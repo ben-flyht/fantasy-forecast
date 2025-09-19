@@ -2,22 +2,45 @@ require "test_helper"
 
 class PredictionAggregatorTest < ActiveSupport::TestCase
   def setup
-    # Clear predictions to avoid fixture conflicts
+    # Clear data to avoid fixture conflicts
     Prediction.destroy_all
+    Gameweek.destroy_all
+
     @user = users(:one)  # Prophet user
     @user2 = users(:two)  # Admin user
     @player = players(:one)
     @player2 = players(:two)
+
+    # Create gameweeks for testing
+    @gameweek1 = Gameweek.create!(
+      fpl_id: 1,
+      name: "Gameweek 1",
+      start_time: 1.week.ago,
+      end_time: Time.current - 1.second,
+      is_current: true,
+      is_next: false,
+      is_finished: false
+    )
+
+    @gameweek2 = Gameweek.create!(
+      fpl_id: 2,
+      name: "Gameweek 2",
+      start_time: Time.current,
+      end_time: 1.week.from_now - 1.second,
+      is_current: false,
+      is_next: true,
+      is_finished: false
+    )
   end
 
   test "for_week should return aggregated prediction counts" do
-    # Create predictions for week 1
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+    # Create predictions for gameweek 1
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
 
-    # Create prediction for week 2 (should not be included)
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 2)
+    # Create prediction for gameweek 2 (should not be included)
+    Prediction.create!(user: @user2, player: @player2, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
 
     result = PredictionAggregator.for_week(1)
 
@@ -46,7 +69,7 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
     Prediction.create!(user: @user, player: @player2, season_type: "rest_of_season", category: "worse_than_expected")
 
     # Create weekly prediction (should not be included)
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
 
     result = PredictionAggregator.for_rest_of_season
 
@@ -70,12 +93,12 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
 
   test "for_player should return aggregated predictions for specific player" do
     # Create predictions for @player
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
     Prediction.create!(user: @user, player: @player, season_type: "rest_of_season", category: "better_than_expected")
 
     # Create predictions for @player2 (should not be included)
-    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "worse_than_expected", week: 1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "worse_than_expected", gameweek: @gameweek1)
 
     result = PredictionAggregator.for_player(@player.id)
 
@@ -93,11 +116,11 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
 
   test "for_user should return aggregated predictions for specific user" do
     # Create predictions for @user
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
     Prediction.create!(user: @user, player: @player2, season_type: "rest_of_season", category: "better_than_expected")
 
     # Create predictions for @user2 (should not be included)
-    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "worse_than_expected", week: 1)
+    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "worse_than_expected", gameweek: @gameweek1)
 
     result = PredictionAggregator.for_user(@user.id)
 
@@ -121,9 +144,9 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
 
   test "consensus_summary_for_week should return formatted consensus data" do
     # Create predictions for week 1
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
 
     result = PredictionAggregator.consensus_summary_for_week(1)
 
@@ -184,9 +207,9 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
   # Tests for enhanced consensus methods
   test "weekly_consensus should return data with Player objects" do
     # Create predictions for week 1
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
 
     result = PredictionAggregator.weekly_consensus(1)
 
@@ -235,11 +258,11 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
   test "top_for_week should return top N players for specific category" do
     # Create predictions with different vote counts
     # @player gets 3 votes for must_have
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
 
     # @player2 gets 1 vote for must_have
-    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
 
     result = PredictionAggregator.top_for_week(1, "must_have", 10)
 
@@ -259,9 +282,9 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
     # Create 3 different players with predictions
     player3 = Player.create!(name: "Player 3", team: "Team 3", position: "FWD", fpl_id: 3003)
 
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user, player: player3, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user, player: player3, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
 
     # Request only top 2
     result = PredictionAggregator.top_for_week(1, "must_have", 2)
@@ -290,8 +313,8 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
 
   test "weekly_consensus_by_category should organize data by category" do
     # Create predictions across different categories
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user2, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user2, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
 
     result = PredictionAggregator.weekly_consensus_by_category(1)
 
@@ -338,8 +361,8 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
 
   test "should filter out players with zero votes in specific category" do
     # Create predictions where @player has votes in must_have but not better_than_expected
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
 
     # Request better_than_expected - should only return @player2
     result = PredictionAggregator.top_for_week(1, "better_than_expected", 10)

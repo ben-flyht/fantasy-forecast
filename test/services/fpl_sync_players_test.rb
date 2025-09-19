@@ -1,7 +1,7 @@
 require "test_helper"
 require "webmock/minitest"
 
-class FplSyncPlayersTest < ActiveSupport::TestCase
+class Fpl::SyncPlayersTest < ActiveSupport::TestCase
   def setup
     # Clear all players to ensure clean tests
     Player.destroy_all
@@ -17,7 +17,7 @@ class FplSyncPlayersTest < ActiveSupport::TestCase
     stub_fpl_api_success
 
     assert_difference "Player.count", 6 do
-      result = FplSyncPlayers.call
+      result = Fpl::SyncPlayers.call
       assert result, "FPL sync should return true on success"
     end
 
@@ -56,7 +56,7 @@ class FplSyncPlayersTest < ActiveSupport::TestCase
 
     # Should add 5 new players (6 total - 1 existing)
     assert_difference "Player.count", 5 do
-      FplSyncPlayers.call
+      Fpl::SyncPlayers.call
     end
 
     # Verify player was updated, not duplicated
@@ -74,17 +74,17 @@ class FplSyncPlayersTest < ActiveSupport::TestCase
     stub_fpl_api_failure
 
     assert_no_difference "Player.count" do
-      result = FplSyncPlayers.call
+      result = Fpl::SyncPlayers.call
       assert_not result, "FPL sync should return false on failure"
     end
   end
 
   test "handles invalid JSON response" do
-    stub_request(:get, FplSyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
       .to_return(status: 200, body: "invalid json", headers: {})
 
     assert_no_difference "Player.count" do
-      result = FplSyncPlayers.call
+      result = Fpl::SyncPlayers.call
       assert_not result, "FPL sync should return false on invalid JSON"
     end
   end
@@ -92,7 +92,7 @@ class FplSyncPlayersTest < ActiveSupport::TestCase
   test "maps position types correctly" do
     stub_fpl_api_success
 
-    FplSyncPlayers.call
+    Fpl::SyncPlayers.call
 
     # Check position mappings
     gk = Player.find_by(fpl_id: 254)  # Alisson
@@ -109,7 +109,7 @@ class FplSyncPlayersTest < ActiveSupport::TestCase
   end
 
   test "builds teams hash correctly" do
-    service = FplSyncPlayers.new
+    service = Fpl::SyncPlayers.new
     teams_data = @fixture_data["teams"]
 
     teams_hash = service.send(:build_teams_hash, teams_data)
@@ -135,23 +135,23 @@ class FplSyncPlayersTest < ActiveSupport::TestCase
       ]
     }
 
-    stub_request(:get, FplSyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
       .to_return(status: 200, body: malformed_data.to_json, headers: {})
 
     assert_no_difference "Player.count" do
-      FplSyncPlayers.call
+      Fpl::SyncPlayers.call
     end
   end
 
   private
 
   def stub_fpl_api_success
-    stub_request(:get, FplSyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
       .to_return(status: 200, body: @fixture_data.to_json, headers: {})
   end
 
   def stub_fpl_api_failure
-    stub_request(:get, FplSyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
       .to_return(status: 500, body: "Internal Server Error", headers: {})
   end
 end

@@ -7,8 +7,40 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     @player = players(:one)
     @player2 = players(:two)
 
-    # Clear predictions to avoid conflicts
+    # Clear data to avoid conflicts
     Prediction.destroy_all
+    Gameweek.destroy_all
+
+    # Create gameweeks for testing
+    @gameweek1 = Gameweek.create!(
+      fpl_id: 1,
+      name: "Gameweek 1",
+      start_time: 1.week.ago,
+      end_time: Time.current - 1.second,
+      is_current: true,
+      is_next: false,
+      is_finished: false
+    )
+
+    @gameweek2 = Gameweek.create!(
+      fpl_id: 2,
+      name: "Gameweek 2",
+      start_time: Time.current,
+      end_time: 1.week.from_now - 1.second,
+      is_current: false,
+      is_next: true,
+      is_finished: false
+    )
+
+    @gameweek5 = Gameweek.create!(
+      fpl_id: 5,
+      name: "Gameweek 5",
+      start_time: 4.weeks.from_now,
+      end_time: 5.weeks.from_now - 1.second,
+      is_current: false,
+      is_next: false,
+      is_finished: false
+    )
   end
 
   test "weekly consensus should require authentication" do
@@ -25,7 +57,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create some test predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
 
     get consensus_weekly_path
     assert_response :success
@@ -39,7 +71,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create test predictions for week 3
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 3)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
 
     get consensus_weekly_path(week: 3)
     assert_response :success
@@ -52,9 +84,9 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create predictions for week 1
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @admin_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @admin_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
 
     get consensus_weekly_path(week: 1)
     assert_response :success
@@ -86,9 +118,9 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
   test "weekly consensus should show available weeks with predictions" do
     sign_in @prophet_user
 
-    # Create predictions for specific weeks
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 2)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", week: 5)
+    # Create predictions for specific gameweeks
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", gameweek: @gameweek5)
 
     get consensus_weekly_path
     assert_response :success
@@ -102,7 +134,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin_user
 
     # Create test predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
 
     get consensus_weekly_path
     assert_response :success
@@ -210,9 +242,9 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
   test "weekly consensus should filter predictions by week correctly" do
     sign_in @prophet_user
 
-    # Create predictions for different weeks
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", week: 2)
+    # Create predictions for different gameweeks
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
 
     # Request week 1 consensus
     get consensus_weekly_path(week: 1)
@@ -221,7 +253,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     consensus_data = assigns(:consensus_data)
     must_have_players = consensus_data["must_have"]
 
-    # Should only show @player (week 1), not @player2 (week 2)
+    # Should only show @player (gameweek 1), not @player2 (gameweek 2)
     assert_equal 1, must_have_players.length
     assert_equal @player, must_have_players.first[:player]
   end
@@ -230,7 +262,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create both weekly and rest of season predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
     Prediction.create!(user: @prophet_user, player: @player2, season_type: "rest_of_season", category: "must_have")
 
     get consensus_rest_of_season_path

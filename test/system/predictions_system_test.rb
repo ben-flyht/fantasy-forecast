@@ -7,8 +7,30 @@ class PredictionsSystemTest < ApplicationSystemTestCase
     @player = players(:one)
     @player2 = players(:two)
 
-    # Clear predictions to avoid conflicts
+    # Clear data to avoid conflicts
     Prediction.destroy_all
+    Gameweek.destroy_all
+
+    # Create gameweeks for testing
+    @current_gameweek = Gameweek.create!(
+      fpl_id: 1,
+      name: "Gameweek 1",
+      start_time: 1.week.ago,
+      end_time: Time.current - 1.second,
+      is_current: true,
+      is_next: false,
+      is_finished: false
+    )
+
+    @next_gameweek = Gameweek.create!(
+      fpl_id: 2,
+      name: "Gameweek 2",
+      start_time: Time.current,
+      end_time: 1.week.from_now - 1.second,
+      is_current: false,
+      is_next: true,
+      is_finished: false
+    )
   end
 
   test "prophet logs in, creates a new weekly prediction and sees it on dashboard" do
@@ -30,7 +52,6 @@ class PredictionsSystemTest < ApplicationSystemTestCase
 
     select "#{@player.name} (#{@player.team} - #{@player.position})", from: "Player"
     select "Weekly Prediction", from: "Season type"
-    fill_in "Week", with: "3"
     select "Must Have", from: "Category"
 
     click_button "Create Prediction"
@@ -41,12 +62,12 @@ class PredictionsSystemTest < ApplicationSystemTestCase
     click_link "Predictions"
     assert_text @player.name
     assert_text "Must Have"
-    assert_text "Week 3"
+    assert_text @next_gameweek.name
 
     # Should see grouped display
     within(".bg-green-50") do  # Must Have section
       assert_text @player.name
-      assert_text "Week 3"
+      assert_text @next_gameweek.name
     end
   end
 
@@ -86,7 +107,7 @@ class PredictionsSystemTest < ApplicationSystemTestCase
       player: @player,
       season_type: "weekly",
       category: "must_have",
-      week: 1
+      gameweek: @next_gameweek
     )
 
     # Sign in as prophet
@@ -99,10 +120,9 @@ class PredictionsSystemTest < ApplicationSystemTestCase
     click_link "Predictions"
     click_link "New prediction"
 
-    # Try to create duplicate prediction (same player, week, season_type)
+    # Try to create duplicate prediction (same player, gameweek, season_type)
     select "#{@player.name} (#{@player.team} - #{@player.position})", from: "Player"
     select "Weekly Prediction", from: "Season type"
-    fill_in "Week", with: "1"  # Same week as existing prediction
     select "Better Than Expected", from: "Category"  # Different category but still duplicate
 
     click_button "Create Prediction"
@@ -119,7 +139,7 @@ class PredictionsSystemTest < ApplicationSystemTestCase
       player: @player,
       season_type: "weekly",
       category: "must_have",
-      week: 2
+      gameweek: @current_gameweek
     )
 
     # Sign in as prophet
@@ -146,7 +166,7 @@ class PredictionsSystemTest < ApplicationSystemTestCase
     click_link "Predictions"
     within(".bg-red-50") do  # Worse Than Expected section
       assert_text @player.name
-      assert_text "Week 2"
+      assert_text @current_gameweek.name
     end
 
     # Should not be in Must Have section anymore
@@ -186,8 +206,8 @@ class PredictionsSystemTest < ApplicationSystemTestCase
 
   test "index shows grouping by category with multiple predictions" do
     # Create multiple predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", week: 2)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @current_gameweek)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", gameweek: @next_gameweek)
     Prediction.create!(user: @prophet_user, player: players(:one), season_type: "rest_of_season", category: "better_than_expected")
 
     # Sign in as prophet
@@ -204,8 +224,8 @@ class PredictionsSystemTest < ApplicationSystemTestCase
       assert_text "Must Have"
       assert_text @player.name
       assert_text @player2.name
-      assert_text "Week 1"
-      assert_text "Week 2"
+      assert_text @current_gameweek.name
+      assert_text @next_gameweek.name
     end
 
     # Should see Better Than Expected section with 1 prediction
@@ -225,7 +245,7 @@ class PredictionsSystemTest < ApplicationSystemTestCase
       player: @player,
       season_type: "weekly",
       category: "must_have",
-      week: 1
+      gameweek: @current_gameweek
     )
 
     # Sign in as admin
@@ -291,7 +311,7 @@ class PredictionsSystemTest < ApplicationSystemTestCase
       player: @player,
       season_type: "weekly",
       category: "must_have",
-      week: 1
+      gameweek: @current_gameweek
     )
 
     # Sign in as prophet

@@ -1,7 +1,8 @@
 require "net/http"
 require "json"
 
-class FplSyncPlayers
+module Fpl
+  class SyncPlayers
   FPL_API_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
 
   def self.call
@@ -89,4 +90,5 @@ class FplSyncPlayers
       end
     end
   end
+end
 end

@@ -29,7 +29,7 @@ puts "Prophet: #{prophet_user.email} (#{prophet_user.username}) - Role: #{prophe
 
 # Sync players from FPL API
 puts "\nSyncing players from FPL API..."
-if FplSyncPlayers.call
+if Fpl::SyncPlayers.call
   puts "Successfully synced #{Player.count} players from FPL API"
 else
   puts "FPL sync failed, falling back to static data..."
@@ -60,6 +60,18 @@ else
   end
 
   puts "Created #{Player.count} players from fallback data"
+end
+
+# Sync gameweeks from FPL API
+puts "\nSyncing gameweeks from FPL API..."
+if Fpl::SyncGameweeks.call
+  puts "Successfully synced #{Gameweek.count} gameweeks from FPL API"
+  current_gw = Gameweek.current_gameweek
+  next_gw = Gameweek.next_gameweek
+  puts "Current gameweek: #{current_gw&.name || 'None'}"
+  puts "Next gameweek: #{next_gw&.name || 'None'}"
+else
+  puts "FPL gameweek sync failed"
 end
 
 # Create sample predictions for demonstration and testing

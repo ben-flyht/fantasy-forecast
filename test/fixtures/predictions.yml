@@ -3,13 +3,13 @@
 one:
   user: one
   player: one
-  week: 1
+  gameweek: one
   season_type: 0  # weekly
   category: 0     # must_have
 
 two:
   user: two
   player: two
-  week: 2
+  gameweek: # null for rest of season
   season_type: 1  # rest_of_season
   category: 1     # better_than_expected

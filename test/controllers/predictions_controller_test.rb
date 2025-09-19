@@ -7,15 +7,27 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
     @player = players(:one)
     @other_player = players(:two)
 
-    # Clear predictions to avoid conflicts
+    # Clear data to avoid conflicts
     Prediction.destroy_all
+    Gameweek.destroy_all
+
+    # Create gameweek for testing
+    @gameweek = Gameweek.create!(
+      fpl_id: 1,
+      name: "Gameweek 1",
+      start_time: 1.week.ago,
+      end_time: Time.current - 1.second,
+      is_current: false,
+      is_next: true,
+      is_finished: false
+    )
 
     @prediction = Prediction.create!(
       user: @prophet_user,
       player: @player,
       season_type: "weekly",
       category: "must_have",
-      week: 1
+      gameweek: @gameweek
     )
   end
 
@@ -39,8 +51,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
         prediction: {
           player_id: @other_player.id,
           season_type: "weekly",
-          category: "better_than_expected",
-          week: 2
+          category: "better_than_expected"
         }
       }
     end
@@ -68,8 +79,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       prediction: {
         player_id: @prediction.player_id,
         season_type: @prediction.season_type,
-        category: "better_than_expected",
-        week: @prediction.week
+        category: "better_than_expected"
       }
     }
     assert_redirected_to prediction_url(@prediction)
@@ -94,7 +104,6 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       player: @other_player,
       season_type: "weekly",
       category: "must_have",
-      week: 3
     )
 
     sign_in @prophet_user
@@ -109,7 +118,6 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       player: @other_player,
       season_type: "weekly",
       category: "must_have",
-      week: 3
     )
 
     sign_in @prophet_user
@@ -118,7 +126,6 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
         player_id: other_user_prediction.player_id,
         season_type: other_user_prediction.season_type,
         category: "worse_than_expected",
-        week: other_user_prediction.week
       }
     }
     assert_redirected_to predictions_url
@@ -131,7 +138,6 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       player: @other_player,
       season_type: "weekly",
       category: "must_have",
-      week: 3
     )
 
     sign_in @prophet_user
@@ -179,7 +185,6 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
         player_id: @prediction.player_id,
         season_type: @prediction.season_type,
         category: "worse_than_expected",
-        week: @prediction.week
       }
     }
     assert_redirected_to predictions_url
@@ -209,7 +214,6 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
           player_id: @player.id,
           season_type: "weekly",
           category: "must_have",
-          week: 1
         }
       }
     end

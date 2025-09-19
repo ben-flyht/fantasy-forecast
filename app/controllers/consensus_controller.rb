@@ -16,17 +16,17 @@ class ConsensusController < ApplicationController
   private
 
   def current_week
-    # Default to week 1, but this could be calculated based on current date
-    # or stored in application settings
-    1
+    # Use the current gameweek's fpl_id or default to 1
+    current_gameweek = Gameweek.current_gameweek
+    current_gameweek&.fpl_id || 1
   end
 
   def available_weeks_with_predictions
-    # Get all weeks that have predictions
-    weeks = Prediction.where(season_type: "weekly")
-                     .where.not(week: nil)
+    # Get all weeks (gameweek fpl_ids) that have predictions
+    weeks = Prediction.joins(:gameweek)
+                     .where(season_type: "weekly")
                      .distinct
-                     .pluck(:week)
+                     .pluck("gameweeks.fpl_id")
                      .sort
 
     # If no predictions exist, still show weeks 1-38 for selection

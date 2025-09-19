@@ -7,10 +7,12 @@
     <strong class="block font-medium mb-1">Player:</strong>
     <%= prediction.player_id %>
   </div>
-  <div>
-    <strong class="block font-medium mb-1">Week:</strong>
-    <%= prediction.week %>
-  </div>
+  <% if prediction.weekly? %>
+    <div>
+      <strong class="block font-medium mb-1">Gameweek:</strong>
+      <%= prediction.gameweek&.name %>
+    </div>
+  <% end %>
   <div>
     <strong class="block font-medium mb-1">Season type:</strong>
     <%= prediction.season_type %>

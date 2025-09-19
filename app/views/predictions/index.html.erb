@@ -34,17 +34,17 @@
               <h3 class="text-lg font-medium mb-3 text-gray-800">
                 <%= season_type.humanize.titleize %>
                 <% if season_type == 'weekly' %>
-                  <span class="text-sm text-gray-500 font-normal">- by week</span>
+                  <span class="text-sm text-gray-500 font-normal">- by gameweek</span>
                 <% end %>
               </h3>
 
               <div class="grid gap-3">
                 <% if season_type == 'weekly' %>
-                  <% season_predictions.group_by(&:week).sort.each do |week, week_predictions| %>
+                  <% season_predictions.group_by(&:gameweek).compact.sort_by { |gw, _| gw&.fpl_id || 0 }.each do |gameweek, gameweek_predictions| %>
                     <div class="border-l-4 border-blue-200 pl-4">
-                      <h4 class="font-medium text-gray-700 mb-2">Week <%= week %></h4>
+                      <h4 class="font-medium text-gray-700 mb-2"><%= gameweek&.name || 'Unknown Gameweek' %></h4>
                       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        <% week_predictions.each do |prediction| %>
+                        <% gameweek_predictions.each do |prediction| %>
                           <%= render 'prediction_card', prediction: prediction %>
                         <% end %>
                       </div>

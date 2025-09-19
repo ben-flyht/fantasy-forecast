@@ -10,9 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_19_164607) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_19_170456) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "gameweeks", force: :cascade do |t|
+    t.integer "fpl_id", null: false
+    t.string "name", null: false
+    t.datetime "start_time", null: false
+    t.datetime "end_time"
+    t.boolean "is_current", default: false, null: false
+    t.boolean "is_next", default: false, null: false
+    t.boolean "is_finished", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fpl_id"], name: "index_gameweeks_on_fpl_id", unique: true
+  end
 
   create_table "players", force: :cascade do |t|
     t.string "name", null: false
@@ -28,13 +41,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_19_164607) do
   create_table "predictions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "player_id", null: false
-    t.integer "week"
     t.integer "season_type", null: false
     t.integer "category", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "gameweek_id"
+    t.index ["gameweek_id"], name: "index_predictions_on_gameweek_id"
     t.index ["player_id"], name: "index_predictions_on_player_id"
-    t.index ["user_id", "player_id", "week", "season_type"], name: "index_predictions_on_unique_constraint", unique: true
     t.index ["user_id"], name: "index_predictions_on_user_id"
   end
 
@@ -53,6 +66,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_19_164607) do
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
+  add_foreign_key "predictions", "gameweeks"
   add_foreign_key "predictions", "players"
   add_foreign_key "predictions", "users"
 end

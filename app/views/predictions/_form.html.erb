@@ -31,11 +31,28 @@
         { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:season_type].none?, "border-red-400 focus:outline-red-600": prediction.errors[:season_type].any?}] } %>
   </div>
 
-  <div class="my-5" id="week-field" style="<%= 'display: none;' unless prediction.weekly? %>">
-    <%= form.label :week %>
-    <%= form.number_field :week, min: 1, max: 38,
-        class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:week].none?, "border-red-400 focus:outline-red-600": prediction.errors[:week].any?}] %>
-    <p class="text-sm text-gray-600 mt-1">Enter the Premier League gameweek (1-38)</p>
+  <div class="my-5" id="gameweek-info" style="<%= 'display: none;' unless prediction.weekly? %>">
+    <% if defined?(@next_gameweek) && @next_gameweek %>
+      <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+        <h3 class="font-medium text-blue-900 mb-2">Making predictions for:</h3>
+        <p class="text-blue-800"><strong><%= @next_gameweek.name %></strong></p>
+        <p class="text-sm text-blue-600 mt-1">
+          Starts: <%= @next_gameweek.start_time.strftime("%b %d, %Y at %l:%M %p") %>
+        </p>
+        <% if @next_gameweek.end_time %>
+          <p class="text-sm text-blue-600">
+            Ends: <%= @next_gameweek.end_time.strftime("%b %d, %Y at %l:%M %p") %>
+          </p>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+        <p class="text-yellow-800">
+          <strong>No upcoming gameweek available.</strong>
+          Please contact an administrator to sync gameweeks from the FPL API.
+        </p>
+      </div>
+    <% end %>
   </div>
 
   <div class="my-5">
@@ -58,17 +75,16 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const seasonTypeSelect = document.querySelector('#prediction_season_type');
-    const weekField = document.querySelector('#week-field');
+    const gameweekInfo = document.querySelector('#gameweek-info');
 
-    function toggleWeekField() {
+    function toggleGameweekInfo() {
       if (seasonTypeSelect.value === 'weekly') {
-        weekField.style.display = 'block';
+        gameweekInfo.style.display = 'block';
       } else {
-        weekField.style.display = 'none';
-        document.querySelector('#prediction_week').value = '';
+        gameweekInfo.style.display = 'none';
       }
     }
 
-    seasonTypeSelect.addEventListener('change', toggleWeekField);
+    seasonTypeSelect.addEventListener('change', toggleGameweekInfo);
   });
 </script>

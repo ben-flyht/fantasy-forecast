@@ -22,15 +22,23 @@ class PredictionsController < ApplicationController
   # GET /predictions/new
   def new
     @prediction = current_user.predictions.build
+    @next_gameweek = Gameweek.next_gameweek
   end
 
   # GET /predictions/1/edit
   def edit
+    @next_gameweek = Gameweek.next_gameweek
   end
 
   # POST /predictions or /predictions.json
   def create
     @prediction = current_user.predictions.build(prediction_params)
+    @next_gameweek = Gameweek.next_gameweek
+
+    # For weekly predictions, ensure gameweek is set to next gameweek regardless of params
+    if @prediction.weekly?
+      @prediction.gameweek = @next_gameweek
+    end
 
     respond_to do |format|
       if @prediction.save
@@ -74,7 +82,14 @@ class PredictionsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def prediction_params
-      params.expect(prediction: [ :player_id, :week, :season_type, :category ])
+      # Exclude week and gameweek_id for weekly predictions since they're auto-assigned
+      allowed_params = [ :player_id, :season_type, :category ]
+
+      # Only allow week for rest_of_season predictions (though it's not used)
+      prediction_data = params.expect(prediction: allowed_params)
+
+      # Prevent tampering with gameweek_id by never allowing it in params
+      prediction_data.except(:gameweek_id, :week)
     end
 
     # Ensure only the prediction owner can edit/delete

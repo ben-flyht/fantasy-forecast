@@ -7,8 +7,40 @@ class ConsensusSystemTest < ApplicationSystemTestCase
     @player = players(:one)
     @player2 = players(:two)
 
-    # Clear predictions to avoid conflicts
+    # Clear data to avoid conflicts
     Prediction.destroy_all
+    Gameweek.destroy_all
+
+    # Create gameweeks for testing
+    @gameweek1 = Gameweek.create!(
+      fpl_id: 1,
+      name: "Gameweek 1",
+      start_time: 1.week.ago,
+      end_time: Time.current - 1.second,
+      is_current: true,
+      is_next: false,
+      is_finished: false
+    )
+
+    @gameweek2 = Gameweek.create!(
+      fpl_id: 2,
+      name: "Gameweek 2",
+      start_time: Time.current,
+      end_time: 1.week.from_now - 1.second,
+      is_current: false,
+      is_next: true,
+      is_finished: false
+    )
+
+    @gameweek3 = Gameweek.create!(
+      fpl_id: 3,
+      name: "Gameweek 3",
+      start_time: 1.week.from_now,
+      end_time: 2.weeks.from_now - 1.second,
+      is_current: false,
+      is_next: false,
+      is_finished: false
+    )
   end
 
   test "prophet navigates to weekly consensus and sees aggregated data" do
@@ -21,10 +53,10 @@ class ConsensusSystemTest < ApplicationSystemTestCase
       role: "prophet"
     )
 
-    # Create predictions showing consensus for week 1
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+    # Create predictions showing consensus for gameweek 1
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
 
     # Sign in as prophet
     visit new_user_session_path
@@ -38,7 +70,7 @@ class ConsensusSystemTest < ApplicationSystemTestCase
     # Should be on weekly consensus page
     assert_current_path consensus_weekly_path
     assert_text "Weekly Consensus"
-    assert_text "Week 1"
+    assert_text @gameweek1.name
 
     # Should see consensus data grouped by category
     within(".bg-green-600", text: "Must Have") do
@@ -75,8 +107,8 @@ class ConsensusSystemTest < ApplicationSystemTestCase
 
   test "prophet selects different week and sees updated data" do
     # Create predictions for different weeks
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", week: 3)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have")
 
     # Sign in as prophet
     visit new_user_session_path
@@ -182,7 +214,7 @@ class ConsensusSystemTest < ApplicationSystemTestCase
 
   test "prophet can navigate between weekly and rest of season views" do
     # Create predictions for both types
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
     Prediction.create!(user: @prophet_user, player: @player2, season_type: "rest_of_season", category: "must_have")
 
     # Sign in as prophet
@@ -219,8 +251,8 @@ class ConsensusSystemTest < ApplicationSystemTestCase
       role: "prophet"
     )
 
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
+    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have")
 
     # Sign in as admin
     visit new_user_session_path
@@ -259,10 +291,10 @@ class ConsensusSystemTest < ApplicationSystemTestCase
     )
 
     # @player gets 3 votes, @player2 gets 1 vote
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: prophet3, player: @player, season_type: "weekly", category: "must_have", week: 1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
+    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have")
+    Prediction.create!(user: prophet3, player: @player, season_type: "weekly", category: "must_have")
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have")
 
     # Sign in as prophet
     visit new_user_session_path
@@ -306,7 +338,7 @@ class ConsensusSystemTest < ApplicationSystemTestCase
 
   test "consensus pages are responsive and display properly on different screen sizes" do
     # Create test data
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
 
     # Sign in as prophet
     visit new_user_session_path
