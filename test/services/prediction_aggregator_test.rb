@@ -180,4 +180,172 @@ class PredictionAggregatorTest < ActiveSupport::TestCase
     result_consensus_season = PredictionAggregator.consensus_summary_rest_of_season
     assert_equal({}, result_consensus_season)
   end
+
+  # Tests for enhanced consensus methods
+  test "weekly_consensus should return data with Player objects" do
+    # Create predictions for week 1
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+
+    result = PredictionAggregator.weekly_consensus(1)
+
+    # Should have results for both players
+    assert_equal 2, result.keys.length
+    assert result.key?(@player.id)
+    assert result.key?(@player2.id)
+
+    # Check structure includes player object
+    player_data = result[@player.id]
+    assert_equal @player, player_data[:player]
+    assert_equal 2, player_data[:votes]["must_have"]
+    assert_equal 2, player_data[:total_votes]
+
+    player2_data = result[@player2.id]
+    assert_equal @player2, player2_data[:player]
+    assert_equal 1, player2_data[:votes]["better_than_expected"]
+    assert_equal 1, player2_data[:total_votes]
+  end
+
+  test "rest_of_season_consensus should return data with Player objects" do
+    # Create rest of season predictions
+    Prediction.create!(user: @user, player: @player, season_type: "rest_of_season", category: "must_have")
+    Prediction.create!(user: @user2, player: @player, season_type: "rest_of_season", category: "must_have")
+    Prediction.create!(user: @user, player: @player2, season_type: "rest_of_season", category: "worse_than_expected")
+
+    result = PredictionAggregator.rest_of_season_consensus
+
+    # Should have results for both players
+    assert_equal 2, result.keys.length
+    assert result.key?(@player.id)
+    assert result.key?(@player2.id)
+
+    # Check structure includes player object
+    player_data = result[@player.id]
+    assert_equal @player, player_data[:player]
+    assert_equal 2, player_data[:votes]["must_have"]
+    assert_equal 2, player_data[:total_votes]
+
+    player2_data = result[@player2.id]
+    assert_equal @player2, player2_data[:player]
+    assert_equal 1, player2_data[:votes]["worse_than_expected"]
+    assert_equal 1, player2_data[:total_votes]
+  end
+
+  test "top_for_week should return top N players for specific category" do
+    # Create predictions with different vote counts
+    # @player gets 3 votes for must_have
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user2, player: @player, season_type: "weekly", category: "must_have", week: 1)
+
+    # @player2 gets 1 vote for must_have
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "must_have", week: 1)
+
+    result = PredictionAggregator.top_for_week(1, "must_have", 10)
+
+    # Should return players sorted by vote count
+    assert_equal 2, result.length
+
+    # First player should be @player with 2 votes
+    assert_equal @player, result.first[:player]
+    assert_equal 2, result.first[:votes]
+
+    # Second player should be @player2 with 1 vote
+    assert_equal @player2, result.second[:player]
+    assert_equal 1, result.second[:votes]
+  end
+
+  test "top_for_week should respect limit parameter" do
+    # Create 3 different players with predictions
+    player3 = Player.create!(name: "Player 3", team: "Team 3", position: "FWD", fpl_id: 3003)
+
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: player3, season_type: "weekly", category: "must_have", week: 1)
+
+    # Request only top 2
+    result = PredictionAggregator.top_for_week(1, "must_have", 2)
+    assert_equal 2, result.length
+  end
+
+  test "top_rest_of_season should return top N players for specific category" do
+    # Create rest of season predictions
+    Prediction.create!(user: @user, player: @player, season_type: "rest_of_season", category: "better_than_expected")
+    Prediction.create!(user: @user2, player: @player, season_type: "rest_of_season", category: "better_than_expected")
+    Prediction.create!(user: @user, player: @player2, season_type: "rest_of_season", category: "better_than_expected")
+
+    result = PredictionAggregator.top_rest_of_season("better_than_expected", 10)
+
+    # Should return players sorted by vote count
+    assert_equal 2, result.length
+
+    # First player should be @player with 2 votes
+    assert_equal @player, result.first[:player]
+    assert_equal 2, result.first[:votes]
+
+    # Second player should be @player2 with 1 vote
+    assert_equal @player2, result.second[:player]
+    assert_equal 1, result.second[:votes]
+  end
+
+  test "weekly_consensus_by_category should organize data by category" do
+    # Create predictions across different categories
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user2, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+
+    result = PredictionAggregator.weekly_consensus_by_category(1)
+
+    # Should have all three categories
+    assert result.key?("must_have")
+    assert result.key?("better_than_expected")
+    assert result.key?("worse_than_expected")
+
+    # Must have category should have @player
+    assert_equal 1, result["must_have"].length
+    assert_equal @player, result["must_have"].first[:player]
+
+    # Better than expected should have @player2
+    assert_equal 1, result["better_than_expected"].length
+    assert_equal @player2, result["better_than_expected"].first[:player]
+
+    # Worse than expected should be empty
+    assert_equal 0, result["worse_than_expected"].length
+  end
+
+  test "rest_of_season_consensus_by_category should organize data by category" do
+    # Create rest of season predictions
+    Prediction.create!(user: @user, player: @player, season_type: "rest_of_season", category: "must_have")
+    Prediction.create!(user: @user2, player: @player2, season_type: "rest_of_season", category: "worse_than_expected")
+
+    result = PredictionAggregator.rest_of_season_consensus_by_category
+
+    # Should have all three categories
+    assert result.key?("must_have")
+    assert result.key?("better_than_expected")
+    assert result.key?("worse_than_expected")
+
+    # Must have category should have @player
+    assert_equal 1, result["must_have"].length
+    assert_equal @player, result["must_have"].first[:player]
+
+    # Worse than expected should have @player2
+    assert_equal 1, result["worse_than_expected"].length
+    assert_equal @player2, result["worse_than_expected"].first[:player]
+
+    # Better than expected should be empty
+    assert_equal 0, result["better_than_expected"].length
+  end
+
+  test "should filter out players with zero votes in specific category" do
+    # Create predictions where @player has votes in must_have but not better_than_expected
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have", week: 1)
+    Prediction.create!(user: @user, player: @player2, season_type: "weekly", category: "better_than_expected", week: 1)
+
+    # Request better_than_expected - should only return @player2
+    result = PredictionAggregator.top_for_week(1, "better_than_expected", 10)
+
+    assert_equal 1, result.length
+    assert_equal @player2, result.first[:player]
+    assert_equal 1, result.first[:votes]
+  end
 end

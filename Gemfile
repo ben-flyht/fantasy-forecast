@@ -65,4 +65,6 @@ group :test do
   gem "selenium-webdriver"
   # Mock HTTP requests in tests
   gem "webmock"
+  # For testing controller assigns
+  gem "rails-controller-testing"
 end

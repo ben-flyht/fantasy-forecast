@@ -30,6 +30,7 @@
           <%= link_to "Players", players_path, class: "text-gray-300 hover:text-white" %>
           <% if user_signed_in? %>
             <%= link_to "Predictions", predictions_path, class: "text-gray-300 hover:text-white" %>
+            <%= link_to "Consensus", consensus_weekly_path, class: "text-gray-300 hover:text-white" %>
           <% end %>
         </div>
         <div class="space-x-4">
