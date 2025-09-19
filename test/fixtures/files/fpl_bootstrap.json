@@ -1,0 +1,52 @@
+{
+  "teams": [
+    {"id": 1, "name": "Arsenal"},
+    {"id": 2, "name": "Liverpool"},
+    {"id": 3, "name": "Manchester City"},
+    {"id": 4, "name": "Chelsea"}
+  ],
+  "elements": [
+    {
+      "id": 233,
+      "first_name": "Erling",
+      "second_name": "Haaland",
+      "team": 3,
+      "element_type": 4
+    },
+    {
+      "id": 253,
+      "first_name": "Mohamed",
+      "second_name": "Salah",
+      "team": 2,
+      "element_type": 4
+    },
+    {
+      "id": 218,
+      "first_name": "Kevin",
+      "second_name": "De Bruyne",
+      "team": 3,
+      "element_type": 3
+    },
+    {
+      "id": 254,
+      "first_name": "Alisson",
+      "second_name": "Becker",
+      "team": 2,
+      "element_type": 1
+    },
+    {
+      "id": 252,
+      "first_name": "Trent",
+      "second_name": "Alexander-Arnold",
+      "team": 2,
+      "element_type": 2
+    },
+    {
+      "id": 356,
+      "first_name": "Bukayo",
+      "second_name": "Saka",
+      "team": 1,
+      "element_type": 3
+    }
+  ]
+}

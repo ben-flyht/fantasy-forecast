@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  resources :predictions
+  resources :players
   devise_for :users
   root "home#index"
 

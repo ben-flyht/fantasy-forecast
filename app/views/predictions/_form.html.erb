@@ -1,0 +1,74 @@
+<%= form_with(model: prediction, class: "contents") do |form| %>
+  <% if prediction.errors.any? %>
+    <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mt-3">
+      <h2><%= pluralize(prediction.errors.count, "error") %> prohibited this prediction from being saved:</h2>
+
+      <ul class="list-disc ml-6">
+        <% prediction.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="my-5">
+    <%= form.label :player_id, "Player" %>
+    <%= form.select :player_id,
+        options_from_collection_for_select(Player.order(:name), :id,
+          proc { |p| "#{p.name} (#{p.team} - #{p.position})" }, prediction.player_id),
+        { prompt: 'Select a player' },
+        { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:player_id].none?, "border-red-400 focus:outline-red-600": prediction.errors[:player_id].any?}] } %>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :season_type %>
+    <%= form.select :season_type,
+        options_for_select([
+          ['Weekly Prediction', 'weekly'],
+          ['Rest of Season', 'rest_of_season']
+        ], prediction.season_type),
+        { prompt: 'Select prediction type' },
+        { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:season_type].none?, "border-red-400 focus:outline-red-600": prediction.errors[:season_type].any?}] } %>
+  </div>
+
+  <div class="my-5" id="week-field" style="<%= 'display: none;' unless prediction.weekly? %>">
+    <%= form.label :week %>
+    <%= form.number_field :week, min: 1, max: 38,
+        class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:week].none?, "border-red-400 focus:outline-red-600": prediction.errors[:week].any?}] %>
+    <p class="text-sm text-gray-600 mt-1">Enter the Premier League gameweek (1-38)</p>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :category %>
+    <%= form.select :category,
+        options_for_select([
+          ['Must Have', 'must_have'],
+          ['Better Than Expected', 'better_than_expected'],
+          ['Worse Than Expected', 'worse_than_expected']
+        ], prediction.category),
+        { prompt: 'Select prediction category' },
+        { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:category].none?, "border-red-400 focus:outline-red-600": prediction.errors[:category].any?}] } %>
+  </div>
+
+  <div class="inline">
+    <%= form.submit class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white inline-block font-medium cursor-pointer" %>
+  </div>
+<% end %>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const seasonTypeSelect = document.querySelector('#prediction_season_type');
+    const weekField = document.querySelector('#week-field');
+
+    function toggleWeekField() {
+      if (seasonTypeSelect.value === 'weekly') {
+        weekField.style.display = 'block';
+      } else {
+        weekField.style.display = 'none';
+        document.querySelector('#prediction_week').value = '';
+      }
+    }
+
+    seasonTypeSelect.addEventListener('change', toggleWeekField);
+  });
+</script>

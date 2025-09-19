@@ -9,4 +9,7 @@ class User < ApplicationRecord
 
   # Validations
   validates :username, presence: true, uniqueness: true
+
+  # Associations
+  has_many :predictions, dependent: :destroy
 end

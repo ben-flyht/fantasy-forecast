@@ -10,9 +10,33 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_19_155752) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_19_161500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "players", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "team", null: false
+    t.integer "position", null: false
+    t.integer "bye_week"
+    t.integer "fpl_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
+  end
+
+  create_table "predictions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "player_id", null: false
+    t.integer "week"
+    t.integer "season_type", null: false
+    t.integer "category", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["player_id"], name: "index_predictions_on_player_id"
+    t.index ["user_id", "player_id", "week", "season_type"], name: "index_predictions_on_unique_constraint", unique: true
+    t.index ["user_id"], name: "index_predictions_on_user_id"
+  end
 
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
@@ -28,4 +52,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_19_155752) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["username"], name: "index_users_on_username", unique: true
   end
+
+  add_foreign_key "predictions", "players"
+  add_foreign_key "predictions", "users"
 end

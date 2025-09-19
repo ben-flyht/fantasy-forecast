@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  user: one
+  player: one
+  week: 1
+  season_type: 0  # weekly
+  category: 0     # must_have
+
+two:
+  user: two
+  player: two
+  week: 2
+  season_type: 1  # rest_of_season
+  category: 1     # better_than_expected
