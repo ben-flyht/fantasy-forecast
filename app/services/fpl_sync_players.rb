@@ -65,6 +65,7 @@ class FplSyncPlayers
     elements.each do |element|
       fpl_id = element["id"]
       name = "#{element['first_name']} #{element['second_name']}".strip
+      short_name = element["web_name"] || element["second_name"] # Fallback to second_name if web_name missing
       team = teams[element["team"]]
       position = position_map[element["element_type"]]
 
@@ -73,6 +74,7 @@ class FplSyncPlayers
 
       player_attributes = {
         name: name,
+        short_name: short_name,
         team: team,
         position: position
       }
@@ -81,7 +83,7 @@ class FplSyncPlayers
       player.assign_attributes(player_attributes)
 
       if player.save
-        Rails.logger.debug "Synced player: #{name} (#{team}, #{position})"
+        Rails.logger.debug "Synced player: #{name} (#{short_name}) (#{team}, #{position})"
       else
         Rails.logger.warn "Failed to sync player #{name}: #{player.errors.full_messages.join(', ')}"
       end

@@ -36,26 +36,26 @@ else
 
   # Fallback to static data if API sync fails
   players_data = [
-    { name: "Erling Haaland", team: "Manchester City", position: "FWD", bye_week: 7, fpl_id: 233 },
-    { name: "Mohamed Salah", team: "Liverpool", position: "FWD", bye_week: 5, fpl_id: 253 },
-    { name: "Harry Kane", team: "Tottenham Hotspur", position: "FWD", bye_week: 8, fpl_id: 427 },
-    { name: "Kevin De Bruyne", team: "Manchester City", position: "MID", bye_week: 7, fpl_id: 218 },
-    { name: "Bruno Fernandes", team: "Manchester United", position: "MID", bye_week: 4, fpl_id: 290 },
-    { name: "Virgil van Dijk", team: "Liverpool", position: "DEF", bye_week: 5, fpl_id: 4 },
-    { name: "Ruben Dias", team: "Manchester City", position: "DEF", bye_week: 7, fpl_id: 239 },
-    { name: "Trent Alexander-Arnold", team: "Liverpool", position: "DEF", bye_week: 5, fpl_id: 252 },
-    { name: "Alisson", team: "Liverpool", position: "GK", bye_week: 5, fpl_id: 254 },
-    { name: "Ederson", team: "Manchester City", position: "GK", bye_week: 7, fpl_id: 259 },
-    { name: "Bukayo Saka", team: "Arsenal", position: "MID", bye_week: 6, fpl_id: 356 },
-    { name: "Gabriel Jesus", team: "Arsenal", position: "FWD", bye_week: 6, fpl_id: 247 }
+    { name: "Erling Haaland", short_name: "Haaland", team: "Manchester City", position: "FWD", fpl_id: 233 },
+    { name: "Mohamed Salah", short_name: "Salah", team: "Liverpool", position: "FWD", fpl_id: 253 },
+    { name: "Harry Kane", short_name: "Kane", team: "Tottenham Hotspur", position: "FWD", fpl_id: 427 },
+    { name: "Kevin De Bruyne", short_name: "De Bruyne", team: "Manchester City", position: "MID", fpl_id: 218 },
+    { name: "Bruno Fernandes", short_name: "B.Fernandes", team: "Manchester United", position: "MID", fpl_id: 290 },
+    { name: "Virgil van Dijk", short_name: "van Dijk", team: "Liverpool", position: "DEF", fpl_id: 4 },
+    { name: "Ruben Dias", short_name: "Dias", team: "Manchester City", position: "DEF", fpl_id: 239 },
+    { name: "Trent Alexander-Arnold", short_name: "Alexander-Arnold", team: "Liverpool", position: "DEF", fpl_id: 252 },
+    { name: "Alisson", short_name: "Alisson", team: "Liverpool", position: "GK", fpl_id: 254 },
+    { name: "Ederson", short_name: "Ederson", team: "Manchester City", position: "GK", fpl_id: 259 },
+    { name: "Bukayo Saka", short_name: "Saka", team: "Arsenal", position: "MID", fpl_id: 356 },
+    { name: "Gabriel Jesus", short_name: "Jesus", team: "Arsenal", position: "FWD", fpl_id: 247 }
   ]
 
   players_data.each do |player_data|
     player = Player.find_or_create_by!(fpl_id: player_data[:fpl_id]) do |p|
       p.name = player_data[:name]
+      p.short_name = player_data[:short_name]
       p.team = player_data[:team]
       p.position = player_data[:position]
-      p.bye_week = player_data[:bye_week]
     end
   end
 

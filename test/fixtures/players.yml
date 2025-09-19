@@ -2,14 +2,14 @@
 
 one:
   name: "Test Player One"
+  short_name: "Player One"
   team: "Arsenal"
   position: "FWD"
-  bye_week: 7
   fpl_id: 100
 
 two:
   name: "Test Player Two"
+  short_name: "Player Two"
   team: "Chelsea"
   position: "MID"
-  bye_week: 5
   fpl_id: 200

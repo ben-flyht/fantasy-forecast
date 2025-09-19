@@ -65,7 +65,7 @@ class PlayerTest < ActiveSupport::TestCase
     assert_not player.MID?
   end
 
-  test "bye_week is optional" do
+  test "short_name is optional" do
     player = Player.new(
       name: "Test Player",
       team: "Arsenal",
@@ -78,9 +78,9 @@ class PlayerTest < ActiveSupport::TestCase
   test "should create valid player with all fields" do
     player = Player.new(
       name: "Test Player",
+      short_name: "Player",
       team: "Arsenal",
       position: "FWD",
-      bye_week: 7,
       fpl_id: 123
     )
     assert player.valid?

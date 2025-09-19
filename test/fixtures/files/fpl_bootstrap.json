@@ -10,6 +10,7 @@
       "id": 233,
       "first_name": "Erling",
       "second_name": "Haaland",
+      "web_name": "Haaland",
       "team": 3,
       "element_type": 4
     },
@@ -17,6 +18,7 @@
       "id": 253,
       "first_name": "Mohamed",
       "second_name": "Salah",
+      "web_name": "Salah",
       "team": 2,
       "element_type": 4
     },
@@ -24,6 +26,7 @@
       "id": 218,
       "first_name": "Kevin",
       "second_name": "De Bruyne",
+      "web_name": "De Bruyne",
       "team": 3,
       "element_type": 3
     },
@@ -31,6 +34,7 @@
       "id": 254,
       "first_name": "Alisson",
       "second_name": "Becker",
+      "web_name": "Alisson",
       "team": 2,
       "element_type": 1
     },
@@ -38,6 +42,7 @@
       "id": 252,
       "first_name": "Trent",
       "second_name": "Alexander-Arnold",
+      "web_name": "Alexander-Arnold",
       "team": 2,
       "element_type": 2
     },
@@ -45,6 +50,7 @@
       "id": 356,
       "first_name": "Bukayo",
       "second_name": "Saka",
+      "web_name": "Saka",
       "team": 1,
       "element_type": 3
     }

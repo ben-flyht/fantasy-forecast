@@ -33,7 +33,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
           name: "New Test Player",
           team: "Liverpool",
           position: "GK",
-          bye_week: 8,
+          short_name: "New Player",
           fpl_id: 999
         }
       }
@@ -55,7 +55,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
         name: "Updated Player",
         team: @player.team,
         position: @player.position,
-        bye_week: @player.bye_week,
+        short_name: @player.short_name,
         fpl_id: @player.fpl_id
       }
     }
@@ -87,7 +87,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
           name: "New Test Player",
           team: "Liverpool",
           position: "GK",
-          bye_week: 8,
+          short_name: "New Player",
           fpl_id: 999
         }
       }
@@ -111,7 +111,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
         name: "Updated Player",
         team: @player.team,
         position: @player.position,
-        bye_week: @player.bye_week,
+        short_name: @player.short_name,
         fpl_id: @player.fpl_id
       }
     }
@@ -143,7 +143,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
           name: "New Test Player",
           team: "Liverpool",
           position: "GK",
-          bye_week: 8,
+          short_name: "New Player",
           fpl_id: 999
         }
       }

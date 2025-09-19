@@ -67,7 +67,7 @@ class PlayersController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def player_params
-      params.expect(player: [ :name, :team, :position, :bye_week, :fpl_id ])
+      params.expect(player: [ :name, :team, :position, :short_name, :fpl_id ])
     end
 
     # Ensure user is admin for restricted actions

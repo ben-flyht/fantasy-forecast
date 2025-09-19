@@ -138,7 +138,7 @@ class ConsensusSystemTest < ApplicationSystemTestCase
       assert_text @player.position
       assert_text "2"  # Vote count
       assert_text "2 votes"
-      assert_text "Bye Week #{@player.bye_week}" if @player.bye_week
+      assert_text @player.short_name if @player.short_name
     end
 
     # Should see worse than expected section with @player2

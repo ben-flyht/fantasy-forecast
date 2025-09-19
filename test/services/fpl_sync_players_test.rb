@@ -25,12 +25,14 @@ class FplSyncPlayersTest < ActiveSupport::TestCase
     haaland = Player.find_by(fpl_id: 233)
     assert_not_nil haaland
     assert_equal "Erling Haaland", haaland.name
+    assert_equal "Haaland", haaland.short_name
     assert_equal "Manchester City", haaland.team
     assert_equal "FWD", haaland.position
 
     salah = Player.find_by(fpl_id: 253)
     assert_not_nil salah
     assert_equal "Mohamed Salah", salah.name
+    assert_equal "Salah", salah.short_name
     assert_equal "Liverpool", salah.team
     assert_equal "FWD", salah.position
 
