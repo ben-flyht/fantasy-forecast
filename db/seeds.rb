@@ -62,61 +62,72 @@ else
   puts "Created #{Player.count} players from fallback data"
 end
 
-# Create sample predictions for the Prophet user
+# Create sample predictions for demonstration and testing
 prophet_user = User.find_by(email: "prophet@example.com")
-if prophet_user && Player.any?
-  puts "\nCreating sample predictions for Prophet user..."
+admin_user = User.find_by(email: "admin@example.com")
 
-  # Get some sample players
-  sample_players = Player.limit(10).order(:name)
+if prophet_user && admin_user && Player.any?
+  puts "\nCreating sample predictions for users..."
 
+  # Clear existing predictions
+  Prediction.destroy_all
+
+  # Get sample players
+  sample_players = Player.limit(15).order(:name)
+
+  # Create additional prophet users for consensus testing
+  prophet2 = User.find_or_create_by!(email: "prophet2@example.com") do |user|
+    user.username = "Prophet2"
+    user.password = "password123"
+    user.password_confirmation = "password123"
+    user.role = "prophet"
+  end
+
+  prophet3 = User.find_or_create_by!(email: "prophet3@example.com") do |user|
+    user.username = "Prophet3"
+    user.password = "password123"
+    user.password_confirmation = "password123"
+    user.role = "prophet"
+  end
+
+  # Prediction data for multiple users to demonstrate consensus
   predictions_data = [
-    # Weekly predictions
-    {
-      player: sample_players[0],
-      week: 1,
-      season_type: "weekly",
-      category: "must_have"
-    },
-    {
-      player: sample_players[1],
-      week: 1,
-      season_type: "weekly",
-      category: "better_than_expected"
-    },
-    {
-      player: sample_players[2],
-      week: 2,
-      season_type: "weekly",
-      category: "worse_than_expected"
-    },
-    {
-      player: sample_players[3],
-      week: 3,
-      season_type: "weekly",
-      category: "must_have"
-    },
-    # Rest of season predictions
-    {
-      player: sample_players[4],
-      season_type: "rest_of_season",
-      category: "must_have"
-    },
-    {
-      player: sample_players[5],
-      season_type: "rest_of_season",
-      category: "better_than_expected"
-    },
-    {
-      player: sample_players[6],
-      season_type: "rest_of_season",
-      category: "worse_than_expected"
-    }
+    # Week 1 predictions - show consensus
+    { user: prophet_user, player: sample_players[0], week: 1, season_type: "weekly", category: "must_have" },
+    { user: prophet2, player: sample_players[0], week: 1, season_type: "weekly", category: "must_have" },
+    { user: prophet3, player: sample_players[0], week: 1, season_type: "weekly", category: "must_have" },
+
+    { user: prophet_user, player: sample_players[1], week: 1, season_type: "weekly", category: "better_than_expected" },
+    { user: prophet2, player: sample_players[1], week: 1, season_type: "weekly", category: "better_than_expected" },
+
+    { user: prophet_user, player: sample_players[2], week: 1, season_type: "weekly", category: "worse_than_expected" },
+
+    # Week 2 predictions
+    { user: prophet_user, player: sample_players[3], week: 2, season_type: "weekly", category: "must_have" },
+    { user: prophet2, player: sample_players[4], week: 2, season_type: "weekly", category: "better_than_expected" },
+    { user: prophet3, player: sample_players[5], week: 2, season_type: "weekly", category: "worse_than_expected" },
+
+    # Week 3 predictions
+    { user: prophet_user, player: sample_players[6], week: 3, season_type: "weekly", category: "must_have" },
+    { user: prophet2, player: sample_players[6], week: 3, season_type: "weekly", category: "better_than_expected" },
+
+    # Rest of season predictions - show consensus
+    { user: prophet_user, player: sample_players[7], season_type: "rest_of_season", category: "must_have" },
+    { user: prophet2, player: sample_players[7], season_type: "rest_of_season", category: "must_have" },
+    { user: prophet3, player: sample_players[7], season_type: "rest_of_season", category: "must_have" },
+
+    { user: prophet_user, player: sample_players[8], season_type: "rest_of_season", category: "better_than_expected" },
+    { user: prophet2, player: sample_players[8], season_type: "rest_of_season", category: "better_than_expected" },
+
+    { user: prophet_user, player: sample_players[9], season_type: "rest_of_season", category: "worse_than_expected" },
+    { user: prophet3, player: sample_players[10], season_type: "rest_of_season", category: "must_have" },
+    { user: prophet2, player: sample_players[11], season_type: "rest_of_season", category: "better_than_expected" },
+    { user: prophet3, player: sample_players[12], season_type: "rest_of_season", category: "worse_than_expected" }
   ]
 
   predictions_data.each do |prediction_data|
-    prediction = Prediction.find_or_create_by!(
-      user: prophet_user,
+    Prediction.find_or_create_by!(
+      user: prediction_data[:user],
       player: prediction_data[:player],
       week: prediction_data[:week],
       season_type: prediction_data[:season_type]
@@ -125,7 +136,13 @@ if prophet_user && Player.any?
     end
   end
 
-  puts "Created #{Prediction.count} predictions for Prophet user"
+  puts "Created #{User.where(role: 'prophet').count} Prophet users"
+  puts "Created #{Prediction.count} predictions across all users"
+
+  # Show consensus examples
+  puts "\nSample consensus data:"
+  puts "Week 1 - #{sample_players[0].name}: #{Prediction.for_week(1).for_player(sample_players[0].id).count} Must Have votes"
+  puts "Rest of Season - #{sample_players[7].name}: #{Prediction.where(season_type: 'rest_of_season').for_player(sample_players[7].id).count} Must Have votes"
 else
-  puts "Skipping predictions - no Prophet user or players found"
+  puts "Skipping predictions - users or players not found"
 end
