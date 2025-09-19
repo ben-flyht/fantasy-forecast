@@ -4,12 +4,26 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
 
-  # Enum for role
-  enum :role, { prophet: 0, admin: 1 }
+  ROLE_PROPHET = "prophet".freeze
+  ROLE_ADMIN = "admin".freeze
+
+  enum :role, {
+    prophet: ROLE_PROPHET,
+    admin: ROLE_ADMIN
+  }
+
+  # Callbacks
+  before_validation :set_default_role, on: :create
 
   # Validations
   validates :username, presence: true, uniqueness: true
 
   # Associations
   has_many :predictions, dependent: :destroy
+
+  private
+
+  def set_default_role
+    self.role ||= :prophet
+  end
 end

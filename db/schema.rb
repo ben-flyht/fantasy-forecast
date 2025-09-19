@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_19_170456) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_19_180022) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -30,22 +30,21 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_19_170456) do
   create_table "players", force: :cascade do |t|
     t.string "name", null: false
     t.string "team", null: false
-    t.integer "position", null: false
     t.integer "fpl_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "short_name"
+    t.string "position", null: false
     t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
   end
 
   create_table "predictions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "player_id", null: false
-    t.integer "season_type", null: false
-    t.integer "category", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "gameweek_id"
+    t.bigint "gameweek_id", null: false
+    t.string "category", null: false
     t.index ["gameweek_id"], name: "index_predictions_on_gameweek_id"
     t.index ["player_id"], name: "index_predictions_on_player_id"
     t.index ["user_id"], name: "index_predictions_on_user_id"

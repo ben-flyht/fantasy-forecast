@@ -1,0 +1,88 @@
+<div class="bg-white shadow-lg rounded-lg overflow-hidden" id="predictions_form_content" data-controller="prediction-form">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider">Target (Recommend)</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase tracking-wider">Avoid (Don't Recommend)</th>
+      </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+      <% [["GK", "goalkeeper"], ["DEF", "defender"], ["MID", "midfielder"], ["FWD", "forward"]].each do |display_position, db_position| %>
+        <% position_players = @players_by_position[db_position] || [] %>
+        <% target_predictions = (@current_predictions["target"] || []).select { |p| p.player.position == db_position } %>
+        <% avoid_predictions = (@current_predictions["avoid"] || []).select { |p| p.player.position == db_position } %>
+        <% target_player_ids = target_predictions.map(&:player_id) %>
+        <% avoid_player_ids = avoid_predictions.map(&:player_id) %>
+        <% all_selected_player_ids = ((@current_predictions["target"] || []) + (@current_predictions["avoid"] || [])).map(&:player_id) %>
+        <!-- DEBUG: <%= display_position %> - Target: [<%= target_player_ids.join(',') %>] Avoid: [<%= avoid_player_ids.join(',') %>] All: [<%= all_selected_player_ids.join(',') %>] -->
+
+        <% 3.times do |slot_index| %>
+          <% selected_target_player = target_predictions[slot_index] %>
+          <% selected_avoid_player = avoid_predictions[slot_index] %>
+          <tr class="<%= 'border-t-2 border-gray-300' if slot_index == 0 %>">
+            <% if slot_index == 0 %>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" rowspan="3">
+                <%= display_position %>
+              </td>
+            <% end %>
+
+            <!-- Target Column -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <%= form_with url: update_prediction_predictions_path, method: :patch, local: false, data: { turbo_frame: "predictions_form" } do |form| %>
+                <select
+                  name="player_id"
+                  class="prediction-select w-full border <%= selected_target_player&.player_id ? 'border-green-500 bg-green-50' : 'border-gray-300' %> rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  data-prediction-form-target="select"
+                  data-action="change->prediction-form#submitForm"
+                  data-debug="target-<%= db_position %>-<%= slot_index %>-player_id:<%= selected_target_player&.player_id || 'none' %>"
+                >
+                  <option value="">Select <%= display_position %> player...</option>
+                  <% position_players.each do |player| %>
+                    <option
+                      value="<%= player.id %>"
+                      <%= 'selected' if selected_target_player&.player_id == player.id %>
+                      <%= 'disabled' if all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id %>
+                    >
+                      <%= player.name %> (<%= player.team %>)<%= all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id ? ' (Selected)' : '' %>
+                    </option>
+                  <% end %>
+                </select>
+                <%= form.hidden_field :category, value: "target" %>
+                <%= form.hidden_field :position, value: db_position %>
+                <%= form.hidden_field :slot, value: slot_index %>
+              <% end %>
+            </td>
+
+            <!-- Avoid Column -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <%= form_with url: update_prediction_predictions_path, method: :patch, local: false, data: { turbo_frame: "predictions_form" } do |form| %>
+                <select
+                  name="player_id"
+                  class="prediction-select w-full border <%= selected_avoid_player&.player_id ? 'border-green-500 bg-green-50' : 'border-gray-300' %> rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  data-prediction-form-target="select"
+                  data-action="change->prediction-form#submitForm"
+                  data-debug="avoid-<%= db_position %>-<%= slot_index %>-player_id:<%= selected_avoid_player&.player_id || 'none' %>"
+                >
+                  <option value="">Select <%= display_position %> player...</option>
+                  <% position_players.each do |player| %>
+                    <option
+                      value="<%= player.id %>"
+                      <%= 'selected' if selected_avoid_player&.player_id == player.id %>
+                      <%= 'disabled' if all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id %>
+                    >
+                      <%= player.name %> (<%= player.team %>)<%= all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id ? ' (Selected)' : '' %>
+                    </option>
+                  <% end %>
+                </select>
+                <%= form.hidden_field :category, value: "avoid" %>
+                <%= form.hidden_field :position, value: db_position %>
+                <%= form.hidden_field :slot, value: slot_index %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    </tbody>
+  </table>
+</div>

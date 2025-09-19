@@ -57,7 +57,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create some test predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "target", gameweek: @gameweek2)
 
     get consensus_weekly_path
     assert_response :success
@@ -71,7 +71,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create test predictions for week 3
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "target", gameweek: @gameweek2)
 
     get consensus_weekly_path(week: 3)
     assert_response :success
@@ -84,9 +84,9 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create predictions for week 1
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
-    Prediction.create!(user: @admin_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "target", gameweek: @gameweek1)
+    Prediction.create!(user: @admin_user, player: @player, season_type: "weekly", category: "target", gameweek: @gameweek1)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "avoid", gameweek: @gameweek1)
 
     get consensus_weekly_path(week: 1)
     assert_response :success
@@ -119,8 +119,8 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create predictions for specific gameweeks
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", gameweek: @gameweek5)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "target", gameweek: @gameweek2)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "target", gameweek: @gameweek5)
 
     get consensus_weekly_path
     assert_response :success
@@ -134,7 +134,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin_user
 
     # Create test predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "target", gameweek: @gameweek2)
 
     get consensus_weekly_path
     assert_response :success
@@ -145,7 +145,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create some test predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "rest_of_season", category: "must_have")
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "rest_of_season", category: "target")
 
     get consensus_rest_of_season_path
     assert_response :success
@@ -157,9 +157,9 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create rest of season predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "rest_of_season", category: "must_have")
-    Prediction.create!(user: @admin_user, player: @player, season_type: "rest_of_season", category: "must_have")
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "rest_of_season", category: "worse_than_expected")
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "rest_of_season", category: "target")
+    Prediction.create!(user: @admin_user, player: @player, season_type: "rest_of_season", category: "target")
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "rest_of_season", category: "avoid")
 
     get consensus_rest_of_season_path
     assert_response :success
@@ -192,7 +192,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin_user
 
     # Create test predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "rest_of_season", category: "must_have")
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "rest_of_season", category: "target")
 
     get consensus_rest_of_season_path
     assert_response :success
@@ -243,8 +243,8 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create predictions for different gameweeks
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "target", gameweek: @gameweek1)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "target", gameweek: @gameweek2)
 
     # Request week 1 consensus
     get consensus_weekly_path(week: 1)
@@ -262,8 +262,8 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @prophet_user
 
     # Create both weekly and rest of season predictions
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek2)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "rest_of_season", category: "must_have")
+    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "target", gameweek: @gameweek2)
+    Prediction.create!(user: @prophet_user, player: @player2, season_type: "rest_of_season", category: "target")
 
     get consensus_rest_of_season_path
     assert_response :success

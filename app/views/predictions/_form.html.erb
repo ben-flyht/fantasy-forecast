@@ -20,18 +20,7 @@
         { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:player_id].none?, "border-red-400 focus:outline-red-600": prediction.errors[:player_id].any?}] } %>
   </div>
 
-  <div class="my-5">
-    <%= form.label :season_type %>
-    <%= form.select :season_type,
-        options_for_select([
-          ['Weekly Prediction', 'weekly'],
-          ['Rest of Season', 'rest_of_season']
-        ], prediction.season_type),
-        { prompt: 'Select prediction type' },
-        { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:season_type].none?, "border-red-400 focus:outline-red-600": prediction.errors[:season_type].any?}] } %>
-  </div>
-
-  <div class="my-5" id="gameweek-info" style="<%= 'display: none;' unless prediction.weekly? %>">
+  <div class="my-5" id="gameweek-info">
     <% if defined?(@next_gameweek) && @next_gameweek %>
       <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
         <h3 class="font-medium text-blue-900 mb-2">Making predictions for:</h3>
@@ -59,9 +48,8 @@
     <%= form.label :category %>
     <%= form.select :category,
         options_for_select([
-          ['Must Have', 'must_have'],
-          ['Better Than Expected', 'better_than_expected'],
-          ['Worse Than Expected', 'worse_than_expected']
+          ['Target (Recommend)', 'target'],
+          ['Avoid (Don\'t Recommend)', 'avoid']
         ], prediction.category),
         { prompt: 'Select prediction category' },
         { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:category].none?, "border-red-400 focus:outline-red-600": prediction.errors[:category].any?}] } %>
@@ -72,19 +60,3 @@
   </div>
 <% end %>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const seasonTypeSelect = document.querySelector('#prediction_season_type');
-    const gameweekInfo = document.querySelector('#gameweek-info');
-
-    function toggleGameweekInfo() {
-      if (seasonTypeSelect.value === 'weekly') {
-        gameweekInfo.style.display = 'block';
-      } else {
-        gameweekInfo.style.display = 'none';
-      }
-    }
-
-    seasonTypeSelect.addEventListener('change', toggleGameweekInfo);
-  });
-</script>

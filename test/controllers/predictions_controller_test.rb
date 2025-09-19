@@ -26,7 +26,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       user: @prophet_user,
       player: @player,
       season_type: "weekly",
-      category: "must_have",
+      category: "target",
       gameweek: @gameweek
     )
   end
@@ -51,7 +51,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
         prediction: {
           player_id: @other_player.id,
           season_type: "weekly",
-          category: "better_than_expected"
+          category: "avoid"
         }
       }
     end
@@ -79,7 +79,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       prediction: {
         player_id: @prediction.player_id,
         season_type: @prediction.season_type,
-        category: "better_than_expected"
+        category: "avoid"
       }
     }
     assert_redirected_to prediction_url(@prediction)
@@ -103,7 +103,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       user: @admin_user,
       player: @other_player,
       season_type: "weekly",
-      category: "must_have",
+      category: "target",
     )
 
     sign_in @prophet_user
@@ -117,7 +117,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       user: @admin_user,
       player: @other_player,
       season_type: "weekly",
-      category: "must_have",
+      category: "target",
     )
 
     sign_in @prophet_user
@@ -125,7 +125,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       prediction: {
         player_id: other_user_prediction.player_id,
         season_type: other_user_prediction.season_type,
-        category: "worse_than_expected",
+        category: "avoid",
       }
     }
     assert_redirected_to predictions_url
@@ -137,7 +137,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       user: @admin_user,
       player: @other_player,
       season_type: "weekly",
-      category: "must_have",
+      category: "target",
     )
 
     sign_in @prophet_user
@@ -156,7 +156,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       user: @admin_user,
       player: @other_player,
       season_type: "rest_of_season",
-      category: "better_than_expected"
+      category: "avoid"
     )
 
     sign_in @admin_user
@@ -184,7 +184,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
       prediction: {
         player_id: @prediction.player_id,
         season_type: @prediction.season_type,
-        category: "worse_than_expected",
+        category: "avoid",
       }
     }
     assert_redirected_to predictions_url
@@ -213,7 +213,7 @@ class PredictionsControllerTest < ActionDispatch::IntegrationTest
         prediction: {
           player_id: @player.id,
           season_type: "weekly",
-          category: "must_have",
+          category: "target",
         }
       }
     end

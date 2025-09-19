@@ -30,12 +30,13 @@
           <%= link_to "Players", players_path, class: "text-gray-300 hover:text-white" %>
           <% if user_signed_in? %>
             <%= link_to "Predictions", predictions_path, class: "text-gray-300 hover:text-white" %>
-            <%= link_to "Consensus", consensus_weekly_path, class: "text-gray-300 hover:text-white" %>
+            <%= link_to "Make Predictions", new_prediction_path, class: "text-gray-300 hover:text-white" %>
+            <%= link_to "Consensus", consensus_index_path, class: "text-gray-300 hover:text-white" %>
           <% end %>
         </div>
         <div class="space-x-4">
           <% if user_signed_in? %>
-            <span>Welcome, <%= current_user.username %> (<%= current_user.role.humanize %>)</span>
+            <span>Welcome, <%= current_user.username %> (<%= current_user.role&.humanize || 'User' %>)</span>
             <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "bg-red-500 hover:bg-red-700 px-3 py-1 rounded" %>
           <% else %>
             <%= link_to "Login", new_user_session_path, class: "bg-blue-500 hover:bg-blue-700 px-3 py-1 rounded" %>

@@ -22,7 +22,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
     assert prediction.valid?
     assert_equal @user, prediction.user
@@ -33,7 +33,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
     assert prediction.valid?
     assert_equal @player, prediction.player
@@ -43,7 +43,7 @@ class PredictionTest < ActiveSupport::TestCase
     prediction = Prediction.new(
       user: @user,
       player: @player,
-      category: "must_have"
+      category: "target"
     )
     assert_not prediction.valid?
     assert_includes prediction.errors[:season_type], "can't be blank"
@@ -64,7 +64,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
     # Gameweek should be auto-assigned, so it should be valid
     assert prediction.valid?
@@ -76,7 +76,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "rest_of_season",
-      category: "must_have"
+      category: "target"
     )
     assert prediction.valid?
   end
@@ -87,7 +87,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have",
+      category: "target",
           )
 
     # Try to create duplicate prediction
@@ -95,7 +95,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "better_than_expected",  # Different category, but same user/player/week/season_type
+      category: "avoid",  # Different category, but same user/player/week/season_type
           )
 
     assert_not prediction2.valid?
@@ -110,7 +110,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have",
+      category: "target",
           )
 
     # Different user should be able to predict same player/week
@@ -118,7 +118,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: user2,
       player: @player,
       season_type: "weekly",
-      category: "better_than_expected",
+      category: "avoid",
           )
 
     assert prediction2.valid?
@@ -130,7 +130,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
 
     # Same user should be able to predict same player for rest of season
@@ -138,7 +138,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "rest_of_season",
-      category: "better_than_expected"
+      category: "avoid"
     )
 
     assert prediction2.valid?
@@ -148,7 +148,7 @@ class PredictionTest < ActiveSupport::TestCase
     prediction = Prediction.new(
       user: @user,
       player: @player,
-      category: "must_have",
+      category: "target",
           )
 
     # Valid season types
@@ -183,14 +183,14 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
 
     pred2 = Prediction.create!(
       user: @user,
       player: players(:two),
       season_type: "rest_of_season",
-      category: "better_than_expected"
+      category: "avoid"
     )
 
     # Test scopes
@@ -216,21 +216,21 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
 
     pred2 = Prediction.create!(
       user: user2,
       player: player2,
       season_type: "weekly",
-      category: "better_than_expected"
+      category: "avoid"
     )
 
     pred3 = Prediction.create!(
       user: @user,
       player: @player,  # Changed to use @player so the for_player scope will include it
       season_type: "rest_of_season",
-      category: "worse_than_expected"
+      category: "avoid"
     )
 
     # Test for_week scope - both weekly predictions should be in the same week now
@@ -259,9 +259,9 @@ class PredictionTest < ActiveSupport::TestCase
     player2 = players(:two)
 
     # Create predictions for current gameweek
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: user2, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: @user, player: player2, season_type: "weekly", category: "better_than_expected")
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "target")
+    Prediction.create!(user: user2, player: @player, season_type: "weekly", category: "target")
+    Prediction.create!(user: @user, player: player2, season_type: "weekly", category: "avoid")
 
     consensus = Prediction.consensus_for_week(@next_gameweek.fpl_id)
     consensus_array = consensus.to_a
@@ -285,12 +285,12 @@ class PredictionTest < ActiveSupport::TestCase
     player2 = players(:two)
 
     # Create rest of season predictions
-    Prediction.create!(user: @user, player: @player, season_type: "rest_of_season", category: "must_have")
-    Prediction.create!(user: user2, player: @player, season_type: "rest_of_season", category: "must_have")
-    Prediction.create!(user: @user, player: player2, season_type: "rest_of_season", category: "worse_than_expected")
+    Prediction.create!(user: @user, player: @player, season_type: "rest_of_season", category: "target")
+    Prediction.create!(user: user2, player: @player, season_type: "rest_of_season", category: "target")
+    Prediction.create!(user: @user, player: player2, season_type: "rest_of_season", category: "avoid")
 
     # Create weekly prediction (should not be included)
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have")
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "target")
 
     consensus = Prediction.consensus_rest_of_season
     consensus_array = consensus.to_a
@@ -315,11 +315,11 @@ class PredictionTest < ActiveSupport::TestCase
 
     # Create multiple predictions for must_have category in current gameweek
     # @player gets 2 votes
-    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: user2, player: @player, season_type: "weekly", category: "must_have")
+    Prediction.create!(user: @user, player: @player, season_type: "weekly", category: "target")
+    Prediction.create!(user: user2, player: @player, season_type: "weekly", category: "target")
 
     # player2 gets 1 vote
-    Prediction.create!(user: @user, player: player2, season_type: "weekly", category: "must_have")
+    Prediction.create!(user: @user, player: player2, season_type: "weekly", category: "target")
 
     # Get top players for must_have category in current gameweek
     top_players = Prediction.top_players_by_category_for_week(@next_gameweek.fpl_id, "must_have", 10)
@@ -343,7 +343,7 @@ class PredictionTest < ActiveSupport::TestCase
     (1..5).each do |i|
       # Create a player with ID that doesn't conflict
       player = Player.create!(name: "Player #{i}", team: "Team #{i}", position: "FWD", fpl_id: 1000 + i)
-      Prediction.create!(user: @user, player: player, season_type: "weekly", category: "must_have")
+      Prediction.create!(user: @user, player: player, season_type: "weekly", category: "target")
     end
 
     # Test with limit of 3
@@ -359,7 +359,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
 
     assert prediction.valid?
@@ -374,7 +374,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
 
     assert_not prediction.valid?
@@ -386,7 +386,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "rest_of_season",
-      category: "must_have"
+      category: "target"
     )
 
     assert prediction.valid?
@@ -398,7 +398,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have"
+      category: "target"
     )
 
     prediction.valid? # Trigger validation to assign gameweek
@@ -427,7 +427,7 @@ class PredictionTest < ActiveSupport::TestCase
       user: @user,
       player: @player,
       season_type: "weekly",
-      category: "must_have",
+      category: "target",
       gameweek: manual_gameweek  # Manually set gameweek
     )
 

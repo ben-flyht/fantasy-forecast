@@ -2,6 +2,7 @@ class PredictionsController < ApplicationController
   before_action :set_prediction, only: %i[ show edit update destroy ]
   before_action :ensure_ownership, only: %i[ edit update destroy ]
   before_action :restrict_admin_edits, only: %i[ edit update destroy ]
+  before_action :authenticate_user!, except: %i[ index show ]
 
   # GET /predictions or /predictions.json
   def index
@@ -21,8 +22,18 @@ class PredictionsController < ApplicationController
 
   # GET /predictions/new
   def new
-    @prediction = current_user.predictions.build
     @next_gameweek = Gameweek.next_gameweek
+    @players_by_position = Player.order(:name).group_by(&:position)
+
+    # Get current user's predictions for the next gameweek
+    @current_predictions = if @next_gameweek
+      current_user.predictions
+                  .includes(:player)
+                  .where(gameweek: @next_gameweek)
+                  .group_by(&:category)
+    else
+      { "target" => [], "avoid" => [] }
+    end
   end
 
   # GET /predictions/1/edit
@@ -35,10 +46,8 @@ class PredictionsController < ApplicationController
     @prediction = current_user.predictions.build(prediction_params)
     @next_gameweek = Gameweek.next_gameweek
 
-    # For weekly predictions, ensure gameweek is set to next gameweek regardless of params
-    if @prediction.weekly?
-      @prediction.gameweek = @next_gameweek
-    end
+    # Ensure gameweek is set to next gameweek regardless of params
+    @prediction.gameweek = @next_gameweek
 
     respond_to do |format|
       if @prediction.save
@@ -74,6 +83,198 @@ class PredictionsController < ApplicationController
     end
   end
 
+  # PATCH /predictions/update_prediction (AJAX)
+  def update_prediction
+    @next_gameweek = Gameweek.next_gameweek
+
+    unless @next_gameweek
+      render json: { error: "No upcoming gameweek available" }, status: :unprocessable_entity
+      return
+    end
+
+    player_id = params[:player_id]
+    category = params[:category]
+    position = params[:position]
+    slot = params[:slot]
+
+    # Start a transaction to handle the update
+    ActiveRecord::Base.transaction do
+      if player_id.present?
+        # Check if this player is already selected anywhere for this gameweek
+        existing_prediction = current_user.predictions
+                                         .where(gameweek: @next_gameweek, player_id: player_id)
+                                         .first
+
+        if existing_prediction
+          # Player already selected, remove the existing prediction
+          existing_prediction.destroy!
+        end
+
+        # Create new prediction
+        current_user.predictions.create!(
+          player_id: player_id,
+          category: category,
+          gameweek: @next_gameweek
+        )
+      end
+    end
+
+    # Reload the data for the response
+    @players_by_position = Player.order(:name).group_by(&:position)
+    @current_predictions = if @next_gameweek
+      current_user.predictions
+                  .includes(:player)
+                  .where(gameweek: @next_gameweek)
+                  .group_by(&:category)
+    else
+      { "target" => [], "avoid" => [] }
+    end
+
+    respond_to do |format|
+      format.turbo_stream { render template: "predictions/sync_all" }
+      format.html { redirect_to new_prediction_path }
+    end
+
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
+    # Reload the data for error response
+    @players_by_position = Player.order(:name).group_by(&:position)
+    @current_predictions = if @next_gameweek
+      current_user.predictions
+                  .includes(:player)
+                  .where(gameweek: @next_gameweek)
+                  .group_by(&:category)
+    else
+      { "target" => [], "avoid" => [] }
+    end
+
+    respond_to do |format|
+      format.turbo_stream { render template: "predictions/sync_all" }
+    end
+  rescue => e
+    Rails.logger.error "General error: #{e.message}"
+    # Reload the data for error response
+    @players_by_position = Player.order(:name).group_by(&:position)
+    @current_predictions = if @next_gameweek
+      current_user.predictions
+                  .includes(:player)
+                  .where(gameweek: @next_gameweek)
+                  .group_by(&:category)
+    else
+      { "target" => [], "avoid" => [] }
+    end
+
+    respond_to do |format|
+      format.turbo_stream { render template: "predictions/sync_all" }
+    end
+  end
+
+  # POST /predictions/sync_all (AJAX)
+  def sync_all
+    @next_gameweek = Gameweek.next_gameweek
+
+    unless @next_gameweek
+      render json: { error: "No upcoming gameweek available" }, status: :unprocessable_entity
+      return
+    end
+
+    predictions_data = params[:predictions] || {}
+    Rails.logger.debug "Received predictions data: #{predictions_data.inspect}"
+
+    # Start a transaction to ensure all-or-nothing update
+    ActiveRecord::Base.transaction do
+      # Delete all existing predictions for this user and gameweek
+      current_user.predictions.where(gameweek: @next_gameweek).destroy_all
+
+      # Collect all player selections and deduplicate - process in reverse order
+      # so that later selections override earlier ones
+      selected_players = {}
+      predictions_to_create = []
+
+      # Process in reverse order: last selection wins
+      predictions_data.each do |category, positions|
+        positions.each do |position, slots|
+          slots.to_a.reverse.each do |slot, player_id|
+            next if player_id.blank?
+
+            # Skip if we've already processed this player (later selection wins)
+            if selected_players.key?(player_id)
+              Rails.logger.debug "Skipping duplicate player: #{player_id} in #{category} #{position} (already selected as #{selected_players[player_id]})"
+              next
+            end
+
+            selected_players[player_id] = "#{category} #{position} slot #{slot}"
+            predictions_to_create << {
+              player_id: player_id,
+              category: category,
+              gameweek: @next_gameweek
+            }
+          end
+        end
+      end
+
+      # Create deduplicated predictions
+      predictions_to_create.each do |prediction_attrs|
+        Rails.logger.debug "Creating prediction: user=#{current_user.id}, player=#{prediction_attrs[:player_id]}, category=#{prediction_attrs[:category]}, gameweek=#{@next_gameweek.id}"
+        current_user.predictions.create!(prediction_attrs)
+      end
+    end
+
+    # Return response based on request format
+    count = current_user.predictions.where(gameweek: @next_gameweek).count
+
+    # Reload the data for the response
+    @players_by_position = Player.order(:name).group_by(&:position)
+    @current_predictions = if @next_gameweek
+      current_user.predictions
+                  .includes(:player)
+                  .where(gameweek: @next_gameweek)
+                  .group_by(&:category)
+    else
+      { "target" => [], "avoid" => [] }
+    end
+
+    respond_to do |format|
+      format.json { render json: { success: true, count: count, message: "Synced #{count} predictions" } }
+      format.turbo_stream # Uses sync_all.turbo_stream.erb template
+    end
+
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
+    # Reload the data for error response
+    @players_by_position = Player.order(:name).group_by(&:position)
+    @current_predictions = if @next_gameweek
+      current_user.predictions
+                  .includes(:player)
+                  .where(gameweek: @next_gameweek)
+                  .group_by(&:category)
+    else
+      { "target" => [], "avoid" => [] }
+    end
+
+    respond_to do |format|
+      format.json { render json: { error: e.record.errors.full_messages.join(", ") }, status: :unprocessable_entity }
+      format.turbo_stream # Uses sync_all.turbo_stream.erb template
+    end
+  rescue => e
+    Rails.logger.error "General error: #{e.message}"
+    # Reload the data for error response
+    @players_by_position = Player.order(:name).group_by(&:position)
+    @current_predictions = if @next_gameweek
+      current_user.predictions
+                  .includes(:player)
+                  .where(gameweek: @next_gameweek)
+                  .group_by(&:category)
+    else
+      { "target" => [], "avoid" => [] }
+    end
+
+    respond_to do |format|
+      format.json { render json: { error: "An error occurred: #{e.message}" }, status: :unprocessable_entity }
+      format.turbo_stream # Uses sync_all.turbo_stream.erb template
+    end
+  end
+
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_prediction
@@ -82,14 +283,9 @@ class PredictionsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def prediction_params
-      # Exclude week and gameweek_id for weekly predictions since they're auto-assigned
-      allowed_params = [ :player_id, :season_type, :category ]
-
-      # Only allow week for rest_of_season predictions (though it's not used)
-      prediction_data = params.expect(prediction: allowed_params)
-
-      # Prevent tampering with gameweek_id by never allowing it in params
-      prediction_data.except(:gameweek_id, :week)
+      # Only allow player_id and category since gameweek is auto-assigned
+      allowed_params = [ :player_id, :category ]
+      params.expect(prediction: allowed_params)
     end
 
     # Ensure only the prediction owner can edit/delete

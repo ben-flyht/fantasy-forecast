@@ -1,6 +1,15 @@
 class Player < ApplicationRecord
-  # Enum for position
-  enum :position, { GK: 0, DEF: 1, MID: 2, FWD: 3 }
+  POSITION_GK = "GK".freeze
+  POSITION_DEF = "DEF".freeze
+  POSITION_MID = "MID".freeze
+  POSITION_FWD = "FWD".freeze
+
+  enum :position, {
+    goalkeeper: POSITION_GK,
+    defender: POSITION_DEF,
+    midfielder: POSITION_MID,
+    forward: POSITION_FWD
+  }
 
   # Validations
   validates :name, presence: true

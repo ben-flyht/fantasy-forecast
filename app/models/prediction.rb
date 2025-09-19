@@ -1,60 +1,56 @@
 class Prediction < ApplicationRecord
   belongs_to :user
   belongs_to :player
-  belongs_to :gameweek, optional: true
+  belongs_to :gameweek
 
-  # Enums
-  enum :season_type, { weekly: 0, rest_of_season: 1 }
-  enum :category, { must_have: 0, better_than_expected: 1, worse_than_expected: 2 }
+  CATEGORY_TARGET = "target".freeze
+  CATEGORY_AVOID = "avoid".freeze
+
+  enum :category, {
+    target: CATEGORY_TARGET,
+    avoid: CATEGORY_AVOID
+  }
 
   # Callbacks
-  before_validation :assign_next_gameweek!, if: :weekly?
+  before_validation :assign_next_gameweek!
 
   # Validations
-  validates :gameweek, presence: true, if: :weekly?
-  validates :season_type, presence: true
   validates :category, presence: true
 
-  # Uniqueness constraint: one prediction per user/player/gameweek/season_type
-  validates :user_id, uniqueness: { scope: [ :player_id, :gameweek_id, :season_type ] }
+  # Uniqueness constraint: one prediction per user/player/gameweek
+  validates :user_id, uniqueness: { scope: [ :player_id, :gameweek_id ] }
 
   # Scopes
   scope :by_category, ->(cat) { where(category: cat) }
   scope :by_gameweek, ->(gameweek_id) { where(gameweek_id: gameweek_id) }
-  scope :weekly_predictions, -> { where(season_type: :weekly) }
-  scope :season_predictions, -> { where(season_type: :rest_of_season) }
-
-  # Additional scopes for querying
   scope :for_gameweek, ->(gameweek_id) { where(gameweek_id: gameweek_id) }
-  scope :for_season_type, ->(season_type) { where(season_type: season_type) }
   scope :for_player, ->(player_id) { where(player_id: player_id) }
   scope :for_user, ->(user_id) { where(user_id: user_id) }
 
-  # Backwards compatibility - map week to gameweek fpl_id
+  # Map week to gameweek fpl_id
   scope :by_week, ->(week) { joins(:gameweek).where(gameweeks: { fpl_id: week }) }
   scope :for_week, ->(week) { joins(:gameweek).where(gameweeks: { fpl_id: week }) }
 
-  # Class methods for aggregation
-  def self.consensus_for_week(week)
-    joins(:gameweek).where(gameweeks: { fpl_id: week })
-      .group(:player_id, :category)
-      .select("player_id, category, COUNT(*) as count")
-      .order("count DESC")
+  # Class methods for consensus scoring (+1 for target, -1 for avoid)
+  def self.consensus_scores_for_week(week)
+    joins(:gameweek, :player)
+      .where(gameweeks: { fpl_id: week })
+      .group("players.id, players.name, players.team, players.position")
+      .select("
+        players.id as player_id,
+        players.name,
+        players.team,
+        players.position,
+        SUM(CASE WHEN category = 'target' THEN 1 WHEN category = 'avoid' THEN -1 ELSE 0 END) as consensus_score,
+        COUNT(*) as total_predictions
+      ")
+      .order("consensus_score DESC, total_predictions DESC")
   end
 
-  def self.consensus_rest_of_season
-    where(season_type: "rest_of_season")
-      .group(:player_id, :category)
-      .select("player_id, category, COUNT(*) as count")
-      .order("count DESC")
-  end
-
-  def self.top_players_by_category_for_week(week, category, limit = 10)
-    joins(:gameweek).where(gameweeks: { fpl_id: week }, category: category)
-      .group(:player_id)
-      .select("player_id, COUNT(*) as count")
-      .order("count DESC")
-      .limit(limit)
+  def self.consensus_scores_for_week_by_position(week, position = nil)
+    query = consensus_scores_for_week(week)
+    query = query.where(players: { position: position }) if position.present?
+    query
   end
 
   # Class method for auto-assignment
@@ -67,7 +63,6 @@ class Prediction < ApplicationRecord
 
   # Instance method for auto-assignment
   def assign_next_gameweek!
-    return unless weekly?
     return if gameweek.present?  # Don't override if gameweek is already set
 
     next_gameweek = Gameweek.next_gameweek
@@ -77,4 +72,5 @@ class Prediction < ApplicationRecord
       errors.add(:gameweek, "No next gameweek available")
     end
   end
+
 end

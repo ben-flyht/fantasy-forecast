@@ -1,9 +1,51 @@
-<% content_for :title, "New prediction" %>
+<% content_for :title, "Make Predictions" %>
 
-<div class="md:w-2/3 w-full">
-  <h1 class="font-bold text-4xl">New prediction</h1>
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-4">Make Your Predictions</h1>
 
-  <%= render "form", prediction: @prediction %>
+    <% if @next_gameweek %>
+      <!-- Gameweek Info -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+        <h3 class="font-semibold text-blue-900 mb-2">Making predictions for:</h3>
+        <p class="text-blue-800 text-lg"><strong><%= @next_gameweek.name %></strong></p>
+        <p class="text-sm text-blue-600 mt-1">
+          Starts: <%= @next_gameweek.start_time.strftime("%b %d, %Y at %l:%M %p") %>
+        </p>
+        <% if @next_gameweek.end_time %>
+          <p class="text-sm text-blue-600">
+            Ends: <%= @next_gameweek.end_time.strftime("%b %d, %Y at %l:%M %p") %>
+          </p>
+        <% end %>
+      </div>
 
-  <%= link_to "Back to predictions", predictions_path, class: "w-full sm:w-auto text-center mt-2 sm:mt-0 sm:ml-2 rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+      <!-- Instructions -->
+      <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+        <h3 class="font-medium text-gray-900 mb-2">Instructions:</h3>
+        <p class="text-sm text-gray-700">
+          Select up to 3 players for each category and position. Your selections are saved automatically.
+        </p>
+      </div>
+
+      <!-- Predictions Table -->
+      <%= turbo_frame_tag "predictions_form" do %>
+        <%= render "predictions_form" %>
+      <% end %>
+
+      <!-- Hidden Submit Button for Accessibility -->
+      <button type="submit" style="opacity: 0; position: absolute; left: -9999px;">Submit Predictions</button>
+
+    <% else %>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <h3 class="font-medium text-yellow-900 mb-2">No Upcoming Gameweek</h3>
+        <p class="text-yellow-800">
+          No upcoming gameweek is available for predictions. Please contact an administrator to sync gameweeks from the FPL API.
+        </p>
+      </div>
+    <% end %>
+
+    <div class="mt-6">
+      <%= link_to "Back to predictions", predictions_path, class: "rounded-md px-3.5 py-2.5 bg-gray-600 hover:bg-gray-500 text-white font-medium" %>
+    </div>
+  </div>
 </div>

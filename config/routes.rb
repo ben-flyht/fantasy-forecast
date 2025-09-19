@@ -1,12 +1,17 @@
 Rails.application.routes.draw do
-  resources :predictions
+  resources :predictions do
+    collection do
+      post :sync_all
+      patch :update_prediction
+    end
+  end
   resources :players
   devise_for :users
   root "home#index"
 
   # Consensus routes
+  get "/consensus", to: "consensus#index", as: :consensus_index
   get "/consensus/weekly(/:week)", to: "consensus#weekly", as: :consensus_weekly
-  get "/consensus/rest_of_season", to: "consensus#rest_of_season", as: :consensus_rest_of_season
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

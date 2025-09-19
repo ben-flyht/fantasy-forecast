@@ -1,0 +1,130 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-4"><%= @page_title %></h1>
+
+    <!-- Week and Position Filters -->
+    <div class="flex flex-wrap gap-4 mb-6">
+      <!-- Week Selector -->
+      <div class="flex items-center space-x-2">
+        <label for="week-select" class="text-sm font-medium text-gray-700">Week:</label>
+        <%= select_tag :week,
+            options_for_select(@available_weeks.map { |w| [w, w] }, @week),
+            {
+              id: "week-select",
+              class: "border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+              onchange: "updateFilters()"
+            } %>
+      </div>
+
+      <!-- Position Filter -->
+      <div class="flex items-center space-x-2">
+        <label for="position-select" class="text-sm font-medium text-gray-700">Position:</label>
+        <%= select_tag :position,
+            options_for_select([["All Positions", ""]] + @available_positions.map { |p| [p, p] }, @position_filter),
+            {
+              id: "position-select",
+              class: "border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+              onchange: "updateFilters()"
+            } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consensus Rankings Table -->
+  <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-800">Consensus Rankings</h2>
+      <p class="text-sm text-gray-600 mt-1">
+        Scoring: +1 for each "Target" vote, -1 for each "Avoid" vote
+      </p>
+    </div>
+
+    <% if @consensus_rankings.any? %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Rank
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Player
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Team
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Position
+              </th>
+              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Consensus Score
+              </th>
+              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total Votes
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @consensus_rankings.each_with_index do |ranking, index| %>
+              <tr class="<%= 'bg-green-50' if ranking.consensus_score > 0 %><%= 'bg-red-50' if ranking.consensus_score < 0 %>">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <%= index + 1 %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900"><%= ranking.name %></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= ranking.team %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <%= case ranking.position
+                        when "goalkeeper" then "GK"
+                        when "defender" then "DEF"
+                        when "midfielder" then "MID"
+                        when "forward" then "FWD"
+                        else ranking.position
+                        end %>
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <span class="text-lg font-bold <%= ranking.consensus_score > 0 ? 'text-green-600' : ranking.consensus_score < 0 ? 'text-red-600' : 'text-gray-500' %>">
+                    <%= ranking.consensus_score > 0 ? "+#{ranking.consensus_score}" : ranking.consensus_score %>
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                  <%= ranking.total_predictions %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="px-6 py-8 text-center">
+        <div class="text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+            <path d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.713-3.714M14 40v-4c0-1.313.253-2.566.713-3.714m0 0A9.971 9.971 0 0124 24c4.004 0 7.625 2.31 9.287 5.286" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No predictions yet</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            No consensus data available for week <%= @week %><%= " (#{@position_filter})" if @position_filter.present? %>.
+          </p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  function updateFilters() {
+    const week = document.getElementById('week-select').value;
+    const position = document.getElementById('position-select').value;
+
+    const params = new URLSearchParams();
+    if (week) params.append('week', week);
+    if (position) params.append('position', position);
+
+    window.location.href = '<%= consensus_index_path %>?' + params.toString();
+  }
+</script>
