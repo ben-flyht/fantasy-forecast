@@ -23,7 +23,34 @@
   </head>
 
   <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+    <nav class="bg-gray-800 text-white p-4">
+      <div class="container mx-auto flex justify-between items-center">
+        <%= link_to "FantasyProphet", root_path, class: "text-xl font-bold" %>
+        <div class="space-x-4">
+          <% if user_signed_in? %>
+            <span>Welcome, <%= current_user.username %> (<%= current_user.role.humanize %>)</span>
+            <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "bg-red-500 hover:bg-red-700 px-3 py-1 rounded" %>
+          <% else %>
+            <%= link_to "Login", new_user_session_path, class: "bg-blue-500 hover:bg-blue-700 px-3 py-1 rounded" %>
+            <%= link_to "Sign Up", new_user_registration_path, class: "bg-green-500 hover:bg-green-700 px-3 py-1 rounded" %>
+          <% end %>
+        </div>
+      </div>
+    </nav>
+
+    <% if notice %>
+      <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
+        <%= notice %>
+      </div>
+    <% end %>
+
+    <% if alert %>
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
+        <%= alert %>
+      </div>
+    <% end %>
+
+    <main class="container mx-auto mt-8 px-5">
       <%= yield %>
     </main>
   </body>
