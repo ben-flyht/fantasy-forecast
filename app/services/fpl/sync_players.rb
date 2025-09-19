@@ -73,18 +73,21 @@ module Fpl
       # Skip if we can't determine position or team
       next unless position && team
 
+      ownership_percentage = element["selected_by_percent"].to_f
+
       player_attributes = {
         name: name,
         short_name: short_name,
         team: team,
-        position: position
+        position: position,
+        ownership_percentage: ownership_percentage
       }
 
       player = Player.find_or_initialize_by(fpl_id: fpl_id)
       player.assign_attributes(player_attributes)
 
       if player.save
-        Rails.logger.debug "Synced player: #{name} (#{short_name}) (#{team}, #{position})"
+        Rails.logger.debug "Synced player: #{name} (#{short_name}) (#{team}, #{position}, #{ownership_percentage}% owned)"
       else
         Rails.logger.warn "Failed to sync player #{name}: #{player.errors.full_messages.join(', ')}"
       end

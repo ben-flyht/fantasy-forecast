@@ -23,7 +23,7 @@ class PredictionsController < ApplicationController
   # GET /predictions/new
   def new
     @next_gameweek = Gameweek.next_gameweek
-    @players_by_position = Player.order(:name).group_by(&:position)
+    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
 
     # Get current user's predictions for the next gameweek
     @current_predictions = if @next_gameweek
@@ -120,7 +120,7 @@ class PredictionsController < ApplicationController
     end
 
     # Reload the data for the response
-    @players_by_position = Player.order(:name).group_by(&:position)
+    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
     @current_predictions = if @next_gameweek
       current_user.predictions
                   .includes(:player)
@@ -138,7 +138,7 @@ class PredictionsController < ApplicationController
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
-    @players_by_position = Player.order(:name).group_by(&:position)
+    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
     @current_predictions = if @next_gameweek
       current_user.predictions
                   .includes(:player)
@@ -154,7 +154,7 @@ class PredictionsController < ApplicationController
   rescue => e
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
-    @players_by_position = Player.order(:name).group_by(&:position)
+    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
     @current_predictions = if @next_gameweek
       current_user.predictions
                   .includes(:player)
@@ -224,7 +224,7 @@ class PredictionsController < ApplicationController
     count = current_user.predictions.where(gameweek: @next_gameweek).count
 
     # Reload the data for the response
-    @players_by_position = Player.order(:name).group_by(&:position)
+    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
     @current_predictions = if @next_gameweek
       current_user.predictions
                   .includes(:player)
@@ -242,7 +242,7 @@ class PredictionsController < ApplicationController
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
-    @players_by_position = Player.order(:name).group_by(&:position)
+    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
     @current_predictions = if @next_gameweek
       current_user.predictions
                   .includes(:player)
@@ -259,7 +259,7 @@ class PredictionsController < ApplicationController
   rescue => e
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
-    @players_by_position = Player.order(:name).group_by(&:position)
+    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
     @current_predictions = if @next_gameweek
       current_user.predictions
                   .includes(:player)

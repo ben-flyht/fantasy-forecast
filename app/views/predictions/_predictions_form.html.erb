@@ -44,7 +44,7 @@
                       <%= 'selected' if selected_target_player&.player_id == player.id %>
                       <%= 'disabled' if all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id %>
                     >
-                      <%= player.name %> (<%= player.team %>)<%= all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id ? ' (Selected)' : '' %>
+                      <%= player.name %> (<%= player.team %>, <%= player.ownership_percentage %>%)<%= all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id ? ' (Selected)' : '' %>
                     </option>
                   <% end %>
                 </select>
@@ -71,7 +71,7 @@
                       <%= 'selected' if selected_avoid_player&.player_id == player.id %>
                       <%= 'disabled' if all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id %>
                     >
-                      <%= player.name %> (<%= player.team %>)<%= all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id ? ' (Selected)' : '' %>
+                      <%= player.name %> (<%= player.team %>, <%= player.ownership_percentage %>%)<%= all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id ? ' (Selected)' : '' %>
                     </option>
                   <% end %>
                 </select>
