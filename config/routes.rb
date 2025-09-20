@@ -5,7 +5,6 @@ Rails.application.routes.draw do
       patch :update_forecast
     end
   end
-  resources :players
   devise_for :users
   root "home#index"
 

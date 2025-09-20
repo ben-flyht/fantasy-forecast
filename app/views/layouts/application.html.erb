@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Fantasy Forecast" %></title>
+    <title><%= content_for(:title) || "Fantasy⚡Forecast" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -23,23 +23,22 @@
   </head>
 
   <body>
-    <nav class="bg-gray-800 text-white p-4">
+    <nav class="bg-white text-gray-800 p-4 border-b border-gray-200">
       <div class="container mx-auto flex justify-between items-center">
         <div class="flex items-center space-x-6">
-          <%= link_to "Fantasy Forecast", root_path, class: "text-xl font-bold" %>
-          <%= link_to "Players", players_path, class: "text-gray-300 hover:text-white" %>
+          <%= link_to "Fantasy⚡Forecast", root_path, class: "text-xl font-bold" %>
           <% if user_signed_in? %>
-            <%= link_to "Forecasts", forecasts_path, class: "text-gray-300 hover:text-white" %>
-            <%= link_to "Make Forecasts", new_forecast_path, class: "text-gray-300 hover:text-white" %>
-            <%= link_to "Consensus", consensus_index_path, class: "text-gray-300 hover:text-white" %>
+            <%= link_to "Forecasts", forecasts_path, class: "text-gray-600 hover:text-gray-800" %>
+            <%= link_to "Make Forecasts", new_forecast_path, class: "text-gray-600 hover:text-gray-800" %>
+            <%= link_to "Consensus", consensus_index_path, class: "text-gray-600 hover:text-gray-800" %>
           <% end %>
         </div>
         <div class="space-x-4">
           <% if user_signed_in? %>
             <span>Welcome, <%= current_user.username %> (<%= current_user.role&.humanize || 'User' %>)</span>
-            <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "bg-red-500 hover:bg-red-700 px-3 py-1 rounded" %>
+            <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-1 rounded" %>
           <% else %>
-            <%= link_to "Login", new_user_session_path, class: "bg-blue-500 hover:bg-blue-700 px-3 py-1 rounded" %>
+            <%= link_to "Login", new_user_session_path, class: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-1 rounded" %>
             <%= link_to "Sign Up", new_user_registration_path, class: "bg-green-500 hover:bg-green-700 px-3 py-1 rounded" %>
           <% end %>
         </div>
