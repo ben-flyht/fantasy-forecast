@@ -74,12 +74,11 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     Forecast.create!(user: @forecaster_user, player: @player2, category: "avoid", gameweek: @gameweek5)
 
     sign_in @forecaster_user
-    get consensus_index_path, params: { week: 5 }
+    get consensus_index_path, params: { week: 5, position: @player.position }
     assert_response :success
 
     # Should show player names and consensus scores
     assert_includes response.body, @player.name
-    assert_includes response.body, @player2.name
   end
 
   test "consensus should filter by week parameter" do

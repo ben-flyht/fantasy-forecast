@@ -1,3 +1,14 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="256" cy="256" r="256" fill="red"/>
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="lightning-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFEB3B"/>
+      <stop offset="100%" style="stop-color:#FFC107"/>
+    </linearGradient>
+  </defs>
+  <!-- Classic lightning bolt shape like ⚡ -->
+  <path d="M 320 60 L 200 240 L 280 240 L 260 450 L 380 270 L 300 270 L 320 60 Z"
+        fill="url(#lightning-grad)"
+        stroke="#FF8F00"
+        stroke-width="6"
+        stroke-linejoin="round"/>
 </svg>

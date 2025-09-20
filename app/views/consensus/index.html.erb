@@ -16,16 +16,19 @@
             } %>
       </div>
 
-      <!-- Position Filter -->
+      <!-- Position Buttons -->
       <div class="flex items-center space-x-2">
-        <label for="position-select" class="text-sm font-medium text-gray-700">Position:</label>
-        <%= select_tag :position,
-            options_for_select([["All Positions", ""]] + @available_positions.map { |p| [p, p] }, @position_filter),
-            {
-              id: "position-select",
-              class: "border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
-              onchange: "updateFilters()"
-            } %>
+        <span class="text-sm font-medium text-gray-700">Position:</span>
+        <div class="flex space-x-2">
+          <% @available_positions.each do |position| %>
+            <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
+            <% is_active = @position_filter == position %>
+            <%= link_to consensus_index_path(week: @week, position: position),
+                class: "px-3 py-2 text-xs font-medium rounded-md border transition-colors #{is_active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}" do %>
+              <%= position_config[:display_name] %>
+            <% end %>
+          <% end %>
+        </div>
       </div>
     </div>
   </div>
@@ -108,7 +111,7 @@
           </svg>
           <h3 class="mt-2 text-sm font-medium text-gray-900">No predictions yet</h3>
           <p class="mt-1 text-sm text-gray-500">
-            No consensus data available for week <%= @week %><%= " (#{@position_filter})" if @position_filter.present? %>.
+            No consensus data available for week <%= @week %><%= " (#{@position_filter.capitalize}s)" if @position_filter.present? %>.
           </p>
         </div>
       </div>
@@ -119,7 +122,7 @@
 <script>
   function updateFilters() {
     const week = document.getElementById('week-select').value;
-    const position = document.getElementById('position-select').value;
+    const position = '<%= @position_filter %>';
 
     const params = new URLSearchParams();
     if (week) params.append('week', week);
