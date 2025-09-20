@@ -8,7 +8,9 @@
       </tr>
     </thead>
     <tbody class="bg-white divide-y divide-gray-200">
-      <% [["GK", "goalkeeper"], ["DEF", "defender"], ["MID", "midfielder"], ["FWD", "forward"]].each do |display_position, db_position| %>
+      <% FantasyForecast::POSITION_CONFIG.each do |db_position, config| %>
+        <% display_position = config[:display_name] %>
+        <% slot_count = config[:slots] %>
         <% position_players = @players_by_position[db_position] || [] %>
         <% target_forecasts = (@current_forecasts["target"] || []).select { |f| f.player.position == db_position } %>
         <% avoid_forecasts = (@current_forecasts["avoid"] || []).select { |f| f.player.position == db_position } %>
@@ -17,12 +19,12 @@
         <% all_selected_player_ids = ((@current_forecasts["target"] || []) + (@current_forecasts["avoid"] || [])).map(&:player_id) %>
         <!-- DEBUG: <%= display_position %> - Target: [<%= target_player_ids.join(',') %>] Avoid: [<%= avoid_player_ids.join(',') %>] All: [<%= all_selected_player_ids.join(',') %>] -->
 
-        <% 3.times do |slot_index| %>
+        <% slot_count.times do |slot_index| %>
           <% selected_target_player = target_forecasts[slot_index] %>
           <% selected_avoid_player = avoid_forecasts[slot_index] %>
           <tr class="<%= 'border-t-2 border-gray-300' if slot_index == 0 %>">
             <% if slot_index == 0 %>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" rowspan="3">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" rowspan="<%= slot_count %>">
                 <%= display_position %>
               </td>
             <% end %>
