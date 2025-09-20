@@ -22,6 +22,8 @@ class ForecastsControllerTest < ActionDispatch::IntegrationTest
       is_finished: false
     )
 
+    @next_gameweek = @gameweek
+
     @forecast = Forecast.create!(
       user: @forecaster_user,
       player: @player,
@@ -175,5 +177,63 @@ class ForecastsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert Forecast.exists?(user: @forecaster_user, player: @other_player, category: "target")
+  end
+
+  test "update_forecast should replace selection in same slot without creating duplicates" do
+    sign_in @forecaster_user
+
+    # First, create a forecast for slot 0 of goalkeeper target
+    patch update_forecast_forecasts_url, params: {
+      player_id: @player.id,
+      category: "target",
+      position: "goalkeeper",
+      slot: "0"
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal 1, Forecast.where(user: @forecaster_user, gameweek: @next_gameweek).count
+    assert Forecast.exists?(user: @forecaster_user, player: @player, category: "target")
+
+    # Now change the selection in slot 0 to a different player
+    patch update_forecast_forecasts_url, params: {
+      player_id: @other_player.id,
+      category: "target",
+      position: "goalkeeper",
+      slot: "0"
+    }, as: :turbo_stream
+
+    assert_response :success
+    # Should still have only 1 forecast (old one replaced, not added)
+    assert_equal 1, Forecast.where(user: @forecaster_user, gameweek: @next_gameweek).count
+    # Should have the new player, not the old one
+    assert Forecast.exists?(user: @forecaster_user, player: @other_player, category: "target")
+    assert_not Forecast.exists?(user: @forecaster_user, player: @player, category: "target")
+  end
+
+  test "update_forecast should clear selection when player_id is empty" do
+    sign_in @forecaster_user
+
+    # First, create a forecast for slot 0 of goalkeeper target
+    patch update_forecast_forecasts_url, params: {
+      player_id: @player.id,
+      category: "target",
+      position: "goalkeeper",
+      slot: "0"
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal 1, Forecast.where(user: @forecaster_user, gameweek: @next_gameweek).count
+
+    # Now clear the selection in slot 0 by sending empty player_id
+    patch update_forecast_forecasts_url, params: {
+      player_id: "",
+      category: "target",
+      position: "goalkeeper",
+      slot: "0"
+    }, as: :turbo_stream
+
+    assert_response :success
+    # Should have no forecasts after clearing
+    assert_equal 0, Forecast.where(user: @forecaster_user, gameweek: @next_gameweek).count
   end
 end

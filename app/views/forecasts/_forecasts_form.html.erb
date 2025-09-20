@@ -12,8 +12,8 @@
         <% display_position = config[:display_name] %>
         <% slot_count = config[:slots] %>
         <% position_players = @players_by_position[db_position] || [] %>
-        <% target_forecasts = (@current_forecasts["target"] || []).select { |f| f.player.position == db_position } %>
-        <% avoid_forecasts = (@current_forecasts["avoid"] || []).select { |f| f.player.position == db_position } %>
+        <% target_forecasts = (@current_forecasts["target"] || []).select { |f| f.player.position == db_position }.sort_by(&:id) %>
+        <% avoid_forecasts = (@current_forecasts["avoid"] || []).select { |f| f.player.position == db_position }.sort_by(&:id) %>
         <% target_player_ids = target_forecasts.map(&:player_id) %>
         <% avoid_player_ids = avoid_forecasts.map(&:player_id) %>
         <% all_selected_player_ids = ((@current_forecasts["target"] || []) + (@current_forecasts["avoid"] || [])).map(&:player_id) %>

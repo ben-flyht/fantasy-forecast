@@ -32,6 +32,7 @@ class ForecastsController < ApplicationController
       current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
+                  .order(:id)
                   .group_by(&:category)
     else
       { "target" => [], "avoid" => [] }
@@ -97,19 +98,31 @@ class ForecastsController < ApplicationController
     player_id = params[:player_id]
     category = params[:category]
     position = params[:position]
-    slot = params[:slot]
+    slot = params[:slot].to_i
 
     # Start a transaction to handle the update
     ActiveRecord::Base.transaction do
-      if player_id.present?
-        # Check if this player is already selected anywhere for this gameweek
-        existing_forecast = current_user.forecasts
-                                         .where(gameweek: @next_gameweek, player_id: player_id)
-                                         .first
+      # Get all forecasts for this position and category, ordered consistently
+      position_forecasts = current_user.forecasts
+                                       .joins(:player)
+                                       .where(gameweek: @next_gameweek, category: category, players: { position: position })
+                                       .order(:id)
 
-        if existing_forecast
-          # Player already selected, remove the existing forecast
-          existing_forecast.destroy!
+      # If there's a forecast at this slot index, remove it
+      if position_forecasts[slot]
+        position_forecasts[slot].destroy!
+      end
+
+      # If a new player is selected, create the forecast
+      if player_id.present?
+        # Check if this player is already selected anywhere else for this gameweek
+        existing_elsewhere = current_user.forecasts
+                                          .where(gameweek: @next_gameweek, player_id: player_id)
+                                          .first
+
+        if existing_elsewhere
+          # Player already selected elsewhere, remove the existing forecast
+          existing_elsewhere.destroy!
         end
 
         # Create new forecast
@@ -127,6 +140,7 @@ class ForecastsController < ApplicationController
       current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
+                  .order(:id)
                   .group_by(&:category)
     else
       { "target" => [], "avoid" => [] }
@@ -145,6 +159,7 @@ class ForecastsController < ApplicationController
       current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
+                  .order(:id)
                   .group_by(&:category)
     else
       { "target" => [], "avoid" => [] }
@@ -161,6 +176,7 @@ class ForecastsController < ApplicationController
       current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
+                  .order(:id)
                   .group_by(&:category)
     else
       { "target" => [], "avoid" => [] }
@@ -231,6 +247,7 @@ class ForecastsController < ApplicationController
       current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
+                  .order(:id)
                   .group_by(&:category)
     else
       { "target" => [], "avoid" => [] }
@@ -249,6 +266,7 @@ class ForecastsController < ApplicationController
       current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
+                  .order(:id)
                   .group_by(&:category)
     else
       { "target" => [], "avoid" => [] }
@@ -266,6 +284,7 @@ class ForecastsController < ApplicationController
       current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
+                  .order(:id)
                   .group_by(&:category)
     else
       { "target" => [], "avoid" => [] }
