@@ -10,9 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_19_185941) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_20_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "forecasts", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "player_id", null: false
+    t.bigint "gameweek_id", null: false
+    t.string "category", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["gameweek_id"], name: "index_forecasts_on_gameweek_id"
+    t.index ["player_id"], name: "index_forecasts_on_player_id"
+    t.index ["user_id", "player_id", "gameweek_id"], name: "index_forecasts_on_unique_constraint", unique: true
+    t.index ["user_id"], name: "index_forecasts_on_user_id"
+  end
 
   create_table "gameweeks", force: :cascade do |t|
     t.integer "fpl_id", null: false
@@ -28,27 +41,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_19_185941) do
   end
 
   create_table "players", force: :cascade do |t|
-    t.string "name", null: false
+    t.string "first_name", null: false
+    t.string "last_name", null: false
     t.string "team", null: false
-    t.integer "fpl_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "short_name"
     t.string "position", null: false
+    t.string "short_name"
+    t.integer "fpl_id", null: false
     t.decimal "ownership_percentage", precision: 5, scale: 2, default: "0.0"
-    t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
-  end
-
-  create_table "predictions", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.bigint "player_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "gameweek_id", null: false
-    t.string "category", null: false
-    t.index ["gameweek_id"], name: "index_predictions_on_gameweek_id"
-    t.index ["player_id"], name: "index_predictions_on_player_id"
-    t.index ["user_id"], name: "index_predictions_on_user_id"
+    t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -58,7 +60,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_19_185941) do
     t.datetime "reset_password_sent_at"
     t.datetime "remember_created_at"
     t.string "username", null: false
-    t.integer "role", default: 0, null: false
+    t.string "role", default: "forecaster", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
@@ -66,7 +68,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_19_185941) do
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
-  add_foreign_key "predictions", "gameweeks"
-  add_foreign_key "predictions", "players"
-  add_foreign_key "predictions", "users"
+  add_foreign_key "forecasts", "gameweeks"
+  add_foreign_key "forecasts", "players"
+  add_foreign_key "forecasts", "users"
 end

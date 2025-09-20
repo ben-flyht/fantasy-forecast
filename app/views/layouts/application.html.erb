@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Fantasyprophet" %></title>
+    <title><%= content_for(:title) || "Fantasy Forecast" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -26,11 +26,11 @@
     <nav class="bg-gray-800 text-white p-4">
       <div class="container mx-auto flex justify-between items-center">
         <div class="flex items-center space-x-6">
-          <%= link_to "FantasyProphet", root_path, class: "text-xl font-bold" %>
+          <%= link_to "Fantasy Forecast", root_path, class: "text-xl font-bold" %>
           <%= link_to "Players", players_path, class: "text-gray-300 hover:text-white" %>
           <% if user_signed_in? %>
-            <%= link_to "Predictions", predictions_path, class: "text-gray-300 hover:text-white" %>
-            <%= link_to "Make Predictions", new_prediction_path, class: "text-gray-300 hover:text-white" %>
+            <%= link_to "Forecasts", forecasts_path, class: "text-gray-300 hover:text-white" %>
+            <%= link_to "Make Forecasts", new_forecast_path, class: "text-gray-300 hover:text-white" %>
             <%= link_to "Consensus", consensus_index_path, class: "text-gray-300 hover:text-white" %>
           <% end %>
         </div>

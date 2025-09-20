@@ -1,10 +1,10 @@
 require "application_system_test_case"
 
 class UserAuthenticationTest < ApplicationSystemTestCase
-  test "prophet can sign up" do
+  test "forecaster can sign up" do
     visit new_user_registration_path
 
-    fill_in "Username", with: "TestProphet"
+    fill_in "Username", with: "TestForecaster"
     fill_in "Email", with: "test@example.com"
     fill_in "Password", with: "password123"
     fill_in "Password confirmation", with: "password123"
@@ -16,23 +16,23 @@ class UserAuthenticationTest < ApplicationSystemTestCase
     # Verify user was created with correct role
     user = User.find_by(email: "test@example.com")
     assert user.present?
-    assert user.prophet?
-    assert_equal "TestProphet", user.username
+    assert user.forecaster?
+    assert_equal "TestForecaster", user.username
   end
 
-  test "prophet can log in and log out" do
+  test "forecaster can log in and log out" do
     # Create a test user first
     user = User.create!(
-      email: "prophet@test.com",
-      username: "TestProphet",
+      email: "forecaster@test.com",
+      username: "TestForecaster",
       password: "password123",
-      role: "prophet"
+      role: "forecaster"
     )
 
     # Test login
     visit new_user_session_path
 
-    fill_in "Email", with: "prophet@test.com"
+    fill_in "Email", with: "forecaster@test.com"
     fill_in "Password", with: "password123"
 
     click_button "Log in"

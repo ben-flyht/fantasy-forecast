@@ -16,16 +16,16 @@ admin_user = User.find_or_create_by!(email: "admin@example.com") do |user|
   user.role = "admin"
 end
 
-prophet_user = User.find_or_create_by!(email: "prophet@example.com") do |user|
-  user.username = "ProphetUser"
+forecaster_user = User.find_or_create_by!(email: "forecaster@example.com") do |user|
+  user.username = "ForecasterUser"
   user.password = "password123"
   user.password_confirmation = "password123"
-  user.role = "prophet"
+  user.role = "forecaster"
 end
 
 puts "Created users:"
 puts "Admin: #{admin_user.email} (#{admin_user.username}) - Role: #{admin_user.role}"
-puts "Prophet: #{prophet_user.email} (#{prophet_user.username}) - Role: #{prophet_user.role}"
+puts "Forecaster: #{forecaster_user.email} (#{forecaster_user.username}) - Role: #{forecaster_user.role}"
 
 # Sync players from FPL API
 puts "\nSyncing players from FPL API..."
@@ -36,23 +36,24 @@ else
 
   # Fallback to static data if API sync fails
   players_data = [
-    { name: "Erling Haaland", short_name: "Haaland", team: "Manchester City", position: "FWD", fpl_id: 233 },
-    { name: "Mohamed Salah", short_name: "Salah", team: "Liverpool", position: "FWD", fpl_id: 253 },
-    { name: "Harry Kane", short_name: "Kane", team: "Tottenham Hotspur", position: "FWD", fpl_id: 427 },
-    { name: "Kevin De Bruyne", short_name: "De Bruyne", team: "Manchester City", position: "MID", fpl_id: 218 },
-    { name: "Bruno Fernandes", short_name: "B.Fernandes", team: "Manchester United", position: "MID", fpl_id: 290 },
-    { name: "Virgil van Dijk", short_name: "van Dijk", team: "Liverpool", position: "DEF", fpl_id: 4 },
-    { name: "Ruben Dias", short_name: "Dias", team: "Manchester City", position: "DEF", fpl_id: 239 },
-    { name: "Trent Alexander-Arnold", short_name: "Alexander-Arnold", team: "Liverpool", position: "DEF", fpl_id: 252 },
-    { name: "Alisson", short_name: "Alisson", team: "Liverpool", position: "GK", fpl_id: 254 },
-    { name: "Ederson", short_name: "Ederson", team: "Manchester City", position: "GK", fpl_id: 259 },
-    { name: "Bukayo Saka", short_name: "Saka", team: "Arsenal", position: "MID", fpl_id: 356 },
-    { name: "Gabriel Jesus", short_name: "Jesus", team: "Arsenal", position: "FWD", fpl_id: 247 }
+    { first_name: "Erling", last_name: "Haaland", short_name: "Haaland", team: "Manchester City", position: "forward", fpl_id: 233 },
+    { first_name: "Mohamed", last_name: "Salah", short_name: "Salah", team: "Liverpool", position: "forward", fpl_id: 253 },
+    { first_name: "Harry", last_name: "Kane", short_name: "Kane", team: "Tottenham Hotspur", position: "forward", fpl_id: 427 },
+    { first_name: "Kevin", last_name: "De Bruyne", short_name: "De Bruyne", team: "Manchester City", position: "midfielder", fpl_id: 218 },
+    { first_name: "Bruno", last_name: "Fernandes", short_name: "B.Fernandes", team: "Manchester United", position: "midfielder", fpl_id: 290 },
+    { first_name: "Virgil", last_name: "van Dijk", short_name: "van Dijk", team: "Liverpool", position: "defender", fpl_id: 4 },
+    { first_name: "Ruben", last_name: "Dias", short_name: "Dias", team: "Manchester City", position: "defender", fpl_id: 239 },
+    { first_name: "Trent", last_name: "Alexander-Arnold", short_name: "Alexander-Arnold", team: "Liverpool", position: "defender", fpl_id: 252 },
+    { first_name: "Alisson", last_name: "Becker", short_name: "Alisson", team: "Liverpool", position: "goalkeeper", fpl_id: 254 },
+    { first_name: "Ederson", last_name: "Moraes", short_name: "Ederson", team: "Manchester City", position: "goalkeeper", fpl_id: 259 },
+    { first_name: "Bukayo", last_name: "Saka", short_name: "Saka", team: "Arsenal", position: "midfielder", fpl_id: 356 },
+    { first_name: "Gabriel", last_name: "Jesus", short_name: "Jesus", team: "Arsenal", position: "forward", fpl_id: 247 }
   ]
 
   players_data.each do |player_data|
     player = Player.find_or_create_by!(fpl_id: player_data[:fpl_id]) do |p|
-      p.name = player_data[:name]
+      p.first_name = player_data[:first_name]
+      p.last_name = player_data[:last_name]
       p.short_name = player_data[:short_name]
       p.team = player_data[:team]
       p.position = player_data[:position]
@@ -74,87 +75,96 @@ else
   puts "FPL gameweek sync failed"
 end
 
-# Create sample predictions for demonstration and testing
-prophet_user = User.find_by(email: "prophet@example.com")
+# Create sample forecasts for demonstration and testing
+forecaster_user = User.find_by(email: "forecaster@example.com")
 admin_user = User.find_by(email: "admin@example.com")
 
-if prophet_user && admin_user && Player.any?
-  puts "\nCreating sample predictions for users..."
+if forecaster_user && admin_user && Player.any?
+  puts "\nCreating sample forecasts for users..."
 
-  # Clear existing predictions
-  Prediction.destroy_all
+  # Clear existing forecasts
+  Forecast.destroy_all
 
   # Get sample players
   sample_players = Player.limit(15).order(:name)
 
-  # Create additional prophet users for consensus testing
-  prophet2 = User.find_or_create_by!(email: "prophet2@example.com") do |user|
-    user.username = "Prophet2"
+  # Create additional forecaster users for consensus testing
+  forecaster2 = User.find_or_create_by!(email: "forecaster2@example.com") do |user|
+    user.username = "Forecaster2"
     user.password = "password123"
     user.password_confirmation = "password123"
-    user.role = "prophet"
+    user.role = "forecaster"
   end
 
-  prophet3 = User.find_or_create_by!(email: "prophet3@example.com") do |user|
-    user.username = "Prophet3"
+  forecaster3 = User.find_or_create_by!(email: "forecaster3@example.com") do |user|
+    user.username = "Forecaster3"
     user.password = "password123"
     user.password_confirmation = "password123"
-    user.role = "prophet"
+    user.role = "forecaster"
   end
 
-  # Prediction data for multiple users to demonstrate consensus
-  predictions_data = [
-    # Week 1 predictions - show consensus
-    { user: prophet_user, player: sample_players[0], week: 1, season_type: "weekly", category: "must_have" },
-    { user: prophet2, player: sample_players[0], week: 1, season_type: "weekly", category: "must_have" },
-    { user: prophet3, player: sample_players[0], week: 1, season_type: "weekly", category: "must_have" },
+  # Get some gameweeks for sample data
+  gameweeks = Gameweek.order(:fpl_id).limit(3)
 
-    { user: prophet_user, player: sample_players[1], week: 1, season_type: "weekly", category: "better_than_expected" },
-    { user: prophet2, player: sample_players[1], week: 1, season_type: "weekly", category: "better_than_expected" },
+  if gameweeks.any?
+    # Forecast data for multiple users to demonstrate consensus
+    forecasts_data = [
+      # Week 1 forecasts - show consensus
+      { user: forecaster_user, player: sample_players[0], gameweek: gameweeks[0], category: "target" },
+      { user: forecaster2, player: sample_players[0], gameweek: gameweeks[0], category: "target" },
+      { user: forecaster3, player: sample_players[0], gameweek: gameweeks[0], category: "target" },
 
-    { user: prophet_user, player: sample_players[2], week: 1, season_type: "weekly", category: "worse_than_expected" },
+      { user: forecaster_user, player: sample_players[1], gameweek: gameweeks[0], category: "target" },
+      { user: forecaster2, player: sample_players[1], gameweek: gameweeks[0], category: "target" },
 
-    # Week 2 predictions
-    { user: prophet_user, player: sample_players[3], week: 2, season_type: "weekly", category: "must_have" },
-    { user: prophet2, player: sample_players[4], week: 2, season_type: "weekly", category: "better_than_expected" },
-    { user: prophet3, player: sample_players[5], week: 2, season_type: "weekly", category: "worse_than_expected" },
+      { user: forecaster_user, player: sample_players[2], gameweek: gameweeks[0], category: "avoid" },
 
-    # Week 3 predictions
-    { user: prophet_user, player: sample_players[6], week: 3, season_type: "weekly", category: "must_have" },
-    { user: prophet2, player: sample_players[6], week: 3, season_type: "weekly", category: "better_than_expected" },
+      # Week 2 forecasts
+      { user: forecaster_user, player: sample_players[3], gameweek: gameweeks[1], category: "target" },
+      { user: forecaster2, player: sample_players[4], gameweek: gameweeks[1], category: "target" },
+      { user: forecaster3, player: sample_players[5], gameweek: gameweeks[1], category: "avoid" },
 
-    # Rest of season predictions - show consensus
-    { user: prophet_user, player: sample_players[7], season_type: "rest_of_season", category: "must_have" },
-    { user: prophet2, player: sample_players[7], season_type: "rest_of_season", category: "must_have" },
-    { user: prophet3, player: sample_players[7], season_type: "rest_of_season", category: "must_have" },
+      # Week 3 forecasts
+      { user: forecaster_user, player: sample_players[6], gameweek: gameweeks[2], category: "target" },
+      { user: forecaster2, player: sample_players[6], gameweek: gameweeks[2], category: "target" },
 
-    { user: prophet_user, player: sample_players[8], season_type: "rest_of_season", category: "better_than_expected" },
-    { user: prophet2, player: sample_players[8], season_type: "rest_of_season", category: "better_than_expected" },
+      { user: forecaster_user, player: sample_players[7], gameweek: gameweeks[2], category: "target" },
+      { user: forecaster2, player: sample_players[7], gameweek: gameweeks[2], category: "target" },
+      { user: forecaster3, player: sample_players[7], gameweek: gameweeks[2], category: "target" },
 
-    { user: prophet_user, player: sample_players[9], season_type: "rest_of_season", category: "worse_than_expected" },
-    { user: prophet3, player: sample_players[10], season_type: "rest_of_season", category: "must_have" },
-    { user: prophet2, player: sample_players[11], season_type: "rest_of_season", category: "better_than_expected" },
-    { user: prophet3, player: sample_players[12], season_type: "rest_of_season", category: "worse_than_expected" }
-  ]
+      { user: forecaster_user, player: sample_players[8], gameweek: gameweeks[1], category: "target" },
+      { user: forecaster2, player: sample_players[8], gameweek: gameweeks[1], category: "target" },
 
-  predictions_data.each do |prediction_data|
-    Prediction.find_or_create_by!(
-      user: prediction_data[:user],
-      player: prediction_data[:player],
-      week: prediction_data[:week],
-      season_type: prediction_data[:season_type]
-    ) do |p|
-      p.category = prediction_data[:category]
+      { user: forecaster_user, player: sample_players[9], gameweek: gameweeks[0], category: "avoid" },
+      { user: forecaster3, player: sample_players[10], gameweek: gameweeks[1], category: "target" },
+      { user: forecaster2, player: sample_players[11], gameweek: gameweeks[2], category: "target" },
+      { user: forecaster3, player: sample_players[12], gameweek: gameweeks[0], category: "avoid" }
+    ]
+
+    forecasts_data.each do |forecast_data|
+      Forecast.find_or_create_by!(
+        user: forecast_data[:user],
+        player: forecast_data[:player],
+        gameweek: forecast_data[:gameweek]
+      ) do |f|
+        f.category = forecast_data[:category]
+      end
     end
+  else
+    puts "No gameweeks found, skipping forecast creation"
   end
 
-  puts "Created #{User.where(role: 'prophet').count} Prophet users"
-  puts "Created #{Prediction.count} predictions across all users"
+  puts "Created #{User.where(role: 'forecaster').count} Forecaster users"
+  puts "Created #{Forecast.count} forecasts across all users"
 
   # Show consensus examples
   puts "\nSample consensus data:"
-  puts "Week 1 - #{sample_players[0].name}: #{Prediction.for_week(1).for_player(sample_players[0].id).count} Must Have votes"
-  puts "Rest of Season - #{sample_players[7].name}: #{Prediction.where(season_type: 'rest_of_season').for_player(sample_players[7].id).count} Must Have votes"
+  if gameweeks.any?
+    week_1_forecasts = Forecast.joins(:gameweek).where(gameweeks: { fpl_id: gameweeks[0].fpl_id }, player: sample_players[0])
+    puts "Week #{gameweeks[0].fpl_id} - #{sample_players[0].name}: #{week_1_forecasts.count} Target votes"
+    week_2_forecasts = Forecast.joins(:gameweek).where(gameweeks: { fpl_id: gameweeks[2].fpl_id }, player: sample_players[7])
+    puts "Week #{gameweeks[2].fpl_id} - #{sample_players[7].name}: #{week_2_forecasts.count} Target votes"
+  end
 else
-  puts "Skipping predictions - users or players not found"
+  puts "Skipping forecasts - users or players not found"
 end

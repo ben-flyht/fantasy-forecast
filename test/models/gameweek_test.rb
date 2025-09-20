@@ -3,7 +3,7 @@ require "test_helper"
 class GameweekTest < ActiveSupport::TestCase
   setup do
     # Clear existing data to avoid fixture conflicts
-    Prediction.destroy_all
+    Forecast.destroy_all
     Gameweek.destroy_all
   end
   test "should require fpl_id" do

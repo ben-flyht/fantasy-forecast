@@ -1,36 +1,44 @@
 require "test_helper"
 
 class PlayerTest < ActiveSupport::TestCase
-  test "should require name" do
-    player = Player.new(team: "Arsenal", position: "FWD", fpl_id: 123)
+  test "should require first_name" do
+    player = Player.new(last_name: "Player", team: "Arsenal", position: "forward", fpl_id: 123)
     assert_not player.valid?
-    assert_includes player.errors[:name], "can't be blank"
+    assert_includes player.errors[:first_name], "can't be blank"
+  end
+
+  test "should require last_name" do
+    player = Player.new(first_name: "Test", team: "Arsenal", position: "forward", fpl_id: 123)
+    assert_not player.valid?
+    assert_includes player.errors[:last_name], "can't be blank"
   end
 
   test "should require team" do
-    player = Player.new(name: "Test Player", position: "FWD", fpl_id: 123)
+    player = Player.new(first_name: "Test", last_name: "Player", position: "forward", fpl_id: 123)
     assert_not player.valid?
     assert_includes player.errors[:team], "can't be blank"
   end
 
   test "should require fpl_id" do
-    player = Player.new(name: "Test Player", team: "Arsenal", position: "FWD")
+    player = Player.new(first_name: "Test", last_name: "Player", team: "Arsenal", position: "forward")
     assert_not player.valid?
     assert_includes player.errors[:fpl_id], "can't be blank"
   end
 
   test "should require unique fpl_id" do
     player1 = Player.create!(
-      name: "Test Player 1",
+      first_name: "Test",
+      last_name: "Player1",
       team: "Arsenal",
-      position: "FWD",
+      position: "forward",
       fpl_id: 123
     )
 
     player2 = Player.new(
-      name: "Test Player 2",
+      first_name: "Test",
+      last_name: "Player2",
       team: "Chelsea",
-      position: "MID",
+      position: "midfielder",
       fpl_id: 123
     )
 
@@ -38,38 +46,22 @@ class PlayerTest < ActiveSupport::TestCase
     assert_includes player2.errors[:fpl_id], "has already been taken"
   end
 
-  test "should validate position enum" do
-    player = Player.new(name: "Test Player", team: "Arsenal", fpl_id: 123)
+  test "should accept valid positions" do
+    player = Player.new(first_name: "Test", last_name: "Player", team: "Arsenal", fpl_id: 123)
 
     # Valid positions
-    %w[GK DEF MID FWD].each do |position|
+    %w[goalkeeper defender midfielder forward].each do |position|
       player.position = position
       assert player.valid?, "#{position} should be valid"
     end
-
-    # Test enum helper methods
-    player.position = "GK"
-    assert player.GK?
-    assert_not player.DEF?
-
-    player.position = "DEF"
-    assert player.DEF?
-    assert_not player.GK?
-
-    player.position = "MID"
-    assert player.MID?
-    assert_not player.FWD?
-
-    player.position = "FWD"
-    assert player.FWD?
-    assert_not player.MID?
   end
 
   test "short_name is optional" do
     player = Player.new(
-      name: "Test Player",
+      first_name: "Test",
+      last_name: "Player",
       team: "Arsenal",
-      position: "FWD",
+      position: "forward",
       fpl_id: 123
     )
     assert player.valid?
@@ -77,13 +69,72 @@ class PlayerTest < ActiveSupport::TestCase
 
   test "should create valid player with all fields" do
     player = Player.new(
-      name: "Test Player",
+      first_name: "Test",
+      last_name: "Player",
       short_name: "Player",
       team: "Arsenal",
-      position: "FWD",
+      position: "forward",
       fpl_id: 123
     )
     assert player.valid?
     assert player.save
+  end
+
+  test "name method should concatenate first_name and last_name" do
+    player = Player.new(
+      first_name: "Test",
+      last_name: "Player",
+      team: "Arsenal",
+      position: "forward",
+      fpl_id: 123
+    )
+    assert_equal "Test Player", player.name
+  end
+
+  test "enum scopes should work" do
+    # Clear existing players to ensure clean test
+    Player.destroy_all
+
+    goalkeeper = Player.create!(
+      first_name: "Goal",
+      last_name: "Keeper",
+      team: "Arsenal",
+      position: "goalkeeper",
+      fpl_id: 1
+    )
+
+    defender = Player.create!(
+      first_name: "Def",
+      last_name: "Ender",
+      team: "Arsenal",
+      position: "defender",
+      fpl_id: 2
+    )
+
+    midfielder = Player.create!(
+      first_name: "Mid",
+      last_name: "Fielder",
+      team: "Arsenal",
+      position: "midfielder",
+      fpl_id: 3
+    )
+
+    forward = Player.create!(
+      first_name: "For",
+      last_name: "Ward",
+      team: "Arsenal",
+      position: "forward",
+      fpl_id: 4
+    )
+
+    assert_includes Player.goalkeeper, goalkeeper
+    assert_includes Player.defender, defender
+    assert_includes Player.midfielder, midfielder
+    assert_includes Player.forward, forward
+
+    assert_equal 1, Player.goalkeeper.count
+    assert_equal 1, Player.defender.count
+    assert_equal 1, Player.midfielder.count
+    assert_equal 1, Player.forward.count
   end
 end

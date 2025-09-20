@@ -1,6 +1,16 @@
 namespace :fpl do
-  desc "Sync players from Fantasy Premier League API"
+  desc "Sync players and gameweeks"
   task sync: :environment do
+    puts "Starting FPL sync (players and gameweeks)..."
+
+    Rake::Task["fpl:sync_players"].invoke
+    Rake::Task["fpl:sync_gameweeks"].invoke
+
+    puts "\n🎉 FPL sync completed successfully!"
+  end
+
+  desc "Sync players from Fantasy Premier League API"
+  task sync_players: :environment do
     puts "Starting FPL player sync..."
 
     if Fpl::SyncPlayers.call
@@ -63,10 +73,10 @@ namespace :fpl do
     puts "FPL Sync Statistics:"
     puts "==================="
     puts "Total players: #{Player.count}"
-    puts "Goalkeepers: #{Player.where(position: 'GK').count}"
-    puts "Defenders: #{Player.where(position: 'DEF').count}"
-    puts "Midfielders: #{Player.where(position: 'MID').count}"
-    puts "Forwards: #{Player.where(position: 'FWD').count}"
+    puts "Goalkeepers: #{Player.where(position: 'goalkeeper').count}"
+    puts "Defenders: #{Player.where(position: 'defender').count}"
+    puts "Midfielders: #{Player.where(position: 'midfielder').count}"
+    puts "Forwards: #{Player.where(position: 'forward').count}"
     puts ""
     puts "Teams represented: #{Player.distinct.count(:team)}"
     puts "Latest player sync: #{Player.maximum(:updated_at)&.strftime('%Y-%m-%d %H:%M:%S') || 'Never'}"

@@ -1,8 +1,8 @@
 Rails.application.routes.draw do
-  resources :predictions do
+  resources :forecasts do
     collection do
       post :sync_all
-      patch :update_prediction
+      patch :update_forecast
     end
   end
   resources :players

@@ -1,4 +1,4 @@
-class Prediction < ApplicationRecord
+class Forecast < ApplicationRecord
   belongs_to :user
   belongs_to :player
   belongs_to :gameweek
@@ -17,7 +17,7 @@ class Prediction < ApplicationRecord
   # Validations
   validates :category, presence: true
 
-  # Uniqueness constraint: one prediction per user/player/gameweek
+  # Uniqueness constraint: one forecast per user/player/gameweek
   validates :user_id, uniqueness: { scope: [ :player_id, :gameweek_id ] }
 
   # Scopes
@@ -35,16 +35,17 @@ class Prediction < ApplicationRecord
   def self.consensus_scores_for_week(week)
     joins(:gameweek, :player)
       .where(gameweeks: { fpl_id: week })
-      .group("players.id, players.name, players.team, players.position")
-      .select("
-        players.id as player_id,
-        players.name,
-        players.team,
-        players.position,
-        SUM(CASE WHEN category = 'target' THEN 1 WHEN category = 'avoid' THEN -1 ELSE 0 END) as consensus_score,
-        COUNT(*) as total_predictions
-      ")
-      .order("consensus_score DESC, total_predictions DESC")
+      .group("players.id, players.first_name, players.last_name, players.team, players.position")
+      .select("players.id as player_id, CONCAT(players.first_name, ' ', players.last_name) as name, players.first_name, players.last_name, players.team, players.position, SUM(CASE WHEN category = 'target' THEN 1 WHEN category = 'avoid' THEN -1 ELSE 0 END) as consensus_score, COUNT(*) as total_forecasts")
+      .order("consensus_score DESC, total_forecasts DESC")
+  end
+
+  # Method for getting raw consensus data by category for aggregator
+  def self.consensus_for_week(week)
+    joins(:gameweek)
+      .where(gameweeks: { fpl_id: week })
+      .group(:player_id, :category)
+      .select("player_id, category, COUNT(*) as count")
   end
 
   def self.consensus_scores_for_week_by_position(week, position = nil)

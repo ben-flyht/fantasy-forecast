@@ -4,7 +4,7 @@ export default class extends Controller {
   static targets = ["select"]
 
   connect() {
-    console.log("Prediction form controller connected")
+    console.log("Forecast form controller connected")
     this.updateStyling()
   }
 

@@ -12,7 +12,7 @@ class UserTest < ActiveSupport::TestCase
       email: "test1@example.com",
       username: "testuser",
       password: "password123",
-      role: "prophet"
+      role: "forecaster"
     )
 
     user2 = User.new(
@@ -25,27 +25,27 @@ class UserTest < ActiveSupport::TestCase
     assert_includes user2.errors[:username], "has already been taken"
   end
 
-  test "should have prophet role by default" do
+  test "should have forecaster role by default" do
     user = User.new(email: "test@example.com", username: "testuser", password: "password123")
-    assert user.prophet?
+    assert user.forecaster?
     assert_not user.admin?
   end
 
   test "should allow admin role" do
     user = User.new(email: "test@example.com", username: "testuser", password: "password123", role: "admin")
     assert user.admin?
-    assert_not user.prophet?
+    assert_not user.forecaster?
   end
 
   test "role enum should work correctly" do
     user = User.new(email: "test@example.com", username: "testuser", password: "password123")
 
-    user.role = "prophet"
-    assert user.prophet?
+    user.role = "forecaster"
+    assert user.forecaster?
     assert_not user.admin?
 
     user.role = "admin"
     assert user.admin?
-    assert_not user.prophet?
+    assert_not user.forecaster?
   end
 end

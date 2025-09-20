@@ -4,7 +4,7 @@ module Fpl
   class SyncGameweeksTest < ActiveSupport::TestCase
     def setup
       # Clear existing data to avoid fixture conflicts
-      Prediction.destroy_all
+      Forecast.destroy_all
       Gameweek.destroy_all
 
       @service = SyncGameweeks.new

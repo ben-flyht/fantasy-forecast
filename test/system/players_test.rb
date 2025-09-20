@@ -4,7 +4,7 @@ class PlayersTest < ApplicationSystemTestCase
   setup do
     @player = players(:one)
     @admin_user = users(:two)  # Admin user from fixtures
-    @prophet_user = users(:one)  # Prophet user from fixtures
+    @forecaster_user = users(:one)  # Forecaster user from fixtures
   end
 
   test "visiting the index" do
@@ -27,8 +27,7 @@ class PlayersTest < ApplicationSystemTestCase
     # Fill in player form
     fill_in "Name", with: "System Test Player"
     fill_in "Team", with: "Manchester United"
-    select "Forward", from: "Position"
-    fill_in "Bye week", with: 9
+    select "forward", from: "Position"
     fill_in "Fpl id", with: 888
 
     click_on "Create Player"
@@ -38,10 +37,10 @@ class PlayersTest < ApplicationSystemTestCase
     assert_text "Manchester United"
   end
 
-  test "prophet visiting new player page gets redirected with error" do
-    # Sign in as prophet
+  test "forecaster visiting new player page gets redirected with error" do
+    # Sign in as forecaster
     visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
+    fill_in "Email", with: @forecaster_user.email
     fill_in "Password", with: "password123"
     click_button "Log in"
 
@@ -53,10 +52,10 @@ class PlayersTest < ApplicationSystemTestCase
     assert_text "Access denied. Admin privileges required."
   end
 
-  test "prophet cannot see admin action buttons" do
-    # Sign in as prophet
+  test "forecaster cannot see admin action buttons" do
+    # Sign in as forecaster
     visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
+    fill_in "Email", with: @forecaster_user.email
     fill_in "Password", with: "password123"
     click_button "Log in"
 

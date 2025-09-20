@@ -2,13 +2,13 @@ require "application_system_test_case"
 
 class ConsensusSystemTest < ApplicationSystemTestCase
   setup do
-    @prophet_user = users(:one)  # Prophet user
+    @forecaster_user = users(:one)  # Forecaster user
     @admin_user = users(:two)    # Admin user
     @player = players(:one)
     @player2 = players(:two)
 
     # Clear data to avoid conflicts
-    Prediction.destroy_all
+    Forecast.destroy_all
     Gameweek.destroy_all
 
     # Create gameweeks for testing
@@ -43,216 +43,136 @@ class ConsensusSystemTest < ApplicationSystemTestCase
     )
   end
 
-  test "prophet navigates to weekly consensus and sees aggregated data" do
-    # Create multiple predictions to show consensus
-    prophet2 = User.create!(
-      email: "prophet2@test.com",
-      username: "Prophet2",
+  test "forecaster navigates to weekly consensus and sees aggregated data" do
+    # Create multiple forecasts to show consensus
+    forecaster2 = User.create!(
+      email: "forecaster2@test.com",
+      username: "Forecaster2",
       password: "password123",
-      password_confirmation: "password123",
-      role: "prophet"
+      role: "forecaster"
     )
 
-    # Create predictions showing consensus for gameweek 1
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
-    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have", gameweek: @gameweek1)
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "better_than_expected", gameweek: @gameweek1)
+    # Create forecasts for gameweek 1
+    Forecast.create!(user: @forecaster_user, player: @player, category: "target", gameweek: @gameweek1)
+    Forecast.create!(user: forecaster2, player: @player, category: "target", gameweek: @gameweek1)
+    Forecast.create!(user: @forecaster_user, player: @player2, category: "avoid", gameweek: @gameweek1)
 
-    # Sign in as prophet
+    # Sign in as forecaster
     visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
+    fill_in "Email", with: @forecaster_user.email
     fill_in "Password", with: "password123"
     click_button "Log in"
 
     # Navigate to consensus
     click_link "Consensus"
 
-    # Should be on weekly consensus page
-    assert_current_path consensus_weekly_path
-    assert_text "Weekly Consensus"
-    assert_text @gameweek1.name
+    assert_selector "h1", text: "Weekly Consensus Rankings"
 
-    # Should see consensus data grouped by category
-    within(".bg-green-600", text: "Must Have") do
-      assert_text "Must Have"
+    # Check that we can see the consensus scores
+    assert_text @player.name
+    assert_text @player2.name
+
+    # Player 1 should have positive consensus score (2 targets)
+    within("tr", text: @player.name) do
+      assert_text "2"  # consensus score
     end
 
-    # Should see player with multiple votes
-    within(".bg-green-50") do
-      assert_text @player.name
-      assert_text @player.team
-      assert_text @player.position
-      assert_text "2"  # Vote count
-      assert_text "2 votes"
+    # Player 2 should have negative consensus score (1 avoid)
+    within("tr", text: @player2.name) do
+      assert_text "-1"  # consensus score
     end
-
-    # Should see better than expected section
-    within(".bg-blue-600", text: "Better Than Expected") do
-      assert_text "Better Than Expected"
-    end
-
-    within(".bg-blue-50") do
-      assert_text @player2.name
-      assert_text "1"  # Vote count
-      assert_text "1 vote"
-    end
-
-    # Should see worse than expected section (empty)
-    within(".bg-red-600", text: "Worse Than Expected") do
-      assert_text "Worse Than Expected"
-    end
-
-    assert_text "No predictions in this category yet"
   end
 
-  test "prophet selects different week and sees updated data" do
-    # Create predictions for different weeks
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have")
+  test "user can filter consensus by week" do
+    # Create forecasts for different weeks
+    Forecast.create!(user: @forecaster_user, player: @player, category: "target", gameweek: @gameweek1)
+    Forecast.create!(user: @forecaster_user, player: @player2, category: "target", gameweek: @gameweek2)
 
-    # Sign in as prophet
+    # Sign in
     visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
+    fill_in "Email", with: @forecaster_user.email
     fill_in "Password", with: "password123"
     click_button "Log in"
 
     # Navigate to consensus
-    visit consensus_weekly_path
+    click_link "Consensus"
 
-    # Should show Week 1 by default with @player
-    assert_text "Week 1"
+    # Should default to week 5 (or first available week)
+    assert_selector "select[name='week']"
+
+    # Select week 1
+    select "1", from: "week"
+
+    # Should see player from week 1
     assert_text @player.name
 
-    # Select Week 3 from dropdown
-    select "3", from: "Week:"
+    # Select week 2
+    select "2", from: "week"
 
-    # Page should update to show Week 3 data
-    assert_text "Week 3"
+    # Should see player from week 2
     assert_text @player2.name
-    assert_no_text @player.name  # Should not show Week 1 player anymore
   end
 
-  test "prophet navigates to rest of season consensus" do
-    # Create rest of season predictions
-    prophet2 = User.create!(
-      email: "prophet2@test.com",
-      username: "Prophet2",
-      password: "password123",
-      password_confirmation: "password123",
-      role: "prophet"
+  test "user can filter consensus by position" do
+    # Create midfielder player
+    midfielder = Player.create!(
+      first_name: "Test",
+      last_name: "Midfielder",
+      team: "Test Team",
+      position: "midfielder",
+      fpl_id: 999
     )
 
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "rest_of_season", category: "must_have")
-    Prediction.create!(user: prophet2, player: @player, season_type: "rest_of_season", category: "must_have")
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "rest_of_season", category: "worse_than_expected")
+    # Create forecasts for different positions
+    Forecast.create!(user: @forecaster_user, player: @player, category: "target", gameweek: @gameweek1)  # goalkeeper
+    Forecast.create!(user: @forecaster_user, player: midfielder, category: "target", gameweek: @gameweek1)
 
-    # Sign in as prophet
+    # Sign in
     visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
+    fill_in "Email", with: @forecaster_user.email
     fill_in "Password", with: "password123"
     click_button "Log in"
 
-    # Navigate to weekly consensus first
-    visit consensus_weekly_path
+    # Navigate to consensus
+    click_link "Consensus"
 
-    # Click to go to rest of season
-    click_link "View Rest of Season Consensus"
-
-    # Should be on rest of season consensus page
-    assert_current_path consensus_rest_of_season_path
-    assert_text "Rest of Season Consensus"
-    assert_text "Long-term predictions for the remainder of the fantasy season"
-
-    # Should see must have section with @player (2 votes)
-    within(".bg-green-50") do
-      assert_text @player.name
-      assert_text @player.team
-      assert_text @player.position
-      assert_text "2"  # Vote count
-      assert_text "2 votes"
-      assert_text @player.short_name if @player.short_name
-    end
-
-    # Should see worse than expected section with @player2
-    within(".bg-red-50") do
-      assert_text @player2.name
-      assert_text "1"  # Vote count
-      assert_text "1 vote"
-    end
-
-    # Should see statistics section
-    assert_text "Consensus Statistics"
-    assert_text "1"  # Must Have Players count
-    assert_text "0"  # Better Than Expected count
-    assert_text "1"  # Worse Than Expected count
-  end
-
-  test "prophet sees empty state when no predictions exist" do
-    # Sign in as prophet
-    visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
-    fill_in "Password", with: "password123"
-    click_button "Log in"
-
-    # Navigate to weekly consensus
-    visit consensus_weekly_path
-
-    # Should see empty state
-    assert_text "No Consensus Data"
-    assert_text "There are no predictions for Week 1 yet"
-    assert_link "View Rest of Season Consensus"
-
-    # Navigate to rest of season consensus
-    visit consensus_rest_of_season_path
-
-    # Should see empty state
-    assert_text "No Season Consensus Data"
-    assert_text "There are no rest of season predictions yet"
-    assert_link "View Weekly Consensus"
-    assert_link "Make a Prediction"
-  end
-
-  test "prophet can navigate between weekly and rest of season views" do
-    # Create predictions for both types
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "rest_of_season", category: "must_have")
-
-    # Sign in as prophet
-    visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
-    fill_in "Password", with: "password123"
-    click_button "Log in"
-
-    # Start at weekly consensus
-    visit consensus_weekly_path
-    assert_text "Weekly Consensus"
+    # Should see both players initially
     assert_text @player.name
+    assert_text midfielder.name
 
-    # Navigate to rest of season
-    click_link "View Rest of Season Consensus"
-    assert_current_path consensus_rest_of_season_path
-    assert_text "Rest of Season Consensus"
-    assert_text @player2.name
+    # Filter by GK position
+    select "GK", from: "position"
 
-    # Navigate back to weekly
-    click_link "Weekly Consensus"
-    assert_current_path consensus_weekly_path
-    assert_text "Weekly Consensus"
+    # Should only see goalkeeper
     assert_text @player.name
+    assert_no_text midfielder.name
+
+    # Filter by MID position
+    select "MID", from: "position"
+
+    # Should only see midfielder
+    assert_text midfielder.name
+    assert_no_text @player.name
   end
 
-  test "admin can view consensus but sees all user predictions" do
-    # Create predictions from different users
-    prophet2 = User.create!(
-      email: "prophet2@test.com",
-      username: "Prophet2",
-      password: "password123",
-      password_confirmation: "password123",
-      role: "prophet"
-    )
+  test "consensus shows empty state when no forecasts exist" do
+    # Don't create any forecasts
 
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have")
+    # Sign in
+    visit new_user_session_path
+    fill_in "Email", with: @forecaster_user.email
+    fill_in "Password", with: "password123"
+    click_button "Log in"
+
+    # Navigate to consensus
+    click_link "Consensus"
+
+    assert_text "No consensus data available"
+  end
+
+  test "admin can access consensus page" do
+    # Create some forecast data
+    Forecast.create!(user: @forecaster_user, player: @player, category: "target", gameweek: @gameweek1)
 
     # Sign in as admin
     visit new_user_session_path
@@ -263,99 +183,12 @@ class ConsensusSystemTest < ApplicationSystemTestCase
     # Navigate to consensus
     click_link "Consensus"
 
-    # Should see aggregated data from all prophets
-    assert_text "Weekly Consensus"
-    within(".bg-green-50") do
-      assert_text @player.name
-      assert_text "2"  # Should show combined votes from both prophets
-      assert_text "2 votes"
-    end
+    assert_selector "h1", text: "Weekly Consensus Rankings"
+    assert_text @player.name
   end
 
-  test "consensus shows players ranked by vote count" do
-    # Create predictions with different vote counts
-    prophet2 = User.create!(
-      email: "prophet2@test.com",
-      username: "Prophet2",
-      password: "password123",
-      password_confirmation: "password123",
-      role: "prophet"
-    )
-
-    prophet3 = User.create!(
-      email: "prophet3@test.com",
-      username: "Prophet3",
-      password: "password123",
-      password_confirmation: "password123",
-      role: "prophet"
-    )
-
-    # @player gets 3 votes, @player2 gets 1 vote
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: prophet2, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: prophet3, player: @player, season_type: "weekly", category: "must_have")
-    Prediction.create!(user: @prophet_user, player: @player2, season_type: "weekly", category: "must_have")
-
-    # Sign in as prophet
-    visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
-    fill_in "Password", with: "password123"
-    click_button "Log in"
-
-    # Navigate to consensus
-    visit consensus_weekly_path
-
-    # Find all must have players and check ranking
-    must_have_section = find(".bg-white", text: "Must Have")
-    player_cards = must_have_section.all(".bg-green-50")
-
-    # First player should be @player with 3 votes (rank 1)
-    within(player_cards[0]) do
-      assert_text "1"  # Rank number
-      assert_text @player.name
-      assert_text "3"  # Vote count
-    end
-
-    # Second player should be @player2 with 1 vote (rank 2)
-    within(player_cards[1]) do
-      assert_text "2"  # Rank number
-      assert_text @player2.name
-      assert_text "1"  # Vote count
-    end
-  end
-
-  test "guest user is redirected to sign in when accessing consensus" do
-    # Try to access weekly consensus without signing in
-    visit consensus_weekly_path
+  test "unauthenticated user cannot access consensus" do
+    visit consensus_index_path
     assert_current_path new_user_session_path
-    assert_text "You need to sign in or sign up before continuing"
-
-    # Try to access rest of season consensus without signing in
-    visit consensus_rest_of_season_path
-    assert_current_path new_user_session_path
-    assert_text "You need to sign in or sign up before continuing"
-  end
-
-  test "consensus pages are responsive and display properly on different screen sizes" do
-    # Create test data
-    Prediction.create!(user: @prophet_user, player: @player, season_type: "weekly", category: "must_have")
-
-    # Sign in as prophet
-    visit new_user_session_path
-    fill_in "Email", with: @prophet_user.email
-    fill_in "Password", with: "password123"
-    click_button "Log in"
-
-    # Test weekly consensus page
-    visit consensus_weekly_path
-
-    # Should have responsive grid classes
-    assert_selector ".grid.grid-cols-1.lg\\:grid-cols-3"
-
-    # Cards should be properly styled
-    assert_selector ".bg-white.shadow.rounded-lg"
-
-    # Should have mobile-friendly navigation
-    assert_selector ".flex.flex-col.sm\\:flex-row"
   end
 end

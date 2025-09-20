@@ -34,7 +34,7 @@ module Fpl
 
     Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
       request = Net::HTTP::Get.new(uri)
-      request["User-Agent"] = "FantasyProphet App"
+      request["User-Agent"] = "Fantasy Forecast App"
 
       response = http.request(request)
 
@@ -57,15 +57,16 @@ module Fpl
 
   def sync_players(elements, teams)
     position_map = {
-      1 => "GK",
-      2 => "DEF",
-      3 => "MID",
-      4 => "FWD"
+      1 => "goalkeeper",
+      2 => "defender",
+      3 => "midfielder",
+      4 => "forward"
     }
 
     elements.each do |element|
       fpl_id = element["id"]
-      name = "#{element['first_name']} #{element['second_name']}".strip
+      first_name = element["first_name"]
+      last_name = element["second_name"]
       short_name = element["web_name"] || element["second_name"] # Fallback to second_name if web_name missing
       team = teams[element["team"]]
       position = position_map[element["element_type"]]
@@ -76,7 +77,8 @@ module Fpl
       ownership_percentage = element["selected_by_percent"].to_f
 
       player_attributes = {
-        name: name,
+        first_name: first_name,
+        last_name: last_name,
         short_name: short_name,
         team: team,
         position: position,
@@ -87,9 +89,9 @@ module Fpl
       player.assign_attributes(player_attributes)
 
       if player.save
-        Rails.logger.debug "Synced player: #{name} (#{short_name}) (#{team}, #{position}, #{ownership_percentage}% owned)"
+        Rails.logger.debug "Synced player: #{first_name} #{last_name} (#{short_name}) (#{team}, #{position}, #{ownership_percentage}% owned)"
       else
-        Rails.logger.warn "Failed to sync player #{name}: #{player.errors.full_messages.join(', ')}"
+        Rails.logger.warn "Failed to sync player #{first_name} #{last_name}: #{player.errors.full_messages.join(', ')}"
       end
     end
   end

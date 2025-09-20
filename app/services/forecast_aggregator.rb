@@ -1,23 +1,20 @@
-class PredictionAggregator
+class ForecastAggregator
   def self.for_week(week)
-    aggregate_predictions(Prediction.for_week(week))
+    aggregate_forecasts(Forecast.for_week(week))
   end
 
-  def self.for_rest_of_season
-    aggregate_predictions(Prediction.where(season_type: "rest_of_season"))
-  end
 
   def self.for_player(player_id)
-    aggregate_predictions(Prediction.for_player(player_id))
+    aggregate_forecasts(Forecast.for_player(player_id))
   end
 
   def self.for_user(user_id)
-    aggregate_predictions(Prediction.for_user(user_id))
+    aggregate_forecasts(Forecast.for_user(user_id))
   end
 
   def self.consensus_summary_for_week(week)
     result = {}
-    Prediction.consensus_for_week(week).each do |prediction|
+    Forecast.consensus_for_week(week).each do |prediction|
       result[prediction.player_id] ||= {}
       # prediction.category is already a string from the SQL select
       category_name = prediction.category.to_s
@@ -26,16 +23,6 @@ class PredictionAggregator
     result
   end
 
-  def self.consensus_summary_rest_of_season
-    result = {}
-    Prediction.consensus_rest_of_season.each do |prediction|
-      result[prediction.player_id] ||= {}
-      # prediction.category is already a string from the SQL select
-      category_name = prediction.category.to_s
-      result[prediction.player_id][category_name] = prediction.count.to_i
-    end
-    result
-  end
 
   # Enhanced methods for consensus feature with Player objects
   def self.weekly_consensus(week)
@@ -43,10 +30,6 @@ class PredictionAggregator
     build_consensus_with_players(consensus_data)
   end
 
-  def self.rest_of_season_consensus
-    consensus_data = consensus_summary_rest_of_season
-    build_consensus_with_players(consensus_data)
-  end
 
   # Get top N players for a specific category and week
   def self.top_for_week(week, category, limit = 10)
@@ -54,11 +37,6 @@ class PredictionAggregator
     get_top_players_by_category(consensus_data, category, limit)
   end
 
-  # Get top N players for a specific category (rest of season)
-  def self.top_rest_of_season(category, limit = 10)
-    consensus_data = rest_of_season_consensus
-    get_top_players_by_category(consensus_data, category, limit)
-  end
 
   # Get all consensus data organized by category for weekly
   def self.weekly_consensus_by_category(week)
@@ -66,27 +44,21 @@ class PredictionAggregator
     organize_by_category(consensus_data)
   end
 
-  # Get all consensus data organized by category for rest of season
-  def self.rest_of_season_consensus_by_category
-    consensus_data = rest_of_season_consensus
-    organize_by_category(consensus_data)
-  end
 
   private
 
-  def self.aggregate_predictions(predictions)
+  def self.aggregate_forecasts(forecasts)
     result = {}
 
-    predictions.group(:player_id, :category).count.each do |(player_id, category), count|
+    forecasts.group(:player_id, :category).count.each do |(player_id, category), count|
       result[player_id] ||= {
-        "must_have" => 0,
-        "better_than_expected" => 0,
-        "worse_than_expected" => 0
+        "target" => 0,
+        "avoid" => 0
       }
 
       # category is an integer from enum, convert to string name
       category_name = if category.is_a?(Integer)
-        Prediction.categories.key(category).to_s
+        Forecast.categories.key(category).to_s
       else
         category.to_s
       end
@@ -142,7 +114,7 @@ class PredictionAggregator
 
   # Organize consensus data by category for easier view rendering
   def self.organize_by_category(consensus_data)
-    categories = %w[must_have better_than_expected worse_than_expected]
+    categories = %w[target avoid]
     result = {}
 
     categories.each do |category|

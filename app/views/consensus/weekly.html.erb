@@ -6,8 +6,8 @@
     <div class="bg-white shadow rounded-lg p-6 mb-8">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">Prophet Consensus</h1>
-          <p class="mt-2 text-gray-600">Weekly predictions aggregated from all Prophet users</p>
+          <h1 class="text-3xl font-bold text-gray-900">Forecaster Consensus</h1>
+          <p class="mt-2 text-gray-600">Weekly forecasts aggregated from all forecasters</p>
         </div>
 
         <!-- Week Selection -->
@@ -31,7 +31,7 @@
     </div>
 
     <!-- Consensus Data -->
-    <% if @consensus_data.any? %>
+    <% if @consensus_rankings.any? %>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Must Have Category -->
         <div class="bg-white shadow rounded-lg overflow-hidden">
@@ -180,20 +180,8 @@
         </svg>
         <h3 class="text-xl font-semibold text-gray-900 mb-2">No Consensus Data</h3>
         <p class="text-gray-600 mb-6">There are no predictions for Week <%= @week %> yet.</p>
-        <%= link_to "View Rest of Season Consensus", consensus_rest_of_season_path,
-            class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700" %>
       </div>
     <% end %>
 
-    <!-- Navigation -->
-    <div class="mt-8 flex justify-center">
-      <%= link_to consensus_rest_of_season_path,
-          class: "inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gray-800 hover:bg-gray-900" do %>
-        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/>
-        </svg>
-        View Rest of Season Consensus
-      <% end %>
-    </div>
   </div>
 </div>

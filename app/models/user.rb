@@ -4,11 +4,11 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
 
-  ROLE_PROPHET = "prophet".freeze
+  ROLE_FORECASTER = "forecaster".freeze
   ROLE_ADMIN = "admin".freeze
 
   enum :role, {
-    prophet: ROLE_PROPHET,
+    forecaster: ROLE_FORECASTER,
     admin: ROLE_ADMIN
   }
 
@@ -19,11 +19,11 @@ class User < ApplicationRecord
   validates :username, presence: true, uniqueness: true
 
   # Associations
-  has_many :predictions, dependent: :destroy
+  has_many :forecasts, dependent: :destroy
 
   private
 
   def set_default_role
-    self.role ||= :prophet
+    self.role ||= :forecaster
   end
 end

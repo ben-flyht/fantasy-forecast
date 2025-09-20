@@ -11,6 +11,7 @@ class CreateGameweeks < ActiveRecord::Migration[8.0]
 
       t.timestamps
     end
+
     add_index :gameweeks, :fpl_id, unique: true
   end
 end

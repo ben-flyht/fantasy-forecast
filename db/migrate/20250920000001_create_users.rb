@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class DeviseCreateUsers < ActiveRecord::Migration[8.0]
+class CreateUsers < ActiveRecord::Migration[8.0]
   def change
     create_table :users do |t|
       ## Database authenticatable
@@ -34,7 +34,7 @@ class DeviseCreateUsers < ActiveRecord::Migration[8.0]
 
       ## Custom fields
       t.string :username, null: false
-      t.integer :role, default: 0, null: false
+      t.string :role, default: "forecaster", null: false
 
       t.timestamps null: false
     end

@@ -1,10 +1,10 @@
-<%= form_with(model: prediction, class: "contents") do |form| %>
-  <% if prediction.errors.any? %>
+<%= form_with(model: forecast, class: "contents") do |form| %>
+  <% if forecast.errors.any? %>
     <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mt-3">
-      <h2><%= pluralize(prediction.errors.count, "error") %> prohibited this prediction from being saved:</h2>
+      <h2><%= pluralize(forecast.errors.count, "error") %> prohibited this forecast from being saved:</h2>
 
       <ul class="list-disc ml-6">
-        <% prediction.errors.each do |error| %>
+        <% forecast.errors.each do |error| %>
           <li><%= error.full_message %></li>
         <% end %>
       </ul>
@@ -14,16 +14,16 @@
   <div class="my-5">
     <%= form.label :player_id, "Player" %>
     <%= form.select :player_id,
-        options_from_collection_for_select(Player.order(:name), :id,
-          proc { |p| "#{p.name} (#{p.team} - #{p.position})" }, prediction.player_id),
+        options_from_collection_for_select(Player.order(:first_name, :last_name), :id,
+          proc { |p| "#{p.name} (#{p.team} - #{p.position})" }, forecast.player_id),
         { prompt: 'Select a player' },
-        { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:player_id].none?, "border-red-400 focus:outline-red-600": prediction.errors[:player_id].any?}] } %>
+        { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": forecast.errors[:player_id].none?, "border-red-400 focus:outline-red-600": forecast.errors[:player_id].any?}] } %>
   </div>
 
   <div class="my-5" id="gameweek-info">
     <% if defined?(@next_gameweek) && @next_gameweek %>
       <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
-        <h3 class="font-medium text-blue-900 mb-2">Making predictions for:</h3>
+        <h3 class="font-medium text-blue-900 mb-2">Making forecasts for:</h3>
         <p class="text-blue-800"><strong><%= @next_gameweek.name %></strong></p>
         <p class="text-sm text-blue-600 mt-1">
           Starts: <%= @next_gameweek.start_time.strftime("%b %d, %Y at %l:%M %p") %>
@@ -50,9 +50,9 @@
         options_for_select([
           ['Target (Recommend)', 'target'],
           ['Avoid (Don\'t Recommend)', 'avoid']
-        ], prediction.category),
-        { prompt: 'Select prediction category' },
-        { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": prediction.errors[:category].none?, "border-red-400 focus:outline-red-600": prediction.errors[:category].any?}] } %>
+        ], forecast.category),
+        { prompt: 'Select forecast category' },
+        { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": forecast.errors[:category].none?, "border-red-400 focus:outline-red-600": forecast.errors[:category].any?}] } %>
   </div>
 
   <div class="inline">

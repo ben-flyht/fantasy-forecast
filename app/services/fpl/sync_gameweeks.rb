@@ -32,7 +32,7 @@ module Fpl
 
       Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
         request = Net::HTTP::Get.new(uri)
-        request["User-Agent"] = "FantasyProphet App"
+        request["User-Agent"] = "Fantasy Forecast App"
 
         response = http.request(request)
 

@@ -24,31 +24,38 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     # Verify specific players were created correctly
     haaland = Player.find_by(fpl_id: 233)
     assert_not_nil haaland
+    assert_equal "Erling", haaland.first_name
+    assert_equal "Haaland", haaland.last_name
     assert_equal "Erling Haaland", haaland.name
     assert_equal "Haaland", haaland.short_name
     assert_equal "Manchester City", haaland.team
-    assert_equal "FWD", haaland.position
+    assert_equal "forward", haaland.position
 
     salah = Player.find_by(fpl_id: 253)
     assert_not_nil salah
+    assert_equal "Mohamed", salah.first_name
+    assert_equal "Salah", salah.last_name
     assert_equal "Mohamed Salah", salah.name
     assert_equal "Salah", salah.short_name
     assert_equal "Liverpool", salah.team
-    assert_equal "FWD", salah.position
+    assert_equal "forward", salah.position
 
     alisson = Player.find_by(fpl_id: 254)
     assert_not_nil alisson
+    assert_equal "Alisson", alisson.first_name
+    assert_equal "Becker", alisson.last_name
     assert_equal "Alisson Becker", alisson.name
     assert_equal "Liverpool", alisson.team
-    assert_equal "GK", alisson.position
+    assert_equal "goalkeeper", alisson.position
   end
 
   test "updates existing players instead of duplicating" do
     # Create existing player
     existing_player = Player.create!(
-      name: "Old Name",
+      first_name: "Old",
+      last_name: "Name",
       team: "Old Team",
-      position: "MID",
+      position: "midfielder",
       fpl_id: 233
     )
 
@@ -61,9 +68,11 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
 
     # Verify player was updated, not duplicated
     existing_player.reload
+    assert_equal "Erling", existing_player.first_name
+    assert_equal "Haaland", existing_player.last_name
     assert_equal "Erling Haaland", existing_player.name
     assert_equal "Manchester City", existing_player.team
-    assert_equal "FWD", existing_player.position
+    assert_equal "forward", existing_player.position
     assert_equal 233, existing_player.fpl_id
 
     # Verify we have the expected total count
@@ -96,16 +105,16 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
 
     # Check position mappings
     gk = Player.find_by(fpl_id: 254)  # Alisson
-    assert_equal "GK", gk.position
+    assert_equal "goalkeeper", gk.position
 
     def_player = Player.find_by(fpl_id: 252)  # TAA
-    assert_equal "DEF", def_player.position
+    assert_equal "defender", def_player.position
 
     mid_player = Player.find_by(fpl_id: 218)  # De Bruyne
-    assert_equal "MID", mid_player.position
+    assert_equal "midfielder", mid_player.position
 
     fwd_player = Player.find_by(fpl_id: 233)  # Haaland
-    assert_equal "FWD", fwd_player.position
+    assert_equal "forward", fwd_player.position
   end
 
   test "builds teams hash correctly" do

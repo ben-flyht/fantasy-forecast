@@ -4,7 +4,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   setup do
     @player = players(:one)
     @admin_user = users(:two)  # Admin user from fixtures
-    @prophet_user = users(:one)  # Prophet user from fixtures
+    @forecaster_user = users(:one)  # Forecaster user from fixtures
   end
 
   # Tests accessible to all users
@@ -30,9 +30,10 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_difference("Player.count") do
       post players_url, params: {
         player: {
-          name: "New Test Player",
+          first_name: "New Test",
+          last_name: "Player",
           team: "Liverpool",
-          position: "GK",
+          position: "goalkeeper",
           short_name: "New Player",
           fpl_id: 999
         }
@@ -52,7 +53,8 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin_user
     patch player_url(@player), params: {
       player: {
-        name: "Updated Player",
+        first_name: "Updated",
+        last_name: "Player",
         team: @player.team,
         position: @player.position,
         short_name: @player.short_name,
@@ -71,16 +73,16 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to players_url
   end
 
-  # Tests for prophet access restrictions
-  test "prophet should be redirected from new" do
-    sign_in @prophet_user
+  # Tests for forecaster access restrictions
+  test "forecaster should be redirected from new" do
+    sign_in @forecaster_user
     get new_player_url
     assert_redirected_to players_url
     assert_equal "Access denied. Admin privileges required.", flash[:alert]
   end
 
-  test "prophet should not create player" do
-    sign_in @prophet_user
+  test "forecaster should not create player" do
+    sign_in @forecaster_user
     assert_no_difference("Player.count") do
       post players_url, params: {
         player: {
@@ -97,15 +99,15 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Access denied. Admin privileges required.", flash[:alert]
   end
 
-  test "prophet should be redirected from edit" do
-    sign_in @prophet_user
+  test "forecaster should be redirected from edit" do
+    sign_in @forecaster_user
     get edit_player_url(@player)
     assert_redirected_to players_url
     assert_equal "Access denied. Admin privileges required.", flash[:alert]
   end
 
-  test "prophet should not update player" do
-    sign_in @prophet_user
+  test "forecaster should not update player" do
+    sign_in @forecaster_user
     patch player_url(@player), params: {
       player: {
         name: "Updated Player",
@@ -119,8 +121,8 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Access denied. Admin privileges required.", flash[:alert]
   end
 
-  test "prophet should not destroy player" do
-    sign_in @prophet_user
+  test "forecaster should not destroy player" do
+    sign_in @forecaster_user
     assert_no_difference("Player.count") do
       delete player_url(@player)
     end

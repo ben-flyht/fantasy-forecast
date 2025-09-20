@@ -1,33 +1,35 @@
-class PredictionsController < ApplicationController
-  before_action :set_prediction, only: %i[ show edit update destroy ]
+class ForecastsController < ApplicationController
+  before_action :set_forecast, only: %i[ show edit update destroy ]
   before_action :ensure_ownership, only: %i[ edit update destroy ]
   before_action :restrict_admin_edits, only: %i[ edit update destroy ]
-  before_action :authenticate_user!, except: %i[ index show ]
+  before_action :authenticate_user!, except: %i[ show ]
 
-  # GET /predictions or /predictions.json
+  # GET /forecasts or /forecasts.json
   def index
-    if current_user.admin?
-      @predictions = Prediction.includes(:user, :player).all
+    if current_user&.admin?
+      @forecasts = Forecast.includes(:user, :player).all
+    elsif current_user
+      @forecasts = current_user.forecasts.includes(:player)
     else
-      @predictions = current_user.predictions.includes(:player)
+      @forecasts = Forecast.none
     end
 
-    # Group predictions for display
-    @grouped_predictions = @predictions.group_by(&:category)
+    # Group forecasts for display
+    @grouped_forecasts = @forecasts.group_by(&:category)
   end
 
-  # GET /predictions/1 or /predictions/1.json
+  # GET /forecasts/1 or /forecasts/1.json
   def show
   end
 
-  # GET /predictions/new
+  # GET /forecasts/new
   def new
     @next_gameweek = Gameweek.next_gameweek
-    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
+    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
 
-    # Get current user's predictions for the next gameweek
-    @current_predictions = if @next_gameweek
-      current_user.predictions
+    # Get current user's forecasts for the next gameweek
+    @current_forecasts = if @next_gameweek
+      current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
                   .group_by(&:category)
@@ -36,55 +38,55 @@ class PredictionsController < ApplicationController
     end
   end
 
-  # GET /predictions/1/edit
+  # GET /forecasts/1/edit
   def edit
     @next_gameweek = Gameweek.next_gameweek
   end
 
-  # POST /predictions or /predictions.json
+  # POST /forecasts or /forecasts.json
   def create
-    @prediction = current_user.predictions.build(prediction_params)
+    @forecast = current_user.forecasts.build(forecast_params)
     @next_gameweek = Gameweek.next_gameweek
 
     # Ensure gameweek is set to next gameweek regardless of params
-    @prediction.gameweek = @next_gameweek
+    @forecast.gameweek = @next_gameweek
 
     respond_to do |format|
-      if @prediction.save
-        format.html { redirect_to @prediction, notice: "Prediction was successfully created." }
-        format.json { render :show, status: :created, location: @prediction }
+      if @forecast.save
+        format.html { redirect_to @forecast, notice: "Forecast was successfully created." }
+        format.json { render :show, status: :created, location: @forecast }
       else
         format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @prediction.errors, status: :unprocessable_entity }
+        format.json { render json: @forecast.errors, status: :unprocessable_entity }
       end
     end
   end
 
-  # PATCH/PUT /predictions/1 or /predictions/1.json
+  # PATCH/PUT /forecasts/1 or /forecasts/1.json
   def update
     respond_to do |format|
-      if @prediction.update(prediction_params)
-        format.html { redirect_to @prediction, notice: "Prediction was successfully updated.", status: :see_other }
-        format.json { render :show, status: :ok, location: @prediction }
+      if @forecast.update(forecast_params)
+        format.html { redirect_to @forecast, notice: "Forecast was successfully updated.", status: :see_other }
+        format.json { render :show, status: :ok, location: @forecast }
       else
         format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @prediction.errors, status: :unprocessable_entity }
+        format.json { render json: @forecast.errors, status: :unprocessable_entity }
       end
     end
   end
 
-  # DELETE /predictions/1 or /predictions/1.json
+  # DELETE /forecasts/1 or /forecasts/1.json
   def destroy
-    @prediction.destroy!
+    @forecast.destroy!
 
     respond_to do |format|
-      format.html { redirect_to predictions_path, notice: "Prediction was successfully destroyed.", status: :see_other }
+      format.html { redirect_to forecasts_path, notice: "Forecast was successfully destroyed.", status: :see_other }
       format.json { head :no_content }
     end
   end
 
-  # PATCH /predictions/update_prediction (AJAX)
-  def update_prediction
+  # PATCH /forecasts/update_forecast (AJAX)
+  def update_forecast
     @next_gameweek = Gameweek.next_gameweek
 
     unless @next_gameweek
@@ -101,17 +103,17 @@ class PredictionsController < ApplicationController
     ActiveRecord::Base.transaction do
       if player_id.present?
         # Check if this player is already selected anywhere for this gameweek
-        existing_prediction = current_user.predictions
+        existing_forecast = current_user.forecasts
                                          .where(gameweek: @next_gameweek, player_id: player_id)
                                          .first
 
-        if existing_prediction
-          # Player already selected, remove the existing prediction
-          existing_prediction.destroy!
+        if existing_forecast
+          # Player already selected, remove the existing forecast
+          existing_forecast.destroy!
         end
 
-        # Create new prediction
-        current_user.predictions.create!(
+        # Create new forecast
+        current_user.forecasts.create!(
           player_id: player_id,
           category: category,
           gameweek: @next_gameweek
@@ -120,9 +122,9 @@ class PredictionsController < ApplicationController
     end
 
     # Reload the data for the response
-    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
-    @current_predictions = if @next_gameweek
-      current_user.predictions
+    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @current_forecasts = if @next_gameweek
+      current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
                   .group_by(&:category)
@@ -131,16 +133,16 @@ class PredictionsController < ApplicationController
     end
 
     respond_to do |format|
-      format.turbo_stream { render template: "predictions/sync_all" }
-      format.html { redirect_to new_prediction_path }
+      format.turbo_stream { render template: "forecasts/sync_all" }
+      format.html { redirect_to new_forecast_path }
     end
 
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
-    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
-    @current_predictions = if @next_gameweek
-      current_user.predictions
+    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @current_forecasts = if @next_gameweek
+      current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
                   .group_by(&:category)
@@ -149,14 +151,14 @@ class PredictionsController < ApplicationController
     end
 
     respond_to do |format|
-      format.turbo_stream { render template: "predictions/sync_all" }
+      format.turbo_stream { render template: "forecasts/sync_all" }
     end
   rescue => e
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
-    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
-    @current_predictions = if @next_gameweek
-      current_user.predictions
+    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @current_forecasts = if @next_gameweek
+      current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
                   .group_by(&:category)
@@ -165,11 +167,11 @@ class PredictionsController < ApplicationController
     end
 
     respond_to do |format|
-      format.turbo_stream { render template: "predictions/sync_all" }
+      format.turbo_stream { render template: "forecasts/sync_all" }
     end
   end
 
-  # POST /predictions/sync_all (AJAX)
+  # POST /forecasts/sync_all (AJAX)
   def sync_all
     @next_gameweek = Gameweek.next_gameweek
 
@@ -178,23 +180,23 @@ class PredictionsController < ApplicationController
       return
     end
 
-    predictions_data = params[:predictions] || {}
-    Rails.logger.debug "Received predictions data: #{predictions_data.inspect}"
+    forecasts_data = params.permit![:forecasts] || {}
+    Rails.logger.debug "Received forecasts data: #{forecasts_data.inspect}"
 
     # Start a transaction to ensure all-or-nothing update
     ActiveRecord::Base.transaction do
-      # Delete all existing predictions for this user and gameweek
-      current_user.predictions.where(gameweek: @next_gameweek).destroy_all
+      # Delete all existing forecasts for this user and gameweek
+      current_user.forecasts.where(gameweek: @next_gameweek).destroy_all
 
       # Collect all player selections and deduplicate - process in reverse order
       # so that later selections override earlier ones
       selected_players = {}
-      predictions_to_create = []
+      forecasts_to_create = []
 
       # Process in reverse order: last selection wins
-      predictions_data.each do |category, positions|
+      forecasts_data.each do |category, positions|
         positions.each do |position, slots|
-          slots.to_a.reverse.each do |slot, player_id|
+          slots.to_h.to_a.reverse.each do |slot, player_id|
             next if player_id.blank?
 
             # Skip if we've already processed this player (later selection wins)
@@ -204,7 +206,7 @@ class PredictionsController < ApplicationController
             end
 
             selected_players[player_id] = "#{category} #{position} slot #{slot}"
-            predictions_to_create << {
+            forecasts_to_create << {
               player_id: player_id,
               category: category,
               gameweek: @next_gameweek
@@ -213,20 +215,20 @@ class PredictionsController < ApplicationController
         end
       end
 
-      # Create deduplicated predictions
-      predictions_to_create.each do |prediction_attrs|
-        Rails.logger.debug "Creating prediction: user=#{current_user.id}, player=#{prediction_attrs[:player_id]}, category=#{prediction_attrs[:category]}, gameweek=#{@next_gameweek.id}"
-        current_user.predictions.create!(prediction_attrs)
+      # Create deduplicated forecasts
+      forecasts_to_create.each do |forecast_attrs|
+        Rails.logger.debug "Creating forecast: user=#{current_user.id}, player=#{forecast_attrs[:player_id]}, category=#{forecast_attrs[:category]}, gameweek=#{@next_gameweek.id}"
+        current_user.forecasts.create!(forecast_attrs)
       end
     end
 
     # Return response based on request format
-    count = current_user.predictions.where(gameweek: @next_gameweek).count
+    count = current_user.forecasts.where(gameweek: @next_gameweek).count
 
     # Reload the data for the response
-    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
-    @current_predictions = if @next_gameweek
-      current_user.predictions
+    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @current_forecasts = if @next_gameweek
+      current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
                   .group_by(&:category)
@@ -235,16 +237,16 @@ class PredictionsController < ApplicationController
     end
 
     respond_to do |format|
-      format.json { render json: { success: true, count: count, message: "Synced #{count} predictions" } }
+      format.json { render json: { success: true, count: count, message: "Synced #{count} forecasts" } }
       format.turbo_stream # Uses sync_all.turbo_stream.erb template
     end
 
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
-    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
-    @current_predictions = if @next_gameweek
-      current_user.predictions
+    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @current_forecasts = if @next_gameweek
+      current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
                   .group_by(&:category)
@@ -259,9 +261,9 @@ class PredictionsController < ApplicationController
   rescue => e
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
-    @players_by_position = Player.order(ownership_percentage: :desc, name: :asc).group_by(&:position)
-    @current_predictions = if @next_gameweek
-      current_user.predictions
+    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @current_forecasts = if @next_gameweek
+      current_user.forecasts
                   .includes(:player)
                   .where(gameweek: @next_gameweek)
                   .group_by(&:category)
@@ -277,28 +279,28 @@ class PredictionsController < ApplicationController
 
   private
     # Use callbacks to share common setup or constraints between actions.
-    def set_prediction
-      @prediction = Prediction.find(params.expect(:id))
+    def set_forecast
+      @forecast = Forecast.find(params.expect(:id))
     end
 
     # Only allow a list of trusted parameters through.
-    def prediction_params
+    def forecast_params
       # Only allow player_id and category since gameweek is auto-assigned
       allowed_params = [ :player_id, :category ]
-      params.expect(prediction: allowed_params)
+      params.expect(forecast: allowed_params)
     end
 
-    # Ensure only the prediction owner can edit/delete
+    # Ensure only the forecast owner can edit/delete
     def ensure_ownership
-      unless current_user.admin? || @prediction.user == current_user
-        redirect_to predictions_path, alert: "You can only edit your own predictions."
+      unless current_user.admin? || @forecast.user == current_user
+        redirect_to forecasts_path, alert: "You can only edit your own forecasts."
       end
     end
 
-    # Prevent admins from editing prophet predictions
+    # Prevent admins from editing forecaster forecasts
     def restrict_admin_edits
-      if current_user.admin? && @prediction.user.prophet?
-        redirect_to predictions_path, alert: "Admins cannot edit Prophet predictions."
+      if current_user.admin? && @forecast.user.forecaster?
+        redirect_to forecasts_path, alert: "Admins cannot edit forecaster forecasts."
       end
     end
 end
