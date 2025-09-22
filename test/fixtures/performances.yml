@@ -1,0 +1,11 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  player: one
+  gameweek: one
+  gameweek_score: 10
+
+two:
+  player: two
+  gameweek: two
+  gameweek_score: 8

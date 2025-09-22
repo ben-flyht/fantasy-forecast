@@ -28,9 +28,9 @@ class ConsensusRanking
         position: player.position,
         consensus_score: forecast_data[:score],
         total_forecasts: forecast_data[:votes],
-        ownership_percentage: player.ownership_percentage
+        total_score: player.total_score(week - 1)
       )
-    end.sort_by { |ranking| [-ranking.consensus_score, -ranking.ownership_percentage.to_f] }
+    end.sort_by { |ranking| [-ranking.consensus_score, -ranking.total_score, ranking.name] }
   end
 
   private

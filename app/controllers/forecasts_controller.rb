@@ -24,8 +24,8 @@ class ForecastsController < ApplicationController
 
   # GET /forecasts/new
   def new
-    @next_gameweek = Gameweek.next_gameweek
-    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @current_gameweek = Gameweek.current_gameweek
+    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
 
     # Get current user's forecasts for the next gameweek
     @current_forecasts = if @next_gameweek
@@ -41,13 +41,13 @@ class ForecastsController < ApplicationController
 
   # GET /forecasts/1/edit
   def edit
-    @next_gameweek = Gameweek.next_gameweek
+    @current_gameweek = Gameweek.current_gameweek
   end
 
   # POST /forecasts or /forecasts.json
   def create
     @forecast = current_user.forecasts.build(forecast_params)
-    @next_gameweek = Gameweek.next_gameweek
+    @current_gameweek = Gameweek.current_gameweek
 
     # Ensure gameweek is set to next gameweek regardless of params
     @forecast.gameweek = @next_gameweek
@@ -88,7 +88,7 @@ class ForecastsController < ApplicationController
 
   # PATCH /forecasts/update_forecast (AJAX)
   def update_forecast
-    @next_gameweek = Gameweek.next_gameweek
+    @current_gameweek = Gameweek.current_gameweek
 
     unless @next_gameweek
       render json: { error: "No upcoming gameweek available" }, status: :unprocessable_entity
@@ -135,7 +135,7 @@ class ForecastsController < ApplicationController
     end
 
     # Reload the data for the response
-    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
     @current_forecasts = if @next_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -154,7 +154,7 @@ class ForecastsController < ApplicationController
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
-    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
     @current_forecasts = if @next_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -171,7 +171,7 @@ class ForecastsController < ApplicationController
   rescue => e
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
-    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
     @current_forecasts = if @next_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -189,7 +189,7 @@ class ForecastsController < ApplicationController
 
   # POST /forecasts/sync_all (AJAX)
   def sync_all
-    @next_gameweek = Gameweek.next_gameweek
+    @current_gameweek = Gameweek.current_gameweek
 
     unless @next_gameweek
       render json: { error: "No upcoming gameweek available" }, status: :unprocessable_entity
@@ -242,7 +242,7 @@ class ForecastsController < ApplicationController
     count = current_user.forecasts.where(gameweek: @next_gameweek).count
 
     # Reload the data for the response
-    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
     @current_forecasts = if @next_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -261,7 +261,7 @@ class ForecastsController < ApplicationController
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
-    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
     @current_forecasts = if @next_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -279,7 +279,7 @@ class ForecastsController < ApplicationController
   rescue => e
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
-    @players_by_position = Player.order(ownership_percentage: :desc, first_name: :asc, last_name: :asc).group_by(&:position)
+    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
     @current_forecasts = if @next_gameweek
       current_user.forecasts
                   .includes(:player)

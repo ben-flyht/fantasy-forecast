@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_20_000004) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_22_112327) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_20_000004) do
     t.index ["fpl_id"], name: "index_gameweeks_on_fpl_id", unique: true
   end
 
+  create_table "performances", force: :cascade do |t|
+    t.bigint "player_id", null: false
+    t.bigint "gameweek_id", null: false
+    t.integer "gameweek_score", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["gameweek_id"], name: "index_performances_on_gameweek_id"
+    t.index ["player_id", "gameweek_id"], name: "index_performances_on_player_id_and_gameweek_id", unique: true
+    t.index ["player_id"], name: "index_performances_on_player_id"
+  end
+
   create_table "players", force: :cascade do |t|
     t.string "first_name", null: false
     t.string "last_name", null: false
@@ -47,7 +58,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_20_000004) do
     t.string "position", null: false
     t.string "short_name"
     t.integer "fpl_id", null: false
-    t.decimal "ownership_percentage", precision: 5, scale: 2, default: "0.0"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
@@ -71,4 +81,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_20_000004) do
   add_foreign_key "forecasts", "gameweeks"
   add_foreign_key "forecasts", "players"
   add_foreign_key "forecasts", "users"
+  add_foreign_key "performances", "gameweeks"
+  add_foreign_key "performances", "players"
 end
