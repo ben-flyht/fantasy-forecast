@@ -23,7 +23,7 @@ class ConsensusRanking
 
       OpenStruct.new(
         player_id: player.id,
-        name: player.name,
+        name: player.short_name,
         first_name: player.first_name,
         last_name: player.last_name,
         team: player.team,

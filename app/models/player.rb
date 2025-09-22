@@ -21,7 +21,7 @@ class Player < ApplicationRecord
   # Associations
   has_many :forecasts, dependent: :destroy
 
-  def name
+  def full_name
     "#{first_name} #{last_name}".strip
   end
 end
