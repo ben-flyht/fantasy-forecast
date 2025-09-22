@@ -1,5 +1,3 @@
-require 'ostruct'
-
 class ConsensusRanking
   def self.for_week_and_position(week, position = nil)
     new(week, position).rankings
@@ -21,7 +19,7 @@ class ConsensusRanking
     players.map do |player|
       forecast_data = forecast_scores[player.id] || { score: 0, votes: 0 }
 
-      OpenStruct.new(
+      Ranking.new(
         player_id: player.id,
         name: player.short_name,
         first_name: player.first_name,

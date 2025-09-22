@@ -1,0 +1,28 @@
+class Ranking
+  attr_reader :player_id, :name, :first_name, :last_name, :team, :position,
+              :consensus_score, :total_forecasts, :ownership_percentage
+
+  def initialize(attributes = {})
+    @player_id = attributes[:player_id]
+    @name = attributes[:name]
+    @first_name = attributes[:first_name]
+    @last_name = attributes[:last_name]
+    @team = attributes[:team]
+    @position = attributes[:position]
+    @consensus_score = attributes[:consensus_score] || 0
+    @total_forecasts = attributes[:total_forecasts] || 0
+    @ownership_percentage = attributes[:ownership_percentage]
+  end
+
+  def positive_score?
+    consensus_score > 0
+  end
+
+  def negative_score?
+    consensus_score < 0
+  end
+
+  def neutral_score?
+    consensus_score == 0
+  end
+end
