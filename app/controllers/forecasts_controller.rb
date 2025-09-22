@@ -216,7 +216,7 @@ class ForecastsController < ApplicationController
       return
     end
 
-    forecasts_data = params.permit![:forecasts] || {}
+    forecasts_data = sync_forecasts_params || {}
     Rails.logger.debug "Received forecasts data: #{forecasts_data.inspect}"
 
     # Start a transaction to ensure all-or-nothing update
@@ -356,5 +356,40 @@ class ForecastsController < ApplicationController
       if current_user.admin? && @forecast.user.forecaster?
         redirect_to forecasts_path, alert: "Admins cannot edit forecaster forecasts."
       end
+    end
+
+    # Strong parameters for sync_all action
+    def sync_forecasts_params
+      return {} unless params[:forecasts]
+
+      # Define valid categories and positions from the enums
+      valid_categories = %w[target avoid]
+      valid_positions = %w[goalkeeper defender midfielder forward]
+
+      # Build the permitted structure dynamically
+      permitted_structure = {}
+      valid_categories.each do |category|
+        permitted_structure[category] = {}
+        valid_positions.each do |position|
+          # Allow any slot numbers (integers as strings) with player_id values
+          permitted_structure[category][position] = {}
+        end
+      end
+
+      # Permit only the valid structure
+      params.require(:forecasts).permit(
+        target: {
+          goalkeeper: {},
+          defender: {},
+          midfielder: {},
+          forward: {}
+        },
+        avoid: {
+          goalkeeper: {},
+          defender: {},
+          midfielder: {},
+          forward: {}
+        }
+      ).to_h
     end
 end
