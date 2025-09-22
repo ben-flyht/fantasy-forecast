@@ -25,7 +25,12 @@ class ForecastsController < ApplicationController
   # GET /forecasts/new
   def new
     @current_gameweek = Gameweek.current_gameweek
-    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
+    # Load players with their total scores pre-calculated and ordered by score
+    players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .group("players.id")
+                                .order("total_score_cached DESC, first_name, last_name")
+    @players_by_position = players_with_scores.group_by(&:position)
 
     # Get current user's forecasts for the current gameweek
     @current_forecasts = if @current_gameweek
@@ -138,7 +143,7 @@ class ForecastsController < ApplicationController
     players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
                                 .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
                                 .group("players.id")
-                                .order(:first_name, :last_name)
+                                .order("total_score_cached DESC, first_name, last_name")
 
     @players_by_position = players_with_scores.group_by(&:position)
     @current_forecasts = if @current_gameweek
@@ -159,7 +164,12 @@ class ForecastsController < ApplicationController
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
-    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
+    # Load players with their total scores pre-calculated and ordered by score
+    players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .group("players.id")
+                                .order("total_score_cached DESC, first_name, last_name")
+    @players_by_position = players_with_scores.group_by(&:position)
     @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -176,7 +186,12 @@ class ForecastsController < ApplicationController
   rescue => e
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
-    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
+    # Load players with their total scores pre-calculated and ordered by score
+    players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .group("players.id")
+                                .order("total_score_cached DESC, first_name, last_name")
+    @players_by_position = players_with_scores.group_by(&:position)
     @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -247,7 +262,12 @@ class ForecastsController < ApplicationController
     count = current_user.forecasts.where(gameweek: @current_gameweek).count
 
     # Reload the data for the response - optimized to only load needed fields
-    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
+    # Load players with their total scores pre-calculated and ordered by score
+    players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .group("players.id")
+                                .order("total_score_cached DESC, first_name, last_name")
+    @players_by_position = players_with_scores.group_by(&:position)
     @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -266,7 +286,12 @@ class ForecastsController < ApplicationController
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
-    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
+    # Load players with their total scores pre-calculated and ordered by score
+    players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .group("players.id")
+                                .order("total_score_cached DESC, first_name, last_name")
+    @players_by_position = players_with_scores.group_by(&:position)
     @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
@@ -284,7 +309,12 @@ class ForecastsController < ApplicationController
   rescue => e
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
-    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
+    # Load players with their total scores pre-calculated and ordered by score
+    players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .group("players.id")
+                                .order("total_score_cached DESC, first_name, last_name")
+    @players_by_position = players_with_scores.group_by(&:position)
     @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
