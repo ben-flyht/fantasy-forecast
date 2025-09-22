@@ -7,6 +7,9 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     @player = players(:one)
     @player2 = players(:two)
 
+    # Create test team
+    @test_team = Team.create!(name: "Test Team", short_name: "TST", fpl_id: 96)
+
     # Clear data to avoid conflicts
     Forecast.destroy_all
     Gameweek.destroy_all
@@ -49,7 +52,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "weekly consensus should require authentication" do
-    get consensus_weekly_path
+    get consensus_index_path
     assert_redirected_to new_user_session_path
   end
 
@@ -78,7 +81,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     # Should show player names and consensus scores
-    assert_includes response.body, @player.name
+    assert_includes response.body, "Player One"
   end
 
   test "consensus should filter by week parameter" do
@@ -102,7 +105,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     midfielder = Player.create!(
       first_name: "Test",
       last_name: "Midfielder",
-      team: "Test Team",
+      team: @test_team,
       position: "midfielder",
       fpl_id: 999
     )
@@ -126,13 +129,13 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "consensus should default to week 5" do
+  test "consensus should default to next gameweek" do
     sign_in @forecaster_user
     get consensus_index_path
     assert_response :success
 
-    # Should see week 5 in page title or content
-    assert_includes response.body, "Week 5"
+    # Should see week 2 (next gameweek) in page title or content
+    assert_includes response.body, "Week 2"
   end
 
   test "consensus should handle empty forecasts gracefully" do
@@ -147,7 +150,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
 
   test "weekly consensus alias should work" do
     sign_in @forecaster_user
-    get consensus_weekly_path(week: 5)
+    get consensus_index_path(week: 5)
     assert_response :success
     assert_includes response.body, "Weekly Consensus Rankings"
   end

@@ -12,7 +12,7 @@ class Forecast < ApplicationRecord
   }
 
   # Callbacks
-  before_validation :assign_current_gameweek!
+  before_validation :assign_next_gameweek!
 
   # Validations
   validates :category, presence: true
@@ -33,10 +33,10 @@ class Forecast < ApplicationRecord
 
   # Class methods for consensus scoring (+1 for target, -1 for avoid)
   def self.consensus_scores_for_week(week)
-    joins(:gameweek, :player)
+    joins(:gameweek, player: :team)
       .where(gameweeks: { fpl_id: week })
-      .group("players.id, players.first_name, players.last_name, players.team, players.position")
-      .select("players.id as player_id, CONCAT(players.first_name, ' ', players.last_name) as name, players.first_name, players.last_name, players.team, players.position, SUM(CASE WHEN category = 'target' THEN 1 WHEN category = 'avoid' THEN -1 ELSE 0 END) as consensus_score, COUNT(*) as total_forecasts")
+      .group("players.id, players.first_name, players.last_name, teams.name, players.position")
+      .select("players.id as player_id, CONCAT(players.first_name, ' ', players.last_name) as name, players.first_name, players.last_name, teams.name as team, players.position, SUM(CASE WHEN category = 'target' THEN 1 WHEN category = 'avoid' THEN -1 ELSE 0 END) as consensus_score, COUNT(*) as total_forecasts")
       .order("consensus_score DESC, total_forecasts DESC")
   end
 
@@ -48,6 +48,15 @@ class Forecast < ApplicationRecord
       .select("player_id, category, COUNT(*) as count")
   end
 
+  # Class method for consensus scoring filtered by position
+  def self.consensus_scores_for_week_by_position(week, position)
+    joins(:gameweek, player: :team)
+      .where(gameweeks: { fpl_id: week }, players: { position: position })
+      .group("players.id, players.first_name, players.last_name, teams.name, players.position")
+      .select("players.id as player_id, CONCAT(players.first_name, ' ', players.last_name) as name, players.first_name, players.last_name, teams.name as team, players.position, SUM(CASE WHEN category = 'target' THEN 1 WHEN category = 'avoid' THEN -1 ELSE 0 END) as consensus_score, COUNT(*) as total_forecasts")
+      .order("consensus_score DESC, total_forecasts DESC")
+  end
+
 
   # Class method for auto-assignment
   def self.assign_current_gameweek!
@@ -55,18 +64,23 @@ class Forecast < ApplicationRecord
     current_gameweek&.id
   end
 
+  # Class method for assigning next gameweek
+  def self.assign_next_gameweek!
+    next_gameweek = Gameweek.next_gameweek
+    next_gameweek&.id
+  end
+
   private
 
   # Instance method for auto-assignment
-  def assign_current_gameweek!
+  def assign_next_gameweek!
     return if gameweek.present?  # Don't override if gameweek is already set
 
-    current_gameweek = Gameweek.current_gameweek
-    if current_gameweek
-      self.gameweek = current_gameweek
+    next_gameweek = Gameweek.next_gameweek
+    if next_gameweek
+      self.gameweek = next_gameweek
     else
-      errors.add(:gameweek, "No current gameweek available")
+      errors.add(:gameweek, "No next gameweek available")
     end
   end
-
 end

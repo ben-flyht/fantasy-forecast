@@ -4,7 +4,7 @@ one:
   first_name: "Test Player"
   last_name: "One"
   short_name: "Player One"
-  team: "Arsenal"
+  team: one
   position: "goalkeeper"
   fpl_id: 100
 
@@ -12,6 +12,6 @@ two:
   first_name: "Test Player"
   last_name: "Two"
   short_name: "Player Two"
-  team: "Chelsea"
+  team: two
   position: "midfielder"
   fpl_id: 200

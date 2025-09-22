@@ -3,8 +3,9 @@ require "webmock/minitest"
 
 class Fpl::SyncPlayersTest < ActiveSupport::TestCase
   def setup
-    # Clear all players to ensure clean tests
+    # Clear all players and teams to ensure clean tests
     Player.destroy_all
+    Team.destroy_all
     @fixture_data = JSON.parse(File.read(Rails.root.join("test/fixtures/files/fpl_bootstrap.json")))
     WebMock.disable_net_connect!(allow_localhost: true)
   end
@@ -28,7 +29,7 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     assert_equal "Haaland", haaland.last_name
     assert_equal "Erling Haaland", haaland.name
     assert_equal "Haaland", haaland.short_name
-    assert_equal "Manchester City", haaland.team
+    assert_equal "Manchester City", haaland.team.name
     assert_equal "forward", haaland.position
 
     salah = Player.find_by(fpl_id: 253)
@@ -37,7 +38,7 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     assert_equal "Salah", salah.last_name
     assert_equal "Mohamed Salah", salah.name
     assert_equal "Salah", salah.short_name
-    assert_equal "Liverpool", salah.team
+    assert_equal "Liverpool", salah.team.name
     assert_equal "forward", salah.position
 
     alisson = Player.find_by(fpl_id: 254)
@@ -45,16 +46,17 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     assert_equal "Alisson", alisson.first_name
     assert_equal "Becker", alisson.last_name
     assert_equal "Alisson Becker", alisson.name
-    assert_equal "Liverpool", alisson.team
+    assert_equal "Liverpool", alisson.team.name
     assert_equal "goalkeeper", alisson.position
   end
 
   test "updates existing players instead of duplicating" do
-    # Create existing player
+    # Create test team and existing player
+    test_team = Team.create!(name: "Old Team", short_name: "OLD", fpl_id: 95)
     existing_player = Player.create!(
       first_name: "Old",
       last_name: "Name",
-      team: "Old Team",
+      team: test_team,
       position: "midfielder",
       fpl_id: 233
     )
@@ -71,7 +73,7 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     assert_equal "Erling", existing_player.first_name
     assert_equal "Haaland", existing_player.last_name
     assert_equal "Erling Haaland", existing_player.name
-    assert_equal "Manchester City", existing_player.team
+    assert_equal "Manchester City", existing_player.team.name
     assert_equal "forward", existing_player.position
     assert_equal 233, existing_player.fpl_id
 

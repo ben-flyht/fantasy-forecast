@@ -1,9 +1,9 @@
 {
   "teams": [
-    {"id": 1, "name": "Arsenal"},
-    {"id": 2, "name": "Liverpool"},
-    {"id": 3, "name": "Manchester City"},
-    {"id": 4, "name": "Chelsea"}
+    {"id": 1, "name": "Arsenal", "short_name": "ARS"},
+    {"id": 2, "name": "Liverpool", "short_name": "LIV"},
+    {"id": 3, "name": "Manchester City", "short_name": "MCI"},
+    {"id": 4, "name": "Chelsea", "short_name": "CHE"}
   ],
   "elements": [
     {

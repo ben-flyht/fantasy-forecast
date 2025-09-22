@@ -5,6 +5,7 @@ class Gameweek < ApplicationRecord
 
   # Associations
   has_many :performances, dependent: :destroy
+  has_many :matches, dependent: :destroy
 
   scope :current, -> { where(is_current: true) }
   scope :next_upcoming, -> { where(is_next: true) }

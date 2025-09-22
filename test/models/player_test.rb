@@ -1,26 +1,29 @@
 require "test_helper"
 
 class PlayerTest < ActiveSupport::TestCase
+  def setup
+    @team = Team.create!(name: "Arsenal", short_name: "ARS", fpl_id: 97)
+  end
+
   test "should require first_name" do
-    player = Player.new(last_name: "Player", team: "Arsenal", position: "forward", fpl_id: 123)
+    player = Player.new(last_name: "Player", team: @team, position: "forward", fpl_id: 123)
     assert_not player.valid?
     assert_includes player.errors[:first_name], "can't be blank"
   end
 
   test "should require last_name" do
-    player = Player.new(first_name: "Test", team: "Arsenal", position: "forward", fpl_id: 123)
+    player = Player.new(first_name: "Test", team: @team, position: "forward", fpl_id: 123)
     assert_not player.valid?
     assert_includes player.errors[:last_name], "can't be blank"
   end
 
   test "should require team" do
     player = Player.new(first_name: "Test", last_name: "Player", position: "forward", fpl_id: 123)
-    assert_not player.valid?
-    assert_includes player.errors[:team], "can't be blank"
+    assert player.valid? # Team is optional now
   end
 
   test "should require fpl_id" do
-    player = Player.new(first_name: "Test", last_name: "Player", team: "Arsenal", position: "forward")
+    player = Player.new(first_name: "Test", last_name: "Player", team: @team, position: "forward")
     assert_not player.valid?
     assert_includes player.errors[:fpl_id], "can't be blank"
   end
@@ -29,7 +32,7 @@ class PlayerTest < ActiveSupport::TestCase
     player1 = Player.create!(
       first_name: "Test",
       last_name: "Player1",
-      team: "Arsenal",
+      team: @team,
       position: "forward",
       fpl_id: 123
     )
@@ -37,7 +40,7 @@ class PlayerTest < ActiveSupport::TestCase
     player2 = Player.new(
       first_name: "Test",
       last_name: "Player2",
-      team: "Chelsea",
+      team: @team,
       position: "midfielder",
       fpl_id: 123
     )
@@ -47,7 +50,7 @@ class PlayerTest < ActiveSupport::TestCase
   end
 
   test "should accept valid positions" do
-    player = Player.new(first_name: "Test", last_name: "Player", team: "Arsenal", fpl_id: 123)
+    player = Player.new(first_name: "Test", last_name: "Player", team: @team, fpl_id: 123)
 
     # Valid positions
     %w[goalkeeper defender midfielder forward].each do |position|
@@ -60,7 +63,7 @@ class PlayerTest < ActiveSupport::TestCase
     player = Player.new(
       first_name: "Test",
       last_name: "Player",
-      team: "Arsenal",
+      team: @team,
       position: "forward",
       fpl_id: 123
     )
@@ -72,7 +75,7 @@ class PlayerTest < ActiveSupport::TestCase
       first_name: "Test",
       last_name: "Player",
       short_name: "Player",
-      team: "Arsenal",
+      team: @team,
       position: "forward",
       fpl_id: 123
     )
@@ -84,7 +87,7 @@ class PlayerTest < ActiveSupport::TestCase
     player = Player.new(
       first_name: "Test",
       last_name: "Player",
-      team: "Arsenal",
+      team: @team,
       position: "forward",
       fpl_id: 123
     )
@@ -98,7 +101,7 @@ class PlayerTest < ActiveSupport::TestCase
     goalkeeper = Player.create!(
       first_name: "Goal",
       last_name: "Keeper",
-      team: "Arsenal",
+      team: @team,
       position: "goalkeeper",
       fpl_id: 1
     )
@@ -106,7 +109,7 @@ class PlayerTest < ActiveSupport::TestCase
     defender = Player.create!(
       first_name: "Def",
       last_name: "Ender",
-      team: "Arsenal",
+      team: @team,
       position: "defender",
       fpl_id: 2
     )
@@ -114,7 +117,7 @@ class PlayerTest < ActiveSupport::TestCase
     midfielder = Player.create!(
       first_name: "Mid",
       last_name: "Fielder",
-      team: "Arsenal",
+      team: @team,
       position: "midfielder",
       fpl_id: 3
     )
@@ -122,7 +125,7 @@ class PlayerTest < ActiveSupport::TestCase
     forward = Player.create!(
       first_name: "For",
       last_name: "Ward",
-      team: "Arsenal",
+      team: @team,
       position: "forward",
       fpl_id: 4
     )

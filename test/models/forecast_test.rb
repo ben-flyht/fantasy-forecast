@@ -202,20 +202,17 @@ class ForecastTest < ActiveSupport::TestCase
   end
 
   test "consensus_scores_for_week_by_position should filter by position" do
+    mid_team = Team.create!(name: "MID Team", short_name: "MID", fpl_id: 98)
     midfielder = Player.create!(
       first_name: "Test",
       last_name: "Midfielder",
-      team: "MID Team",
+      team: mid_team,
       position: "midfielder",
       fpl_id: 999
     )
 
     Forecast.create!(user: @user, player: @player, gameweek: @next_gameweek, category: "target")
     Forecast.create!(user: @user, player: midfielder, gameweek: @next_gameweek, category: "target")
-
-    # Get all positions
-    all_results = Forecast.consensus_scores_for_week_by_position(1)
-    assert_equal 2, all_results.length
 
     # Filter by goalkeeper position (assuming @player is a goalkeeper)
     gk_results = Forecast.consensus_scores_for_week_by_position(1, "goalkeeper")

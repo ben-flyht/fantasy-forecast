@@ -131,7 +131,7 @@ class ForecastAggregatorTest < ActiveSupport::TestCase
 
     # Check structure includes player object
     assert_equal @player, result[@player.id][:player]
-    assert_equal({"target" => 2}, result[@player.id][:votes])
+    assert_equal({ "target" => 2 }, result[@player.id][:votes])
     assert_equal 2, result[@player.id][:total_votes]
   end
 
@@ -158,9 +158,12 @@ class ForecastAggregatorTest < ActiveSupport::TestCase
   end
 
   test "top_for_week should respect limit parameter" do
+    # Create a team first
+    team = Team.create!(name: "Test Team", short_name: "TST", fpl_id: 99)
+
     # Create forecasts for multiple players
     5.times do |i|
-      player = Player.create!(first_name: "Player", last_name: "#{i}", team: "Team", position: "forward", fpl_id: 500 + i)
+      player = Player.create!(first_name: "Player", last_name: "#{i}", team: team, position: "forward", fpl_id: 500 + i)
       Forecast.create!(user: @user, player: player, category: "target", gameweek: @gameweek1)
     end
 

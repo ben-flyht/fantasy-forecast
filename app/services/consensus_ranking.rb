@@ -24,13 +24,13 @@ class ConsensusRanking
         name: player.short_name,
         first_name: player.first_name,
         last_name: player.last_name,
-        team: player.team,
+        team: player.team&.short_name || "No Team",
         position: player.position,
         consensus_score: forecast_data[:score],
         total_forecasts: forecast_data[:votes],
         total_score: player.total_score(week - 1)
       )
-    end.sort_by { |ranking| [-ranking.consensus_score, -ranking.total_score, ranking.name] }
+    end.sort_by { |ranking| [ -ranking.consensus_score, -ranking.total_score, ranking.name ] }
   end
 
   private
@@ -38,7 +38,7 @@ class ConsensusRanking
   attr_reader :week, :position
 
   def base_players_query
-    query = Player.all
+    query = Player.includes(:team)
     query = query.where(position: position) if position.present?
     query
   end
@@ -48,9 +48,9 @@ class ConsensusRanking
                        .where(gameweeks: { fpl_id: week })
                        .group(:player_id)
                        .select(
-                         'player_id',
-                         'SUM(CASE WHEN category = \'target\' THEN 1 WHEN category = \'avoid\' THEN -1 ELSE 0 END) as score',
-                         'COUNT(*) as votes'
+                         "player_id",
+                         "SUM(CASE WHEN category = 'target' THEN 1 WHEN category = 'avoid' THEN -1 ELSE 0 END) as score",
+                         "COUNT(*) as votes"
                        )
 
     forecasts.each_with_object({}) do |forecast, hash|
@@ -60,5 +60,4 @@ class ConsensusRanking
       }
     end
   end
-
 end

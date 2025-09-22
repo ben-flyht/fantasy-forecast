@@ -9,6 +9,8 @@ module Fpl
 
       @service = SyncGameweeks.new
       @api_url = "https://fantasy.premierleague.com/api/bootstrap-static/"
+      @fixtures_api_url = "https://fantasy.premierleague.com/api/fixtures/"
+      @mock_fixtures_response = []
       @mock_api_response = {
         "events" => [
           {
@@ -41,7 +43,9 @@ module Fpl
 
     test "call creates new gameweeks from API data" do
       stub_request(:get, @api_url)
-        .to_return(status: 200, body: @mock_api_response.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: @mock_api_response.to_json, headers: { "Content-Type" => "application/json" })
+      stub_request(:get, @fixtures_api_url)
+        .to_return(status: 200, body: @mock_fixtures_response.to_json, headers: { "Content-Type" => "application/json" })
 
       assert_difference "Gameweek.count", 3 do
         assert SyncGameweeks.call
@@ -81,7 +85,9 @@ module Fpl
       )
 
       stub_request(:get, @api_url)
-        .to_return(status: 200, body: @mock_api_response.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: @mock_api_response.to_json, headers: { "Content-Type" => "application/json" })
+      stub_request(:get, @fixtures_api_url)
+        .to_return(status: 200, body: @mock_fixtures_response.to_json, headers: { "Content-Type" => "application/json" })
 
       assert_difference "Gameweek.count", 2 do # Only 2 new gameweeks created
         assert SyncGameweeks.call
@@ -111,7 +117,9 @@ module Fpl
       )
 
       stub_request(:get, @api_url)
-        .to_return(status: 200, body: @mock_api_response.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: @mock_api_response.to_json, headers: { "Content-Type" => "application/json" })
+      stub_request(:get, @fixtures_api_url)
+        .to_return(status: 200, body: @mock_fixtures_response.to_json, headers: { "Content-Type" => "application/json" })
 
       SyncGameweeks.call
 
@@ -131,7 +139,9 @@ module Fpl
 
     test "call calculates end_time correctly" do
       stub_request(:get, @api_url)
-        .to_return(status: 200, body: @mock_api_response.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: @mock_api_response.to_json, headers: { "Content-Type" => "application/json" })
+      stub_request(:get, @fixtures_api_url)
+        .to_return(status: 200, body: @mock_fixtures_response.to_json, headers: { "Content-Type" => "application/json" })
 
       SyncGameweeks.call
 
@@ -181,7 +191,9 @@ module Fpl
       }
 
       stub_request(:get, @api_url)
-        .to_return(status: 200, body: invalid_response.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: invalid_response.to_json, headers: { "Content-Type" => "application/json" })
+      stub_request(:get, @fixtures_api_url)
+        .to_return(status: 200, body: @mock_fixtures_response.to_json, headers: { "Content-Type" => "application/json" })
 
       # Should not crash and should create valid gameweeks
       assert SyncGameweeks.call
@@ -195,7 +207,9 @@ module Fpl
 
     test "class method call delegates to instance" do
       stub_request(:get, @api_url)
-        .to_return(status: 200, body: @mock_api_response.to_json, headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: @mock_api_response.to_json, headers: { "Content-Type" => "application/json" })
+      stub_request(:get, @fixtures_api_url)
+        .to_return(status: 200, body: @mock_fixtures_response.to_json, headers: { "Content-Type" => "application/json" })
 
       # Test that the class method works (it calls new.call internally)
       assert SyncGameweeks.call

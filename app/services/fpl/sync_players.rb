@@ -15,6 +15,9 @@ module Fpl
     data = fetch_fpl_data
     return false unless data
 
+    # Sync teams first
+    sync_teams(data["teams"])
+
     teams = build_teams_hash(data["teams"])
     elements = data["elements"]
 
@@ -24,6 +27,7 @@ module Fpl
     true
   rescue => e
     Rails.logger.error "FPL sync failed: #{e.message}"
+    Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
     false
   end
 
@@ -47,6 +51,27 @@ module Fpl
     end
   end
 
+  def sync_teams(teams_data)
+    Rails.logger.info "Syncing teams..."
+
+    teams_data.each do |team_data|
+      team = Team.find_or_initialize_by(fpl_id: team_data["id"])
+
+      team.assign_attributes(
+        name: team_data["name"],
+        short_name: team_data["short_name"]
+      )
+
+      if team.save
+        Rails.logger.debug "Synced team: #{team.name} (#{team.short_name})"
+      else
+        Rails.logger.error "Failed to sync team #{team_data['name']}: #{team.errors.full_messages.join(', ')}"
+      end
+    end
+
+    Rails.logger.info "Teams sync completed. Total teams: #{Team.count}"
+  end
+
   def build_teams_hash(teams_data)
     teams_hash = {}
     teams_data.each do |team|
@@ -63,34 +88,54 @@ module Fpl
       4 => "forward"
     }
 
+    success_count = 0
+    skip_count = 0
+    error_count = 0
+
     elements.each do |element|
-      fpl_id = element["id"]
-      first_name = element["first_name"]
-      last_name = element["second_name"]
-      short_name = element["web_name"] || element["second_name"] # Fallback to second_name if web_name missing
-      team = teams[element["team"]]
-      position = position_map[element["element_type"]]
+      begin
+        fpl_id = element["id"]
+        first_name = element["first_name"]
+        last_name = element["second_name"]
+        short_name = element["web_name"] || element["second_name"] # Fallback to second_name if web_name missing
+        team_fpl_id = element["team"]
+        position = position_map[element["element_type"]]
 
-      # Skip if we can't determine position or team
-      next unless position && team
+        # Find the team record
+        team_record = Team.find_by(fpl_id: team_fpl_id)
 
-      player_attributes = {
-        first_name: first_name,
-        last_name: last_name,
-        short_name: short_name,
-        team: team,
-        position: position
-      }
+        # Skip if we can't determine position or team
+        unless position && team_record
+          Rails.logger.warn "Skipping player #{first_name} #{last_name}: position=#{position}, team_record=#{team_record&.name}"
+          skip_count += 1
+          next
+        end
 
-      player = Player.find_or_initialize_by(fpl_id: fpl_id)
-      player.assign_attributes(player_attributes)
+        player_attributes = {
+          first_name: first_name,
+          last_name: last_name,
+          short_name: short_name,
+          team: team_record,
+          position: position
+        }
 
-      if player.save
-        Rails.logger.debug "Synced player: #{first_name} #{last_name} (#{short_name}) (#{team}, #{position})"
-      else
-        Rails.logger.warn "Failed to sync player #{first_name} #{last_name}: #{player.errors.full_messages.join(', ')}"
+        player = Player.find_or_initialize_by(fpl_id: fpl_id)
+        player.assign_attributes(player_attributes)
+
+        if player.save
+          Rails.logger.debug "Synced player: #{first_name} #{last_name} (#{short_name}) (#{team_record.name}, #{position})"
+          success_count += 1
+        else
+          Rails.logger.error "Failed to sync player #{first_name} #{last_name}: #{player.errors.full_messages.join(', ')}"
+          error_count += 1
+        end
+      rescue => e
+        Rails.logger.error "Exception syncing player #{element['first_name']} #{element['second_name']}: #{e.message}"
+        error_count += 1
       end
     end
+
+    Rails.logger.info "Player sync results: #{success_count} synced, #{skip_count} skipped, #{error_count} errors"
   end
-end
+  end
 end

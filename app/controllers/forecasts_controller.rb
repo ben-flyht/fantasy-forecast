@@ -24,10 +24,10 @@ class ForecastsController < ApplicationController
 
   # GET /forecasts/new
   def new
-    @current_gameweek = Gameweek.current_gameweek
+    @current_gameweek = Gameweek.next_gameweek
     # Load players with their total scores pre-calculated and ordered by score
     players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
-                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
                                 .group("players.id")
                                 .order("total_score_cached DESC, first_name, last_name")
     @players_by_position = players_with_scores.group_by(&:position)
@@ -46,13 +46,13 @@ class ForecastsController < ApplicationController
 
   # GET /forecasts/1/edit
   def edit
-    @current_gameweek = Gameweek.current_gameweek
+    @current_gameweek = Gameweek.next_gameweek
   end
 
   # POST /forecasts or /forecasts.json
   def create
     @forecast = current_user.forecasts.build(forecast_params)
-    @current_gameweek = Gameweek.current_gameweek
+    @current_gameweek = Gameweek.next_gameweek
 
     # Ensure gameweek is set to next gameweek regardless of params
     @forecast.gameweek = @current_gameweek
@@ -93,7 +93,7 @@ class ForecastsController < ApplicationController
 
   # PATCH /forecasts/update_forecast (AJAX)
   def update_forecast
-    @current_gameweek = Gameweek.current_gameweek
+    @current_gameweek = Gameweek.next_gameweek
 
     unless @current_gameweek
       render json: { error: "No current gameweek available" }, status: :unprocessable_entity
@@ -141,7 +141,7 @@ class ForecastsController < ApplicationController
 
     # Load players with their total scores pre-calculated to avoid N+1 queries
     players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
-                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
                                 .group("players.id")
                                 .order("total_score_cached DESC, first_name, last_name")
 
@@ -166,7 +166,7 @@ class ForecastsController < ApplicationController
     # Reload the data for error response
     # Load players with their total scores pre-calculated and ordered by score
     players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
-                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
                                 .group("players.id")
                                 .order("total_score_cached DESC, first_name, last_name")
     @players_by_position = players_with_scores.group_by(&:position)
@@ -188,7 +188,7 @@ class ForecastsController < ApplicationController
     # Reload the data for error response
     # Load players with their total scores pre-calculated and ordered by score
     players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
-                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
                                 .group("players.id")
                                 .order("total_score_cached DESC, first_name, last_name")
     @players_by_position = players_with_scores.group_by(&:position)
@@ -209,7 +209,7 @@ class ForecastsController < ApplicationController
 
   # POST /forecasts/sync_all (AJAX)
   def sync_all
-    @current_gameweek = Gameweek.current_gameweek
+    @current_gameweek = Gameweek.next_gameweek
 
     unless @current_gameweek
       render json: { error: "No current gameweek available" }, status: :unprocessable_entity
@@ -264,7 +264,7 @@ class ForecastsController < ApplicationController
     # Reload the data for the response - optimized to only load needed fields
     # Load players with their total scores pre-calculated and ordered by score
     players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
-                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
                                 .group("players.id")
                                 .order("total_score_cached DESC, first_name, last_name")
     @players_by_position = players_with_scores.group_by(&:position)
@@ -288,7 +288,7 @@ class ForecastsController < ApplicationController
     # Reload the data for error response
     # Load players with their total scores pre-calculated and ordered by score
     players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
-                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
                                 .group("players.id")
                                 .order("total_score_cached DESC, first_name, last_name")
     @players_by_position = players_with_scores.group_by(&:position)
@@ -311,7 +311,7 @@ class ForecastsController < ApplicationController
     # Reload the data for error response
     # Load players with their total scores pre-calculated and ordered by score
     players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
-                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
                                 .group("players.id")
                                 .order("total_score_cached DESC, first_name, last_name")
     @players_by_position = players_with_scores.group_by(&:position)

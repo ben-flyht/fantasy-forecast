@@ -14,16 +14,20 @@ class Player < ApplicationRecord
   # Validations
   validates :first_name, presence: true
   validates :last_name, presence: true
-  validates :team, presence: true
   validates :fpl_id, presence: true, uniqueness: true
   validates :position, presence: true
 
   # Associations
+  belongs_to :team, optional: true  # Optional for now during migration
   has_many :forecasts, dependent: :destroy
   has_many :performances, dependent: :destroy
 
   def full_name
     "#{first_name} #{last_name}".strip
+  end
+
+  def name
+    full_name
   end
 
   def total_score(up_to_gameweek = nil)
@@ -43,8 +47,8 @@ class Player < ApplicationRecord
   # Access the cached total score from SQL query or fall back to dynamic calculation
   def total_score_cached
     # If we have a cached value from the SQL query, use it
-    if attributes.key?('total_score_cached')
-      attributes['total_score_cached'].to_i
+    if attributes.key?("total_score_cached")
+      attributes["total_score_cached"].to_i
     else
       # Fall back to the dynamic calculation
       total_score

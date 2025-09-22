@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_22_112327) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_22_210735) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,28 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_112327) do
     t.index ["fpl_id"], name: "index_gameweeks_on_fpl_id", unique: true
   end
 
+  create_table "matches", force: :cascade do |t|
+    t.bigint "home_team_id", null: false
+    t.bigint "away_team_id", null: false
+    t.bigint "gameweek_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "fpl_id"
+    t.index ["away_team_id"], name: "index_matches_on_away_team_id"
+    t.index ["fpl_id"], name: "index_matches_on_fpl_id", unique: true
+    t.index ["gameweek_id"], name: "index_matches_on_gameweek_id"
+    t.index ["home_team_id"], name: "index_matches_on_home_team_id"
+  end
+
+  create_table "opponents", force: :cascade do |t|
+    t.bigint "performance_id", null: false
+    t.bigint "team_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["performance_id"], name: "index_opponents_on_performance_id"
+    t.index ["team_id"], name: "index_opponents_on_team_id"
+  end
+
   create_table "performances", force: :cascade do |t|
     t.bigint "player_id", null: false
     t.bigint "gameweek_id", null: false
@@ -54,13 +76,23 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_112327) do
   create_table "players", force: :cascade do |t|
     t.string "first_name", null: false
     t.string "last_name", null: false
-    t.string "team", null: false
     t.string "position", null: false
     t.string "short_name"
     t.integer "fpl_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "team_id"
     t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
+    t.index ["team_id"], name: "index_players_on_team_id"
+  end
+
+  create_table "teams", force: :cascade do |t|
+    t.string "name"
+    t.string "short_name"
+    t.integer "fpl_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fpl_id"], name: "index_teams_on_fpl_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -81,6 +113,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_112327) do
   add_foreign_key "forecasts", "gameweeks"
   add_foreign_key "forecasts", "players"
   add_foreign_key "forecasts", "users"
+  add_foreign_key "matches", "gameweeks"
+  add_foreign_key "matches", "teams", column: "away_team_id"
+  add_foreign_key "matches", "teams", column: "home_team_id"
+  add_foreign_key "opponents", "performances"
+  add_foreign_key "opponents", "teams"
   add_foreign_key "performances", "gameweeks"
   add_foreign_key "performances", "players"
+  add_foreign_key "players", "teams"
 end

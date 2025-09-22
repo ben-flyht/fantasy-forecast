@@ -45,7 +45,7 @@
                       <%= 'selected' if selected_target_player&.player_id == player.id %>
                       <%= 'disabled' if all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id %>
                     >
-                      <%= player.full_name %> (<%= player.team %>, <%= player.total_score_cached %> pts)<%= all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id ? ' (Selected)' : '' %>
+                      <%= player.full_name %> (<%= player.team&.short_name || "No Team" %>, <%= player.total_score_cached %> pts)<%= all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id ? ' (Selected)' : '' %>
                     </option>
                   <% end %>
                 </select>
@@ -72,7 +72,7 @@
                       <%= 'selected' if selected_avoid_player&.player_id == player.id %>
                       <%= 'disabled' if all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id %>
                     >
-                      <%= player.full_name %> (<%= player.team %>, <%= player.total_score_cached %> pts)<%= all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id ? ' (Selected)' : '' %>
+                      <%= player.full_name %> (<%= player.team&.short_name || "No Team" %>, <%= player.total_score_cached %> pts)<%= all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id ? ' (Selected)' : '' %>
                     </option>
                   <% end %>
                 </select>

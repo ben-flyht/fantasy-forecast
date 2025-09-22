@@ -1,12 +1,27 @@
 namespace :fpl do
-  desc "Sync players and gameweeks"
+  desc "Sync teams, players, gameweeks and matches"
   task sync: :environment do
-    puts "Starting FPL sync (players and gameweeks)..."
+    puts "Starting FPL sync (teams, players, gameweeks and matches)..."
 
+    Rake::Task["fpl:sync_teams"].invoke
     Rake::Task["fpl:sync_players"].invoke
     Rake::Task["fpl:sync_gameweeks"].invoke
+    Rake::Task["fpl:sync_matches"].invoke
 
     puts "\n🎉 FPL sync completed successfully!"
+  end
+
+  desc "Sync teams from Fantasy Premier League API"
+  task sync_teams: :environment do
+    puts "Starting FPL team sync..."
+
+    service = Fpl::SyncTeams.new
+    if service.call
+      puts "✅ Successfully synced #{Team.count} teams from FPL API"
+    else
+      puts "❌ Team sync failed. Check logs for details."
+      exit 1
+    end
   end
 
   desc "Sync players from Fantasy Premier League API"
@@ -34,6 +49,18 @@ namespace :fpl do
       puts "Next gameweek: #{next_gw&.name || 'None'}"
     else
       puts "❌ FPL gameweek sync failed. Check logs for details."
+      exit 1
+    end
+  end
+
+  desc "Sync matches from Fantasy Premier League API"
+  task sync_matches: :environment do
+    puts "Starting FPL match sync..."
+
+    if Fpl::SyncMatches.call
+      puts "✅ Successfully synced #{Match.count} matches from FPL API"
+    else
+      puts "❌ Match sync failed. Check logs for details."
       exit 1
     end
   end
@@ -120,7 +147,7 @@ namespace :fpl do
 
       # Show breakdown by gameweek
       puts "\nPerformance breakdown:"
-      Performance.joins(:gameweek).group('gameweeks.name').count.each do |gw_name, count|
+      Performance.joins(:gameweek).group("gameweeks.name").count.each do |gw_name, count|
         puts "  #{gw_name}: #{count} performances"
       end
     else
@@ -130,7 +157,7 @@ namespace :fpl do
   end
 
   desc "Sync player performances for a specific gameweek"
-  task :sync_performances_for_gameweek, [:gameweek_id] => :environment do |t, args|
+  task :sync_performances_for_gameweek, [ :gameweek_id ] => :environment do |t, args|
     gameweek_id = args[:gameweek_id]
 
     unless gameweek_id

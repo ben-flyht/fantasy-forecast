@@ -7,7 +7,7 @@
     <% if @current_gameweek %>
       <!-- Gameweek Info -->
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-        <h3 class="font-semibold text-blue-900 mb-2">Making forecasts for:</h3>
+        <h3 class="font-semibold text-blue-900 mb-2">Making forecasts for next gameweek:</h3>
         <p class="text-blue-800 text-lg"><strong><%= @current_gameweek.name %></strong></p>
         <p class="text-sm text-blue-600 mt-1">
           Starts: <%= @current_gameweek.start_time.strftime("%b %d, %Y at %l:%M %p") %>

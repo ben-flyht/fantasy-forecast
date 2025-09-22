@@ -215,6 +215,6 @@ class GameweekTest < ActiveSupport::TestCase
     gw2 = Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: Time.current + 1.week)
 
     ordered_gameweeks = Gameweek.ordered
-    assert_equal [gw1, gw2, gw3], ordered_gameweeks.to_a
+    assert_equal [ gw1, gw2, gw3 ], ordered_gameweeks.to_a
   end
 end

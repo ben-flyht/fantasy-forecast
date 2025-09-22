@@ -18,7 +18,15 @@ module Fpl
       events = data["events"]
       sync_gameweeks(events)
 
-      Rails.logger.info "FPL gameweek sync completed. Total gameweeks: #{Gameweek.count}"
+      # Also sync matches/fixtures
+      fixtures_data = fetch_fixtures_data
+      if fixtures_data
+        sync_matches(fixtures_data)
+      else
+        Rails.logger.warn "Could not fetch fixtures data"
+      end
+
+      Rails.logger.info "FPL gameweek sync completed. Total gameweeks: #{Gameweek.count}, Total matches: #{Match.count}"
       true
     rescue => e
       Rails.logger.error "FPL gameweek sync failed: #{e.message}"
@@ -43,6 +51,81 @@ module Fpl
           nil
         end
       end
+    end
+
+    def fetch_fixtures_data
+      uri = URI("https://fantasy.premierleague.com/api/fixtures/")
+
+      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
+        request = Net::HTTP::Get.new(uri)
+        request["User-Agent"] = "Fantasy Forecast App"
+
+        response = http.request(request)
+
+        if response.code == "200"
+          JSON.parse(response.body)
+        else
+          Rails.logger.error "FPL Fixtures API returned #{response.code}: #{response.message}"
+          nil
+        end
+      end
+    end
+
+    def sync_matches(fixtures_data)
+      Rails.logger.info "Syncing matches..."
+
+      success_count = 0
+      skip_count = 0
+      error_count = 0
+
+      fixtures_data.each do |fixture|
+        begin
+          fpl_id = fixture["id"]
+          gameweek_fpl_id = fixture["event"]
+          home_team_fpl_id = fixture["team_h"]
+          away_team_fpl_id = fixture["team_a"]
+
+          # Skip if essential data is missing
+          unless fpl_id && gameweek_fpl_id && home_team_fpl_id && away_team_fpl_id
+            Rails.logger.warn "Skipping fixture #{fpl_id}: missing essential data"
+            skip_count += 1
+            next
+          end
+
+          # Find the gameweek and teams
+          gameweek = Gameweek.find_by(fpl_id: gameweek_fpl_id)
+          home_team = Team.find_by(fpl_id: home_team_fpl_id)
+          away_team = Team.find_by(fpl_id: away_team_fpl_id)
+
+          unless gameweek && home_team && away_team
+            Rails.logger.warn "Skipping fixture #{fpl_id}: gameweek=#{gameweek&.name}, home=#{home_team&.name}, away=#{away_team&.name}"
+            skip_count += 1
+            next
+          end
+
+          match_attributes = {
+            home_team: home_team,
+            away_team: away_team,
+            gameweek: gameweek
+          }
+
+          match = Match.find_or_initialize_by(fpl_id: fpl_id)
+          match.assign_attributes(match_attributes)
+
+          if match.save
+            Rails.logger.debug "Synced match: #{home_team.short_name} vs #{away_team.short_name} (GW#{gameweek.fpl_id})"
+            success_count += 1
+          else
+            Rails.logger.error "Failed to sync match #{fpl_id}: #{match.errors.full_messages.join(', ')}"
+            error_count += 1
+          end
+        rescue => e
+          Rails.logger.error "Exception syncing fixture #{fixture['id']}: #{e.message}"
+          error_count += 1
+        end
+      end
+
+      Rails.logger.info "Match sync results: #{success_count} synced, #{skip_count} skipped, #{error_count} errors"
     end
 
     def sync_gameweeks(events)
