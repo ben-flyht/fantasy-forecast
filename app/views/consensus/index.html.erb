@@ -1,40 +1,46 @@
 <div class="container mx-auto px-4 py-8">
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-800 mb-4"><%= @page_title %></h1>
+  <%= turbo_frame_tag "rankings_container" do %>
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-800 mb-4"><%= @page_title %></h1>
 
-    <!-- Week and Position Filters -->
-    <div class="flex flex-wrap gap-4 mb-6">
-      <!-- Week Selector -->
-      <div class="flex items-center space-x-2">
-        <label for="week-select" class="text-sm font-medium text-gray-700">Week:</label>
-        <%= select_tag :week,
-            options_for_select(@available_weeks.map { |w| [w, w] }, @week),
-            {
-              id: "week-select",
-              class: "border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
-              onchange: "updateFilters()"
-            } %>
-      </div>
+      <!-- Week and Position Filters -->
+      <%= form_with url: consensus_index_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form" do |f| %>
+        <div class="flex flex-wrap gap-4 mb-6">
+          <!-- Week Selector -->
+          <div class="flex items-center space-x-2">
+            <label for="week-select" class="text-sm font-medium text-gray-700">Week:</label>
+            <%= select_tag :week,
+                options_for_select(@available_weeks.map { |w| [w, w] }, @week),
+                {
+                  id: "week-select",
+                  class: "border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  onchange: "this.form.requestSubmit()"
+                } %>
+          </div>
 
-      <!-- Position Buttons -->
-      <div class="flex items-center space-x-2">
-        <span class="text-sm font-medium text-gray-700">Position:</span>
-        <div class="flex space-x-2">
-          <% @available_positions.each do |position| %>
-            <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
-            <% is_active = @position_filter == position %>
-            <%= link_to consensus_index_path(week: @week, position: position),
-                class: "px-3 py-2 text-xs font-medium rounded-md border transition-colors #{is_active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}" do %>
-              <%= position_config[:display_name] %>
-            <% end %>
-          <% end %>
+          <!-- Position Radio Buttons styled as buttons -->
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-medium text-gray-700">Position:</span>
+            <div class="flex space-x-2" role="radiogroup">
+              <% @available_positions.each do |position| %>
+                <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
+                <% is_active = @position_filter == position %>
+                <label class="px-3 py-2 text-xs font-medium rounded-md border transition-all cursor-pointer inline-block
+                           <%= is_active ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' %>">
+                  <%= radio_button_tag :position, position, is_active,
+                      style: "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;",
+                      onchange: "this.form.requestSubmit()" %>
+                  <%= position_config[:display_name] %>
+                </label>
+              <% end %>
+            </div>
+          </div>
         </div>
-      </div>
+      <% end %>
     </div>
-  </div>
 
-  <!-- Consensus Rankings Table -->
-  <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+    <!-- Consensus Rankings Table -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
     <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
       <h2 class="text-xl font-semibold text-gray-800">Consensus Rankings</h2>
       <p class="text-sm text-gray-600 mt-1">
@@ -122,18 +128,6 @@
         </div>
       </div>
     <% end %>
-  </div>
+    </div>
+  <% end %>
 </div>
-
-<script>
-  function updateFilters() {
-    const week = document.getElementById('week-select').value;
-    const position = '<%= @position_filter %>';
-
-    const params = new URLSearchParams();
-    if (week) params.append('week', week);
-    if (position) params.append('position', position);
-
-    window.location.href = '<%= consensus_index_path %>?' + params.toString();
-  }
-</script>
