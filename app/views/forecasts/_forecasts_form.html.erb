@@ -3,8 +3,8 @@
     <thead class="bg-gray-50">
       <tr>
         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
-        <th class="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider">Target (Recommend)</th>
-        <th class="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase tracking-wider">Avoid (Don't Recommend)</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-green-600 uppercase tracking-wider">Target XI (Recommend)</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-red-600 uppercase tracking-wider">Avoid XI (Don't Recommend)</th>
       </tr>
     </thead>
     <tbody class="bg-white divide-y divide-gray-200">
@@ -17,7 +17,6 @@
         <% target_player_ids = target_forecasts.map(&:player_id) %>
         <% avoid_player_ids = avoid_forecasts.map(&:player_id) %>
         <% all_selected_player_ids = ((@current_forecasts["target"] || []) + (@current_forecasts["avoid"] || [])).map(&:player_id) %>
-        <!-- DEBUG: <%= display_position %> - Target: [<%= target_player_ids.join(',') %>] Avoid: [<%= avoid_player_ids.join(',') %>] All: [<%= all_selected_player_ids.join(',') %>] -->
 
         <% slot_count.times do |slot_index| %>
           <% selected_target_player = target_forecasts[slot_index] %>
@@ -46,7 +45,7 @@
                       <%= 'selected' if selected_target_player&.player_id == player.id %>
                       <%= 'disabled' if all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id %>
                     >
-                      <%= player.full_name %> (<%= player.team %>, <%= player.total_score %> pts)<%= all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id ? ' (Selected)' : '' %>
+                      <%= player.full_name %> (<%= player.team %>, <%= player.total_score_cached %> pts)<%= all_selected_player_ids.include?(player.id) && selected_target_player&.player_id != player.id ? ' (Selected)' : '' %>
                     </option>
                   <% end %>
                 </select>
@@ -73,7 +72,7 @@
                       <%= 'selected' if selected_avoid_player&.player_id == player.id %>
                       <%= 'disabled' if all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id %>
                     >
-                      <%= player.full_name %> (<%= player.team %>, <%= player.total_score %> pts)<%= all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id ? ' (Selected)' : '' %>
+                      <%= player.full_name %> (<%= player.team %>, <%= player.total_score_cached %> pts)<%= all_selected_player_ids.include?(player.id) && selected_avoid_player&.player_id != player.id ? ' (Selected)' : '' %>
                     </option>
                   <% end %>
                 </select>

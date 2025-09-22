@@ -21,16 +21,16 @@
   </div>
 
   <div class="my-5" id="gameweek-info">
-    <% if defined?(@next_gameweek) && @next_gameweek %>
+    <% if defined?(@current_gameweek) && @current_gameweek %>
       <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
         <h3 class="font-medium text-blue-900 mb-2">Making forecasts for:</h3>
-        <p class="text-blue-800"><strong><%= @next_gameweek.name %></strong></p>
+        <p class="text-blue-800"><strong><%= @current_gameweek.name %></strong></p>
         <p class="text-sm text-blue-600 mt-1">
-          Starts: <%= @next_gameweek.start_time.strftime("%b %d, %Y at %l:%M %p") %>
+          Starts: <%= @current_gameweek.start_time.strftime("%b %d, %Y at %l:%M %p") %>
         </p>
-        <% if @next_gameweek.end_time %>
+        <% if @current_gameweek.end_time %>
           <p class="text-sm text-blue-600">
-            Ends: <%= @next_gameweek.end_time.strftime("%b %d, %Y at %l:%M %p") %>
+            Ends: <%= @current_gameweek.end_time.strftime("%b %d, %Y at %l:%M %p") %>
           </p>
         <% end %>
       </div>
@@ -48,8 +48,8 @@
     <%= form.label :category %>
     <%= form.select :category,
         options_for_select([
-          ['Target (Recommend)', 'target'],
-          ['Avoid (Don\'t Recommend)', 'avoid']
+          ['Target XI (Recommend)', 'target'],
+          ['Avoid XI (Don\'t Recommend)', 'avoid']
         ], forecast.category),
         { prompt: 'Select forecast category' },
         { class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": forecast.errors[:category].none?, "border-red-400 focus:outline-red-600": forecast.errors[:category].any?}] } %>
@@ -59,4 +59,3 @@
     <%= form.submit class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white inline-block font-medium cursor-pointer" %>
   </div>
 <% end %>
-

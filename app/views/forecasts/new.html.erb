@@ -4,27 +4,19 @@
   <div class="mb-8">
     <h1 class="text-3xl font-bold text-gray-800 mb-4">Make Your Forecasts</h1>
 
-    <% if @next_gameweek %>
+    <% if @current_gameweek %>
       <!-- Gameweek Info -->
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
         <h3 class="font-semibold text-blue-900 mb-2">Making forecasts for:</h3>
-        <p class="text-blue-800 text-lg"><strong><%= @next_gameweek.name %></strong></p>
+        <p class="text-blue-800 text-lg"><strong><%= @current_gameweek.name %></strong></p>
         <p class="text-sm text-blue-600 mt-1">
-          Starts: <%= @next_gameweek.start_time.strftime("%b %d, %Y at %l:%M %p") %>
+          Starts: <%= @current_gameweek.start_time.strftime("%b %d, %Y at %l:%M %p") %>
         </p>
-        <% if @next_gameweek.end_time %>
+        <% if @current_gameweek.end_time %>
           <p class="text-sm text-blue-600">
-            Ends: <%= @next_gameweek.end_time.strftime("%b %d, %Y at %l:%M %p") %>
+            Ends: <%= @current_gameweek.end_time.strftime("%b %d, %Y at %l:%M %p") %>
           </p>
         <% end %>
-      </div>
-
-      <!-- Instructions -->
-      <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-        <h3 class="font-medium text-gray-900 mb-2">Instructions:</h3>
-        <p class="text-sm text-gray-700">
-          Select up to 3 players for each category and position. Your selections are saved automatically.
-        </p>
       </div>
 
       <!-- Forecasts Table -->

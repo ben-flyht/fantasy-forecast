@@ -12,7 +12,7 @@ class Forecast < ApplicationRecord
   }
 
   # Callbacks
-  before_validation :assign_next_gameweek!
+  before_validation :assign_current_gameweek!
 
   # Validations
   validates :category, presence: true
@@ -50,22 +50,22 @@ class Forecast < ApplicationRecord
 
 
   # Class method for auto-assignment
-  def self.assign_next_gameweek!
-    next_gameweek = Gameweek.next_gameweek
-    next_gameweek&.id
+  def self.assign_current_gameweek!
+    current_gameweek = Gameweek.current_gameweek
+    current_gameweek&.id
   end
 
   private
 
   # Instance method for auto-assignment
-  def assign_next_gameweek!
+  def assign_current_gameweek!
     return if gameweek.present?  # Don't override if gameweek is already set
 
-    next_gameweek = Gameweek.next_gameweek
-    if next_gameweek
-      self.gameweek = next_gameweek
+    current_gameweek = Gameweek.current_gameweek
+    if current_gameweek
+      self.gameweek = current_gameweek
     else
-      errors.add(:gameweek, "No next gameweek available")
+      errors.add(:gameweek, "No current gameweek available")
     end
   end
 

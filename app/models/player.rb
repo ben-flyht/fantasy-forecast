@@ -39,4 +39,15 @@ class Player < ApplicationRecord
 
     scope.sum(:gameweek_score)
   end
+
+  # Access the cached total score from SQL query or fall back to dynamic calculation
+  def total_score_cached
+    # If we have a cached value from the SQL query, use it
+    if attributes.key?('total_score_cached')
+      attributes['total_score_cached'].to_i
+    else
+      # Fall back to the dynamic calculation
+      total_score
+    end
+  end
 end

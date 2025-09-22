@@ -27,11 +27,11 @@ class ForecastsController < ApplicationController
     @current_gameweek = Gameweek.current_gameweek
     @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
 
-    # Get current user's forecasts for the next gameweek
-    @current_forecasts = if @next_gameweek
+    # Get current user's forecasts for the current gameweek
+    @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
-                  .where(gameweek: @next_gameweek)
+                  .where(gameweek: @current_gameweek)
                   .order(:id)
                   .group_by(&:category)
     else
@@ -50,7 +50,7 @@ class ForecastsController < ApplicationController
     @current_gameweek = Gameweek.current_gameweek
 
     # Ensure gameweek is set to next gameweek regardless of params
-    @forecast.gameweek = @next_gameweek
+    @forecast.gameweek = @current_gameweek
 
     respond_to do |format|
       if @forecast.save
@@ -90,8 +90,8 @@ class ForecastsController < ApplicationController
   def update_forecast
     @current_gameweek = Gameweek.current_gameweek
 
-    unless @next_gameweek
-      render json: { error: "No upcoming gameweek available" }, status: :unprocessable_entity
+    unless @current_gameweek
+      render json: { error: "No current gameweek available" }, status: :unprocessable_entity
       return
     end
 
@@ -105,7 +105,7 @@ class ForecastsController < ApplicationController
       # Get all forecasts for this position and category, ordered consistently
       position_forecasts = current_user.forecasts
                                        .joins(:player)
-                                       .where(gameweek: @next_gameweek, category: category, players: { position: position })
+                                       .where(gameweek: @current_gameweek, category: category, players: { position: position })
                                        .order(:id)
 
       # If there's a forecast at this slot index, remove it
@@ -117,7 +117,7 @@ class ForecastsController < ApplicationController
       if player_id.present?
         # Check if this player is already selected anywhere else for this gameweek
         existing_elsewhere = current_user.forecasts
-                                          .where(gameweek: @next_gameweek, player_id: player_id)
+                                          .where(gameweek: @current_gameweek, player_id: player_id)
                                           .first
 
         if existing_elsewhere
@@ -129,17 +129,22 @@ class ForecastsController < ApplicationController
         current_user.forecasts.create!(
           player_id: player_id,
           category: category,
-          gameweek: @next_gameweek
+          gameweek: @current_gameweek
         )
       end
     end
 
-    # Reload the data for the response
-    @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
-    @current_forecasts = if @next_gameweek
+    # Load players with their total scores pre-calculated to avoid N+1 queries
+    players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) as total_score_cached")
+                                .group("players.id")
+                                .order(:first_name, :last_name)
+
+    @players_by_position = players_with_scores.group_by(&:position)
+    @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
-                  .where(gameweek: @next_gameweek)
+                  .where(gameweek: @current_gameweek)
                   .order(:id)
                   .group_by(&:category)
     else
@@ -155,10 +160,10 @@ class ForecastsController < ApplicationController
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
     @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
-    @current_forecasts = if @next_gameweek
+    @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
-                  .where(gameweek: @next_gameweek)
+                  .where(gameweek: @current_gameweek)
                   .order(:id)
                   .group_by(&:category)
     else
@@ -172,10 +177,10 @@ class ForecastsController < ApplicationController
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
     @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
-    @current_forecasts = if @next_gameweek
+    @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
-                  .where(gameweek: @next_gameweek)
+                  .where(gameweek: @current_gameweek)
                   .order(:id)
                   .group_by(&:category)
     else
@@ -191,8 +196,8 @@ class ForecastsController < ApplicationController
   def sync_all
     @current_gameweek = Gameweek.current_gameweek
 
-    unless @next_gameweek
-      render json: { error: "No upcoming gameweek available" }, status: :unprocessable_entity
+    unless @current_gameweek
+      render json: { error: "No current gameweek available" }, status: :unprocessable_entity
       return
     end
 
@@ -202,7 +207,7 @@ class ForecastsController < ApplicationController
     # Start a transaction to ensure all-or-nothing update
     ActiveRecord::Base.transaction do
       # Delete all existing forecasts for this user and gameweek
-      current_user.forecasts.where(gameweek: @next_gameweek).destroy_all
+      current_user.forecasts.where(gameweek: @current_gameweek).destroy_all
 
       # Collect all player selections and deduplicate - process in reverse order
       # so that later selections override earlier ones
@@ -225,7 +230,7 @@ class ForecastsController < ApplicationController
             forecasts_to_create << {
               player_id: player_id,
               category: category,
-              gameweek: @next_gameweek
+              gameweek: @current_gameweek
             }
           end
         end
@@ -233,20 +238,20 @@ class ForecastsController < ApplicationController
 
       # Create deduplicated forecasts
       forecasts_to_create.each do |forecast_attrs|
-        Rails.logger.debug "Creating forecast: user=#{current_user.id}, player=#{forecast_attrs[:player_id]}, category=#{forecast_attrs[:category]}, gameweek=#{@next_gameweek.id}"
+        Rails.logger.debug "Creating forecast: user=#{current_user.id}, player=#{forecast_attrs[:player_id]}, category=#{forecast_attrs[:category]}, gameweek=#{@current_gameweek.id}"
         current_user.forecasts.create!(forecast_attrs)
       end
     end
 
     # Return response based on request format
-    count = current_user.forecasts.where(gameweek: @next_gameweek).count
+    count = current_user.forecasts.where(gameweek: @current_gameweek).count
 
-    # Reload the data for the response
+    # Reload the data for the response - optimized to only load needed fields
     @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
-    @current_forecasts = if @next_gameweek
+    @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
-                  .where(gameweek: @next_gameweek)
+                  .where(gameweek: @current_gameweek)
                   .order(:id)
                   .group_by(&:category)
     else
@@ -262,10 +267,10 @@ class ForecastsController < ApplicationController
     Rails.logger.error "RecordInvalid error: #{e.record.errors.full_messages.join(', ')}"
     # Reload the data for error response
     @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
-    @current_forecasts = if @next_gameweek
+    @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
-                  .where(gameweek: @next_gameweek)
+                  .where(gameweek: @current_gameweek)
                   .order(:id)
                   .group_by(&:category)
     else
@@ -280,10 +285,10 @@ class ForecastsController < ApplicationController
     Rails.logger.error "General error: #{e.message}"
     # Reload the data for error response
     @players_by_position = Player.order(first_name: :asc, last_name: :asc).group_by(&:position)
-    @current_forecasts = if @next_gameweek
+    @current_forecasts = if @current_gameweek
       current_user.forecasts
                   .includes(:player)
-                  .where(gameweek: @next_gameweek)
+                  .where(gameweek: @current_gameweek)
                   .order(:id)
                   .group_by(&:category)
     else

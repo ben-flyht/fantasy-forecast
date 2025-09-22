@@ -1,1 +1,1 @@
-json.partial! "predictions/prediction", prediction: @prediction
+json.partial! "forecasts/forecast", forecast: @forecast

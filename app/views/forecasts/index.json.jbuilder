@@ -1,1 +1,1 @@
-json.array! @predictions, partial: "predictions/prediction", as: :prediction
+json.array! @forecasts, partial: "forecasts/forecast", as: :forecast
