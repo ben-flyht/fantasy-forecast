@@ -48,11 +48,6 @@ class Forecast < ApplicationRecord
       .select("player_id, category, COUNT(*) as count")
   end
 
-  def self.consensus_scores_for_week_by_position(week, position = nil)
-    query = consensus_scores_for_week(week)
-    query = query.where(players: { position: position }) if position.present?
-    query
-  end
 
   # Class method for auto-assignment
   def self.assign_next_gameweek!

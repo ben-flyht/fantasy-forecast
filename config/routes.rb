@@ -10,7 +10,6 @@ Rails.application.routes.draw do
 
   # Consensus routes
   get "/consensus", to: "consensus#index", as: :consensus_index
-  get "/consensus/weekly(/:week)", to: "consensus#weekly", as: :consensus_weekly
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

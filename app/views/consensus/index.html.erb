@@ -65,6 +65,9 @@
               <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Total Votes
               </th>
+              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ownership %
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
@@ -97,6 +100,9 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                   <%= ranking.total_forecasts %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                  <%= ranking.ownership_percentage.present? ? "#{ranking.ownership_percentage}%" : "N/A" %>
                 </td>
               </tr>
             <% end %>
