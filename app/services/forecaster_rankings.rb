@@ -91,7 +91,7 @@ class ForecasterRankings
             .limit(limit)
             .map do |performance|
               {
-                week: performance.week,
+                gameweek: performance.week,
                 total_score: performance.total_score.to_f.round(2),
                 accuracy_score: performance.accuracy_score.to_f.round(2),
                 contrarian_bonus: performance.contrarian_bonus.to_f.round(2),
@@ -101,9 +101,9 @@ class ForecasterRankings
             end
   end
 
-  def self.weekly_forecasts(user_id, week)
-    # Get detailed forecasts for a specific user and week
-    gameweek = Gameweek.find_by(fpl_id: week)
+  def self.weekly_forecasts(user_id, gameweek_number)
+    # Get detailed forecasts for a specific user and gameweek
+    gameweek = Gameweek.find_by(fpl_id: gameweek_number)
     return [] unless gameweek
 
     Forecast.joins(:player, player: :team)
@@ -132,7 +132,7 @@ class ForecasterRankings
                accuracy_score: forecast.accuracy_score.to_f.round(2),
                contrarian_bonus: forecast.contrarian_bonus.to_f.round(2),
                actual_points: performance&.gameweek_score || 0,
-               week: forecast.gameweek_fpl_id
+               gameweek: forecast.gameweek_fpl_id
              }
            end
   end

@@ -49,16 +49,16 @@
                 <% end %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-lg font-bold text-blue-600"><%= ranking[:weighted_score] %></span>
+                <span class="text-lg font-bold text-blue-600"><%= ranking[:weighted_score].round(2) %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-sm text-gray-700"><%= ranking[:total_score] %></span>
+                <span class="text-sm text-gray-700"><%= ranking[:total_score].round(2) %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-sm text-gray-700"><%= ranking[:accuracy_score] %></span>
+                <span class="text-sm text-gray-700"><%= ranking[:accuracy_score].round(2) %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-sm text-gray-700"><%= ranking[:contrarian_bonus] %></span>
+                <span class="text-sm text-gray-700"><%= ranking[:contrarian_bonus].round(2) %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
                 <span class="text-sm text-gray-700"><%= ranking[:forecast_count] %></span>

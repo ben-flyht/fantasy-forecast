@@ -1,10 +1,10 @@
 class ConsensusRanking
-  def self.for_week_and_position(week, position = nil)
-    new(week, position).rankings
+  def self.for_week_and_position(gameweek, position = nil)
+    new(gameweek, position).rankings
   end
 
-  def initialize(week, position = nil)
-    @week = week
+  def initialize(gameweek, position = nil)
+    @gameweek = gameweek
     @position = position
   end
 
@@ -28,14 +28,14 @@ class ConsensusRanking
         position: player.position,
         consensus_score: forecast_data[:score],
         total_forecasts: forecast_data[:votes],
-        total_score: player.total_score(week - 1)
+        total_score: player.total_score(@gameweek - 1)
       )
     end.sort_by { |ranking| [ -(ranking.consensus_score || 0), -(ranking.total_score || 0), ranking.name || "" ] }
   end
 
   private
 
-  attr_reader :week, :position
+  attr_reader :gameweek, :position
 
   def base_players_query
     query = Player.includes(:team)
@@ -45,7 +45,7 @@ class ConsensusRanking
 
   def forecast_scores_by_player
     forecasts = Forecast.joins(:gameweek)
-                       .where(gameweeks: { fpl_id: week })
+                       .where(gameweeks: { fpl_id: @gameweek })
                        .group(:player_id)
                        .select(
                          "player_id",

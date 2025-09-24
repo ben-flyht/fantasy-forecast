@@ -33,29 +33,36 @@ class UsersController < ApplicationController
                                     .order("total_score_cached DESC, first_name, last_name")
         @players_by_position = players_with_scores.group_by(&:position)
 
-        # Get current user's forecasts for the current gameweek
-        @current_forecasts = current_user.forecasts
-                                        .includes(:player)
-                                        .where(gameweek: @current_gameweek)
-                                        .order(:id)
-                                        .group_by(&:category)
+        # Get current user's forecasts for the current gameweek, ordered by position
+        forecasts = current_user.forecasts
+                                .includes(:player)
+                                .where(gameweek: @current_gameweek)
+                                .order(:id)
+
+        # Define position order for sorting
+        position_order = [ "goalkeeper", "defender", "midfielder", "forward" ]
+
+        # Group by category and sort by position within each category
+        @current_forecasts = forecasts.group_by(&:category).transform_values do |category_forecasts|
+          category_forecasts.sort_by { |f| position_order.index(f.player.position) || 999 }
+        end
       else
         @current_forecasts = { "target" => [], "avoid" => [] }
       end
     end
   end
 
-  def weekly_forecasts
+  def gameweeks
     @user = User.find(params[:id])
-    @week = params[:week]&.to_i
-    @forecasts = ForecasterRankings.weekly_forecasts(@user.id, @week)
-    @page_title = "#{@user.username} - Week #{@week} Forecasts"
+    @gameweek = params[:gameweek]&.to_i
+    @forecasts = ForecasterRankings.weekly_forecasts(@user.id, @gameweek)
+    @page_title = "#{@user.username} - Gameweek #{@gameweek} Forecasts"
 
-    # Calculate week totals
+    # Calculate gameweek totals
     if @forecasts.any?
-      @week_total = @forecasts.sum { |f| f[:total_score] }
-      @week_accuracy = @forecasts.sum { |f| f[:accuracy_score] }
-      @week_contrarian = @forecasts.sum { |f| f[:contrarian_bonus] }
+      @gameweek_total = @forecasts.sum { |f| f[:total_score] }
+      @gameweek_accuracy = @forecasts.sum { |f| f[:accuracy_score] }
+      @gameweek_contrarian = @forecasts.sum { |f| f[:contrarian_bonus] }
     end
   end
 end

@@ -24,11 +24,11 @@
           <div class="text-sm text-gray-600">Overall Rank</div>
         </div>
         <div class="text-center">
-          <div class="text-2xl font-bold text-green-600"><%= @overall_stats[:weighted_score] %></div>
+          <div class="text-2xl font-bold text-green-600"><%= @overall_stats[:weighted_score].round(2) %></div>
           <div class="text-sm text-gray-600">Weighted Score</div>
         </div>
         <div class="text-center">
-          <div class="text-2xl font-bold text-purple-600"><%= @overall_stats[:average_score] %></div>
+          <div class="text-2xl font-bold text-purple-600"><%= @overall_stats[:average_score].round(2) %></div>
           <div class="text-sm text-gray-600">Avg per Forecast</div>
         </div>
         <div class="text-center">
@@ -60,8 +60,8 @@
       <% if @best_week %>
         <div class="bg-green-50 border border-green-200 rounded-lg p-6">
           <h3 class="font-semibold text-green-900 mb-2">Best Week</h3>
-          <div class="text-2xl font-bold text-green-700">GW<%= @best_week[:week] %></div>
-          <div class="text-lg text-green-600"><%= @best_week[:total_score] %> points</div>
+          <div class="text-2xl font-bold text-green-700">GW<%= @best_week[:gameweek] %></div>
+          <div class="text-lg text-green-600"><%= @best_week[:total_score].round(2) %> points</div>
         </div>
       <% end %>
 
@@ -105,7 +105,7 @@
                     <span class="text-sm text-gray-600 ml-2">(<%= forecast.player.team.name %>)</span>
                   </div>
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    <%= forecast.player.position.upcase[0..2] %>
+                    <%= FantasyForecast::POSITION_CONFIG[forecast.player.position][:display_name] %>
                   </span>
                 </div>
               <% end %>
@@ -127,7 +127,7 @@
                     <span class="text-sm text-gray-600 ml-2">(<%= forecast.player.team.name %>)</span>
                   </div>
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    <%= forecast.player.position.upcase[0..2] %>
+                    <%= FantasyForecast::POSITION_CONFIG[forecast.player.position][:display_name] %>
                   </span>
                 </div>
               <% end %>
@@ -159,28 +159,28 @@
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <% @weekly_performance.each_with_index do |week, index| %>
+          <% @weekly_performance.each_with_index do |gameweek_performance, index| %>
             <tr class="<%= index < 3 ? 'bg-gray-50' : 'hover:bg-gray-50' %>">
               <td class="px-6 py-4 whitespace-nowrap">
-                <%= link_to weekly_forecasts_user_path(@user, week: week[:week]),
+                <%= link_to gameweeks_user_path(@user, gameweek: gameweek_performance[:gameweek]),
                     class: "text-sm font-medium text-blue-600 hover:text-blue-900" do %>
-                  Gameweek <%= week[:week] %>
+                  Gameweek <%= gameweek_performance[:gameweek] %>
                 <% end %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-lg font-bold text-gray-900"><%= week[:total_score] %></span>
+                <span class="text-lg font-bold text-gray-900"><%= gameweek_performance[:total_score].round(2) %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-sm text-gray-700"><%= week[:accuracy_score] %></span>
+                <span class="text-sm text-gray-700"><%= gameweek_performance[:accuracy_score] %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-sm text-gray-700"><%= week[:contrarian_bonus] %></span>
+                <span class="text-sm text-gray-700"><%= gameweek_performance[:contrarian_bonus] %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-sm text-gray-700"><%= week[:forecast_count] %></span>
+                <span class="text-sm text-gray-700"><%= gameweek_performance[:forecast_count] %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="text-sm font-medium text-gray-900"><%= week[:average_score] %></span>
+                <span class="text-sm font-medium text-gray-900"><%= gameweek_performance[:average_score] %></span>
               </td>
             </tr>
           <% end %>

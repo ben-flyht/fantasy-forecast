@@ -6,6 +6,7 @@ Rails.application.routes.draw do
     end
   end
   devise_for :users
+
   root "home#index"
 
   # Player rankings routes
@@ -14,7 +15,7 @@ Rails.application.routes.draw do
   # User rankings routes
   resources :users, only: [ :index, :show ] do
     member do
-      get "weekly_forecasts/:week", to: "users#weekly_forecasts", as: "weekly_forecasts"
+      get "gameweeks/:gameweek", to: "users#gameweeks", as: "gameweeks"
     end
   end
 
