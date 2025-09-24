@@ -1,5 +1,5 @@
 Rails.application.routes.draw do
-  resources :forecasts do
+  resources :forecasts, only: [ :new, :create ] do
     collection do
       post :sync_all
       patch :update_forecast
@@ -8,8 +8,15 @@ Rails.application.routes.draw do
   devise_for :users
   root "home#index"
 
-  # Consensus routes
-  get "/consensus", to: "consensus#index", as: :consensus_index
+  # Player rankings routes
+  resources :players, only: [ :index ]
+
+  # User rankings routes
+  resources :users, only: [ :index, :show ] do
+    member do
+      get "weekly_forecasts/:week", to: "users#weekly_forecasts", as: "weekly_forecasts"
+    end
+  end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

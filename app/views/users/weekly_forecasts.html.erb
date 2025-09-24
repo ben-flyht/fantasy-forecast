@@ -1,0 +1,120 @@
+<% content_for :title, @page_title %>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900"><%= @user.username %></h1>
+        <p class="text-lg text-gray-600 mt-2">Week <%= @week %> Forecasts</p>
+      </div>
+      <%= link_to user_path(@user),
+          class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" do %>
+        ← Back to Profile
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Week Summary -->
+  <% if @forecasts.any? %>
+    <div class="bg-white shadow-sm rounded-lg p-6 mb-8">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Week <%= @week %> Summary</h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-blue-600"><%= @week_total %></div>
+          <div class="text-sm text-gray-600">Total Score</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-600"><%= @week_accuracy %></div>
+          <div class="text-sm text-gray-600">Accuracy Points</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-purple-600"><%= @week_contrarian %></div>
+          <div class="text-sm text-gray-600">Contrarian Bonus</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-gray-600"><%= @forecasts.size %></div>
+          <div class="text-sm text-gray-600">Forecasts Made</div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Detailed Forecasts -->
+  <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900">Individual Forecast Scores</h2>
+    </div>
+
+    <% if @forecasts.any? %>
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actual Points</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Forecast Score</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Contrarian</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @forecasts.each_with_index do |forecast, index| %>
+            <tr class="<%= index < 3 ? 'bg-green-50' : 'hover:bg-gray-50' %>">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900"><%= forecast[:player_name] %></div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center">
+                <span class="text-sm text-gray-700"><%= forecast[:team_name] %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                  <%= case forecast[:position]
+                      when 'goalkeeper' then 'bg-yellow-100 text-yellow-800'
+                      when 'defender' then 'bg-blue-100 text-blue-800'
+                      when 'midfielder' then 'bg-green-100 text-green-800'
+                      when 'forward' then 'bg-red-100 text-red-800'
+                      else 'bg-gray-100 text-gray-800'
+                      end %>">
+                  <%= forecast[:position].upcase[0..2] %>
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                  <%= forecast[:category] == 'target' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+                  <%= forecast[:category].upcase %>
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center">
+                <span class="text-sm font-medium text-gray-900"><%= forecast[:actual_points] %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center">
+                <span class="text-lg font-bold text-blue-600"><%= forecast[:total_score] %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center">
+                <span class="text-sm text-gray-700"><%= forecast[:accuracy_score] %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center">
+                <span class="text-sm text-gray-700"><%= forecast[:contrarian_bonus] %></span>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <!-- Legend -->
+      <div class="px-6 py-4 bg-gray-50 text-xs text-gray-600">
+        <p><strong>Forecast Score:</strong> Total points earned for this prediction (accuracy + contrarian)</p>
+        <p><strong>Accuracy:</strong> Points based on how well the player performed relative to position</p>
+        <p><strong>Contrarian:</strong> Bonus points based on pick popularity and category</p>
+        <p><strong>Actual Points:</strong> Fantasy points the player scored this gameweek</p>
+      </div>
+    <% else %>
+      <div class="px-6 py-12 text-center">
+        <p class="text-gray-500">No forecast data available for this week.</p>
+        <p class="text-gray-400 text-sm mt-2">This may mean forecasts haven't been scored yet or no forecasts were made.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

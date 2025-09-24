@@ -10,7 +10,7 @@
     Leverage crowd-sourced wisdom from experienced fantasy football forecasters to make winning lineup decisions. Our consensus rankings combine multiple expert opinions to give you the edge in your fantasy league.
   </p>
   <div class="flex gap-4 justify-center">
-    <%= link_to "View This Week's Rankings", consensus_index_path, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
+    <%= link_to "View This Week's Rankings", players_path, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
     <%= link_to "Become a Forecaster", new_user_registration_path, class: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
   </div>
 </section>
@@ -28,7 +28,7 @@
       <p class="text-gray-700 mb-6">
         Our consensus rankings aggregate forecasts from multiple fantasy football experts to provide you with the most reliable player rankings. Each week, our forecasters analyze matchups, injuries, and performance trends to deliver accurate predictions.
       </p>
-      <%= link_to "View Complete Rankings →", consensus_index_path, class: "inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200" %>
+      <%= link_to "View Complete Rankings →", players_path, class: "inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200" %>
     </div>
   </div>
 </section>
@@ -170,7 +170,7 @@
     Join thousands of fantasy football players who trust Fantasy Forecast for accurate, reliable player rankings every week.
   </p>
   <div class="flex gap-4 justify-center">
-    <%= link_to "View Rankings", consensus_index_path, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
+    <%= link_to "View Rankings", players_path, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
     <%= link_to "Sign Up Free", new_user_registration_path, class: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
   </div>
 </section>

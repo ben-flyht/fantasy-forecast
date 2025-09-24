@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_22_210735) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_24_145258) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,8 +21,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_210735) do
     t.string "category", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "accuracy_score", precision: 8, scale: 2
+    t.decimal "contrarian_bonus", precision: 8, scale: 2
+    t.decimal "total_score", precision: 8, scale: 2
+    t.index ["gameweek_id", "total_score"], name: "index_forecasts_on_gameweek_id_and_total_score", order: { total_score: :desc }
     t.index ["gameweek_id"], name: "index_forecasts_on_gameweek_id"
     t.index ["player_id"], name: "index_forecasts_on_player_id"
+    t.index ["user_id", "gameweek_id", "total_score"], name: "index_forecasts_on_user_id_and_gameweek_id_and_total_score", order: { total_score: :desc }
     t.index ["user_id", "player_id", "gameweek_id"], name: "index_forecasts_on_unique_constraint", unique: true
     t.index ["user_id"], name: "index_forecasts_on_user_id"
   end

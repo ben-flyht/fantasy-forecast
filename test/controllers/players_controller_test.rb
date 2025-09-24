@@ -1,6 +1,6 @@
 require "test_helper"
 
-class ConsensusControllerTest < ActionDispatch::IntegrationTest
+class PlayersControllerTest < ActionDispatch::IntegrationTest
   setup do
     @forecaster_user = users(:one)  # Forecaster user
     @admin_user = users(:two)    # Admin user
@@ -46,28 +46,22 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "consensus index should not require authentication" do
-    get consensus_index_path
+  test "players index should not require authentication" do
+    get players_path
     assert_response :success
     assert_includes response.body, "Weekly Consensus Rankings"
   end
 
-  test "weekly consensus should not require authentication" do
-    get consensus_index_path
-    assert_response :success
-    assert_includes response.body, "Weekly Consensus Rankings"
-  end
-
-  test "forecaster should access consensus index" do
+  test "forecaster should access players index" do
     sign_in @forecaster_user
-    get consensus_index_path
+    get players_path
     assert_response :success
     assert_includes response.body, "Weekly Consensus Rankings"
   end
 
-  test "admin should access consensus index" do
+  test "admin should access players index" do
     sign_in @admin_user
-    get consensus_index_path
+    get players_path
     assert_response :success
     assert_includes response.body, "Weekly Consensus Rankings"
   end
@@ -79,7 +73,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     Forecast.create!(user: @forecaster_user, player: @player2, category: "avoid", gameweek: @gameweek5)
 
     sign_in @forecaster_user
-    get consensus_index_path, params: { week: 5, position: @player.position }
+    get players_path, params: { week: 5, position: @player.position }
     assert_response :success
 
     # Should show player names and consensus scores
@@ -94,11 +88,11 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @forecaster_user
 
     # Test week 1
-    get consensus_index_path, params: { week: 1 }
+    get players_path, params: { week: 1 }
     assert_response :success
 
     # Test week 2
-    get consensus_index_path, params: { week: 2 }
+    get players_path, params: { week: 2 }
     assert_response :success
   end
 
@@ -119,21 +113,21 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     sign_in @forecaster_user
 
     # Test no position filter
-    get consensus_index_path, params: { week: 5 }
+    get players_path, params: { week: 5 }
     assert_response :success
 
     # Test goalkeeper filter
-    get consensus_index_path, params: { week: 5, position: "GK" }
+    get players_path, params: { week: 5, position: "GK" }
     assert_response :success
 
     # Test midfielder filter
-    get consensus_index_path, params: { week: 5, position: "MID" }
+    get players_path, params: { week: 5, position: "MID" }
     assert_response :success
   end
 
   test "consensus should default to next gameweek" do
     sign_in @forecaster_user
-    get consensus_index_path
+    get players_path
     assert_response :success
 
     # Should see week 2 (next gameweek) in page title or content
@@ -143,7 +137,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
   test "consensus should handle empty forecasts gracefully" do
     # No forecasts created
     sign_in @forecaster_user
-    get consensus_index_path, params: { week: 10 }
+    get players_path, params: { week: 10 }
     assert_response :success
 
     # Should show empty state or no consensus message
@@ -152,7 +146,7 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
 
   test "weekly consensus alias should work" do
     sign_in @forecaster_user
-    get consensus_index_path(week: 5)
+    get players_path(week: 5)
     assert_response :success
     assert_includes response.body, "Weekly Consensus Rankings"
   end

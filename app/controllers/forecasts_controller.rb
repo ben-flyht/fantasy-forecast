@@ -1,26 +1,5 @@
 class ForecastsController < ApplicationController
-  before_action :set_forecast, only: %i[ show edit update destroy ]
-  before_action :ensure_ownership, only: %i[ edit update destroy ]
-  before_action :restrict_admin_edits, only: %i[ edit update destroy ]
-  before_action :authenticate_user!, except: %i[ show ]
-
-  # GET /forecasts or /forecasts.json
-  def index
-    if current_user&.admin?
-      @forecasts = Forecast.includes(:user, :player).all
-    elsif current_user
-      @forecasts = current_user.forecasts.includes(:player)
-    else
-      @forecasts = Forecast.none
-    end
-
-    # Group forecasts for display
-    @grouped_forecasts = @forecasts.group_by(&:category)
-  end
-
-  # GET /forecasts/1 or /forecasts/1.json
-  def show
-  end
+  before_action :authenticate_user!
 
   # GET /forecasts/new
   def new
@@ -44,10 +23,6 @@ class ForecastsController < ApplicationController
     end
   end
 
-  # GET /forecasts/1/edit
-  def edit
-    @current_gameweek = Gameweek.next_gameweek
-  end
 
   # POST /forecasts or /forecasts.json
   def create
@@ -59,8 +34,8 @@ class ForecastsController < ApplicationController
 
     respond_to do |format|
       if @forecast.save
-        format.html { redirect_to @forecast, notice: "Forecast was successfully created." }
-        format.json { render :show, status: :created, location: @forecast }
+        format.html { redirect_to new_forecast_url, notice: "Forecast was successfully created." }
+        format.json { render json: { success: true, message: "Forecast was successfully created." }, status: :created }
       else
         format.html { render :new, status: :unprocessable_entity }
         format.json { render json: @forecast.errors, status: :unprocessable_entity }
@@ -68,28 +43,6 @@ class ForecastsController < ApplicationController
     end
   end
 
-  # PATCH/PUT /forecasts/1 or /forecasts/1.json
-  def update
-    respond_to do |format|
-      if @forecast.update(forecast_params)
-        format.html { redirect_to @forecast, notice: "Forecast was successfully updated.", status: :see_other }
-        format.json { render :show, status: :ok, location: @forecast }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @forecast.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # DELETE /forecasts/1 or /forecasts/1.json
-  def destroy
-    @forecast.destroy!
-
-    respond_to do |format|
-      format.html { redirect_to forecasts_path, notice: "Forecast was successfully destroyed.", status: :see_other }
-      format.json { head :no_content }
-    end
-  end
 
   # PATCH /forecasts/update_forecast (AJAX)
   def update_forecast
@@ -332,30 +285,11 @@ class ForecastsController < ApplicationController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_forecast
-      @forecast = Forecast.find(params.expect(:id))
-    end
-
     # Only allow a list of trusted parameters through.
     def forecast_params
       # Only allow player_id and category since gameweek is auto-assigned
       allowed_params = [ :player_id, :category ]
       params.expect(forecast: allowed_params)
-    end
-
-    # Ensure only the forecast owner can edit/delete
-    def ensure_ownership
-      unless current_user.admin? || @forecast.user == current_user
-        redirect_to forecasts_path, alert: "You can only edit your own forecasts."
-      end
-    end
-
-    # Prevent admins from editing forecaster forecasts
-    def restrict_admin_edits
-      if current_user.admin? && @forecast.user.forecaster?
-        redirect_to forecasts_path, alert: "Admins cannot edit forecaster forecasts."
-      end
     end
 
     # Strong parameters for sync_all action

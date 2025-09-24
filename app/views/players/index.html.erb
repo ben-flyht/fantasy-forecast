@@ -4,7 +4,7 @@
       <h1 class="text-3xl font-bold text-gray-800 mb-4"><%= @page_title %></h1>
 
       <!-- Week and Position Filters -->
-      <%= form_with url: consensus_index_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form" do |f| %>
+      <%= form_with url: players_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form" do |f| %>
         <div class="flex flex-wrap gap-4 mb-6">
           <!-- Week Selector -->
           <div class="flex items-center space-x-2">
