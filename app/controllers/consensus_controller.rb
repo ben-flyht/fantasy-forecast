@@ -1,4 +1,6 @@
 class ConsensusController < ApplicationController
+  skip_before_action :authenticate_user!
+
   def index
     @week = params[:week].present? ? params[:week].to_i : current_week
     @position_filter = params[:position] || "forward"  # Default to forward if no position specified

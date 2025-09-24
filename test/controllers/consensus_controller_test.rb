@@ -46,14 +46,16 @@ class ConsensusControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "consensus index should require authentication" do
+  test "consensus index should not require authentication" do
     get consensus_index_path
-    assert_redirected_to new_user_session_path
+    assert_response :success
+    assert_includes response.body, "Weekly Consensus Rankings"
   end
 
-  test "weekly consensus should require authentication" do
+  test "weekly consensus should not require authentication" do
     get consensus_index_path
-    assert_redirected_to new_user_session_path
+    assert_response :success
+    assert_includes response.body, "Weekly Consensus Rankings"
   end
 
   test "forecaster should access consensus index" do
