@@ -20,6 +20,9 @@ class Forecast < ApplicationRecord
   # Uniqueness constraint: one forecast per user/player/gameweek
   validates :user_id, uniqueness: { scope: [ :player_id, :gameweek_id ] }
 
+  # Position slot limit validation
+  validate :position_slot_limit
+
   # Scopes
   scope :by_category, ->(cat) { where(category: cat) }
   scope :by_gameweek, ->(gameweek_id) { where(gameweek_id: gameweek_id) }
@@ -199,6 +202,27 @@ class Forecast < ApplicationRecord
   end
 
   private
+
+  # Validate position slot limits based on POSITION_CONFIG
+  def position_slot_limit
+    return unless player&.position && user_id && gameweek_id
+
+    position_config = FantasyForecast::POSITION_CONFIG[player.position]
+    return unless position_config
+
+    max_slots = position_config[:slots]
+
+    # Count existing forecasts for this user/gameweek/position/category
+    existing_count = Forecast.joins(:player)
+                           .where(user: user, gameweek: gameweek, category: category, players: { position: player.position })
+                           .where.not(id: id) # Exclude current record for updates
+                           .count
+
+    if existing_count >= max_slots
+      position_display = position_config[:display_name]
+      errors.add(:player, "Too many #{category} picks for #{position_display}. Maximum #{max_slots} allowed.")
+    end
+  end
 
   # Instance method for auto-assignment
   def assign_next_gameweek!

@@ -161,10 +161,14 @@ class ForecastAggregatorTest < ActiveSupport::TestCase
     # Create a team first
     team = Team.create!(name: "Test Team", short_name: "TST", fpl_id: 99)
 
-    # Create forecasts for multiple players
+    # Create forecasts for multiple users and players to test limit without violating position limits
+    # Use different positions to avoid validation errors
+    positions = ["midfielder", "midfielder", "defender", "defender", "goalkeeper"]
+    users = [@user, @user2, @user, @user2, @user]
+
     5.times do |i|
-      player = Player.create!(first_name: "Player", last_name: "#{i}", team: team, position: "forward", fpl_id: 500 + i)
-      Forecast.create!(user: @user, player: player, category: "target", gameweek: @gameweek1)
+      player = Player.create!(first_name: "Player", last_name: "#{i}", team: team, position: positions[i], fpl_id: 500 + i)
+      Forecast.create!(user: users[i], player: player, category: "target", gameweek: @gameweek1)
     end
 
     result = ForecastAggregator.top_for_week(1, "target", 3)

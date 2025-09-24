@@ -177,10 +177,20 @@ class ForecastsController < ApplicationController
       # Delete all existing forecasts for this user and gameweek
       current_user.forecasts.where(gameweek: @current_gameweek).destroy_all
 
-      # Collect all player selections and deduplicate - process in reverse order
-      # so that later selections override earlier ones
+      # Collect all player selections and validate position limits
       selected_players = {}
       forecasts_to_create = []
+      position_counts = {}
+
+      # Initialize position counts for each category
+      %w[target avoid].each do |category|
+        position_counts[category] = {
+          "goalkeeper" => 0,
+          "defender" => 0,
+          "midfielder" => 0,
+          "forward" => 0
+        }
+      end
 
       # Process in reverse order: last selection wins
       forecasts_data.each do |category, positions|
@@ -194,7 +204,15 @@ class ForecastsController < ApplicationController
               next
             end
 
+            # Check position slot limits
+            position_config = FantasyForecast::POSITION_CONFIG[position]
+            if position_config && position_counts[category][position] >= position_config[:slots]
+              Rails.logger.debug "Skipping #{category} #{position} selection: already at limit of #{position_config[:slots]}"
+              next
+            end
+
             selected_players[player_id] = "#{category} #{position} slot #{slot}"
+            position_counts[category][position] += 1
             forecasts_to_create << {
               player_id: player_id,
               category: category,
