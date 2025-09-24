@@ -30,7 +30,7 @@ class ConsensusRanking
         total_forecasts: forecast_data[:votes],
         total_score: player.total_score(week - 1)
       )
-    end.sort_by { |ranking| [ -ranking.consensus_score, -ranking.total_score, ranking.name ] }
+    end.sort_by { |ranking| [ -(ranking.consensus_score || 0), -(ranking.total_score || 0), ranking.name || "" ] }
   end
 
   private
