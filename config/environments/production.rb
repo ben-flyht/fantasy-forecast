@@ -59,7 +59,7 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: ENV["APP_HOST"] || "fantasy-forecast-staging-e2097dd1767b.herokuapp.com", protocol: "https" }
+  config.action_mailer.default_url_options = { host: ENV["APP_HOST"] || "fantasyforecast.co.uk", protocol: "https" }
 
   # Mailer To Go SMTP settings
   config.action_mailer.smtp_settings = {

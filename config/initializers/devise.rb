@@ -24,7 +24,7 @@ Devise.setup do |config|
   # Configure the e-mail address which will be shown in Devise::Mailer,
   # note that it will be overwritten if you use your own mailer class
   # with default "from" parameter.
-  config.mailer_sender = "noreply@fantasy-forecast-staging-e2097dd1767b.herokuapp.com"
+  config.mailer_sender = "support@fantasyforecast.co.uk"
 
   # Configure the class responsible to send e-mails.
   # config.mailer = 'Devise::Mailer'
