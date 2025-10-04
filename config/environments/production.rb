@@ -56,6 +56,7 @@ Rails.application.configure do
   config.action_mailer.raise_delivery_errors = true
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.perform_deliveries = true
+  config.action_mailer.perform_caching = false
 
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV["APP_HOST"] || "fantasy-forecast-staging-e2097dd1767b.herokuapp.com", protocol: "https" }
