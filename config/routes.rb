@@ -7,7 +7,13 @@ Rails.application.routes.draw do
   end
   devise_for :users
 
-  root "home#index"
+  root "pages#home"
+
+  # Legal pages with SEO-friendly URLs
+  get "privacy-policy", to: "pages#privacy_policy", as: :privacy_policy
+  get "terms-of-service", to: "pages#terms_of_service", as: :terms_of_service
+  get "cookie-policy", to: "pages#cookie_policy", as: :cookie_policy
+  get "contact-us", to: "pages#contact_us", as: :contact_us
 
   # Player rankings routes
   resources :players, only: [ :index ]

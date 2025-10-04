@@ -42,7 +42,7 @@ namespace :forecasts do
 
   desc "Recalculate scores for a specific gameweek (use GAMEWEEK=n)"
   task recalculate: :environment do
-    gameweek_number = ENV['GAMEWEEK']
+    gameweek_number = ENV["GAMEWEEK"]
 
     if gameweek_number.blank?
       puts "Please specify a gameweek number: rake forecasts:recalculate GAMEWEEK=5"
@@ -94,7 +94,7 @@ namespace :forecasts do
     print "Are you sure you want to clear all forecast scores? (yes/no): "
     response = STDIN.gets.chomp.downcase
 
-    unless response == 'yes'
+    unless response == "yes"
       puts "Aborted."
       exit
     end
@@ -152,7 +152,7 @@ namespace :forecasts do
     end
 
     puts "\nBy Category:"
-    ["target", "avoid"].each do |category|
+    [ "target", "avoid" ].each do |category|
       stats = Forecast.where(category: category)
       total = stats.count
       scored = stats.where.not(total_score: nil).count

@@ -57,7 +57,7 @@ namespace :seed do
         position_targets = { "goalkeeper" => 0, "defender" => 0, "midfielder" => 0, "forward" => 0 }
         position_avoids = { "goalkeeper" => 0, "defender" => 0, "midfielder" => 0, "forward" => 0 }
 
-        ["goalkeeper", "defender", "midfielder", "forward"].each do |position|
+        [ "goalkeeper", "defender", "midfielder", "forward" ].each do |position|
           position_perfs = by_position[position] || []
           next if position_perfs.empty?
 
@@ -92,18 +92,18 @@ namespace :seed do
             # Regular forecasters - mix of current form and overall quality
             # Add some randomness to simulate different opinions
             top_performers = sorted_perfs.first(10)
-            bottom_performers = sorted_perfs.last([10, sorted_perfs.length].min)
+            bottom_performers = sorted_perfs.last([ 10, sorted_perfs.length ].min)
 
             # Get position slot limit from config
             position_config = FantasyForecast::POSITION_CONFIG[position]
             max_slots = position_config ? position_config[:slots] : 1
 
             # Pick targets respecting slot limits
-            num_targets = [1, [max_slots, 2].min].sample
+            num_targets = [ 1, [ max_slots, 2 ].min ].sample
             targets = top_performers.sample(num_targets)
 
             # Pick avoids respecting slot limits
-            num_avoids = [1, [max_slots, 2].min].sample
+            num_avoids = [ 1, [ max_slots, 2 ].min ].sample
             avoids = bottom_performers.sample(num_avoids)
           end
 
@@ -226,11 +226,11 @@ namespace :seed do
 
   desc "Clear all forecast seed data (only for test users)"
   task clear_forecasts: :environment do
-    if ENV['FORCE'] != 'true'
+    if ENV["FORCE"] != "true"
       print "This will delete all forecasts from test users (forecaster1-20@example.com). Continue? (yes/no): "
       response = STDIN.gets&.chomp&.downcase
 
-      unless response == 'yes'
+      unless response == "yes"
         puts "Aborted."
         exit
       end

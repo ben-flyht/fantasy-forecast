@@ -163,8 +163,8 @@ class ForecastAggregatorTest < ActiveSupport::TestCase
 
     # Create forecasts for multiple users and players to test limit without violating position limits
     # Use different positions to avoid validation errors
-    positions = ["midfielder", "midfielder", "defender", "defender", "goalkeeper"]
-    users = [@user, @user2, @user, @user2, @user]
+    positions = [ "midfielder", "midfielder", "defender", "defender", "goalkeeper" ]
+    users = [ @user, @user2, @user, @user2, @user ]
 
     5.times do |i|
       player = Player.create!(first_name: "Player", last_name: "#{i}", team: team, position: positions[i], fpl_id: 500 + i)

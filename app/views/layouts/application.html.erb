@@ -41,7 +41,7 @@
             <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-1 rounded" %>
           <% else %>
             <%= link_to "Login", new_user_session_path, class: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-1 rounded" %>
-            <%= link_to "Sign Up", new_user_registration_path, class: "bg-green-500 hover:bg-green-700 px-3 py-1 rounded" %>
+            <%= link_to "Sign Up", new_user_registration_path, class: "bg-gray-800 hover:gray-400 text-white px-3 py-1 rounded" %>
           <% end %>
         </div>
       </div>
@@ -62,5 +62,31 @@
     <main class="container mx-auto mt-8 px-5">
       <%= yield %>
     </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12 mt-16">
+      <div class="container mx-auto px-4">
+        <div class="grid md:grid-cols-4 gap-8">
+          <div>
+            <h3 class="text-xl font-bold mb-4">⚡ Fantasy Forecast</h3>
+            <p class="text-gray-300">
+              The most accurate FPL consensus weekly rankings from experienced Fantasy Premier League managers.
+            </p>
+          </div>
+          <div>
+            <ul class="space-y-2 text-gray-300">
+              <li><%= link_to "Privacy Policy", privacy_policy_path, class: "hover:text-white" %></li>
+              <li><%= link_to "Terms of Service", terms_of_service_path, class: "hover:text-white" %></li>
+              <li><%= link_to "Cookie Policy", cookie_policy_path, class: "hover:text-white" %></li>
+              <li><%= link_to "Contact Us", contact_us_path, class: "hover:text-white" %></li>
+            </ul>
+          </div>
+        </div>
+        <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300">
+          <p>&copy; 2025 Fantasy Forecast. All rights reserved. FPL consensus weekly rankings for Fantasy Premier League managers.</p>
+          <p class="mt-2 text-sm">Not affiliated with the Premier League or Fantasy Premier League. All player and team names are trademarks of their respective owners.</p>
+        </div>
+      </div>
+    </footer>
   </body>
 </html>
