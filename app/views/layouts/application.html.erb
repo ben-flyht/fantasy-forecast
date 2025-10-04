@@ -25,41 +25,75 @@
   </head>
 
   <body>
-    <nav class="bg-white text-gray-800 p-4 border-b border-gray-200">
-      <div class="container mx-auto flex justify-between items-center">
-        <div class="flex items-center space-x-6">
-          <%= link_to "⚡ Fantasy Forecast", root_path, class: "text-xl font-bold" %>
-          <%= link_to "Player Rankings", players_path, class: "text-gray-600 hover:text-gray-800" %>
-          <%= link_to "Forecaster Rankings", users_path, class: "text-gray-600 hover:text-gray-800" %>
-        </div>
-        <div class="space-x-4">
-          <% if user_signed_in? %>
-            <span>Welcome, <%= current_user.username %></span>
+    <nav class="bg-white text-gray-800 p-4 border-b border-gray-200 fixed top-0 left-0 right-0 z-50 shadow-md" data-controller="mobile-menu">
+      <div class="container mx-auto">
+        <div class="flex justify-between items-center">
+          <!-- Logo -->
+          <div class="flex items-center">
+            <%= link_to "⚡ Fantasy Forecast", root_path, class: "text-lg md:text-xl font-bold" %>
+          </div>
+
+          <!-- Desktop Navigation -->
+          <div class="hidden md:flex items-center space-x-6">
+            <%= link_to "Player Rankings", players_path, class: "text-gray-600 hover:text-gray-800 #{'font-semibold text-gray-900' if controller_name == 'players'}" %>
+            <%= link_to "Forecaster Rankings", forecasters_path, class: "text-gray-600 hover:text-gray-800 #{'font-semibold text-gray-900' if controller_name == 'forecasters'}" %>
+          </div>
+
+          <!-- Desktop Auth Links -->
+          <div class="hidden md:flex space-x-4">
             <% if user_signed_in? %>
-              <%= link_to "My Profile", user_path(current_user), class: "text-gray-600 hover:text-gray-800" %>
+              <%= link_to "My Profile", forecaster_path(current_user), class: "text-gray-600 hover:text-gray-800" %>
+              <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "text-gray-600 hover:text-gray-800" %>
+            <% else %>
+              <%= link_to "Login", new_user_session_path, class: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-1 rounded" %>
+              <%= link_to "Sign Up", new_user_registration_path, class: "bg-gray-800 hover:gray-400 text-white px-3 py-1 rounded" %>
             <% end %>
-            <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-1 rounded" %>
-          <% else %>
-            <%= link_to "Login", new_user_session_path, class: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-1 rounded" %>
-            <%= link_to "Sign Up", new_user_registration_path, class: "bg-gray-800 hover:gray-400 text-white px-3 py-1 rounded" %>
-          <% end %>
+          </div>
+
+          <!-- Mobile Burger Button -->
+          <button type="button" class="md:hidden text-gray-800 focus:outline-none" data-action="click->mobile-menu#toggle">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div class="hidden md:hidden mt-4 pb-4 border-t border-gray-200 pt-4" data-mobile-menu-target="menu">
+          <div class="flex flex-col space-y-3">
+            <%= link_to "Player Rankings", players_path, class: "text-gray-600 hover:text-gray-800 py-2 #{'font-semibold text-gray-900' if controller_name == 'players'}", data: { action: "click->mobile-menu#close" } %>
+            <%= link_to "Forecaster Rankings", forecasters_path, class: "text-gray-600 hover:text-gray-800 py-2 #{'font-semibold text-gray-900' if controller_name == 'forecasters'}", data: { action: "click->mobile-menu#close" } %>
+
+            <div class="border-t border-gray-200 pt-3 mt-3">
+              <% if user_signed_in? %>
+                <div class="text-sm text-gray-600 mb-3">Welcome, <%= current_user.username %></div>
+                <%= link_to "My Profile", forecaster_path(current_user), class: "block text-gray-600 hover:text-gray-800 py-2", data: { action: "click->mobile-menu#close" } %>
+                <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete, action: "click->mobile-menu#close" }, class: "block border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-2 rounded text-center mt-2" %>
+              <% else %>
+                <%= link_to "Login", new_user_session_path, class: "block border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-2 rounded text-center mb-2", data: { action: "click->mobile-menu#close" } %>
+                <%= link_to "Sign Up", new_user_registration_path, class: "block bg-gray-800 hover:gray-400 text-white px-3 py-2 rounded text-center", data: { action: "click->mobile-menu#close" } %>
+              <% end %>
+            </div>
+          </div>
         </div>
       </div>
     </nav>
 
-    <% if notice %>
-      <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
-        <%= notice %>
-      </div>
-    <% end %>
+    <div class="pt-20">
+      <% if notice %>
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
+          <%= notice %>
+        </div>
+      <% end %>
 
-    <% if alert %>
-      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
-        <%= alert %>
-      </div>
-    <% end %>
+      <% if alert %>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
+          <%= alert %>
+        </div>
+      <% end %>
+    </div>
 
-    <main class="container mx-auto mt-8 px-5">
+    <main class="container mx-auto mt-4 md:mt-8 px-2 md:px-5">
       <%= yield %>
     </main>
 

@@ -4,10 +4,8 @@ one:
   user: one
   player: one
   gameweek: one
-  category: target
 
 two:
   user: two
   player: two
   gameweek: one
-  category: avoid

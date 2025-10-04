@@ -4,10 +4,10 @@ one:
   email: user1@example.com
   username: testuser1
   encrypted_password: <%= Devise::Encryptor.digest(User, 'password123') %>
-  role: forecaster
+  confirmed_at: <%= Time.current %>
 
 two:
   email: user2@example.com
   username: testuser2
   encrypted_password: <%= Devise::Encryptor.digest(User, 'password123') %>
-  role: admin
+  confirmed_at: <%= Time.current %>

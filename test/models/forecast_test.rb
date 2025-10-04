@@ -21,8 +21,7 @@ class ForecastTest < ActiveSupport::TestCase
     forecast = Forecast.new(
       user: @user,
       player: @player,
-      gameweek: @next_gameweek,
-      category: "target"
+      gameweek: @next_gameweek
     )
     assert forecast.valid?
     assert_equal @user, forecast.user
@@ -32,8 +31,7 @@ class ForecastTest < ActiveSupport::TestCase
     forecast = Forecast.new(
       user: @user,
       player: @player,
-      gameweek: @next_gameweek,
-      category: "target"
+      gameweek: @next_gameweek
     )
     assert forecast.valid?
     assert_equal @player, forecast.player
@@ -43,43 +41,10 @@ class ForecastTest < ActiveSupport::TestCase
     forecast = Forecast.new(
       user: @user,
       player: @player,
-      gameweek: @next_gameweek,
-      category: "target"
+      gameweek: @next_gameweek
     )
     assert forecast.valid?
     assert_equal @next_gameweek, forecast.gameweek
-  end
-
-  test "should require category" do
-    forecast = Forecast.new(
-      user: @user,
-      player: @player,
-      gameweek: @next_gameweek
-    )
-    assert_not forecast.valid?
-    assert_includes forecast.errors[:category], "can't be blank"
-  end
-
-  test "should validate category enum" do
-    forecast = Forecast.new(
-      user: @user,
-      player: @player,
-      gameweek: @next_gameweek
-    )
-
-    # Valid categories
-    forecast.category = "target"
-    assert forecast.valid?
-    assert forecast.target?
-
-    forecast.category = "avoid"
-    assert forecast.valid?
-    assert forecast.avoid?
-
-    # Invalid category
-    assert_raises(ArgumentError) do
-      forecast.category = "invalid"
-    end
   end
 
   test "should enforce uniqueness constraint" do
@@ -87,16 +52,14 @@ class ForecastTest < ActiveSupport::TestCase
     forecast1 = Forecast.create!(
       user: @user,
       player: @player,
-      gameweek: @next_gameweek,
-      category: "target"
+      gameweek: @next_gameweek
     )
 
     # Try to create duplicate (same user, player, gameweek)
     forecast2 = Forecast.new(
       user: @user,
       player: @player,
-      gameweek: @next_gameweek,
-      category: "avoid"  # Different category but still duplicate
+      gameweek: @next_gameweek
     )
 
     assert_not forecast2.valid?
@@ -116,16 +79,14 @@ class ForecastTest < ActiveSupport::TestCase
     forecast1 = Forecast.create!(
       user: @user,
       player: @player,
-      gameweek: @next_gameweek,
-      category: "target"
+      gameweek: @next_gameweek
     )
 
     # Create forecast for gameweek 2 - should be valid
     forecast2 = Forecast.new(
       user: @user,
       player: @player,
-      gameweek: gameweek2,
-      category: "target"
+      gameweek: gameweek2
     )
 
     assert forecast2.valid?
@@ -138,20 +99,14 @@ class ForecastTest < ActiveSupport::TestCase
     forecast1 = Forecast.create!(
       user: @user,
       player: @player,
-      gameweek: @next_gameweek,
-      category: "target"
+      gameweek: @next_gameweek
     )
 
     forecast2 = Forecast.create!(
       user: user2,
       player: player2,
-      gameweek: @next_gameweek,
-      category: "avoid"
+      gameweek: @next_gameweek
     )
-
-    # Test by_category scope
-    assert_includes Forecast.by_category("target"), forecast1
-    assert_not_includes Forecast.by_category("target"), forecast2
 
     # Test for_player scope
     assert_includes Forecast.for_player(@player.id), forecast1
@@ -170,8 +125,7 @@ class ForecastTest < ActiveSupport::TestCase
     forecast = Forecast.create!(
       user: @user,
       player: @player,
-      gameweek: @next_gameweek,
-      category: "target"
+      gameweek: @next_gameweek
     )
 
     # Test by_week scope using fpl_id
@@ -184,20 +138,18 @@ class ForecastTest < ActiveSupport::TestCase
     player2 = players(:two)
 
     # Create multiple forecasts
-    Forecast.create!(user: @user, player: @player, gameweek: @next_gameweek, category: "target")
-    Forecast.create!(user: user2, player: @player, gameweek: @next_gameweek, category: "target")
-    Forecast.create!(user: @user, player: player2, gameweek: @next_gameweek, category: "avoid")
+    Forecast.create!(user: @user, player: @player, gameweek: @next_gameweek)
+    Forecast.create!(user: user2, player: @player, gameweek: @next_gameweek)
+    Forecast.create!(user: @user, player: player2, gameweek: @next_gameweek)
 
     results = Forecast.consensus_scores_for_week(1)
 
-    # Check player1 has consensus score of +2 (two targets)
+    # Check player1 has 2 forecasts
     player1_result = results.find { |r| r.player_id == @player.id }
-    assert_equal 2, player1_result.consensus_score
     assert_equal 2, player1_result.total_forecasts
 
-    # Check player2 has consensus score of -1 (one avoid)
+    # Check player2 has 1 forecast
     player2_result = results.find { |r| r.player_id == player2.id }
-    assert_equal(-1, player2_result.consensus_score)
     assert_equal 1, player2_result.total_forecasts
   end
 
@@ -211,8 +163,8 @@ class ForecastTest < ActiveSupport::TestCase
       fpl_id: 999
     )
 
-    Forecast.create!(user: @user, player: @player, gameweek: @next_gameweek, category: "target")
-    Forecast.create!(user: @user, player: midfielder, gameweek: @next_gameweek, category: "target")
+    Forecast.create!(user: @user, player: @player, gameweek: @next_gameweek)
+    Forecast.create!(user: @user, player: midfielder, gameweek: @next_gameweek)
 
     # Filter by goalkeeper position (assuming @player is a goalkeeper)
     gk_results = Forecast.consensus_scores_for_week_by_position(1, "goalkeeper")
@@ -228,8 +180,7 @@ class ForecastTest < ActiveSupport::TestCase
   test "forecast should automatically assign next gameweek" do
     forecast = Forecast.new(
       user: @user,
-      player: @player,
-      category: "target"
+      player: @player
     )
 
     assert forecast.valid?
@@ -246,8 +197,7 @@ class ForecastTest < ActiveSupport::TestCase
     forecast = Forecast.new(
       user: @user,
       player: @player,
-      gameweek: other_gameweek,
-      category: "target"
+      gameweek: other_gameweek
     )
 
     assert forecast.valid?

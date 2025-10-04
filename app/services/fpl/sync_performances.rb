@@ -42,7 +42,8 @@ module Fpl
         gameweek_score = element.dig("stats", "total_points") || 0
 
         performance_attributes = {
-          gameweek_score: gameweek_score
+          gameweek_score: gameweek_score,
+          team: player.team
         }
 
         performance = Performance.find_or_initialize_by(player: player, gameweek: gameweek)

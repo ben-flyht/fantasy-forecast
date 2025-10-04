@@ -1,34 +1,130 @@
 class ForecasterRankings
-  def self.overall
-    # Get all forecasts with their gameweek data for weighting
-    forecasts_with_weights = calculate_weighted_scores
+  def self.for_gameweek(gameweek)
+    # Get rankings for a specific gameweek
+    gameweek_record = Gameweek.find_by(fpl_id: gameweek)
+    return [] unless gameweek_record
 
-    # Group by user and aggregate weighted scores
-    user_scores = forecasts_with_weights.group_by { |f| f[:user_id] }.map do |user_id, user_forecasts|
-      user = User.find(user_id)
+    # Get all users who have ever made forecasts
+    all_forecasters = User.joins(:forecasts)
+                         .where.not(forecasts: { total_score: nil })
+                         .distinct
+                         .select(:id, :username)
 
-      total_weighted_score = user_forecasts.sum { |f| f[:weighted_score] }
-      total_raw_score = user_forecasts.sum { |f| f[:total_score] }
-      total_accuracy = user_forecasts.sum { |f| f[:accuracy_score] }
-      total_contrarian = user_forecasts.sum { |f| f[:contrarian_bonus] }
-      forecast_count = user_forecasts.size
-      gameweeks = user_forecasts.map { |f| f[:gameweek_fpl_id] }.uniq.size
+    # Get forecasts for this specific gameweek with scores
+    gameweek_forecasts = Forecast.joins(:user)
+                                 .where(gameweek: gameweek_record)
+                                 .where.not(total_score: nil)
+                                 .select("forecasts.*", "users.username")
+                                 .group_by(&:user_id)
+
+    # Calculate total required slots across all positions
+    total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
+
+    # Calculate scores for all forecasters
+    user_scores = all_forecasters.map do |user|
+      user_forecasts = gameweek_forecasts[user.id] || []
+
+      if user_forecasts.any?
+        avg_score = user_forecasts.sum { |f| f.total_score.to_f } / user_forecasts.size
+        avg_accuracy = user_forecasts.sum { |f| f.accuracy_score.to_f } / user_forecasts.size
+        avg_differential = user_forecasts.sum { |f| f.differential_score.to_f } / user_forecasts.size
+        forecast_count = user_forecasts.size
+      else
+        # User didn't forecast this gameweek - give them 0 scores
+        avg_score = 0.0
+        avg_accuracy = 0.0
+        avg_differential = 0.0
+        forecast_count = 0
+      end
+
+      # Calculate availability (forecasts made / total required)
+      availability_score = forecast_count.to_f / total_required_slots
 
       {
-        user_id: user_id,
+        user_id: user.id,
         username: user.username,
-        weighted_score: total_weighted_score.round(2),
-        total_score: total_raw_score.round(2),
-        accuracy_score: total_accuracy.round(2),
-        contrarian_bonus: total_contrarian.round(2),
-        forecast_count: forecast_count,
-        average_score: (total_raw_score / forecast_count).round(2),
-        gameweeks_participated: gameweeks
+        total_score: avg_score.round(4),
+        accuracy_score: avg_accuracy.round(4),
+        differential_score: avg_differential.round(4),
+        availability_score: availability_score.round(4),
+        forecast_count: forecast_count
       }
     end
 
-    # Sort by weighted score and add ranks
-    user_scores.sort_by { |u| -u[:weighted_score] }.each_with_index.map do |ranking, index|
+    # Sort by total_score, then accuracy_score, then differential_score
+    user_scores.sort_by { |u| [ -u[:total_score], -u[:accuracy_score], -u[:differential_score] ] }.each_with_index.map do |ranking, index|
+      ranking.merge(rank: index + 1)
+    end
+  end
+
+  def self.overall
+    # Get all gameweeks that have scored forecasts
+    gameweeks_with_forecasts = Forecast.joins(:gameweek)
+                                       .where.not(total_score: nil)
+                                       .distinct
+                                       .pluck("gameweeks.fpl_id")
+
+    total_gameweeks = gameweeks_with_forecasts.size
+    return [] if total_gameweeks == 0
+
+    # Calculate total required slots across all positions
+    total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
+    total_possible_forecasts = total_required_slots * total_gameweeks
+
+    # Get all users who have made any forecasts
+    all_forecasters = User.joins(:forecasts)
+                         .where.not(forecasts: { total_score: nil })
+                         .distinct
+                         .select(:id, :username)
+
+    # Get all forecasts with their gameweek data
+    all_forecasts = Forecast.joins(:gameweek, :user)
+                           .where.not(total_score: nil)
+                           .select("forecasts.*", "gameweeks.fpl_id as gameweek_fpl_id", "users.username")
+                           .group_by(&:user_id)
+
+    # Calculate scores for all forecasters
+    user_scores = all_forecasters.map do |user|
+      user_forecasts_by_gw = (all_forecasts[user.id] || []).index_by(&:gameweek_fpl_id)
+
+      # Calculate average across ALL gameweeks (0 if didn't participate)
+      total_score_sum = 0.0
+      accuracy_sum = 0.0
+      differential_sum = 0.0
+      total_forecast_count = 0
+
+      gameweeks_with_forecasts.each do |gw_fpl_id|
+        forecast = user_forecasts_by_gw[gw_fpl_id]
+        if forecast
+          total_score_sum += forecast.total_score.to_f
+          accuracy_sum += forecast.accuracy_score.to_f
+          differential_sum += forecast.differential_score.to_f
+          total_forecast_count += 1
+        end
+        # If no forecast, adds 0 (implicit)
+      end
+
+      avg_score = total_score_sum / total_gameweeks
+      avg_accuracy = accuracy_sum / total_gameweeks
+      avg_differential = differential_sum / total_gameweeks
+
+      # Calculate availability (total forecasts made / total possible forecasts)
+      availability_score = total_forecast_count.to_f / total_possible_forecasts
+
+      {
+        user_id: user.id,
+        username: user.username,
+        total_score: avg_score.round(4),
+        accuracy_score: avg_accuracy.round(4),
+        differential_score: avg_differential.round(4),
+        availability_score: availability_score.round(4),
+        forecast_count: total_forecast_count,
+        gameweeks_participated: total_forecast_count
+      }
+    end
+
+    # Sort by total_score, then accuracy_score, then differential_score
+    user_scores.sort_by { |u| [ -u[:total_score], -u[:accuracy_score], -u[:differential_score] ] }.each_with_index.map do |ranking, index|
       ranking.merge(rank: index + 1)
     end
   end
@@ -66,7 +162,7 @@ class ForecasterRankings
         gameweek_fpl_id: forecast.gameweek_fpl_id,
         total_score: forecast.total_score.to_f,
         accuracy_score: forecast.accuracy_score.to_f,
-        contrarian_bonus: forecast.contrarian_bonus.to_f,
+        differential_score: forecast.differential_score.to_f,
         weight: weight,
         weighted_score: forecast.total_score.to_f * weight
       }
@@ -81,22 +177,20 @@ class ForecasterRankings
             .group("gameweeks.id, gameweeks.fpl_id")
             .select(
               "gameweeks.fpl_id as week",
-              "SUM(total_score) as total_score",
-              "SUM(accuracy_score) as accuracy_score",
-              "SUM(contrarian_bonus) as contrarian_bonus",
-              "COUNT(*) as forecast_count",
-              "AVG(total_score) as average_score"
+              "AVG(total_score) as total_score",
+              "AVG(accuracy_score) as accuracy_score",
+              "AVG(differential_score) as differential_score",
+              "COUNT(*) as forecast_count"
             )
             .order("gameweeks.fpl_id DESC")
             .limit(limit)
             .map do |performance|
               {
                 gameweek: performance.week,
-                total_score: performance.total_score.to_f.round(2),
-                accuracy_score: performance.accuracy_score.to_f.round(2),
-                contrarian_bonus: performance.contrarian_bonus.to_f.round(2),
-                forecast_count: performance.forecast_count,
-                average_score: performance.average_score.to_f.round(2)
+                total_score: performance.total_score.to_f.round(4),
+                accuracy_score: performance.accuracy_score.to_f.round(4),
+                differential_score: performance.differential_score.to_f.round(4),
+                forecast_count: performance.forecast_count
               }
             end
   end
@@ -127,10 +221,9 @@ class ForecasterRankings
                player_name: "#{forecast.first_name} #{forecast.last_name}",
                team_name: forecast.team_name,
                position: forecast.position,
-               category: forecast.category,
-               total_score: forecast.total_score.to_f.round(2),
-               accuracy_score: forecast.accuracy_score.to_f.round(2),
-               contrarian_bonus: forecast.contrarian_bonus.to_f.round(2),
+               forecaster_score: forecast.total_score.to_f.round(4),
+               accuracy_score: forecast.accuracy_score.to_f.round(4),
+               differential_score: forecast.differential_score.to_f.round(4),
                actual_points: performance&.gameweek_score || 0,
                gameweek: forecast.gameweek_fpl_id
              }

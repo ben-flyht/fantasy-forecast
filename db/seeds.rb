@@ -13,19 +13,19 @@ admin_user = User.find_or_create_by!(email: "admin@example.com") do |user|
   user.username = "AdminUser"
   user.password = "password123"
   user.password_confirmation = "password123"
-  user.role = "admin"
+  user.confirmed_at = Time.current
 end
 
 forecaster_user = User.find_or_create_by!(email: "forecaster@example.com") do |user|
   user.username = "ForecasterUser"
   user.password = "password123"
   user.password_confirmation = "password123"
-  user.role = "forecaster"
+  user.confirmed_at = Time.current
 end
 
 puts "Created users:"
-puts "Admin: #{admin_user.email} (#{admin_user.username}) - Role: #{admin_user.role}"
-puts "Forecaster: #{forecaster_user.email} (#{forecaster_user.username}) - Role: #{forecaster_user.role}"
+puts "Admin: #{admin_user.email} (#{admin_user.username})"
+puts "Forecaster: #{forecaster_user.email} (#{forecaster_user.username})"
 
 # Sync players from FPL API
 puts "\nSyncing players from FPL API..."
@@ -93,14 +93,14 @@ if forecaster_user && admin_user && Player.any?
     user.username = "Forecaster2"
     user.password = "password123"
     user.password_confirmation = "password123"
-    user.role = "forecaster"
+    user.confirmed_at = Time.current
   end
 
   forecaster3 = User.find_or_create_by!(email: "forecaster3@example.com") do |user|
     user.username = "Forecaster3"
     user.password = "password123"
     user.password_confirmation = "password123"
-    user.role = "forecaster"
+    user.confirmed_at = Time.current
   end
 
   # Get some gameweeks for sample data
@@ -110,35 +110,35 @@ if forecaster_user && admin_user && Player.any?
     # Forecast data for multiple users to demonstrate consensus
     forecasts_data = [
       # Week 1 forecasts - show consensus
-      { user: forecaster_user, player: sample_players[0], gameweek: gameweeks[0], category: "target" },
-      { user: forecaster2, player: sample_players[0], gameweek: gameweeks[0], category: "target" },
-      { user: forecaster3, player: sample_players[0], gameweek: gameweeks[0], category: "target" },
+      { user: forecaster_user, player: sample_players[0], gameweek: gameweeks[0] },
+      { user: forecaster2, player: sample_players[0], gameweek: gameweeks[0] },
+      { user: forecaster3, player: sample_players[0], gameweek: gameweeks[0] },
 
-      { user: forecaster_user, player: sample_players[1], gameweek: gameweeks[0], category: "target" },
-      { user: forecaster2, player: sample_players[1], gameweek: gameweeks[0], category: "target" },
+      { user: forecaster_user, player: sample_players[1], gameweek: gameweeks[0] },
+      { user: forecaster2, player: sample_players[1], gameweek: gameweeks[0] },
 
-      { user: forecaster_user, player: sample_players[2], gameweek: gameweeks[0], category: "avoid" },
+      { user: forecaster_user, player: sample_players[2], gameweek: gameweeks[0] },
 
       # Week 2 forecasts
-      { user: forecaster_user, player: sample_players[3], gameweek: gameweeks[1], category: "target" },
-      { user: forecaster2, player: sample_players[4], gameweek: gameweeks[1], category: "target" },
-      { user: forecaster3, player: sample_players[5], gameweek: gameweeks[1], category: "avoid" },
+      { user: forecaster_user, player: sample_players[3], gameweek: gameweeks[1] },
+      { user: forecaster2, player: sample_players[4], gameweek: gameweeks[1] },
+      { user: forecaster3, player: sample_players[5], gameweek: gameweeks[1] },
 
       # Week 3 forecasts
-      { user: forecaster_user, player: sample_players[6], gameweek: gameweeks[2], category: "target" },
-      { user: forecaster2, player: sample_players[6], gameweek: gameweeks[2], category: "target" },
+      { user: forecaster_user, player: sample_players[6], gameweek: gameweeks[2] },
+      { user: forecaster2, player: sample_players[6], gameweek: gameweeks[2] },
 
-      { user: forecaster_user, player: sample_players[7], gameweek: gameweeks[2], category: "target" },
-      { user: forecaster2, player: sample_players[7], gameweek: gameweeks[2], category: "target" },
-      { user: forecaster3, player: sample_players[7], gameweek: gameweeks[2], category: "target" },
+      { user: forecaster_user, player: sample_players[7], gameweek: gameweeks[2] },
+      { user: forecaster2, player: sample_players[7], gameweek: gameweeks[2] },
+      { user: forecaster3, player: sample_players[7], gameweek: gameweeks[2] },
 
-      { user: forecaster_user, player: sample_players[8], gameweek: gameweeks[1], category: "target" },
-      { user: forecaster2, player: sample_players[8], gameweek: gameweeks[1], category: "target" },
+      { user: forecaster_user, player: sample_players[8], gameweek: gameweeks[1] },
+      { user: forecaster2, player: sample_players[8], gameweek: gameweeks[1] },
 
-      { user: forecaster_user, player: sample_players[9], gameweek: gameweeks[0], category: "avoid" },
-      { user: forecaster3, player: sample_players[10], gameweek: gameweeks[1], category: "target" },
-      { user: forecaster2, player: sample_players[11], gameweek: gameweeks[2], category: "target" },
-      { user: forecaster3, player: sample_players[12], gameweek: gameweeks[0], category: "avoid" }
+      { user: forecaster_user, player: sample_players[9], gameweek: gameweeks[0] },
+      { user: forecaster3, player: sample_players[10], gameweek: gameweeks[1] },
+      { user: forecaster2, player: sample_players[11], gameweek: gameweeks[2] },
+      { user: forecaster3, player: sample_players[12], gameweek: gameweeks[0] }
     ]
 
     forecasts_data.each do |forecast_data|
@@ -146,15 +146,13 @@ if forecaster_user && admin_user && Player.any?
         user: forecast_data[:user],
         player: forecast_data[:player],
         gameweek: forecast_data[:gameweek]
-      ) do |f|
-        f.category = forecast_data[:category]
-      end
+      )
     end
   else
     puts "No gameweeks found, skipping forecast creation"
   end
 
-  puts "Created #{User.where(role: 'forecaster').count} Forecaster users"
+  puts "Created #{User.count} users"
   puts "Created #{Forecast.count} forecasts across all users"
 
   # Show consensus examples

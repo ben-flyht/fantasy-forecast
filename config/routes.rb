@@ -1,10 +1,4 @@
 Rails.application.routes.draw do
-  resources :forecasts, only: [ :new, :create ] do
-    collection do
-      post :sync_all
-      patch :update_forecast
-    end
-  end
   devise_for :users
 
   root "pages#home"
@@ -16,12 +10,16 @@ Rails.application.routes.draw do
   get "contact-us", to: "pages#contact_us", as: :contact_us
 
   # Player rankings routes
-  resources :players, only: [ :index ]
+  resources :players, only: [ :index ] do
+    collection do
+      post :toggle_forecast
+    end
+  end
 
-  # User rankings routes
-  resources :users, only: [ :index, :show ] do
+  # Forecaster rankings routes
+  resources :forecasters, only: [ :index, :show ] do
     member do
-      get "gameweeks/:gameweek", to: "users#gameweeks", as: "gameweeks"
+      get "gameweeks/:gameweek", to: "forecasters#gameweeks", as: "gameweeks"
     end
   end
 

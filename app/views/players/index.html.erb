@@ -1,36 +1,76 @@
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-2 md:px-4 py-4 md:py-8">
   <%= turbo_frame_tag "rankings_container" do %>
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-800 mb-4"><%= @page_title %></h1>
+    <% if user_signed_in? && !current_user.confirmed? %>
+      <div class="mb-4 md:mb-6 bg-yellow-50 border border-yellow-200 rounded-md p-3 md:p-4">
+        <p class="text-xs md:text-sm text-yellow-800">
+          <strong>Please confirm your email address to make forecasts.</strong>
+          Didn't receive the confirmation email?
+          <%= button_to "Resend confirmation email", user_confirmation_path, method: :post, params: { user: { email: current_user.email } }, class: "text-yellow-900 underline hover:no-underline", form: { data: { turbo: false } } %>
+        </p>
+      </div>
+    <% end %>
+
+    <div class="mb-4 md:mb-8">
+      <h1 class="text-xl md:text-3xl font-bold text-gray-800 mb-3 md:mb-4"><%= @page_title %></h1>
 
       <!-- Week and Position Filters -->
       <%= form_with url: players_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form" do |f| %>
-        <div class="flex flex-wrap gap-4 mb-6">
+        <div class="flex flex-col md:flex-row md:flex-wrap gap-3 md:gap-4 mb-6">
           <!-- Gameweek Selector -->
           <div class="flex items-center space-x-2">
-            <label for="gameweek-select" class="text-sm font-medium text-gray-700">Gameweek:</label>
+            <label for="gameweek-select" class="text-xs md:text-sm font-medium text-gray-700 whitespace-nowrap">Gameweek:</label>
             <%= select_tag :gameweek,
                 options_for_select(@available_gameweeks.map { |w| [w, w] }, @gameweek),
                 {
                   id: "gameweek-select",
-                  class: "border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  class: "border border-gray-300 rounded-md px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  onchange: "this.form.requestSubmit()"
+                } %>
+          </div>
+
+          <!-- Team Selector -->
+          <div class="flex items-center space-x-2">
+            <label for="team-select" class="text-xs md:text-sm font-medium text-gray-700 whitespace-nowrap">Team:</label>
+            <%= select_tag :team_id,
+                options_for_select([['All Teams', '']] + @available_teams.map { |t| [t.name, t.id] }, @team_filter),
+                {
+                  id: "team-select",
+                  class: "border border-gray-300 rounded-md px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
                   onchange: "this.form.requestSubmit()"
                 } %>
           </div>
 
           <!-- Position Radio Buttons styled as buttons -->
-          <div class="flex items-center space-x-2">
-            <span class="text-sm font-medium text-gray-700">Position:</span>
-            <div class="flex space-x-2" role="radiogroup">
+          <div class="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
+            <span class="text-xs md:text-sm font-medium text-gray-700">Position:</span>
+            <div class="flex flex-wrap gap-2" role="radiogroup">
               <% @available_positions.each do |position| %>
                 <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
                 <% is_active = @position_filter == position %>
-                <label class="px-3 py-2 text-xs font-medium rounded-md border transition-all cursor-pointer inline-block
-                           <%= is_active ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' %>">
+                <% forecast_count = @forecast_counts[position] || 0 %>
+                <% max_slots = position_config[:slots] %>
+                <% is_complete = user_signed_in? && forecast_count == max_slots %>
+                <%
+                  if is_complete && is_active
+                    pill_classes = 'bg-yellow-400 text-gray-900 border-yellow-400 shadow-md'
+                  elsif is_complete
+                    pill_classes = 'bg-yellow-100 text-gray-900 border-yellow-300 hover:bg-yellow-200'
+                  elsif is_active
+                    pill_classes = 'bg-blue-600 text-white border-blue-600 shadow-md'
+                  else
+                    pill_classes = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  end
+                %>
+                <label class="px-2 md:px-3 py-1.5 md:py-2 text-xs font-medium rounded-md border transition-all cursor-pointer inline-block <%= pill_classes %>">
                   <%= radio_button_tag :position, position, is_active,
                       style: "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;",
                       onchange: "this.form.requestSubmit()" %>
                   <%= position_config[:display_name] %>
+                  <% if user_signed_in? %>
+                    <span class="ml-1">
+                      (<%= forecast_count %>/<%= max_slots %>)
+                    </span>
+                  <% end %>
                 </label>
               <% end %>
             </div>
@@ -40,49 +80,132 @@
     </div>
 
     <!-- Consensus Rankings Table -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-      <h2 class="text-xl font-semibold text-gray-800">Consensus Rankings</h2>
-      <p class="text-sm text-gray-600 mt-1">
-        Scoring: +1 for each "Target" vote, -1 for each "Avoid" vote
-      </p>
-    </div>
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden" data-controller="player-forecast">
 
     <% if @consensus_rankings.any? %>
       <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-2 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Rank
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Player
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Team
               </th>
-              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Score
+              <th class="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Opponent
               </th>
+              <th class="hidden md:table-cell px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Pts
+              </th>
+              <th class="hidden md:table-cell px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Forecast %
+              </th>
+              <% if @is_next_gameweek %>
+                <th class="px-2 md:px-6 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Select
+                </th>
+              <% end %>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
+            <% has_forecasts = @consensus_rankings.any? { |r| r.total_forecasts > 0 } %>
+            <%
+              # Calculate ranks based on forecast counts
+              if has_forecasts
+                current_rank = 1
+                last_count = nil
+                ranks = []
+
+                @consensus_rankings.each_with_index do |ranking, index|
+                  if ranking.total_forecasts != last_count
+                    current_rank = index + 1
+                    last_count = ranking.total_forecasts
+                  end
+
+                  # Check if there are more players with the same count after this one
+                  next_rankings = @consensus_rankings[(index + 1)..-1] || []
+                  has_ties = next_rankings.any? { |r| r.total_forecasts == ranking.total_forecasts }
+
+                  if has_ties || (index > 0 && @consensus_rankings[index - 1].total_forecasts == ranking.total_forecasts)
+                    ranks << "#{current_rank}="
+                  else
+                    ranks << current_rank.to_s
+                  end
+                end
+              end
+            %>
             <% @consensus_rankings.each_with_index do |ranking, index| %>
-              <tr class="<%= 'bg-green-50' if ranking.consensus_score > 0 %><%= 'bg-red-50' if ranking.consensus_score < 0 %>">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  <%= index + 1 %>
+              <% player = @players.find { |p| p.id == ranking.player_id } %>
+              <% is_selected = @current_forecasts[ranking.player_id].present? %>
+              <tr class="<%= is_selected ? 'bg-yellow-100 border-l-4 border-yellow-400' : '' %>" data-player-row="<%= ranking.player_id %>">
+                <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-base md:text-lg font-medium text-gray-900">
+                  <%= has_forecasts ? ranks[index] : "1=" %>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900"><%= ranking.name %></div>
+                <td class="px-3 md:px-6 py-2 md:py-4">
+                  <div class="flex items-center space-x-2 md:space-x-4">
+                    <% player = @players.find { |p| p.id == ranking.player_id } %>
+                    <div class="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
+                      <% if player&.photo_url %>
+                        <img src="<%= player.photo_url(size: '40x40') %>" alt="<%= ranking.name %>" class="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover" onerror="this.style.display='none'">
+                      <% end %>
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-xs md:text-sm text-gray-500 break-words"><%= ranking.first_name %></span>
+                      <span class="text-sm md:text-lg font-bold text-gray-900 break-words"><%= ranking.last_name %></span>
+                    </div>
+                  </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <%= ranking.team %>
+                <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap">
+                  <% player = @players.find { |p| p.id == ranking.player_id } %>
+                  <div class="flex items-center space-x-2">
+                    <% if player&.team&.badge_url %>
+                      <img src="<%= player.team.badge_url %>" alt="<%= player.team.name %>" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
+                    <% end %>
+                    <span class="text-sm text-gray-700"><%= player&.team&.name || ranking.team %></span>
+                  </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <span class="text-lg font-bold <%= ranking.consensus_score > 0 ? 'text-green-600' : ranking.consensus_score < 0 ? 'text-red-600' : 'text-gray-500' %>">
-                    <%= ranking.consensus_score > 0 ? "+#{ranking.consensus_score}" : ranking.consensus_score %>
-                  </span>
+                <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap">
+                  <% if ranking.team_id && @opponents[ranking.team_id] %>
+                    <div class="flex items-center space-x-2">
+                      <% if @opponents[ranking.team_id][:team].badge_url %>
+                        <img src="<%= @opponents[ranking.team_id][:team].badge_url %>" alt="<%= @opponents[ranking.team_id][:team].name %>" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
+                      <% end %>
+                      <span class="text-sm text-gray-700"><%= @opponents[ranking.team_id][:team].name %></span>
+                      <span class="text-xs text-gray-400">(<%= @opponents[ranking.team_id][:venue] %>)</span>
+                    </div>
+                  <% else %>
+                    <span class="text-gray-400">-</span>
+                  <% end %>
                 </td>
+                <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-center text-lg font-medium text-gray-900">
+                  <% player = @players.find { |p| p.id == ranking.player_id } %>
+                  <%= player&.total_score(@gameweek - 1) || 0 %>
+                </td>
+                <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-center text-lg font-medium text-gray-900">
+                  <% if @total_forecasters > 0 %>
+                    <%= ((ranking.total_forecasts.to_f / @total_forecasters) * 100).round(1) %>%
+                  <% else %>
+                    0%
+                  <% end %>
+                </td>
+                <% if @is_next_gameweek %>
+                  <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-center">
+                    <button
+                      type="button"
+                      class="forecast-toggle-btn text-2xl md:text-3xl transition-all cursor-pointer <%= is_selected ? 'text-yellow-400 drop-shadow-lg filter' : 'text-gray-300 hover:text-yellow-300' %>"
+                      data-player-id="<%= ranking.player_id %>"
+                      data-position="<%= ranking.position %>"
+                      data-selected="<%= is_selected %>"
+                      data-action="click->player-forecast#toggleForecast"
+                      style="<%= is_selected ? 'text-shadow: 0 0 10px rgba(250, 204, 21, 0.8);' : '' %>">
+                      ⚡
+                    </button>
+                  </td>
+                <% end %>
               </tr>
             <% end %>
           </tbody>

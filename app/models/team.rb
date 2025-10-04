@@ -12,4 +12,9 @@ class Team < ApplicationRecord
   def matches
     Match.where("home_team_id = ? OR away_team_id = ?", id, id)
   end
+
+  def badge_url
+    return nil unless code.present?
+    "https://resources.premierleague.com/premierleague25/badges/#{code}.svg"
+  end
 end

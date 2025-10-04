@@ -22,7 +22,8 @@ module Fpl
 
         team.assign_attributes(
           name: team_data["name"],
-          short_name: team_data["short_name"]
+          short_name: team_data["short_name"],
+          code: team_data["code"]
         )
 
         if team.save

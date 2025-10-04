@@ -1,11 +1,12 @@
 class ConsensusRanking
-  def self.for_week_and_position(gameweek, position = nil)
-    new(gameweek, position).rankings
+  def self.for_week_and_position(gameweek, position = nil, team_id = nil)
+    new(gameweek, position, team_id).rankings
   end
 
-  def initialize(gameweek, position = nil)
+  def initialize(gameweek, position = nil, team_id = nil)
     @gameweek = gameweek
     @position = position
+    @team_id = team_id
   end
 
   def rankings
@@ -16,7 +17,7 @@ class ConsensusRanking
     players = base_players_query
 
     # Combine base scores with forecast adjustments
-    players.map do |player|
+    rankings = players.map do |player|
       forecast_data = forecast_scores[player.id] || { score: 0, votes: 0 }
 
       Ranking.new(
@@ -25,21 +26,31 @@ class ConsensusRanking
         first_name: player.first_name,
         last_name: player.last_name,
         team: player.team&.short_name || "No Team",
+        team_id: player.team_id,
         position: player.position,
         consensus_score: forecast_data[:score],
         total_forecasts: forecast_data[:votes],
         total_score: player.total_score(@gameweek - 1)
       )
-    end.sort_by { |ranking| [ -(ranking.consensus_score || 0), -(ranking.total_score || 0), ranking.name || "" ] }
+    end
+
+    # If no forecasts have been made, sort by total score then alphabetically by name
+    # Otherwise, sort by total forecasts (descending), then total score (descending), then name
+    if forecast_scores.empty?
+      rankings.sort_by { |ranking| [ -(ranking.total_score || 0), ranking.name || "" ] }
+    else
+      rankings.sort_by { |ranking| [ -(ranking.total_forecasts || 0), -(ranking.total_score || 0), ranking.name || "" ] }
+    end
   end
 
   private
 
-  attr_reader :gameweek, :position
+  attr_reader :gameweek, :position, :team_id
 
   def base_players_query
     query = Player.includes(:team)
     query = query.where(position: position) if position.present?
+    query = query.where(team_id: team_id) if team_id.present?
     query
   end
 
@@ -49,13 +60,12 @@ class ConsensusRanking
                        .group(:player_id)
                        .select(
                          "player_id",
-                         "SUM(CASE WHEN category = 'target' THEN 1 WHEN category = 'avoid' THEN -1 ELSE 0 END) as score",
                          "COUNT(*) as votes"
                        )
 
     forecasts.each_with_object({}) do |forecast, hash|
       hash[forecast.player_id] = {
-        score: forecast.score,
+        score: forecast.votes,
         votes: forecast.votes
       }
     end

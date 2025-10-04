@@ -59,7 +59,8 @@ module Fpl
 
       team.assign_attributes(
         name: team_data["name"],
-        short_name: team_data["short_name"]
+        short_name: team_data["short_name"],
+        code: team_data["code"]
       )
 
       if team.save
@@ -98,6 +99,7 @@ module Fpl
         first_name = element["first_name"]
         last_name = element["second_name"]
         short_name = element["web_name"] || element["second_name"] # Fallback to second_name if web_name missing
+        code = element["code"]
         team_fpl_id = element["team"]
         position = position_map[element["element_type"]]
 
@@ -115,6 +117,7 @@ module Fpl
           first_name: first_name,
           last_name: last_name,
           short_name: short_name,
+          code: code,
           team: team_record,
           position: position
         }

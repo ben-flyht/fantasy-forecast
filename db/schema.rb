@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_24_145258) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_04_190132) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -18,11 +18,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_24_145258) do
     t.bigint "user_id", null: false
     t.bigint "player_id", null: false
     t.bigint "gameweek_id", null: false
-    t.string "category", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "accuracy_score", precision: 8, scale: 2
-    t.decimal "contrarian_bonus", precision: 8, scale: 2
+    t.decimal "differential_score", precision: 8, scale: 2
     t.decimal "total_score", precision: 8, scale: 2
     t.index ["gameweek_id", "total_score"], name: "index_forecasts_on_gameweek_id_and_total_score", order: { total_score: :desc }
     t.index ["gameweek_id"], name: "index_forecasts_on_gameweek_id"
@@ -58,24 +57,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_24_145258) do
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
   end
 
-  create_table "opponents", force: :cascade do |t|
-    t.bigint "performance_id", null: false
-    t.bigint "team_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["performance_id"], name: "index_opponents_on_performance_id"
-    t.index ["team_id"], name: "index_opponents_on_team_id"
-  end
-
   create_table "performances", force: :cascade do |t|
     t.bigint "player_id", null: false
     t.bigint "gameweek_id", null: false
     t.integer "gameweek_score", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "team_id", null: false
     t.index ["gameweek_id"], name: "index_performances_on_gameweek_id"
     t.index ["player_id", "gameweek_id"], name: "index_performances_on_player_id_and_gameweek_id", unique: true
     t.index ["player_id"], name: "index_performances_on_player_id"
+    t.index ["team_id"], name: "index_performances_on_team_id"
   end
 
   create_table "players", force: :cascade do |t|
@@ -87,6 +79,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_24_145258) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "team_id"
+    t.integer "code"
     t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
     t.index ["team_id"], name: "index_players_on_team_id"
   end
@@ -97,6 +90,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_24_145258) do
     t.integer "fpl_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "code"
     t.index ["fpl_id"], name: "index_teams_on_fpl_id", unique: true
   end
 
@@ -107,9 +101,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_24_145258) do
     t.datetime "reset_password_sent_at"
     t.datetime "remember_created_at"
     t.string "username", null: false
-    t.string "role", default: "forecaster", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "confirmation_token"
+    t.datetime "confirmed_at"
+    t.datetime "confirmation_sent_at"
+    t.string "unconfirmed_email"
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["username"], name: "index_users_on_username", unique: true
@@ -121,9 +119,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_24_145258) do
   add_foreign_key "matches", "gameweeks"
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"
-  add_foreign_key "opponents", "performances"
-  add_foreign_key "opponents", "teams"
   add_foreign_key "performances", "gameweeks"
   add_foreign_key "performances", "players"
+  add_foreign_key "performances", "teams"
   add_foreign_key "players", "teams"
 end

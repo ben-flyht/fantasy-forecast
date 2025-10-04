@@ -30,6 +30,11 @@ class Player < ApplicationRecord
     full_name
   end
 
+  def short_name
+    # Use the short_name attribute if it exists, otherwise fall back to last name
+    read_attribute(:short_name).presence || last_name
+  end
+
   def total_score(up_to_gameweek = nil)
     scope = performances
 
@@ -53,5 +58,10 @@ class Player < ApplicationRecord
       # Fall back to the dynamic calculation
       total_score
     end
+  end
+
+  def photo_url(size: "110x140")
+    return nil unless code.present?
+    "https://resources.premierleague.com/premierleague25/photos/players/#{size}/#{code}.png"
   end
 end
