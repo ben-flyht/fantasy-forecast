@@ -86,7 +86,7 @@ if forecaster_user && admin_user && Player.any?
   Forecast.destroy_all
 
   # Get sample players
-  sample_players = Player.limit(15).order(:name)
+  sample_players = Player.limit(15).order(:last_name)
 
   # Create additional forecaster users for consensus testing
   forecaster2 = User.find_or_create_by!(email: "forecaster2@example.com") do |user|
