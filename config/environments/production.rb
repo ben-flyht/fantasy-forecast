@@ -61,14 +61,15 @@ Rails.application.configure do
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV["APP_HOST"] || "fantasyforecast.co.uk", protocol: "https" }
 
-  # Mailer To Go SMTP settings
+  # Mailgun SMTP settings
   config.action_mailer.smtp_settings = {
-    user_name: ENV["MAILERTOGO_SMTP_USER"],
-    password: ENV["MAILERTOGO_SMTP_PASSWORD"],
-    address: ENV["MAILERTOGO_SMTP_HOST"],
-    port: ENV["MAILERTOGO_SMTP_PORT"] || 587,
+    user_name: ENV["MAILGUN_SMTP_LOGIN"],
+    password: ENV["MAILGUN_SMTP_PASSWORD"],
+    address: ENV["MAILGUN_SMTP_SERVER"] || "smtp.eu.mailgun.org",
+    port: ENV["MAILGUN_SMTP_PORT"] || 587,
     authentication: :plain,
-    enable_starttls_auto: true
+    enable_starttls_auto: true,
+    domain: "fantasyforecast.co.uk"
   }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
