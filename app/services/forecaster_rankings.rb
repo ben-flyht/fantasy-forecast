@@ -55,14 +55,36 @@ class ForecasterRankings
   end
 
   def self.overall
-    # Get all gameweeks that have scores
+    # Get all gameweeks that have scores (from starting gameweek onwards)
+    starting_gameweek = Gameweek::STARTING_GAMEWEEK
     gameweeks_with_scores = Forecast.joins(:gameweek)
                                   .where.not(accuracy: nil)
+                                  .where("gameweeks.fpl_id >= ?", starting_gameweek)
                                   .distinct
                                   .pluck("gameweeks.fpl_id")
 
     total_gameweeks = gameweeks_with_scores.size
-    return [] if total_gameweeks == 0
+
+    # If no scored gameweeks yet, show all forecasters with 0 scores and rank 1=
+    if total_gameweeks == 0
+      all_forecasters = User.joins(:forecasts)
+                           .distinct
+                           .select(:id, :username)
+                           .order(:username)
+
+      return all_forecasters.map do |user|
+        {
+          user_id: user.id,
+          username: user.username,
+          total_score: 0.0,
+          accuracy_score: 0.0,
+          availability_score: 0.0,
+          forecast_count: 0,
+          gameweeks_participated: 0,
+          rank: "1="
+        }
+      end
+    end
 
     # Calculate total required slots across all positions
     total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
@@ -70,13 +92,16 @@ class ForecasterRankings
 
     # Get all users who have scores
     all_forecasters = User.joins(:forecasts)
+                         .joins("JOIN gameweeks ON forecasts.gameweek_id = gameweeks.id")
                          .where.not(forecasts: { accuracy: nil })
+                         .where("gameweeks.fpl_id >= ?", starting_gameweek)
                          .distinct
                          .select(:id, :username)
 
-    # Get all scores with their gameweek data
+    # Get all scores with their gameweek data (from starting gameweek onwards)
     all_scores = Forecast.joins(:gameweek, :user)
                       .where.not(accuracy: nil)
+                      .where("gameweeks.fpl_id >= ?", starting_gameweek)
                       .select("forecasts.*", "gameweeks.fpl_id as gameweek_fpl_id", "users.username")
                       .group_by(&:user_id)
 
@@ -163,20 +188,22 @@ class ForecasterRankings
   end
 
   def self.weekly_performance(user_id, limit: nil)
-    # Get weekly performance for a specific user
+    # Get weekly performance for a specific user (from starting gameweek onwards)
     # Calculate total required slots across all positions
     total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
+    starting_gameweek = Gameweek::STARTING_GAMEWEEK
 
     query = Forecast.joins(:gameweek)
             .where(user_id: user_id)
             .where.not(accuracy: nil)
+            .where("gameweeks.fpl_id >= ?", starting_gameweek)
             .group("gameweeks.id, gameweeks.fpl_id")
             .select(
               "gameweeks.fpl_id as week",
               "AVG(accuracy) as avg_accuracy",
               "COUNT(*) as forecast_count"
             )
-            .order("gameweeks.fpl_id DESC") # Descending so gameweek 1 is at bottom
+            .order("gameweeks.fpl_id DESC") # Descending so starting gameweek is at bottom
 
     query = query.limit(limit) if limit
 

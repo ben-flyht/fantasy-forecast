@@ -9,9 +9,10 @@ class ForecastersController < ApplicationController
   def show
     @user = User.find(params[:id])
 
-    # Determine the range of gameweeks to show (1 to next)
+    # Determine the range of gameweeks to show (starting gameweek to next)
     next_gw = Gameweek.next_gameweek
     current_gw = Gameweek.current_gameweek
+    starting_gw = Gameweek::STARTING_GAMEWEEK
 
     if next_gw
       max_gameweek = next_gw.fpl_id
@@ -20,7 +21,7 @@ class ForecastersController < ApplicationController
       max_gameweek = current_gw.fpl_id
       @next_gameweek_id = nil
     else
-      max_gameweek = 8 # Default fallback
+      max_gameweek = starting_gw # Default fallback
       @next_gameweek_id = nil
     end
 
@@ -35,7 +36,7 @@ class ForecastersController < ApplicationController
                               .count
 
     # Get rankings for each gameweek to add rank
-    (1...max_gameweek).each do |gw|
+    (starting_gw...max_gameweek).each do |gw|
       gameweek_rankings = ForecasterRankings.for_gameweek(gw)
       user_ranking = gameweek_rankings.find { |r| r[:user_id] == @user.id }
       if performance_by_gw[gw] && user_ranking
@@ -49,8 +50,8 @@ class ForecastersController < ApplicationController
     @overall_ranking = overall_rankings.find { |r| r[:user_id] == @user.id }
     @total_forecasters = overall_rankings.size
 
-    # Fill in all gameweeks from 1 to next (including next)
-    @weekly_rankings = (1..max_gameweek).map do |gw|
+    # Fill in all gameweeks from starting gameweek to next (including next)
+    @weekly_rankings = (starting_gw..max_gameweek).map do |gw|
       performance_by_gw[gw] || {
         gameweek: gw,
         total_score: 0.0,
@@ -59,7 +60,7 @@ class ForecastersController < ApplicationController
         forecast_count: forecast_counts[gw] || 0,
         rank: nil
       }
-    end.reverse # Descending order so gameweek 1 is at bottom
+    end.reverse # Descending order so starting gameweek is at bottom
 
     # Calculate total forecasts for overall summary
     @total_forecast_count = forecast_counts.values.sum

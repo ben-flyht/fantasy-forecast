@@ -168,23 +168,25 @@ class PlayersController < ApplicationController
 
   def available_gameweeks_with_forecasts
     next_gw = Gameweek.next_gameweek
+    starting_gw = Gameweek::STARTING_GAMEWEEK
 
     # Get all gameweeks that have forecasts
     gameweeks_with_forecasts = Forecast.joins(:gameweek)
                                        .distinct
                                        .pluck("gameweeks.fpl_id")
+                                       .select { |gw| gw >= starting_gw }
                                        .sort
                                        .reverse
 
     if next_gw
-      # Show gameweeks from 1 to next gameweek, but only if they have forecasts (except next)
-      all_gameweeks = (1..next_gw.fpl_id).to_a.reverse
+      # Show gameweeks from starting gameweek to next gameweek, but only if they have forecasts (except next)
+      all_gameweeks = (starting_gw..next_gw.fpl_id).to_a.reverse
       all_gameweeks.select do |gw|
         gameweeks_with_forecasts.include?(gw) || gw == next_gw.fpl_id
       end
     else
       # Fallback: show gameweeks that have forecasts
-      gameweeks_with_forecasts.empty? ? [ 1 ] : gameweeks_with_forecasts
+      gameweeks_with_forecasts.empty? ? [ starting_gw ] : gameweeks_with_forecasts
     end
   end
 end
