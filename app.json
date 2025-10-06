@@ -48,6 +48,9 @@
       "scripts": {
         "test": "bin/rails test"
       },
+      "addons": [
+        { "plan": "heroku-postgresql:in-dyno" }
+      ],
       "env": {
         "HEROKU_CI_POSTGRES_HEROKU_EXT_OFF": "true"
       }
