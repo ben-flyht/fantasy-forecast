@@ -21,31 +21,14 @@ class PlayersController < ApplicationController
     # Get consensus scores for the gameweek with position and team filtering
     @consensus_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
 
-    # Load opponent data for the gameweek and get total forecasters count
+    # Get total number of unique forecasters for this gameweek
     gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
     if gameweek_record
-      matches = Match.includes(:home_team, :away_team).where(gameweek: gameweek_record)
-      @opponents = {}
-      matches.each do |match|
-        # For home team, opponent is away team
-        @opponents[match.home_team_id] = {
-          team: match.away_team,
-          venue: "H"
-        }
-        # For away team, opponent is home team
-        @opponents[match.away_team_id] = {
-          team: match.home_team,
-          venue: "A"
-        }
-      end
-
-      # Get total number of unique forecasters for this gameweek
       @total_forecasters = Forecast.joins(:gameweek)
                                    .where(gameweeks: { fpl_id: @gameweek })
                                    .distinct
                                    .count(:user_id)
     else
-      @opponents = {}
       @total_forecasters = 0
     end
 

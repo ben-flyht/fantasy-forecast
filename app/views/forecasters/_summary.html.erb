@@ -1,17 +1,16 @@
 <% if forecast_count > 0 && avg_total_score.present? %>
-  <div class="bg-white shadow-lg rounded-lg p-4 md:p-6 mb-4 md:mb-6">
-    <h2 class="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Summary</h2>
+  <%= render HeroComponent.new do %>
     <div class="grid grid-cols-2 gap-4">
       <% if defined?(gameweek_rank) && gameweek_rank && defined?(gameweek_total_forecasters) && gameweek_total_forecasters %>
         <div class="text-center">
-          <div class="text-xl md:text-2xl font-bold text-gray-900">#<%= gameweek_rank %></div>
-          <div class="text-xs md:text-sm text-gray-600">Rank</div>
+          <div class="text-2xl md:text-3xl font-bold text-gray-900">#<%= gameweek_rank %></div>
+          <div class="text-xs md:text-sm text-gray-700">Rank</div>
         </div>
       <% end %>
       <div class="text-center">
-        <div class="text-xl md:text-2xl font-bold text-gray-900"><%= (avg_total_score * 100).round(2) %>%</div>
-        <div class="text-xs md:text-sm text-gray-600">Accuracy</div>
+        <div class="text-2xl md:text-3xl font-bold text-gray-900"><%= (avg_total_score * 100).round(2) %>%</div>
+        <div class="text-xs md:text-sm text-gray-700">Accuracy</div>
       </div>
     </div>
-  </div>
+  <% end %>
 <% end %>
