@@ -100,23 +100,25 @@
           <tbody class="bg-white divide-y divide-gray-200">
             <% has_forecasts = @consensus_rankings.any? { |r| r.total_forecasts > 0 } %>
             <%
-              # Calculate ranks based on forecast counts
+              # Calculate ranks based on forecast counts and total score as tiebreaker
               if has_forecasts
                 current_rank = 1
                 last_count = nil
+                last_score = nil
                 ranks = []
 
                 @consensus_rankings.each_with_index do |ranking, index|
-                  if ranking.total_forecasts != last_count
+                  if ranking.total_forecasts != last_count || ranking.total_score != last_score
                     current_rank = index + 1
                     last_count = ranking.total_forecasts
+                    last_score = ranking.total_score
                   end
 
-                  # Check if there are more players with the same count after this one
+                  # Check if there are more players with the same count AND score after this one
                   next_rankings = @consensus_rankings[(index + 1)..-1] || []
-                  has_ties = next_rankings.any? { |r| r.total_forecasts == ranking.total_forecasts }
+                  has_ties = next_rankings.any? { |r| r.total_forecasts == ranking.total_forecasts && r.total_score == ranking.total_score }
 
-                  if has_ties || (index > 0 && @consensus_rankings[index - 1].total_forecasts == ranking.total_forecasts)
+                  if has_ties || (index > 0 && @consensus_rankings[index - 1].total_forecasts == ranking.total_forecasts && @consensus_rankings[index - 1].total_score == ranking.total_score)
                     ranks << "#{current_rank}="
                   else
                     ranks << current_rank.to_s
