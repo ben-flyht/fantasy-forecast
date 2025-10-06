@@ -51,7 +51,7 @@
                 <% max_slots = position_config[:slots] %>
                 <%
                   if is_active
-                    pill_classes = 'bg-yellow-400 text-gray-900 border-yellow-400 shadow-md'
+                    pill_classes = 'bg-yellow-400 text-gray-800 border-yellow-400 shadow-md'
                   else
                     pill_classes = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   end
@@ -128,7 +128,7 @@
               <% player = @players_by_id[ranking.player_id] %>
               <% is_selected = @current_forecasts[ranking.player_id].present? %>
               <tr class="<%= is_selected ? 'bg-yellow-100 border-l-4 border-yellow-400' : '' %>" data-player-row="<%= ranking.player_id %>">
-                <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-base md:text-lg font-medium text-gray-900 w-16">
+                <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-base md:text-lg font-medium text-gray-800 w-16">
                   <%= has_forecasts ? ranks[index] : "1=" %>
                 </td>
                 <td class="px-3 md:px-6 py-2 md:py-4">
@@ -161,7 +161,7 @@
           <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
             <path d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.713-3.714M14 40v-4c0-1.313.253-2.566.713-3.714m0 0A9.971 9.971 0 0124 24c4.004 0 7.625 2.31 9.287 5.286" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No predictions yet</h3>
+          <h3 class="mt-2 text-sm font-medium text-gray-800">No predictions yet</h3>
           <p class="mt-1 text-sm text-gray-500">
             No consensus data available for gameweek <%= @gameweek %><%= " (#{@position_filter.capitalize}s)" if @position_filter.present? %>.
           </p>
