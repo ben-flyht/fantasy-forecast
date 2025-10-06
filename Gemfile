@@ -27,6 +27,9 @@ gem "jbuilder"
 # Flexible authentication solution for Rails with Warden [https://github.com/heartcombo/devise]
 gem "devise"
 
+# Mailgun API client for sending emails
+gem "mailgun-ruby"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
