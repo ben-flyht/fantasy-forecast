@@ -35,8 +35,8 @@
 
           <!-- Desktop Navigation -->
           <div class="hidden md:flex items-center space-x-6">
-            <%= link_to "Player Rankings", players_path, class: "text-gray-600 hover:text-gray-800 #{'font-semibold text-gray-900' if controller_name == 'players'}" %>
-            <%= link_to "Forecaster Rankings", forecasters_path, class: "text-gray-600 hover:text-gray-800 #{'font-semibold text-gray-900' if controller_name == 'forecasters'}" %>
+            <%= link_to "Player Rankings", players_path, class: "text-gray-600 hover:text-gray-800 #{'font-semibold text-gray-800' if controller_name == 'players'}" %>
+            <%= link_to "Forecaster Rankings", forecasters_path, class: "text-gray-600 hover:text-gray-800 #{'font-semibold text-gray-800' if controller_name == 'forecasters'}" %>
           </div>
 
           <!-- Desktop Auth Links -->
@@ -47,7 +47,7 @@
               <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "text-gray-600 hover:text-gray-800" %>
             <% else %>
               <%= link_to "Login", new_user_session_path, class: "border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-1 rounded" %>
-              <%= link_to "Sign Up", new_user_registration_path, class: "bg-amber-200 hover:bg-amber-300 text-black px-3 py-1 rounded font-semibold" %>
+              <%= link_to "Sign Up", new_user_registration_path, class: "bg-amber-200 hover:bg-amber-300 text-gray-800 px-3 py-1 rounded font-semibold" %>
             <% end %>
           </div>
 
@@ -62,8 +62,8 @@
         <!-- Mobile Menu -->
         <div class="hidden md:hidden mt-4 pb-4 border-t border-gray-200 pt-4" data-mobile-menu-target="menu">
           <div class="flex flex-col space-y-3">
-            <%= link_to "Player Rankings", players_path, class: "text-gray-600 hover:text-gray-800 py-2 #{'font-semibold text-gray-900' if controller_name == 'players'}", data: { action: "click->mobile-menu#close" } %>
-            <%= link_to "Forecaster Rankings", forecasters_path, class: "text-gray-600 hover:text-gray-800 py-2 #{'font-semibold text-gray-900' if controller_name == 'forecasters'}", data: { action: "click->mobile-menu#close" } %>
+            <%= link_to "Player Rankings", players_path, class: "text-gray-600 hover:text-gray-800 py-2 #{'font-semibold text-gray-800' if controller_name == 'players'}", data: { action: "click->mobile-menu#close" } %>
+            <%= link_to "Forecaster Rankings", forecasters_path, class: "text-gray-600 hover:text-gray-800 py-2 #{'font-semibold text-gray-800' if controller_name == 'forecasters'}", data: { action: "click->mobile-menu#close" } %>
 
             <div class="border-t border-gray-200 pt-3 mt-3">
               <% if user_signed_in? %>
@@ -72,7 +72,7 @@
                 <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete, action: "click->mobile-menu#close" }, class: "block border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-2 rounded text-center mt-2" %>
               <% else %>
                 <%= link_to "Login", new_user_session_path, class: "block border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-2 rounded text-center mb-2", data: { action: "click->mobile-menu#close" } %>
-                <%= link_to "Sign Up", new_user_registration_path, class: "block bg-amber-200 hover:bg-amber-300 text-black font-semibold px-3 py-2 rounded text-center", data: { action: "click->mobile-menu#close" } %>
+                <%= link_to "Sign Up", new_user_registration_path, class: "block bg-amber-200 hover:bg-amber-300 text-gray-800 font-semibold px-3 py-2 rounded text-center", data: { action: "click->mobile-menu#close" } %>
               <% end %>
             </div>
           </div>

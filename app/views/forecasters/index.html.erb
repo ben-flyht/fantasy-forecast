@@ -28,15 +28,15 @@
           <% @rankings.each do |ranking| %>
             <% is_current_user = user_signed_in? && current_user.id == ranking[:user_id] %>
             <tr class="<%= is_current_user ? 'bg-amber-100 border-l-4 border-amber-400' : '' %>">
-              <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900 w-16">
+              <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-800 w-16">
                 <%= ranking[:rank] %>
               </td>
               <td class="px-3 md:px-6 py-2 md:py-4">
-                <%= link_to forecaster_path(ranking[:user_id]), data: { turbo_frame: "_top" }, class: "text-xs md:text-sm font-medium text-gray-900 hover:text-yellow-500 break-words underline" do %>
+                <%= link_to forecaster_path(ranking[:user_id]), data: { turbo_frame: "_top" }, class: "text-xs md:text-sm font-medium text-gray-800 hover:text-yellow-500 break-words underline" do %>
                   <%= ranking[:username] %>
                 <% end %>
               </td>
-              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-gray-900 w-32">
+              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-gray-800 w-32">
                 <%= (ranking[:total_score] * 100).round(2) %>%
               </td>
             </tr>
@@ -46,7 +46,7 @@
     <% else %>
       <div class="px-6 py-8 text-center">
         <div class="text-gray-500">
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No rankings yet</h3>
+          <h3 class="mt-2 text-sm font-medium text-gray-800">No rankings yet</h3>
           <p class="mt-1 text-sm text-gray-500">
             Rankings will appear once forecasts have been scored.
           </p>
