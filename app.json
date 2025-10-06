@@ -47,6 +47,9 @@
     "test": {
       "scripts": {
         "test": "bin/rails test"
+      },
+      "env": {
+        "HEROKU_CI_POSTGRES_HEROKU_EXT_OFF": "true"
       }
     }
   }
