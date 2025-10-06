@@ -41,13 +41,11 @@
     }
   },
   "scripts": {
-    "test-setup": "bin/rails db:schema:load db:migrate",
     "test": "bin/rails test"
   },
   "environments": {
     "test": {
       "scripts": {
-        "test-setup": "bin/rails db:schema:load db:migrate",
         "test": "bin/rails test"
       }
     }
