@@ -62,7 +62,7 @@
                       onchange: "this.form.requestSubmit()" %>
                   <%= position_config[:display_name] %>
                   <% if user_signed_in? %>
-                    <span class="ml-1">
+                    <span class="ml-1 text-gray-600">
                       (<%= forecast_count %>/<%= max_slots %>)
                     </span>
                   <% end %>

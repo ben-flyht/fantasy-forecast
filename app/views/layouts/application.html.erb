@@ -42,7 +42,8 @@
           <!-- Desktop Auth Links -->
           <div class="hidden md:flex space-x-4">
             <% if user_signed_in? %>
-              <%= link_to "My Profile", forecaster_path(current_user), class: "text-gray-600 hover:text-gray-800" %>
+              <%= link_to "My Rankings", forecaster_path(current_user), class: "text-gray-600 hover:text-gray-800" %>
+              <%= link_to "My Account", edit_user_registration_path, class: "text-gray-600 hover:text-gray-800" %>
               <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "text-gray-600 hover:text-gray-800" %>
             <% else %>
               <%= link_to "Login", new_user_session_path, class: "border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-1 rounded" %>
@@ -66,8 +67,8 @@
 
             <div class="border-t border-gray-200 pt-3 mt-3">
               <% if user_signed_in? %>
-                <div class="text-sm text-gray-600 mb-3">Welcome, <%= current_user.username %></div>
-                <%= link_to "My Profile", forecaster_path(current_user), class: "block text-gray-600 hover:text-gray-800 py-2", data: { action: "click->mobile-menu#close" } %>
+                <%= link_to "My Rankings", forecaster_path(current_user), class: "block text-gray-600 hover:text-gray-800 py-2", data: { action: "click->mobile-menu#close" } %>
+                <%= link_to "My Account", edit_user_registration_path, class: "block text-gray-600 hover:text-gray-800 py-2", data: { action: "click->mobile-menu#close" } %>
                 <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete, action: "click->mobile-menu#close" }, class: "block border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-2 rounded text-center mt-2" %>
               <% else %>
                 <%= link_to "Login", new_user_session_path, class: "block border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-2 rounded text-center mb-2", data: { action: "click->mobile-menu#close" } %>
