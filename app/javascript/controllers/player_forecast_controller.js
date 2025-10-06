@@ -80,12 +80,6 @@ export default class extends Controller {
           const counterSpan = label.querySelector('span')
           if (counterSpan) {
             counterSpan.textContent = `(${count}/${maxSlots})`
-            // Add green color if at max
-            if (count === maxSlots) {
-              counterSpan.classList.add('text-green-400')
-            } else {
-              counterSpan.classList.remove('text-green-400')
-            }
           }
         }
       })

@@ -6,8 +6,8 @@
       <% end %>
     </div>
     <div class="flex flex-col min-w-0">
-      <span class="text-xs text-gray-900 break-words"><%= @player.first_name %></span>
-      <span class="text-sm md:text-lg font-bold text-gray-900 break-words"><%= @player.last_name %></span>
+      <span class="text-xs text-gray-800 break-words"><%= @player.first_name %></span>
+      <span class="text-sm md:text-lg font-bold text-gray-800 break-words"><%= @player.last_name %></span>
       <% if @player.team %>
         <span class="text-xs text-gray-700"><%= @player.team.name %></span>
       <% end %>
@@ -17,7 +17,8 @@
   <div class="flex items-center space-x-2 md:space-x-4">
     <div class="w-8 h-8 md:w-16 md:h-16 flex-shrink-0 bg-gray-200 rounded-full"></div>
     <div class="flex flex-col min-w-0">
-      <span class="text-xs text-gray-400">Not selected</span>
+      <span class="text-sm md:text-lg font-bold text-gray-400 break-words">Not selected</span>
+      <%= link_to "Select", @selection_url || "#", class: "text-xs text-gray-800 hover:text-gray-600 underline" %>
     </div>
   </div>
 <% end %>
