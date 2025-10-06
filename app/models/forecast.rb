@@ -6,6 +6,19 @@ class Forecast < ApplicationRecord
   # Callbacks
   before_validation :assign_next_gameweek!
 
+  # Calculate total score on the fly: accuracy × availability
+  def total_score
+    return nil unless accuracy
+    accuracy * availability_score
+  end
+
+  # Calculate availability for this user in this gameweek
+  def availability_score
+    total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
+    forecast_count = Forecast.where(user: user, gameweek: gameweek).count
+    forecast_count.to_f / total_required_slots
+  end
+
   # Uniqueness constraint: one forecast per user/player/gameweek
   validates :user_id, uniqueness: { scope: [ :player_id, :gameweek_id ] }
 
@@ -17,8 +30,8 @@ class Forecast < ApplicationRecord
   scope :for_gameweek, ->(gameweek_id) { where(gameweek_id: gameweek_id) }
   scope :for_player, ->(player_id) { where(player_id: player_id) }
   scope :for_user, ->(user_id) { where(user_id: user_id) }
-  scope :scored, -> { where.not(total_score: nil) }
-  scope :by_total_score, -> { order(total_score: :desc) }
+  scope :scored, -> { where.not(accuracy: nil) }
+  scope :by_total_score, -> { order(accuracy: :desc) }
 
   # Map week to gameweek fpl_id
   scope :by_week, ->(week) { joins(:gameweek).where(gameweeks: { fpl_id: week }) }
@@ -70,12 +83,6 @@ class Forecast < ApplicationRecord
     # Calculate rankings by position for this gameweek
     position_rankings = calculate_position_rankings(performances)
 
-    # Get forecast counts by player for differential scoring
-    forecast_counts = forecasts.group(:player_id).count
-
-    # Get total number of unique forecasters for percentage calculations
-    total_forecasters = forecasts.distinct.count(:user_id)
-
     # Group forecasts by user to calculate availability
     forecasts_by_user = forecasts.group_by(&:user_id)
 
@@ -95,18 +102,9 @@ class Forecast < ApplicationRecord
       performance = performances[forecast.player_id]
       next unless performance # Skip if no performance data
 
-      accuracy_score = calculate_accuracy_score(forecast, performance, position_rankings)
-      differential_score = calculate_differential_score(forecast, forecast_counts, total_forecasters)
-      availability_score = availability_by_user[forecast.user_id]
+      accuracy = calculate_accuracy_score(forecast, performance, position_rankings)
 
-      # Forecaster score = accuracy × differential × availability (0.0 to 1.0)
-      forecaster_score = accuracy_score * differential_score * availability_score
-
-      forecast.update!(
-        accuracy_score: accuracy_score,
-        differential_score: differential_score,
-        total_score: forecaster_score
-      )
+      forecast.update!(accuracy: accuracy)
     end
   end
 
@@ -134,8 +132,11 @@ class Forecast < ApplicationRecord
   end
 
   # Calculate accuracy score based on actual performance (0.0 to 1.0)
-  # 1.0 = Player finished 1st in their position
-  # 0.0 = Player finished last in their position
+  # Simple formula: 1.0 - (rank / total)
+  # Rank 1 of 81: 1.0 - (1 / 81) = 98.8%
+  # Rank 10 of 81: 1.0 - (10 / 81) = 87.7%
+  # Rank 81 of 81: 1.0 - (81 / 81) = 0.0%
+  # Negative scoring players will be ranked last automatically
   def self.calculate_accuracy_score(forecast, performance, position_rankings)
     ranking = position_rankings[forecast.player_id]
     return 0.0 unless ranking
@@ -146,29 +147,8 @@ class Forecast < ApplicationRecord
     # Return 0 if only one player in position (can't calculate)
     return 0.0 if position_total <= 1
 
-    # Formula: (total_players - rank) / (total_players - 1)
-    # Rank 1 of 30: (30 - 1) / 29 = 1.0
-    # Rank 30 of 30: (30 - 30) / 29 = 0.0
-    (position_total - rank).to_f / (position_total - 1)
-  end
-
-  # Calculate differential score for unique/unpopular picks (0.0 to 1.0)
-  # 1.0 = Only you picked this player (unique)
-  # 0.0 = Everyone picked this player (consensus)
-  def self.calculate_differential_score(forecast, forecast_counts, total_forecasters)
-    player_count = forecast_counts[forecast.player_id] || 0
-
-    # Return 1.0 if you're the only forecaster (edge case)
-    return 1.0 if total_forecasters <= 1
-
-    # Count other forecasters who picked this player (excluding yourself)
-    other_forecasters_who_picked = player_count - 1
-    total_other_forecasters = total_forecasters - 1
-
-    # Formula: 1.0 - (other_forecasters_who_picked / total_other_forecasters)
-    # 0 others picked: 1.0 - (0 / 19) = 1.0
-    # All others picked: 1.0 - (19 / 19) = 0.0
-    1.0 - (other_forecasters_who_picked.to_f / total_other_forecasters)
+    # Formula: 1.0 - (rank / total)
+    1.0 - (rank.to_f / position_total)
   end
 
   private

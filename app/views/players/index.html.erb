@@ -49,14 +49,9 @@
                 <% is_active = @position_filter == position %>
                 <% forecast_count = @forecast_counts[position] || 0 %>
                 <% max_slots = position_config[:slots] %>
-                <% is_complete = user_signed_in? && forecast_count == max_slots %>
                 <%
-                  if is_complete && is_active
+                  if is_active
                     pill_classes = 'bg-yellow-400 text-gray-900 border-yellow-400 shadow-md'
-                  elsif is_complete
-                    pill_classes = 'bg-yellow-100 text-gray-900 border-yellow-300 hover:bg-yellow-200'
-                  elsif is_active
-                    pill_classes = 'bg-blue-600 text-white border-blue-600 shadow-md'
                   else
                     pill_classes = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   end
@@ -67,7 +62,7 @@
                       onchange: "this.form.requestSubmit()" %>
                   <%= position_config[:display_name] %>
                   <% if user_signed_in? %>
-                    <span class="ml-1">
+                    <span class="ml-1 text-gray-600">
                       (<%= forecast_count %>/<%= max_slots %>)
                     </span>
                   <% end %>
@@ -86,26 +81,17 @@
       <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-2 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
                 Rank
               </th>
               <th class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Player
               </th>
-              <th class="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Team
-              </th>
-              <th class="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-2 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                 Opponent
               </th>
-              <th class="hidden md:table-cell px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Pts
-              </th>
-              <th class="hidden md:table-cell px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Forecast %
-              </th>
               <% if @is_next_gameweek %>
-                <th class="px-2 md:px-6 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-2 md:px-6 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                   Select
                 </th>
               <% end %>
@@ -139,61 +125,20 @@
               end
             %>
             <% @consensus_rankings.each_with_index do |ranking, index| %>
-              <% player = @players.find { |p| p.id == ranking.player_id } %>
+              <% player = @players_by_id[ranking.player_id] %>
               <% is_selected = @current_forecasts[ranking.player_id].present? %>
               <tr class="<%= is_selected ? 'bg-yellow-100 border-l-4 border-yellow-400' : '' %>" data-player-row="<%= ranking.player_id %>">
-                <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-base md:text-lg font-medium text-gray-900">
+                <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-base md:text-lg font-medium text-gray-900 w-16">
                   <%= has_forecasts ? ranks[index] : "1=" %>
                 </td>
                 <td class="px-3 md:px-6 py-2 md:py-4">
-                  <div class="flex items-center space-x-2 md:space-x-4">
-                    <% player = @players.find { |p| p.id == ranking.player_id } %>
-                    <div class="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
-                      <% if player&.photo_url %>
-                        <img src="<%= player.photo_url(size: '40x40') %>" alt="<%= ranking.name %>" class="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover" onerror="this.style.display='none'">
-                      <% end %>
-                    </div>
-                    <div class="flex flex-col min-w-0">
-                      <span class="text-xs md:text-sm text-gray-500 break-words"><%= ranking.first_name %></span>
-                      <span class="text-sm md:text-lg font-bold text-gray-900 break-words"><%= ranking.last_name %></span>
-                    </div>
-                  </div>
+                  <%= render PlayerCardComponent.new(player: player) %>
                 </td>
-                <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap">
-                  <% player = @players.find { |p| p.id == ranking.player_id } %>
-                  <div class="flex items-center space-x-2">
-                    <% if player&.team&.badge_url %>
-                      <img src="<%= player.team.badge_url %>" alt="<%= player.team.name %>" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
-                    <% end %>
-                    <span class="text-sm text-gray-700"><%= player&.team&.name || ranking.team %></span>
-                  </div>
-                </td>
-                <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap">
-                  <% if ranking.team_id && @opponents[ranking.team_id] %>
-                    <div class="flex items-center space-x-2">
-                      <% if @opponents[ranking.team_id][:team].badge_url %>
-                        <img src="<%= @opponents[ranking.team_id][:team].badge_url %>" alt="<%= @opponents[ranking.team_id][:team].name %>" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
-                      <% end %>
-                      <span class="text-sm text-gray-700"><%= @opponents[ranking.team_id][:team].name %></span>
-                      <span class="text-xs text-gray-400">(<%= @opponents[ranking.team_id][:venue] %>)</span>
-                    </div>
-                  <% else %>
-                    <span class="text-gray-400">-</span>
-                  <% end %>
-                </td>
-                <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-center text-lg font-medium text-gray-900">
-                  <% player = @players.find { |p| p.id == ranking.player_id } %>
-                  <%= player&.total_score(@gameweek - 1) || 0 %>
-                </td>
-                <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-center text-lg font-medium text-gray-900">
-                  <% if @total_forecasters > 0 %>
-                    <%= ((ranking.total_forecasts.to_f / @total_forecasters) * 100).round(1) %>%
-                  <% else %>
-                    0%
-                  <% end %>
+                <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-right w-32">
+                  <%= render OpponentComponent.new(player: player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
                 </td>
                 <% if @is_next_gameweek %>
-                  <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-center">
+                  <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-center w-20">
                     <button
                       type="button"
                       class="forecast-toggle-btn text-2xl md:text-3xl transition-all cursor-pointer <%= is_selected ? 'text-yellow-400 drop-shadow-lg filter' : 'text-gray-300 hover:text-yellow-300' %>"

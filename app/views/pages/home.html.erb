@@ -1,168 +1,55 @@
 <!-- Hero Section -->
-<section class="py-16 px-4 text-center bg-gradient-to-br from-green-50 to-blue-50 rounded-lg mb-12">
-  <h1 class="text-5xl font-bold text-gray-900 mb-6">
-    Welcome to Fantasy Forecast
+<section class="py-8 md:py-16 px-4 text-center bg-amber-200 rounded-lg mb-8 md:mb-12">
+  <h1 class="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6 px-2">
+    Fantasy Forecast
   </h1>
-  <h2 class="text-2xl text-gray-700 mb-8 max-w-3xl mx-auto">
-    The Ultimate Fantasy Premier League (FPL) Rankings Platform - Where FPL Managers Unite to Create Accurate Consensus Rankings
+  <h2 class="text-lg md:text-2xl text-gray-700 mb-6 md:mb-8 max-w-3xl mx-auto px-2">
+    Crowd-sourced fantasy football player rankings for the premier league updated every gameweek
   </h2>
-  <p class="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
-    Leverage crowd-sourced wisdom from experienced FPL managers to make winning gameweek decisions. Our FPL consensus rankings combine multiple expert opinions to help improve your overall rank and dominate your mini-league.
+  <p class="text-base md:text-lg text-gray-600 mb-8 md:mb-10 max-w-2xl mx-auto px-2">
+    Make better transfer and captain decisions with consensus rankings from experienced FPL managers.
   </p>
-  <div class="flex gap-4 justify-center">
-    <%= link_to "View FPL Gameweek Rankings", players_path, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
-    <%= link_to "Join FPL Forecasters", new_user_registration_path, class: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
-  </div>
-</section>
-
-<!-- Weekly Rankings Section -->
-<section class="mb-16">
-  <div class="text-center mb-8">
-    <h2 class="text-3xl font-bold text-gray-900 mb-4">FPL Gameweek Consensus Rankings</h2>
-    <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-      Updated weekly with the latest FPL tips and predictions. See how the community ranks players for optimal Fantasy Premier League performance, including captain picks and transfer recommendations.
-    </p>
+  <div class="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center px-4 sm:px-0">
+    <%= link_to "View Rankings", players_path, class: "w-full sm:w-auto bg-white hover:bg-gray-50 text-black font-bold py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition duration-200 shadow-md" %>
+    <%= link_to "Sign Up", new_user_registration_path, class: "w-full sm:w-auto bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition duration-200 shadow-md" %>
   </div>
 </section>
 
 <!-- How It Works Section -->
-<section class="mb-16">
-  <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">How FPL Fantasy Forecast Works</h2>
-  <div class="grid md:grid-cols-3 gap-8">
-    <div class="bg-white rounded-lg p-6 shadow-md border border-gray-100">
-      <div class="text-4xl mb-4">📊</div>
-      <h3 class="text-xl font-semibold mb-3">FPL Managers Submit Rankings</h3>
-      <p class="text-gray-600">
-        Experienced FPL managers submit their gameweek player rankings based on comprehensive analysis of fixtures, form, team news, price changes, and fixture difficulty ratings (FDR).
+<section class="mb-12 md:mb-16">
+  <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-6 md:mb-8">How It Works</h2>
+  <div class="grid md:grid-cols-3 gap-6 md:gap-8">
+    <div class="bg-white rounded-lg p-5 md:p-6 shadow-md border border-gray-100">
+      <div class="text-3xl md:text-4xl mb-3 md:mb-4">📊</div>
+      <h3 class="text-lg md:text-xl font-semibold mb-2 md:mb-3">Managers Submit Rankings</h3>
+      <p class="text-sm md:text-base text-gray-600">
+        Experienced FPL managers rank players each gameweek based on fixtures, form, and team news.
       </p>
     </div>
-    <div class="bg-white rounded-lg p-6 shadow-md border border-gray-100">
-      <div class="text-4xl mb-4">🔄</div>
-      <h3 class="text-xl font-semibold mb-3">FPL Consensus Algorithm</h3>
-      <p class="text-gray-600">
-        Our sophisticated algorithm combines all FPL predictions, weighing manager accuracy and overall rank performance to generate reliable consensus rankings for each gameweek.
+    <div class="bg-white rounded-lg p-5 md:p-6 shadow-md border border-gray-100">
+      <div class="text-3xl md:text-4xl mb-3 md:mb-4">🔄</div>
+      <h3 class="text-lg md:text-xl font-semibold mb-2 md:mb-3">We Count Votes</h3>
+      <p class="text-sm md:text-base text-gray-600">
+        Players are ranked by how many managers selected them for the gameweek.
       </p>
     </div>
-    <div class="bg-white rounded-lg p-6 shadow-md border border-gray-100">
-      <div class="text-4xl mb-4">🏆</div>
-      <h3 class="text-xl font-semibold mb-3">You Make Winning Decisions</h3>
-      <p class="text-gray-600">
-        Use our consensus rankings to optimize your FPL team decisions, including captain picks, transfers, and wildcard strategies to gain a competitive edge in your mini-league.
+    <div class="bg-white rounded-lg p-5 md:p-6 shadow-md border border-gray-100">
+      <div class="text-3xl md:text-4xl mb-3 md:mb-4">🏆</div>
+      <h3 class="text-lg md:text-xl font-semibold mb-2 md:mb-3">Make Better Decisions</h3>
+      <p class="text-sm md:text-base text-gray-600">
+        Use consensus rankings to optimize your transfers, captain picks, and chip strategy.
       </p>
     </div>
   </div>
 </section>
 
 <!-- Become a Forecaster CTA -->
-<section class="bg-gradient-to-r from-blue-600 to-green-600 rounded-lg p-12 text-white text-center mb-16">
-  <h2 class="text-3xl font-bold mb-4">Join Our Community of Forecasters</h2>
-  <p class="text-xl mb-8 max-w-2xl mx-auto">
-    Are you an FPL enthusiast with a proven track record? Apply to become a forecaster and contribute to the most accurate FPL consensus rankings for each gameweek.
+<section class="bg-black rounded-lg p-8 md:p-12 text-white text-center">
+  <h2 class="text-2xl md:text-3xl font-bold mb-3 md:mb-4">Become a Forecaster</h2>
+  <p class="text-base md:text-xl mb-6 md:mb-8 max-w-2xl mx-auto px-4">
+    Share your forecast, build your reputation, and track your accuracy.
   </p>
-  <div class="space-y-4">
-    <div class="flex flex-wrap justify-center gap-8 mb-8">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">✓</span>
-        <span>Share Your Forecasts</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">✓</span>
-        <span>Build Your Reputation</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">✓</span>
-        <span>Track Your Accuracy</span>
-      </div>
-    </div>
-    <%= link_to "Apply to Become a Forecaster", new_user_registration_path, class: "inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-lg text-lg hover:bg-gray-100 transition duration-200" %>
-  </div>
-</section>
-
-<!-- Why Choose Fantasy Forecast -->
-<section class="mb-16">
-  <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">Why FPL Players Choose Fantasy Forecast</h2>
-  <div class="grid md:grid-cols-2 gap-8">
-    <div class="flex gap-4">
-      <div class="flex-shrink-0">
-        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-          <span class="text-2xl">📈</span>
-        </div>
-      </div>
-      <div>
-        <h3 class="text-xl font-semibold mb-2">Data-Driven Rankings</h3>
-        <p class="text-gray-600">
-          Our rankings are based on comprehensive statistical analysis and forecaster insights, not just gut feelings or personal bias.
-        </p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-shrink-0">
-        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-          <span class="text-2xl">👥</span>
-        </div>
-      </div>
-      <div>
-        <h3 class="text-xl font-semibold mb-2">Crowd-Sourced Wisdom</h3>
-        <p class="text-gray-600">
-          Multiple forecaster opinions reduce individual bias and provide more reliable rankings than any single source.
-        </p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-shrink-0">
-        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-          <span class="text-2xl">🔄</span>
-        </div>
-      </div>
-      <div>
-        <h3 class="text-xl font-semibold mb-2">Weekly Updates</h3>
-        <p class="text-gray-600">
-          Rankings are updated weekly to reflect the latest injuries, matchups, performance trends, and optimal timing for wildcards, free hits, and other FPL chips.
-        </p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-shrink-0">
-        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-          <span class="text-2xl">⭐</span>
-        </div>
-      </div>
-      <div>
-        <h3 class="text-xl font-semibold mb-2">Proven Track Record</h3>
-        <p class="text-gray-600">
-          Our consensus approach consistently outperforms individual forecaster rankings in accuracy and reliability.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- SEO Content Section -->
-<section class="prose max-w-4xl mx-auto mb-16">
-  <h2 class="text-2xl font-bold mb-4">FPL Rankings You Can Trust</h2>
-  <p class="text-gray-700 mb-4">
-    Fantasy Forecast revolutionizes FPL decision-making by combining analysis from multiple forecasters into comprehensive consensus rankings. Whether you're planning transfers, using your wildcard, or timing your bench boost chip, our rankings provide the insights you need to dominate your mini-league.
-  </p>
-  <p class="text-gray-700 mb-4">
-    Our platform features weekly FPL rankings for all positions including goalkeepers (GK), defenders (DEF), midfielders (MID), and forwards (FWD). Each week, our forecasters analyze player matchups, recent performance, injury reports, fixture difficulty ratings, and double gameweeks to deliver the most accurate FPL rankings available.
-  </p>
-  <h3 class="text-xl font-semibold mb-3">The Power of Consensus in FPL</h3>
-  <p class="text-gray-700 mb-4">
-    Studies have shown that consensus rankings consistently outperform individual predictions. By aggregating multiple forecaster opinions, Fantasy Forecast eliminates personal biases and provides more stable, reliable rankings for your FPL team decisions. Our forecasters include seasoned FPL managers, data analysts, and Premier League enthusiasts who bring diverse perspectives to create comprehensive gameweek rankings.
-  </p>
-  <p class="text-gray-700 mb-4">
-    Start using Fantasy Forecast today to improve your FPL performance. Whether you're setting your weekly team, making transfer decisions, or planning your chip strategy, our consensus rankings give you the competitive edge you need to climb the overall leaderboard and win your mini-league.
-  </p>
-</section>
-
-<!-- Final CTA -->
-<section class="text-center py-12 bg-gray-50 rounded-lg">
-  <h2 class="text-3xl font-bold text-gray-900 mb-4">Ready to Dominate Your Mini-League?</h2>
-  <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-    Join thousands of FPL managers who trust Fantasy Forecast for accurate, reliable player rankings every gameweek.
-  </p>
-  <div class="flex gap-4 justify-center">
-    <%= link_to "View Rankings", players_path, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
-    <%= link_to "Sign Up Free", new_user_registration_path, class: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200" %>
+  <div class="px-4">
+    <%= link_to "Sign Up", new_user_registration_path, class: "w-full sm:w-auto inline-block bg-white hover:bg-gray-100 text-black font-bold py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition duration-200 shadow-md" %>
   </div>
 </section>

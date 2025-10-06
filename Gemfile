@@ -30,6 +30,9 @@ gem "devise"
 # Mailgun API client for sending emails
 gem "mailgun-ruby"
 
+# A framework for building reusable, testable & encapsulated view components [https://viewcomponent.org]
+gem "view_component"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
