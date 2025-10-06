@@ -54,7 +54,7 @@
           <!-- Empty slots -->
           <% empty_slots.times do %>
             <div class="px-3 md:px-4 py-2 md:py-3 bg-gray-50">
-              <%= render PlayerCardComponent.new(player: nil) %>
+              <%= render PlayerCardComponent.new(player: nil, selection_url: players_path(gameweek: @gameweek, position: position)) %>
             </div>
           <% end %>
         </div>
