@@ -1,0 +1,58 @@
+{
+  "name": "fantasy-forecast",
+  "description": "Fantasy Premier League forecasting and consensus application",
+  "repository": "https://github.com/ben-flyht/fantasy-forecast",
+  "logo": "",
+  "keywords": ["rails", "fantasy-football", "fpl"],
+  "addons": [
+    "heroku-postgresql"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/ruby"
+    },
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "RAILS_ENV": {
+      "value": "test"
+    },
+    "RACK_ENV": {
+      "value": "test"
+    },
+    "RAILS_MASTER_KEY": {
+      "required": false,
+      "description": "Master key for decrypting credentials (optional if credentials are not used)"
+    },
+    "SECRET_KEY_BASE": {
+      "generator": "secret"
+    },
+    "MAILGUN_API_KEY": {
+      "required": false,
+      "description": "Mailgun API key for email functionality (optional for tests)"
+    },
+    "MAILGUN_DOMAIN": {
+      "required": false,
+      "description": "Mailgun domain for email functionality (optional for tests)"
+    }
+  },
+  "formation": {
+    "test": {
+      "quantity": 1
+    }
+  },
+  "scripts": {
+    "test-setup": "bin/rails db:schema:load db:migrate",
+    "test": "bin/rails test"
+  },
+  "environments": {
+    "test": {
+      "scripts": {
+        "test-setup": "bin/rails db:schema:load db:migrate",
+        "test": "bin/rails test"
+      }
+    }
+  }
+}
