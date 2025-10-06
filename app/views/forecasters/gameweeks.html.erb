@@ -45,7 +45,7 @@
                   <%= render PlayerCardComponent.new(player: forecast.player) %>
                 </div>
                 <div class="flex-shrink-0 text-right">
-                  <%= render OpponentComponent.new(player: forecast.player, gameweek: @gameweek) %>
+                  <%= render OpponentComponent.new(player: forecast.player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
                 </div>
               </div>
             </div>

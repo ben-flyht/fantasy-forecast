@@ -125,18 +125,17 @@
               end
             %>
             <% @consensus_rankings.each_with_index do |ranking, index| %>
-              <% player = @players.find { |p| p.id == ranking.player_id } %>
+              <% player = @players_by_id[ranking.player_id] %>
               <% is_selected = @current_forecasts[ranking.player_id].present? %>
               <tr class="<%= is_selected ? 'bg-yellow-100 border-l-4 border-yellow-400' : '' %>" data-player-row="<%= ranking.player_id %>">
                 <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-base md:text-lg font-medium text-gray-900 w-16">
                   <%= has_forecasts ? ranks[index] : "1=" %>
                 </td>
                 <td class="px-3 md:px-6 py-2 md:py-4">
-                  <% player = @players.find { |p| p.id == ranking.player_id } %>
                   <%= render PlayerCardComponent.new(player: player) %>
                 </td>
                 <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-right w-32">
-                  <%= render OpponentComponent.new(player: player, gameweek: @gameweek) %>
+                  <%= render OpponentComponent.new(player: player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
                 </td>
                 <% if @is_next_gameweek %>
                   <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-center w-20">

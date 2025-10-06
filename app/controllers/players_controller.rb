@@ -22,41 +22,51 @@ class PlayersController < ApplicationController
     @consensus_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
 
     # Get total number of unique forecasters for this gameweek
-    gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
-    if gameweek_record
+    @gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
+    if @gameweek_record
       @total_forecasters = Forecast.joins(:gameweek)
                                    .where(gameweeks: { fpl_id: @gameweek })
                                    .distinct
                                    .count(:user_id)
+
+      # Preload matches for opponent component to avoid N+1
+      @matches_by_team = Hash.new { |h, k| h[k] = [] }
+      Match.includes(:home_team, :away_team)
+           .where(gameweek: @gameweek_record)
+           .each do |match|
+        @matches_by_team[match.home_team_id] << match
+        @matches_by_team[match.away_team_id] << match
+      end
     else
       @total_forecasters = 0
+      @matches_by_team = {}
     end
 
     # Load all players for the current position with their scores
-    players_with_scores = Player.joins("LEFT JOIN performances ON performances.player_id = players.id")
-                                .joins("LEFT JOIN teams ON teams.id = players.team_id")
+    players_with_scores = Player.includes(:team)
+                                .joins("LEFT JOIN performances ON performances.player_id = players.id")
                                 .where(position: @position_filter)
-                                .select("players.*, teams.name as team_name, teams.short_name as team_short_name, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
-                                .group("players.id, teams.name, teams.short_name")
+                                .select("players.*, COALESCE(SUM(performances.gameweek_score), 0) AS total_score_cached")
+                                .group("players.id")
                                 .order("total_score_cached DESC, first_name, last_name")
     @players = players_with_scores
+    @players_by_id = @players.index_by(&:id)
 
     # Get current user's forecasts
     if user_signed_in?
       next_gw = Gameweek.next_gameweek
-      gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
 
       # Load user's forecasts for the current viewing gameweek
-      if gameweek_record
+      if @gameweek_record
         @current_forecasts = current_user.forecasts
                     .includes(:player)
-                    .where(gameweek: gameweek_record)
+                    .where(gameweek: @gameweek_record)
                     .index_by(&:player_id)
 
         # Get forecast counts for the current viewing gameweek
         @forecast_counts = current_user.forecasts
                     .joins(:player)
-                    .where(gameweek: gameweek_record)
+                    .where(gameweek: @gameweek_record)
                     .group("players.position")
                     .count
       else

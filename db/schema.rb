@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_06_120108) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_06_135127) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,8 +21,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_120108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "accuracy"
+    t.index ["gameweek_id", "player_id"], name: "index_forecasts_on_gameweek_id_and_player_id"
     t.index ["gameweek_id"], name: "index_forecasts_on_gameweek_id"
     t.index ["player_id"], name: "index_forecasts_on_player_id"
+    t.index ["user_id", "gameweek_id"], name: "index_forecasts_on_user_id_and_gameweek_id"
     t.index ["user_id", "player_id", "gameweek_id"], name: "index_forecasts_on_unique_constraint", unique: true
     t.index ["user_id"], name: "index_forecasts_on_user_id"
   end
@@ -49,6 +51,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_120108) do
     t.integer "fpl_id"
     t.index ["away_team_id"], name: "index_matches_on_away_team_id"
     t.index ["fpl_id"], name: "index_matches_on_fpl_id", unique: true
+    t.index ["gameweek_id", "away_team_id"], name: "index_matches_on_gameweek_id_and_away_team_id"
+    t.index ["gameweek_id", "home_team_id"], name: "index_matches_on_gameweek_id_and_home_team_id"
     t.index ["gameweek_id"], name: "index_matches_on_gameweek_id"
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
   end
@@ -60,6 +64,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_120108) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "team_id", null: false
+    t.index ["gameweek_id", "gameweek_score"], name: "index_performances_on_gameweek_id_and_gameweek_score"
     t.index ["gameweek_id"], name: "index_performances_on_gameweek_id"
     t.index ["player_id", "gameweek_id"], name: "index_performances_on_player_id_and_gameweek_id", unique: true
     t.index ["player_id"], name: "index_performances_on_player_id"
@@ -77,6 +82,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_120108) do
     t.bigint "team_id"
     t.integer "code"
     t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
+    t.index ["position", "team_id"], name: "index_players_on_position_and_team_id"
     t.index ["team_id"], name: "index_players_on_team_id"
   end
 

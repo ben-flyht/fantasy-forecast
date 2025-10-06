@@ -78,8 +78,21 @@ class ForecastersController < ApplicationController
 
     # Get all performances for this gameweek to calculate ranks
     gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
+
+    # Preload matches for opponent component to avoid N+1
     if gameweek_record
-      performances = Performance.includes(:player)
+      @matches_by_team = Hash.new { |h, k| h[k] = [] }
+      Match.includes(:home_team, :away_team)
+           .where(gameweek: gameweek_record)
+           .each do |match|
+        @matches_by_team[match.home_team_id] << match
+        @matches_by_team[match.away_team_id] << match
+      end
+    else
+      @matches_by_team = {}
+    end
+    if gameweek_record
+      performances = Performance.includes(player: :team)
                                 .where(gameweek_id: gameweek_record.id)
                                 .order(gameweek_score: :desc)
 
