@@ -45,8 +45,8 @@
               <%= link_to "My Profile", forecaster_path(current_user), class: "text-gray-600 hover:text-gray-800" %>
               <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete }, class: "text-gray-600 hover:text-gray-800" %>
             <% else %>
-              <%= link_to "Login", new_user_session_path, class: "border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-1 rounded" %>
-              <%= link_to "Sign Up", new_user_registration_path, class: "bg-gray-800 hover:gray-400 text-white px-3 py-1 rounded" %>
+              <%= link_to "Login", new_user_session_path, class: "border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-1 rounded" %>
+              <%= link_to "Sign Up", new_user_registration_path, class: "bg-amber-200 hover:bg-amber-300 text-black px-3 py-1 rounded font-semibold" %>
             <% end %>
           </div>
 
@@ -68,10 +68,10 @@
               <% if user_signed_in? %>
                 <div class="text-sm text-gray-600 mb-3">Welcome, <%= current_user.username %></div>
                 <%= link_to "My Profile", forecaster_path(current_user), class: "block text-gray-600 hover:text-gray-800 py-2", data: { action: "click->mobile-menu#close" } %>
-                <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete, action: "click->mobile-menu#close" }, class: "block border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-2 rounded text-center mt-2" %>
+                <%= link_to "Logout", destroy_user_session_path, data: { "turbo-method": :delete, action: "click->mobile-menu#close" }, class: "block border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-2 rounded text-center mt-2" %>
               <% else %>
-                <%= link_to "Login", new_user_session_path, class: "block border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-3 py-2 rounded text-center mb-2", data: { action: "click->mobile-menu#close" } %>
-                <%= link_to "Sign Up", new_user_registration_path, class: "block bg-gray-800 hover:gray-400 text-white px-3 py-2 rounded text-center", data: { action: "click->mobile-menu#close" } %>
+                <%= link_to "Login", new_user_session_path, class: "block border border-gray-800 text-gray-800 hover:bg-gray-100 px-3 py-2 rounded text-center mb-2", data: { action: "click->mobile-menu#close" } %>
+                <%= link_to "Sign Up", new_user_registration_path, class: "block bg-amber-200 hover:bg-amber-300 text-black font-semibold px-3 py-2 rounded text-center", data: { action: "click->mobile-menu#close" } %>
               <% end %>
             </div>
           </div>
@@ -81,7 +81,7 @@
 
     <div class="pt-20">
       <% if notice %>
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
+        <div class="bg-amber-100 border border-amber-400 text-amber-800 px-4 py-3 rounded mb-4 mx-4 mt-4">
           <%= notice %>
         </div>
       <% end %>
@@ -98,17 +98,17 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-12 mt-16">
+    <footer class="bg-gray-800 text-white py-8 md:py-12 mt-12 md:mt-16">
       <div class="container mx-auto px-4">
-        <div class="grid md:grid-cols-4 gap-8">
+        <div class="grid md:grid-cols-4 gap-6 md:gap-8">
           <div>
-            <h3 class="text-xl font-bold mb-4">⚡ Fantasy Forecast</h3>
-            <p class="text-gray-300">
+            <h3 class="text-lg md:text-xl font-bold mb-3 md:mb-4">⚡ Fantasy Forecast</h3>
+            <p class="text-sm md:text-base text-gray-300">
               The most accurate FPL consensus weekly rankings from experienced Fantasy Premier League managers.
             </p>
           </div>
           <div>
-            <ul class="space-y-2 text-gray-300">
+            <ul class="space-y-2 text-sm md:text-base text-gray-300">
               <li><%= link_to "Privacy Policy", privacy_policy_path, class: "hover:text-white" %></li>
               <li><%= link_to "Terms of Service", terms_of_service_path, class: "hover:text-white" %></li>
               <li><%= link_to "Cookie Policy", cookie_policy_path, class: "hover:text-white" %></li>
@@ -116,9 +116,9 @@
             </ul>
           </div>
         </div>
-        <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300">
-          <p>&copy; 2025 Fantasy Forecast. All rights reserved. FPL consensus weekly rankings for Fantasy Premier League managers.</p>
-          <p class="mt-2 text-sm">Not affiliated with the Premier League or Fantasy Premier League. All player and team names are trademarks of their respective owners.</p>
+        <div class="border-t border-gray-700 mt-6 md:mt-8 pt-6 md:pt-8 text-center text-gray-300">
+          <p class="text-xs md:text-sm">&copy; 2025 Fantasy Forecast. All rights reserved. FPL consensus weekly rankings for Fantasy Premier League managers.</p>
+          <p class="mt-2 text-xs">Not affiliated with the Premier League or Fantasy Premier League. All player and team names are trademarks of their respective owners.</p>
         </div>
       </div>
     </footer>
