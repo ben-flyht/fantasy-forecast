@@ -8,3 +8,16 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+@import "tailwindcss";
+
+@theme {
+  /* Primary color - Gold/Amber matching lightning bolt */
+  --color-primary: #FFC107;
+  --color-primary-dark: #FF8F00;
+  --color-primary-light: #FFEB3B;
+
+  /* Secondary - Black and White */
+  --color-secondary: #FFFFFF;
+  --color-secondary-dark: #000000;
+}

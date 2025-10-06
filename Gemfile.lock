@@ -355,6 +355,9 @@ GEM
     unicode-emoji (4.1.0)
     uri (1.0.3)
     useragent (0.16.11)
+    view_component (4.0.2)
+      activesupport (>= 7.1.0, < 8.1)
+      concurrent-ruby (~> 1)
     warden (1.2.9)
       rack (>= 2.0.9)
     web-console (4.2.1)
@@ -410,6 +413,7 @@ DEPENDENCIES
   thruster
   turbo-rails
   tzinfo-data
+  view_component
   web-console
   webmock
 
