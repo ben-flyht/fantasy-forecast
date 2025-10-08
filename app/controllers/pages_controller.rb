@@ -17,29 +17,7 @@ class PagesController < ApplicationController
   end
 
   def robots
-    # Only allow indexing on production domain
-    app_host = ENV.fetch("APP_HOST", "www.fantasyforecast.co.uk")
-    is_production = app_host.include?("www.fantasyforecast.co.uk")
-
-    respond_to do |format|
-      format.text do
-        if is_production
-          render plain: <<~ROBOTS
-            # Allow all crawlers on production
-            User-agent: *
-            Allow: /
-
-            # Sitemap location
-            Sitemap: https://#{app_host}/sitemap.xml.gz
-          ROBOTS
-        else
-          render plain: <<~ROBOTS
-            # Disallow all crawlers on non-production environments
-            User-agent: *
-            Disallow: /
-          ROBOTS
-        end
-      end
-    end
+    @app_host = ENV.fetch("APP_HOST", "www.fantasyforecast.co.uk")
+    @is_production = @app_host.include?("www.fantasyforecast.co.uk")
   end
 end
