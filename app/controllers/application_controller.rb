@@ -2,13 +2,12 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
-  before_action :authenticate_user!, except: :robots
   before_action :configure_permitted_parameters, if: :devise_controller?
 
   def robots
     @app_host = ENV.fetch("APP_HOST", "www.fantasyforecast.co.uk")
     @is_production = @app_host.include?("www.fantasyforecast.co.uk")
-    render "shared/robots", formats: [:text]
+    render "shared/robots", formats: [ :text ]
   end
 
   private
