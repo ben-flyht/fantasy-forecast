@@ -48,11 +48,6 @@ module ApplicationHelper
       ]
     }
 
-    if content_for?(:structured_data)
-      base_schema[:@graph] << JSON.parse(content_for(:structured_data))
-    end
-
-    json_tag = tag.script(base_schema.to_json.html_safe, type: "application/ld+json")
-    json_tag.html_safe
+    tag.script(base_schema.to_json.html_safe, type: "application/ld+json")
   end
 end
