@@ -8,7 +8,7 @@ module ApplicationHelper
   end
 
   def meta_image
-    content_for?(:meta_image) ? content_for(:meta_image) : image_url("og-image.png")
+    content_for?(:meta_image) ? content_for(:meta_image) : "https://www.fantasyforecast.co.uk/icon.png"
   end
 
   def meta_url
