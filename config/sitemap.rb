@@ -23,26 +23,12 @@ SitemapGenerator::Sitemap.create do
   # Player rankings - main page with high priority
   add players_path, priority: 0.9, changefreq: "daily"
 
-  # Player rankings by position for recent gameweeks
+  # Player rankings by position (defaults to latest gameweek)
   positions = [ "forward", "midfielder", "defender", "goalkeeper" ]
-  next_gw = Gameweek.next_gameweek
-  if next_gw
-    # Add next gameweek rankings (highest priority for fresh content)
-    positions.each do |position|
-      add players_path(gameweek: next_gw.fpl_id, position: position),
-          priority: 0.9,
-          changefreq: "daily"
-    end
-
-    # Add last 3 gameweeks of rankings
-    recent_gameweeks = ((next_gw.fpl_id - 3)...next_gw.fpl_id).to_a
-    recent_gameweeks.each do |gw|
-      positions.each do |position|
-        add players_path(gameweek: gw, position: position),
-            priority: 0.7,
-            changefreq: "weekly"
-      end
-    end
+  positions.each do |position|
+    add players_path(position: position),
+        priority: 0.9,
+        changefreq: "daily"
   end
 
   # Forecaster rankings
