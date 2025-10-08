@@ -12,8 +12,7 @@ SitemapGenerator::Sitemap.create do
   # Defaults: priority: 0.5, changefreq: 'weekly',
   #           lastmod: Time.now, host: default_host
 
-  # Home page
-  add root_path, priority: 1.0, changefreq: "daily"
+  # Note: root path is added automatically by sitemap_generator
 
   # Static pages
   add privacy_policy_path, priority: 0.3, changefreq: "monthly"
