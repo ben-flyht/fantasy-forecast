@@ -15,9 +15,4 @@ class PagesController < ApplicationController
 
   def contact_us
   end
-
-  def robots
-    @app_host = ENV.fetch("APP_HOST", "www.fantasyforecast.co.uk")
-    @is_production = @app_host.include?("www.fantasyforecast.co.uk")
-  end
 end

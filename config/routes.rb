@@ -4,7 +4,7 @@ Rails.application.routes.draw do
   root "pages#home"
 
   # Dynamic robots.txt based on environment
-  get "robots.txt", to: "pages#robots", defaults: { format: "text" }
+  get "robots.txt", to: "application#robots", defaults: { format: "text" }
 
   # Legal pages with SEO-friendly URLs
   get "privacy-policy", to: "pages#privacy_policy", as: :privacy_policy
