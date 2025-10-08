@@ -1,5 +1,5 @@
-# Set the host name for URL creation
-SitemapGenerator::Sitemap.default_host = "https://www.fantasyforecast.co.uk"
+# Set the host name for URL creation (reuses APP_HOST from mailer config)
+SitemapGenerator::Sitemap.default_host = "https://#{ENV.fetch('APP_HOST', 'www.fantasyforecast.co.uk')}"
 SitemapGenerator::Sitemap.create do
   # Put links creation logic here.
   #
