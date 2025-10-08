@@ -6,6 +6,9 @@ Rails.application.routes.draw do
   # Dynamic robots.txt based on environment
   get "robots.txt", to: "application#robots", defaults: { format: "text" }
 
+  # Dynamic sitemap.xml
+  get "sitemap.xml", to: "application#sitemap", defaults: { format: "xml" }
+
   # Legal pages with SEO-friendly URLs
   get "privacy-policy", to: "pages#privacy_policy", as: :privacy_policy
   get "terms-of-service", to: "pages#terms_of_service", as: :terms_of_service

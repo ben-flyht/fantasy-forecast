@@ -10,6 +10,11 @@ class ApplicationController < ActionController::Base
     render "shared/robots", formats: [ :text ]
   end
 
+  def sitemap
+    @base_url = "https://#{ENV.fetch('APP_HOST', 'www.fantasyforecast.co.uk')}"
+    render "shared/sitemap", formats: [ :xml ]
+  end
+
   private
 
   def configure_permitted_parameters
