@@ -18,7 +18,8 @@ class PagesController < ApplicationController
 
   def robots
     # Only allow indexing on production domain
-    is_production = ENV.fetch("APP_HOST", "").include?("www.fantasyforecast.co.uk")
+    app_host = ENV.fetch("APP_HOST", "www.fantasyforecast.co.uk")
+    is_production = app_host.include?("www.fantasyforecast.co.uk")
 
     respond_to do |format|
       format.text do
@@ -29,7 +30,7 @@ class PagesController < ApplicationController
             Allow: /
 
             # Sitemap location
-            Sitemap: https://www.fantasyforecast.co.uk/sitemap.xml.gz
+            Sitemap: https://#{app_host}/sitemap.xml.gz
           ROBOTS
         else
           render plain: <<~ROBOTS
