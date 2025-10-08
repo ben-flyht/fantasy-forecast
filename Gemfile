@@ -33,6 +33,9 @@ gem "mailgun-ruby"
 # A framework for building reusable, testable & encapsulated view components [https://viewcomponent.org]
 gem "view_component"
 
+# Generate XML sitemaps for search engines [https://github.com/kjvarga/sitemap_generator]
+gem "sitemap_generator"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
