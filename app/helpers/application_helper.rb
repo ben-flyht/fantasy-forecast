@@ -14,4 +14,45 @@ module ApplicationHelper
   def meta_url
     content_for?(:meta_url) ? content_for(:meta_url) : request.original_url
   end
+
+  def structured_data
+    base_schema = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://www.fantasyforecast.co.uk/#website",
+          "url": "https://www.fantasyforecast.co.uk/",
+          "name": "Fantasy Forecast",
+          "description": "Crowd-sourced Fantasy Premier League player rankings updated every gameweek",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://www.fantasyforecast.co.uk/players?search={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.fantasyforecast.co.uk/#organization",
+          "name": "Fantasy Forecast",
+          "url": "https://www.fantasyforecast.co.uk/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.fantasyforecast.co.uk/icon.png"
+          },
+          "sameAs": []
+        }
+      ]
+    }
+
+    if content_for?(:structured_data)
+      base_schema[:@graph] << JSON.parse(content_for(:structured_data))
+    end
+
+    json_tag = tag.script(base_schema.to_json.html_safe, type: "application/ld+json")
+    json_tag.html_safe
+  end
 end
