@@ -20,9 +20,6 @@ SitemapGenerator::Sitemap.create do
   add cookie_policy_path, priority: 0.3, changefreq: "monthly"
   add contact_us_path, priority: 0.4, changefreq: "monthly"
 
-  # Player rankings - main page with high priority
-  add players_path, priority: 0.9, changefreq: "daily"
-
   # Player rankings by position (defaults to latest gameweek)
   positions = [ "forward", "midfielder", "defender", "goalkeeper" ]
   positions.each do |position|
@@ -33,13 +30,4 @@ SitemapGenerator::Sitemap.create do
 
   # Forecaster rankings
   add forecasters_path, priority: 0.8, changefreq: "daily"
-
-  # Top forecasters (first 50)
-  User.joins(:forecasts)
-      .group("users.id")
-      .order("COUNT(forecasts.id) DESC")
-      .limit(50)
-      .each do |user|
-    add forecaster_path(user), priority: 0.6, changefreq: "weekly"
-  end
 end
