@@ -1,10 +1,36 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Fantasy Forecast" %></title>
+    <title><%= meta_title %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="<%= meta_description %>">
+    <% unless ENV.fetch("APP_HOST", "").include?("www.fantasyforecast.co.uk") %>
+      <meta name="robots" content="noindex, nofollow">
+    <% end %>
+    <meta name="keywords" content="FPL, Fantasy Premier League, FPL rankings, FPL player rankings, fantasy football, FPL consensus, FPL transfer advice, FPL captains, FPL gameweek rankings">
+    <link rel="canonical" href="<%= meta_url %>">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="<%= meta_title %>">
+    <meta property="og:description" content="<%= meta_description %>">
+    <meta property="og:image" content="<%= meta_image %>">
+    <meta property="og:url" content="<%= meta_url %>">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Fantasy Forecast">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<%= meta_title %>">
+    <meta name="twitter:description" content="<%= meta_description %>">
+    <meta name="twitter:image" content="<%= meta_image %>">
+
+    <!-- Structured Data -->
+    <%= structured_data %>
+
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
@@ -104,14 +130,29 @@
     <footer class="bg-gray-800 text-white py-8 md:py-12 mt-12 md:mt-16">
       <div class="container mx-auto px-4">
         <div class="grid md:grid-cols-4 gap-6 md:gap-8">
-          <div>
+          <div class="md:col-span-2">
             <h3 class="text-lg md:text-xl font-bold mb-3 md:mb-4">⚡ Fantasy Forecast</h3>
-            <p class="text-sm md:text-base text-gray-300">
+            <p class="text-sm md:text-base text-gray-300 mb-3">
               The most accurate FPL consensus weekly rankings from experienced Fantasy Premier League managers.
+            </p>
+            <p class="text-xs md:text-sm text-gray-400">
+              Get expert FPL player rankings, transfer advice, and captain recommendations every gameweek.
+              Our crowd-sourced fantasy football rankings help you make better decisions for your Fantasy
+              Premier League team with consensus data from top FPL managers.
             </p>
           </div>
           <div>
-            <ul class="space-y-2 text-sm md:text-base text-gray-300">
+            <h4 class="text-sm md:text-base font-semibold mb-3 md:mb-4">Features</h4>
+            <ul class="space-y-2 text-xs md:text-sm text-gray-300">
+              <li><%= link_to "FPL Player Rankings", players_path, class: "hover:text-white" %></li>
+              <li><%= link_to "Forecaster Leaderboard", forecasters_path, class: "hover:text-white" %></li>
+              <li><span class="text-gray-400">Weekly Gameweek Updates</span></li>
+              <li><span class="text-gray-400">Position-Based Rankings</span></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="text-sm md:text-base font-semibold mb-3 md:mb-4">Legal</h4>
+            <ul class="space-y-2 text-xs md:text-sm text-gray-300">
               <li><%= link_to "Privacy Policy", privacy_policy_path, class: "hover:text-white" %></li>
               <li><%= link_to "Terms of Service", terms_of_service_path, class: "hover:text-white" %></li>
               <li><%= link_to "Cookie Policy", cookie_policy_path, class: "hover:text-white" %></li>

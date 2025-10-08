@@ -1,5 +1,5 @@
 class PlayersController < ApplicationController
-  skip_before_action :authenticate_user!
+  before_action :authenticate_user!, only: [ :toggle_forecast ]
 
   def index
     @gameweek = params[:gameweek].present? ? params[:gameweek].to_i : current_gameweek

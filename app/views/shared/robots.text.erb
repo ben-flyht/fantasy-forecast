@@ -1,0 +1,12 @@
+<% if @is_production %>
+# Allow all crawlers on production
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://<%= @app_host %>/sitemap.xml.gz
+<% else %>
+# Disallow all crawlers on non-production environments
+User-agent: *
+Disallow: /
+<% end %>
