@@ -9,8 +9,8 @@
       <span class="text-xs text-gray-800 break-words"><%= @player.first_name %></span>
       <span class="text-sm md:text-lg font-bold text-gray-800 break-words"><%= @player.last_name %></span>
       <% if @player.team %>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-gray-700"><%= @player.team.name %></span>
+        <div class="flex items-center gap-2 mt-0.5">
+          <span class="text-xs px-2 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-800"><%= @player.team.name %></span>
           <% if show_status_info? %>
             <span class="text-xs px-2 py-0.5 rounded <%= status_badge_class %>">
               <%= status_text %>

@@ -11,13 +11,13 @@ class PlayerCardComponent < ViewComponent::Base
     chance = @player&.chance_of_playing
 
     if chance <= 25
-      "bg-red-100 text-red-800"
+      "border border-red-200 bg-red-50 text-red-800"
     elsif chance <= 50
-      "bg-orange-100 text-orange-800"
+      "border border-orange-200 bg-orange-50 text-orange-800"
     elsif chance <= 75
-      "bg-yellow-100 text-yellow-800"
+      "border border-yellow-200 bg-yellow-50 text-yellow-800"
     else
-      "bg-green-100 text-green-800"
+      "border border-green-200 bg-green-50 text-green-800"
     end
   end
 
