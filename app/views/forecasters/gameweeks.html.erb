@@ -21,7 +21,7 @@
   </div>
 
   <!-- 4 Column Grid for Positions -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-4">
     <% ["goalkeeper", "defender", "midfielder", "forward"].each do |position| %>
       <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
       <% forecasts = (@forecasts_by_position[position] || []).sort_by { |f| -(f.accuracy || 0) } %>
