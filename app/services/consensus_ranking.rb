@@ -35,11 +35,11 @@ class ConsensusRanking
     end
 
     # If no forecasts have been made, sort by total score then alphabetically by name
-    # Otherwise, sort by total forecasts (descending), then total score (descending), then name
+    # Otherwise, sort by adjusted consensus score (descending), then total score (descending), then name
     if forecast_scores.empty?
       rankings.sort_by { |ranking| [ -(ranking.total_score || 0), ranking.name || "" ] }
     else
-      rankings.sort_by { |ranking| [ -(ranking.total_forecasts || 0), -(ranking.total_score || 0), ranking.name || "" ] }
+      rankings.sort_by { |ranking| [ -(ranking.consensus_score || 0), -(ranking.total_score || 0), ranking.name || "" ] }
     end
   end
 
