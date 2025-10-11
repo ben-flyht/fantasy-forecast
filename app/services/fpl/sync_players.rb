@@ -119,7 +119,9 @@ module Fpl
           short_name: short_name,
           code: code,
           team: team_record,
-          position: position
+          position: position,
+          status: element["status"],
+          chance_of_playing: element["chance_of_playing_next_round"]
         }
 
         player = Player.find_or_initialize_by(fpl_id: fpl_id)

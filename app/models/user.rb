@@ -5,7 +5,10 @@ class User < ApplicationRecord
          :recoverable, :rememberable, :validatable, :confirmable
 
   # Validations
-  validates :username, presence: true, uniqueness: true
+  validates :username, presence: true, uniqueness: true, format: {
+    with: /\A[a-zA-Z0-9]+\z/,
+    message: "can only contain letters and numbers (no spaces or special characters)"
+  }
 
   # Associations
   has_many :forecasts, dependent: :destroy
