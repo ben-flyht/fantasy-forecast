@@ -8,17 +8,8 @@ class PlayerCardComponent < ViewComponent::Base
   end
 
   def status_badge_class
-    chance = @player&.chance_of_playing
-
-    if chance <= 25
-      "border border-red-200 bg-red-50 text-red-800"
-    elsif chance <= 50
-      "border border-orange-200 bg-orange-50 text-orange-800"
-    elsif chance <= 75
-      "border border-yellow-200 bg-yellow-50 text-yellow-800"
-    else
-      "border border-green-200 bg-green-50 text-green-800"
-    end
+    color = status_color
+    "border border-#{color}-200 bg-#{color}-50 text-#{color}-800"
   end
 
   def status_text
@@ -40,5 +31,17 @@ class PlayerCardComponent < ViewComponent::Base
 
   def show_status_info?
     @player && @player.chance_of_playing.present? && @player.chance_of_playing < 100
+  end
+
+  private
+
+  def status_color
+    chance = @player&.chance_of_playing
+    case chance
+    when 0..25 then "red"
+    when 26..50 then "orange"
+    when 51..75 then "yellow"
+    else "green"
+    end
   end
 end
