@@ -111,30 +111,22 @@
           <tbody class="bg-white divide-y divide-gray-200">
             <% has_forecasts = @consensus_rankings.any? { |r| r.total_forecasts > 0 } %>
             <%
-              # Calculate ranks based on forecast counts and total score as tiebreaker
+              # Calculate ranks - always sequential, alphabetical as tiebreaker
               if has_forecasts
-                current_rank = 1
-                last_count = nil
-                last_score = nil
-                ranks = []
-
-                @consensus_rankings.each_with_index do |ranking, index|
-                  if ranking.total_forecasts != last_count || ranking.total_score != last_score
-                    current_rank = index + 1
-                    last_count = ranking.total_forecasts
-                    last_score = ranking.total_score
-                  end
-
-                  # Check if there are more players with the same count AND score after this one
-                  next_rankings = @consensus_rankings[(index + 1)..-1] || []
-                  has_ties = next_rankings.any? { |r| r.total_forecasts == ranking.total_forecasts && r.total_score == ranking.total_score }
-
-                  if has_ties || (index > 0 && @consensus_rankings[index - 1].total_forecasts == ranking.total_forecasts && @consensus_rankings[index - 1].total_score == ranking.total_score)
-                    ranks << "#{current_rank}="
-                  else
-                    ranks << current_rank.to_s
-                  end
+                # Sort by forecast count (desc), total score (desc), then alphabetically by last name
+                sorted_rankings = @consensus_rankings.sort_by do |r|
+                  player = @players_by_id[r.player_id]
+                  [-r.total_forecasts, -r.total_score, player&.last_name || ""]
                 end
+
+                # Create a rank map for original order
+                rank_map = {}
+                sorted_rankings.each_with_index do |ranking, index|
+                  rank_map[ranking.player_id] = (index + 1).to_s
+                end
+
+                # Build ranks array in original @consensus_rankings order
+                ranks = @consensus_rankings.map { |r| rank_map[r.player_id] }
               end
             %>
             <% @consensus_rankings.each_with_index do |ranking, index| %>
