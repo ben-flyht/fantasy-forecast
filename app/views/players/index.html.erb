@@ -15,10 +15,19 @@
 
     <div class="mb-4 md:mb-8">
       <h1 class="text-xl md:text-3xl font-bold text-gray-800 mb-3 md:mb-4"><%= @page_title %></h1>
+    </div>
 
-      <!-- Week and Position Filters -->
-      <%= form_with url: players_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form" do |f| %>
-        <div class="flex flex-col md:flex-row md:flex-wrap gap-3 md:gap-4 mb-6">
+    <!-- Week and Position Filters -->
+    <div data-controller="sticky-shadow">
+    <div data-sticky-shadow-target="sentinel"></div>
+    <!-- Placeholder to maintain layout when filter becomes fixed -->
+    <div data-sticky-shadow-target="placeholder" style="display: none;"></div>
+    <div class="z-40 bg-white transition-shadow duration-200 -mx-2 md:-mx-4 mb-4 md:mb-6" data-sticky-shadow-target="container">
+    <%= form_with url: players_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form", class: "pb-4" do |f| %>
+      <div class="container mx-auto px-2 md:px-4">
+      <div class="flex flex-col gap-3 md:gap-4 pt-4">
+        <!-- Gameweek and Team Row -->
+        <div class="flex flex-wrap gap-3 md:gap-4">
           <!-- Gameweek Selector -->
           <div class="flex items-center space-x-2">
             <label for="gameweek-select" class="text-xs md:text-sm font-medium text-gray-700 whitespace-nowrap">Gameweek:</label>
@@ -42,60 +51,59 @@
                   onchange: "this.form.requestSubmit()"
                 } %>
           </div>
+        </div>
 
-          <!-- Position Radio Buttons styled as buttons -->
-          <div class="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
-            <span class="text-xs md:text-sm font-medium text-gray-700">Position:</span>
-            <div class="flex flex-wrap gap-2" role="radiogroup">
-              <% @available_positions.each do |position| %>
-                <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
-                <% is_active = @position_filter == position %>
-                <% forecast_count = @forecast_counts[position] || 0 %>
-                <% max_slots = position_config[:slots] %>
-                <%
-                  if is_active
-                    pill_classes = 'bg-amber-200 text-gray-800 border-amber-200 shadow-md'
-                  else
-                    pill_classes = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  end
-                %>
-                <label class="px-2 md:px-3 py-1.5 md:py-2 text-xs font-medium rounded-md border transition-all cursor-pointer inline-block <%= pill_classes %>">
-                  <%= radio_button_tag :position, position, is_active,
-                      style: "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;",
-                      onchange: "this.form.requestSubmit()" %>
-                  <%= position_config[:display_name] %>
-                  <% if user_signed_in? %>
-                    <span class="ml-1 text-gray-600">
-                      (<%= forecast_count %>/<%= max_slots %>)
-                    </span>
-                  <% end %>
-                </label>
-              <% end %>
-            </div>
+        <!-- Position Radio Buttons styled as buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs md:text-sm font-medium text-gray-700">Position:</span>
+          <div class="flex flex-wrap gap-2" role="radiogroup">
+            <% @available_positions.each do |position| %>
+              <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
+              <% is_active = @position_filter == position %>
+              <% forecast_count = @forecast_counts[position] || 0 %>
+              <% max_slots = position_config[:slots] %>
+              <%
+                if is_active
+                  pill_classes = 'bg-amber-200 text-gray-800 border-amber-200 shadow-md'
+                else
+                  pill_classes = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                end
+              %>
+              <label class="px-2 md:px-3 py-1.5 md:py-2 text-xs font-medium rounded-md border transition-all cursor-pointer inline-block <%= pill_classes %>">
+                <%= radio_button_tag :position, position, is_active,
+                    style: "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;",
+                    onchange: "this.form.requestSubmit()" %><%= position_config[:display_name] %><% if user_signed_in? %><span class="ml-1 text-gray-600">(<%= forecast_count %>/<%= max_slots %>)</span>
+                <% end %>
+              </label>
+            <% end %>
           </div>
         </div>
-      <% end %>
+      </div>
+      </div>
+    <% end %>
+    </div>
     </div>
 
     <!-- Consensus Rankings Table -->
     <div class="bg-white shadow-lg rounded-lg overflow-hidden" data-controller="player-forecast">
 
     <% if @consensus_rankings.any? %>
-      <table class="min-w-full divide-y divide-gray-200">
+      <table class="w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+              <th class="px-1 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10 md:w-16">
                 Rank
               </th>
-              <th class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-2 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Player
               </th>
-              <th class="px-2 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                Opponent
+              <th class="px-1 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-14 md:w-32">
+                Opp
               </th>
               <% if @is_next_gameweek %>
-                <th class="px-2 md:px-6 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                  Select
+                <th class="px-1 md:px-6 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10 md:w-20">
+                  <span class="hidden md:inline">Select</span>
+                  <span class="md:hidden">⚡</span>
                 </th>
               <% end %>
             </tr>
@@ -103,30 +111,22 @@
           <tbody class="bg-white divide-y divide-gray-200">
             <% has_forecasts = @consensus_rankings.any? { |r| r.total_forecasts > 0 } %>
             <%
-              # Calculate ranks based on forecast counts and total score as tiebreaker
+              # Calculate ranks - always sequential, alphabetical as tiebreaker
               if has_forecasts
-                current_rank = 1
-                last_count = nil
-                last_score = nil
-                ranks = []
-
-                @consensus_rankings.each_with_index do |ranking, index|
-                  if ranking.total_forecasts != last_count || ranking.total_score != last_score
-                    current_rank = index + 1
-                    last_count = ranking.total_forecasts
-                    last_score = ranking.total_score
-                  end
-
-                  # Check if there are more players with the same count AND score after this one
-                  next_rankings = @consensus_rankings[(index + 1)..-1] || []
-                  has_ties = next_rankings.any? { |r| r.total_forecasts == ranking.total_forecasts && r.total_score == ranking.total_score }
-
-                  if has_ties || (index > 0 && @consensus_rankings[index - 1].total_forecasts == ranking.total_forecasts && @consensus_rankings[index - 1].total_score == ranking.total_score)
-                    ranks << "#{current_rank}="
-                  else
-                    ranks << current_rank.to_s
-                  end
+                # Sort by forecast count (desc), total score (desc), then alphabetically by last name
+                sorted_rankings = @consensus_rankings.sort_by do |r|
+                  player = @players_by_id[r.player_id]
+                  [-r.total_forecasts, -r.total_score, player&.last_name || ""]
                 end
+
+                # Create a rank map for original order
+                rank_map = {}
+                sorted_rankings.each_with_index do |ranking, index|
+                  rank_map[ranking.player_id] = (index + 1).to_s
+                end
+
+                # Build ranks array in original @consensus_rankings order
+                ranks = @consensus_rankings.map { |r| rank_map[r.player_id] }
               end
             %>
             <% @consensus_rankings.each_with_index do |ranking, index| %>
@@ -134,20 +134,20 @@
               <% is_selected = @current_forecasts[ranking.player_id].present? %>
               <% has_no_forecasts = ranking.total_forecasts == 0 %>
               <tr class="<%= is_selected ? 'bg-yellow-100 border-l-4 border-yellow-400' : (has_no_forecasts ? 'bg-gray-50' : '') %>" data-player-row="<%= ranking.player_id %>">
-                <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-base md:text-lg font-medium <%= has_no_forecasts ? 'text-gray-400' : 'text-gray-800' %> w-16">
+                <td class="px-1 md:px-4 py-2 md:py-4 whitespace-nowrap text-sm md:text-lg font-medium <%= has_no_forecasts ? 'text-gray-400' : 'text-gray-800' %> w-10 md:w-16">
                   <%= ranking.total_forecasts > 0 ? ranks[index] : "-" %>
                 </td>
-                <td class="px-3 md:px-6 py-2 md:py-4">
+                <td class="px-2 md:px-6 py-2 md:py-4">
                   <%= render PlayerCardComponent.new(player: player) %>
                 </td>
-                <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-right w-32">
+                <td class="px-1 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm w-14 md:w-32">
                   <%= render OpponentComponent.new(player: player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
                 </td>
                 <% if @is_next_gameweek %>
-                  <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-center w-20">
+                  <td class="px-1 md:px-6 py-2 md:py-4 whitespace-nowrap text-center w-10 md:w-20">
                     <button
                       type="button"
-                      class="forecast-toggle-btn text-2xl md:text-3xl transition-all cursor-pointer <%= is_selected ? 'text-yellow-400 drop-shadow-lg filter' : 'text-gray-300 hover:text-yellow-300' %>"
+                      class="forecast-toggle-btn text-xl md:text-3xl transition-all cursor-pointer <%= is_selected ? 'text-yellow-400 drop-shadow-lg filter' : 'text-gray-300 hover:text-yellow-300' %>"
                       data-player-id="<%= ranking.player_id %>"
                       data-position="<%= ranking.position %>"
                       data-selected="<%= is_selected %>"
