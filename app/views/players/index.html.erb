@@ -88,21 +88,22 @@
     <div class="bg-white shadow-lg rounded-lg overflow-hidden" data-controller="player-forecast">
 
     <% if @consensus_rankings.any? %>
-      <table class="w-full divide-y divide-gray-200" style="table-layout: fixed;">
+      <table class="w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 3rem;">
+              <th class="px-1 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10 md:w-16">
                 Rank
               </th>
-              <th class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th class="px-2 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Player
               </th>
-              <th class="px-2 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 5rem;">
-                Opponent
+              <th class="px-1 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-14 md:w-32">
+                Opp
               </th>
               <% if @is_next_gameweek %>
-                <th class="px-2 md:px-6 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 3.5rem;">
-                  Select
+                <th class="px-1 md:px-6 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10 md:w-20">
+                  <span class="hidden md:inline">Select</span>
+                  <span class="md:hidden">⚡</span>
                 </th>
               <% end %>
             </tr>
@@ -141,20 +142,20 @@
               <% is_selected = @current_forecasts[ranking.player_id].present? %>
               <% has_no_forecasts = ranking.total_forecasts == 0 %>
               <tr class="<%= is_selected ? 'bg-yellow-100 border-l-4 border-yellow-400' : (has_no_forecasts ? 'bg-gray-50' : '') %>" data-player-row="<%= ranking.player_id %>">
-                <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-base md:text-lg font-medium <%= has_no_forecasts ? 'text-gray-400' : 'text-gray-800' %>">
+                <td class="px-1 md:px-4 py-2 md:py-4 whitespace-nowrap text-sm md:text-lg font-medium <%= has_no_forecasts ? 'text-gray-400' : 'text-gray-800' %> w-10 md:w-16">
                   <%= ranking.total_forecasts > 0 ? ranks[index] : "-" %>
                 </td>
-                <td class="px-3 md:px-6 py-2 md:py-4">
+                <td class="px-2 md:px-6 py-2 md:py-4">
                   <%= render PlayerCardComponent.new(player: player) %>
                 </td>
-                <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-right">
+                <td class="px-1 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm w-14 md:w-32">
                   <%= render OpponentComponent.new(player: player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
                 </td>
                 <% if @is_next_gameweek %>
-                  <td class="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-center">
+                  <td class="px-1 md:px-6 py-2 md:py-4 whitespace-nowrap text-center w-10 md:w-20">
                     <button
                       type="button"
-                      class="forecast-toggle-btn text-2xl md:text-3xl transition-all cursor-pointer <%= is_selected ? 'text-yellow-400 drop-shadow-lg filter' : 'text-gray-300 hover:text-yellow-300' %>"
+                      class="forecast-toggle-btn text-xl md:text-3xl transition-all cursor-pointer <%= is_selected ? 'text-yellow-400 drop-shadow-lg filter' : 'text-gray-300 hover:text-yellow-300' %>"
                       data-player-id="<%= ranking.player_id %>"
                       data-position="<%= ranking.position %>"
                       data-selected="<%= is_selected %>"
