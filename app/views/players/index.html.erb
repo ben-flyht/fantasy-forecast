@@ -47,11 +47,10 @@
         </div>
       </div>
 
-      <!-- Position Filter (sticky) -->
+      <!-- Position Filter (sticky with JS) -->
       <div data-controller="sticky-shadow">
         <div data-sticky-shadow-target="sentinel"></div>
-        <!-- Placeholder to maintain layout when filter becomes fixed -->
-        <div data-sticky-shadow-target="placeholder" style="display: none;"></div>
+        <div data-sticky-shadow-target="placeholder" style="height: 0;"></div>
         <div class="z-40 bg-white transition-shadow duration-200 -mx-2 md:-mx-4 mb-4 md:mb-6" data-sticky-shadow-target="container">
           <div class="container mx-auto px-2 md:px-4">
             <div class="flex flex-wrap items-center gap-2 py-3">

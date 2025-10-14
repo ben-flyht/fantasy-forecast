@@ -4,9 +4,10 @@ export default class extends Controller {
   static targets = ["container", "sentinel", "placeholder"]
 
   connect() {
-    // Track current state to prevent unnecessary updates
+    // Track current state
     this.isFixed = false
-    this.debounceTimer = null
+    this.lastStateChange = 0
+    this.cooldownPeriod = 300 // 300ms cooldown to prevent rapid toggling
 
     // Calculate the header height
     const header = document.querySelector('nav')
@@ -19,32 +20,72 @@ export default class extends Controller {
       // Find the inner container
       this.innerContainer = this.containerTarget.querySelector('.container')
 
-      // Observe the sentinel element - when it's not visible, make the element fixed
-      // Use a larger threshold and rootMargin to prevent rapid toggling
-      this.observer = new IntersectionObserver(
-        ([e]) => {
-          // Debounce to prevent rapid state changes
-          clearTimeout(this.debounceTimer)
-          this.debounceTimer = setTimeout(() => {
-            const shouldBeFixed = !e.isIntersecting
+      // Use scroll event with throttling as backup
+      this.handleScroll = this.throttle(() => {
+        this.checkPosition()
+      }, 50)
 
-            // Only update if state actually changed
-            if (shouldBeFixed !== this.isFixed) {
-              if (shouldBeFixed) {
-                this.makeFixed()
-              } else {
-                this.makeStatic()
-              }
+      // Observe the sentinel element
+      this.observer = new IntersectionObserver(
+        ([entry]) => {
+          // Only process if enough time has passed since last change
+          const now = Date.now()
+          if (now - this.lastStateChange < this.cooldownPeriod) {
+            return
+          }
+
+          const shouldBeFixed = !entry.isIntersecting
+
+          // Only update if state actually needs to change
+          if (shouldBeFixed !== this.isFixed) {
+            this.lastStateChange = now
+            if (shouldBeFixed) {
+              this.makeFixed()
+            } else {
+              this.makeStatic()
             }
-          }, 10)
+          }
         },
         {
           threshold: [0],
-          rootMargin: `-${this.headerHeight + 5}px 0px 0px 0px` // Add 5px buffer
+          rootMargin: `-${this.headerHeight}px 0px 0px 0px`
         }
       )
 
       this.observer.observe(this.sentinelTarget)
+
+      // Also listen to scroll as a backup
+      window.addEventListener('scroll', this.handleScroll, { passive: true })
+    }
+  }
+
+  throttle(func, delay) {
+    let lastCall = 0
+    return function(...args) {
+      const now = Date.now()
+      if (now - lastCall >= delay) {
+        lastCall = now
+        func.apply(this, args)
+      }
+    }
+  }
+
+  checkPosition() {
+    const sentinelRect = this.sentinelTarget.getBoundingClientRect()
+    const shouldBeFixed = sentinelRect.bottom <= this.headerHeight
+
+    const now = Date.now()
+    if (now - this.lastStateChange < this.cooldownPeriod) {
+      return
+    }
+
+    if (shouldBeFixed !== this.isFixed) {
+      this.lastStateChange = now
+      if (shouldBeFixed) {
+        this.makeFixed()
+      } else {
+        this.makeStatic()
+      }
     }
   }
 
@@ -54,6 +95,9 @@ export default class extends Controller {
     // Measure where the inner container is BEFORE changing anything
     const innerRect = this.innerContainer.getBoundingClientRect()
     const targetLeft = innerRect.left
+
+    // Set placeholder height to maintain layout
+    this.placeholderTarget.style.height = `${this.containerHeight}px`
 
     this.containerTarget.style.position = 'fixed'
     this.containerTarget.style.top = `${this.headerHeight}px`
@@ -67,10 +111,6 @@ export default class extends Controller {
     // Override the inner container's auto margins to keep it in place
     this.innerContainer.style.marginLeft = `${targetLeft}px`
     this.innerContainer.style.marginRight = 'auto'
-
-    // Show placeholder to prevent layout shift
-    this.placeholderTarget.style.display = 'block'
-    this.placeholderTarget.style.height = `${this.containerHeight}px`
   }
 
   makeStatic() {
@@ -89,16 +129,16 @@ export default class extends Controller {
     this.innerContainer.style.marginLeft = ''
     this.innerContainer.style.marginRight = ''
 
-    // Hide placeholder
-    this.placeholderTarget.style.display = 'none'
+    // Remove placeholder height
+    this.placeholderTarget.style.height = '0'
   }
 
   disconnect() {
-    // Clear any pending debounce timer
-    clearTimeout(this.debounceTimer)
-
     if (this.observer) {
       this.observer.disconnect()
+    }
+    if (this.handleScroll) {
+      window.removeEventListener('scroll', this.handleScroll)
     }
   }
 }
