@@ -4,6 +4,10 @@ export default class extends Controller {
   static targets = ["container", "sentinel", "placeholder"]
 
   connect() {
+    // Track current state to prevent unnecessary updates
+    this.isFixed = false
+    this.debounceTimer = null
+
     // Calculate the header height
     const header = document.querySelector('nav')
     if (header) {
@@ -16,17 +20,28 @@ export default class extends Controller {
       this.innerContainer = this.containerTarget.querySelector('.container')
 
       // Observe the sentinel element - when it's not visible, make the element fixed
+      // Use a larger threshold and rootMargin to prevent rapid toggling
       this.observer = new IntersectionObserver(
         ([e]) => {
-          if (e.isIntersecting) {
-            // Sentinel is visible, element is in normal flow
-            this.makeStatic()
-          } else {
-            // Sentinel is hidden, element should be fixed
-            this.makeFixed()
-          }
+          // Debounce to prevent rapid state changes
+          clearTimeout(this.debounceTimer)
+          this.debounceTimer = setTimeout(() => {
+            const shouldBeFixed = !e.isIntersecting
+
+            // Only update if state actually changed
+            if (shouldBeFixed !== this.isFixed) {
+              if (shouldBeFixed) {
+                this.makeFixed()
+              } else {
+                this.makeStatic()
+              }
+            }
+          }, 10)
         },
-        { threshold: [0], rootMargin: `-${this.headerHeight}px 0px 0px 0px` }
+        {
+          threshold: [0],
+          rootMargin: `-${this.headerHeight + 5}px 0px 0px 0px` // Add 5px buffer
+        }
       )
 
       this.observer.observe(this.sentinelTarget)
@@ -34,6 +49,8 @@ export default class extends Controller {
   }
 
   makeFixed() {
+    this.isFixed = true
+
     // Measure where the inner container is BEFORE changing anything
     const innerRect = this.innerContainer.getBoundingClientRect()
     const targetLeft = innerRect.left
@@ -57,6 +74,8 @@ export default class extends Controller {
   }
 
   makeStatic() {
+    this.isFixed = false
+
     this.containerTarget.style.position = 'static'
     this.containerTarget.style.top = ''
     this.containerTarget.style.left = ''
@@ -75,6 +94,9 @@ export default class extends Controller {
   }
 
   disconnect() {
+    // Clear any pending debounce timer
+    clearTimeout(this.debounceTimer)
+
     if (this.observer) {
       this.observer.disconnect()
     }
