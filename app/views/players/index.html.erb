@@ -17,16 +17,9 @@
       <h1 class="text-xl md:text-3xl font-bold text-gray-800 mb-3 md:mb-4"><%= @page_title %></h1>
     </div>
 
-    <!-- Week and Position Filters -->
-    <div data-controller="sticky-shadow">
-    <div data-sticky-shadow-target="sentinel"></div>
-    <!-- Placeholder to maintain layout when filter becomes fixed -->
-    <div data-sticky-shadow-target="placeholder" style="display: none;"></div>
-    <div class="z-40 bg-white transition-shadow duration-200 -mx-2 md:-mx-4 mb-4 md:mb-6" data-sticky-shadow-target="container">
-    <%= form_with url: players_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form", class: "pb-4" do |f| %>
-      <div class="container mx-auto px-2 md:px-4">
-      <div class="flex flex-col gap-3 md:gap-4 pt-4">
-        <!-- Gameweek and Team Row -->
+    <%= form_with url: players_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form" do |f| %>
+      <!-- Gameweek and Team Filters (not sticky) -->
+      <div class="pt-4 mb-3 md:mb-4">
         <div class="flex flex-wrap gap-3 md:gap-4">
           <!-- Gameweek Selector -->
           <div class="flex items-center space-x-2">
@@ -52,37 +45,43 @@
                 } %>
           </div>
         </div>
+      </div>
 
-        <!-- Position Radio Buttons styled as buttons -->
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs md:text-sm font-medium text-gray-700">Position:</span>
-          <div class="flex flex-wrap gap-2" role="radiogroup">
-            <% @available_positions.each do |position| %>
-              <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
-              <% is_active = @position_filter == position %>
-              <% forecast_count = @forecast_counts[position] || 0 %>
-              <% max_slots = position_config[:slots] %>
-              <%
-                if is_active
-                  pill_classes = 'bg-amber-200 text-gray-800 border-amber-200 shadow-md'
-                else
-                  pill_classes = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                end
-              %>
-              <label class="px-2 md:px-3 py-1.5 md:py-2 text-xs font-medium rounded-md border transition-all cursor-pointer inline-block <%= pill_classes %>">
-                <%= radio_button_tag :position, position, is_active,
-                    style: "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;",
-                    onchange: "this.form.requestSubmit()" %><%= position_config[:display_name] %><% if user_signed_in? %><span class="ml-1 text-gray-600">(<%= forecast_count %>/<%= max_slots %>)</span>
+      <!-- Position Filter (sticky) -->
+      <div data-controller="sticky-shadow">
+        <div data-sticky-shadow-target="sentinel"></div>
+        <!-- Placeholder to maintain layout when filter becomes fixed -->
+        <div data-sticky-shadow-target="placeholder" style="display: none;"></div>
+        <div class="z-40 bg-white transition-shadow duration-200 -mx-2 md:-mx-4 mb-4 md:mb-6" data-sticky-shadow-target="container">
+          <div class="container mx-auto px-2 md:px-4">
+            <div class="flex flex-wrap items-center gap-2 py-3">
+              <span class="text-xs md:text-sm font-medium text-gray-700">Position:</span>
+              <div class="flex flex-wrap gap-2" role="radiogroup">
+                <% @available_positions.each do |position| %>
+                  <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
+                  <% is_active = @position_filter == position %>
+                  <% forecast_count = @forecast_counts[position] || 0 %>
+                  <% max_slots = position_config[:slots] %>
+                  <%
+                    if is_active
+                      pill_classes = 'bg-amber-200 text-gray-800 border-amber-200 shadow-md'
+                    else
+                      pill_classes = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    end
+                  %>
+                  <label class="px-2 md:px-3 py-1.5 md:py-2 text-xs font-medium rounded-md border transition-all cursor-pointer inline-block <%= pill_classes %>">
+                    <%= radio_button_tag :position, position, is_active,
+                        style: "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;",
+                        onchange: "this.form.requestSubmit()" %><%= position_config[:display_name] %><% if user_signed_in? %><span class="ml-1 text-gray-600">(<%= forecast_count %>/<%= max_slots %>)</span>
+                    <% end %>
+                  </label>
                 <% end %>
-              </label>
-            <% end %>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      </div>
     <% end %>
-    </div>
-    </div>
 
     <!-- Consensus Rankings Table -->
     <div class="bg-white shadow-lg rounded-lg overflow-hidden" data-controller="player-forecast">
