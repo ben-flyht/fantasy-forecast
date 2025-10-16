@@ -108,32 +108,14 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <% has_forecasts = @consensus_rankings.any? { |r| r.total_forecasts > 0 } %>
-            <%
-              # Calculate ranks - always sequential, alphabetical as tiebreaker
-              if has_forecasts
-                # Sort by forecast count (desc), total score (desc), then alphabetically by last name
-                sorted_rankings = @consensus_rankings.sort_by do |r|
-                  player = @players_by_id[r.player_id]
-                  [-r.total_forecasts, -r.total_score, player&.last_name || ""]
-                end
-
-                # Create a rank map for original order
-                rank_map = {}
-                sorted_rankings.each_with_index do |ranking, index|
-                  rank_map[ranking.player_id] = (index + 1).to_s
-                end
-
-                # Build ranks array in original @consensus_rankings order
-                ranks = @consensus_rankings.map { |r| rank_map[r.player_id] }
-              end
-            %>
             <% @consensus_rankings.each_with_index do |ranking, index| %>
               <% player = @players_by_id[ranking.player_id] %>
               <% is_selected = @current_forecasts[ranking.player_id].present? %>
               <% has_no_forecasts = ranking.total_forecasts == 0 %>
+              <% rank = has_forecasts && ranking.total_forecasts > 0 ? index + 1 : nil %>
               <tr class="<%= is_selected ? 'bg-yellow-100 border-l-4 border-yellow-400' : (has_no_forecasts ? 'bg-gray-50' : '') %>" data-player-row="<%= ranking.player_id %>">
                 <td class="px-1 md:px-4 py-2 md:py-4 whitespace-nowrap text-sm md:text-lg font-medium <%= has_no_forecasts ? 'text-gray-400' : 'text-gray-800' %> w-10 md:w-16">
-                  <%= ranking.total_forecasts > 0 ? ranks[index] : "-" %>
+                  <%= rank || "-" %>
                 </td>
                 <td class="px-2 md:px-6 py-2 md:py-4">
                   <%= render PlayerCardComponent.new(player: player) %>
