@@ -24,15 +24,7 @@ module ApplicationHelper
           "@id": "https://www.fantasyforecast.co.uk/#website",
           "url": "https://www.fantasyforecast.co.uk/",
           "name": "Fantasy Forecast",
-          "description": "Crowd-sourced Fantasy Premier League player rankings updated every gameweek",
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": {
-              "@type": "EntryPoint",
-              "urlTemplate": "https://www.fantasyforecast.co.uk/players?search={search_term_string}"
-            },
-            "query-input": "required name=search_term_string"
-          }
+          "description": "Crowd-sourced Fantasy Premier League player rankings updated every gameweek"
         },
         {
           "@type": "Organization",
