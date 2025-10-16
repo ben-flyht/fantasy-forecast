@@ -1,13 +1,15 @@
 <% if @player %>
   <div class="flex items-center space-x-2 md:space-x-4">
-    <div class="w-8 h-8 md:w-16 md:h-16 flex-shrink-0">
+    <div class="w-8 h-8 md:w-12 md:h-12 flex-shrink-0">
       <% if @player.photo_url %>
-        <img src="<%= @player.photo_url(size: '40x40') %>" alt="<%= @player.name %>" class="w-8 h-8 md:w-16 md:h-16 rounded-full object-cover" onerror="this.style.display='none'">
+        <%= image_tag @player.photo_url(size: "40x40"), alt: @player.name, class: "w-8 h-8 md:w-12 md:h-12 rounded-full object-cover", onerror: "this.style.display='none'" %>
       <% end %>
     </div>
     <div class="flex flex-col min-w-0">
-      <span class="text-xs text-gray-800 break-words"><%= @player.first_name %></span>
-      <span class="text-sm md:text-lg font-bold text-gray-800 break-words"><%= @player.last_name %></span>
+      <span class="text-sm md:text-lg font-bold text-gray-800 break-words" aria-label="<%= @player.full_name %>">
+        <%= @player.short_name %>
+        <span class="sr-only"><%= @player.full_name %></span>
+      </span>
       <% if @player.team %>
         <div class="flex flex-wrap items-center gap-1 mt-0.5">
           <span class="text-xs px-2 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-800 whitespace-nowrap"><%= @player.team.name %></span>
