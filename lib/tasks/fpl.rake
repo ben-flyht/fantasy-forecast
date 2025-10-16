@@ -1,14 +1,15 @@
 namespace :fpl do
-  desc "Sync teams, players, gameweeks and matches"
+  desc "Sync all FPL data (teams, players, gameweeks, matches, and all performances)"
   task sync: :environment do
-    puts "Starting FPL sync (teams, players, gameweeks and matches)..."
+    puts "Starting full FPL sync..."
 
     Rake::Task["fpl:sync_teams"].invoke
     Rake::Task["fpl:sync_players"].invoke
     Rake::Task["fpl:sync_gameweeks"].invoke
     Rake::Task["fpl:sync_matches"].invoke
+    Rake::Task["fpl:sync_all_performances"].invoke
 
-    puts "\n🎉 FPL sync completed successfully!"
+    puts "\n🎉 Complete FPL sync finished successfully!"
   end
 
   desc "Sync teams from Fantasy Premier League API"
@@ -65,47 +66,26 @@ namespace :fpl do
     end
   end
 
-  desc "Sync both players and gameweeks from FPL API"
-  task sync_all: :environment do
-    puts "Starting full FPL sync (players and gameweeks)..."
-
-    # Sync players first
-    puts "\n1. Syncing players..."
-    if Fpl::SyncPlayers.call
-      puts "✅ Successfully synced #{Player.count} players"
-    else
-      puts "❌ Player sync failed"
-      exit 1
-    end
-
-    # Then sync gameweeks
-    puts "\n2. Syncing gameweeks..."
-    if Fpl::SyncGameweeks.call
-      current_gw = Gameweek.current_gameweek
-      next_gw = Gameweek.next_gameweek
-
-      puts "✅ Successfully synced #{Gameweek.count} gameweeks"
-      puts "Current gameweek: #{current_gw&.name || 'None'}"
-      puts "Next gameweek: #{next_gw&.name || 'None'}"
-    else
-      puts "❌ Gameweek sync failed"
-      exit 1
-    end
-
-    puts "\n🎉 Full FPL sync completed successfully!"
-  end
-
-  desc "Sync player performances from Fantasy Premier League API (latest finished gameweek)"
+  desc "Sync player performances from Fantasy Premier League API (current or latest finished gameweek)"
   task sync_performances: :environment do
     puts "Starting FPL performance sync..."
 
     if Fpl::SyncPerformances.call
-      latest_finished_gw = Gameweek.finished.ordered.last
-      performance_count = latest_finished_gw ? Performance.where(gameweek: latest_finished_gw).count : 0
+      synced_gw = Gameweek.current_gameweek || Gameweek.finished.ordered.last
+      performance_count = synced_gw ? Performance.where(gameweek: synced_gw).count : 0
+      status = synced_gw&.is_finished? ? "finished" : "in progress"
 
       puts "✅ Successfully synced performance data"
-      puts "Latest finished gameweek: #{latest_finished_gw&.name || 'None'}"
+      puts "Gameweek: #{synced_gw&.name || 'None'} (#{status})"
       puts "Performances synced: #{performance_count}"
+
+      # Auto-calculate forecast scores for the synced gameweek
+      if synced_gw
+        puts "\nCalculating forecast scores for #{synced_gw.name}..."
+        Forecast.calculate_scores_for_gameweek!(synced_gw)
+        scored_count = Forecast.where(gameweek: synced_gw).where.not(accuracy: nil).count
+        puts "✅ Updated scores for #{scored_count} forecasts"
+      end
     else
       puts "❌ FPL performance sync failed. Check logs for details."
       exit 1
@@ -152,29 +132,6 @@ namespace :fpl do
       end
     else
       puts "\n❌ Sync completed with errors. Failed gameweeks: #{failed_gameweeks.join(', ')}"
-      exit 1
-    end
-  end
-
-  desc "Sync player performances for a specific gameweek"
-  task :sync_performances_for_gameweek, [ :gameweek_id ] => :environment do |t, args|
-    gameweek_id = args[:gameweek_id]
-
-    unless gameweek_id
-      puts "❌ Please provide a gameweek ID: rake fpl:sync_performances_for_gameweek[1]"
-      exit 1
-    end
-
-    puts "Starting FPL performance sync for gameweek #{gameweek_id}..."
-
-    if Fpl::SyncPerformances.call(gameweek_id.to_i)
-      gameweek = Gameweek.find_by(fpl_id: gameweek_id.to_i)
-      performance_count = gameweek ? Performance.where(gameweek: gameweek).count : 0
-
-      puts "✅ Successfully synced performance data for gameweek #{gameweek_id}"
-      puts "Performances synced: #{performance_count}"
-    else
-      puts "❌ FPL performance sync failed for gameweek #{gameweek_id}. Check logs for details."
       exit 1
     end
   end
