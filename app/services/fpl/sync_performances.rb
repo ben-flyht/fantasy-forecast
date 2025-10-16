@@ -12,19 +12,20 @@ module Fpl
     def call(gameweek_id = nil)
       Rails.logger.info "Starting FPL performance sync..."
 
-      # Use latest finished gameweek if none specified (performances only available for finished gameweeks)
+      # Use current or latest finished gameweek if none specified
+      # This allows live scoring during in-progress gameweeks
       gameweek = if gameweek_id
         Gameweek.find_by(fpl_id: gameweek_id)
       else
-        Gameweek.finished.ordered.last
+        Gameweek.current_gameweek || Gameweek.finished.ordered.last
       end
 
       unless gameweek
-        Rails.logger.error "No finished gameweek found for sync"
+        Rails.logger.error "No current or finished gameweek found for sync"
         return false
       end
 
-      Rails.logger.info "Syncing performances for gameweek: #{gameweek.name}"
+      Rails.logger.info "Syncing performances for gameweek: #{gameweek.name} (#{gameweek.is_finished? ? 'finished' : 'in progress'})"
 
       # Fetch all player performance data for this gameweek in a single API call
       gameweek_data = fetch_gameweek_live_data(gameweek.fpl_id)
