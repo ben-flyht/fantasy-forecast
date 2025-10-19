@@ -146,7 +146,7 @@ namespace :fpl do
     puts "Midfielders: #{Player.where(position: 'midfielder').count}"
     puts "Forwards: #{Player.where(position: 'forward').count}"
     puts ""
-    puts "Teams represented: #{Player.distinct.count(:team)}"
+    puts "Teams represented: #{Player.distinct.count(:team_id)}"
     puts "Latest player sync: #{Player.maximum(:updated_at)&.strftime('%Y-%m-%d %H:%M:%S') || 'Never'}"
     puts ""
     puts "Total gameweeks: #{Gameweek.count}"
