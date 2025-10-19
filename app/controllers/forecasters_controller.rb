@@ -71,6 +71,7 @@ class ForecastersController < ApplicationController
   def gameweeks
     @user = User.find(params[:id])
     @gameweek = params[:gameweek]&.to_i
+    @next_gameweek_id = Gameweek.next_gameweek&.fpl_id
 
     # Get all forecasts for this user and gameweek, grouped by position
     all_forecasts = ForecasterRankings.weekly_forecasts(@user.id, @gameweek)
@@ -117,19 +118,13 @@ class ForecastersController < ApplicationController
 
     @forecasts_by_position = all_forecasts.group_by { |f| f.player.position }
 
-    # Calculate gameweek scores (matching forecasters table)
-    if all_forecasts.any?
-      @forecast_count = all_forecasts.size
+    # Get gameweek scores from the service (single source of truth)
+    gameweek_performance = ForecasterRankings.weekly_performance(@user.id).find { |w| w[:gameweek] == @gameweek }
 
-      # Only calculate averages if there are scored forecasts
-      scored_forecasts = all_forecasts.select { |f| f.accuracy.present? }
-      if scored_forecasts.any?
-        @avg_total_score = scored_forecasts.sum { |f| f.total_score.to_f } / scored_forecasts.size
-        @avg_accuracy_score = scored_forecasts.sum { |f| f.accuracy.to_f } / scored_forecasts.size
-      else
-        @avg_total_score = nil
-        @avg_accuracy_score = nil
-      end
+    if gameweek_performance
+      @forecast_count = gameweek_performance[:forecast_count]
+      @avg_total_score = gameweek_performance[:total_score]
+      @avg_accuracy_score = gameweek_performance[:accuracy_score]
     else
       @forecast_count = 0
       @avg_total_score = nil
