@@ -107,28 +107,34 @@ class ForecasterRankings
 
     # Calculate scores for all forecasters
     user_scores = all_forecasters.map do |user|
-      user_scores_by_gw = (all_scores[user.id] || []).index_by(&:gameweek_fpl_id)
+      user_scores_by_gw = (all_scores[user.id] || []).group_by(&:gameweek_fpl_id)
 
-      # Calculate average across ALL gameweeks (0 if didn't participate)
+      # Calculate average across gameweeks participated
       total_score_sum = 0.0
       accuracy_sum = 0.0
-      total_forecast_count = 0
+      gameweeks_participated = 0
+      total_forecasts_made = 0
 
       gameweeks_with_scores.each do |gw_fpl_id|
-        score = user_scores_by_gw[gw_fpl_id]
-        if score
-          total_score_sum += score.total_score.to_f
-          accuracy_sum += score.accuracy.to_f
-          total_forecast_count += 1
+        gameweek_forecasts = user_scores_by_gw[gw_fpl_id]
+        if gameweek_forecasts&.any?
+          # Average accuracy and total_score across all forecasts in this gameweek
+          avg_gw_accuracy = gameweek_forecasts.sum { |f| f.accuracy.to_f } / gameweek_forecasts.size
+          avg_gw_total_score = gameweek_forecasts.sum { |f| f.total_score.to_f } / gameweek_forecasts.size
+
+          total_score_sum += avg_gw_total_score
+          accuracy_sum += avg_gw_accuracy
+          gameweeks_participated += 1
+          total_forecasts_made += gameweek_forecasts.size
         end
-        # If no score, adds 0 (implicit)
       end
 
-      avg_score = total_score_sum / total_gameweeks
-      avg_accuracy = accuracy_sum / total_gameweeks
+      # Average across gameweeks participated (not all gameweeks)
+      avg_score = gameweeks_participated > 0 ? total_score_sum / gameweeks_participated : 0.0
+      avg_accuracy = gameweeks_participated > 0 ? accuracy_sum / gameweeks_participated : 0.0
 
-      # Calculate availability (total forecasts made / total possible forecasts)
-      availability_score = total_forecast_count.to_f / total_possible_forecasts
+      # Calculate availability (gameweeks participated / total gameweeks)
+      availability_score = gameweeks_participated.to_f / total_gameweeks
 
       {
         user_id: user.id,
@@ -136,8 +142,8 @@ class ForecasterRankings
         total_score: avg_score.round(4),
         accuracy_score: avg_accuracy.round(4),
         availability_score: availability_score.round(4),
-        forecast_count: total_forecast_count,
-        gameweeks_participated: total_forecast_count
+        forecast_count: total_forecasts_made,
+        gameweeks_participated: gameweeks_participated
       }
     end
 
@@ -193,30 +199,38 @@ class ForecasterRankings
     total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
     starting_gameweek = Gameweek::STARTING_GAMEWEEK
 
-    query = Forecast.joins(:gameweek)
-            .where(user_id: user_id)
-            .where.not(accuracy: nil)
-            .where("gameweeks.fpl_id >= ?", starting_gameweek)
-            .group("gameweeks.id, gameweeks.fpl_id")
-            .select(
-              "gameweeks.fpl_id as week",
-              "AVG(accuracy) as avg_accuracy",
-              "COUNT(*) as forecast_count"
-            )
-            .order("gameweeks.fpl_id DESC") # Descending so starting gameweek is at bottom
+    # Get all gameweeks this user has forecasts for
+    gameweeks_with_forecasts = Forecast.joins(:gameweek)
+                                      .where(user_id: user_id)
+                                      .where("gameweeks.fpl_id >= ?", starting_gameweek)
+                                      .group("gameweeks.fpl_id")
+                                      .pluck("gameweeks.fpl_id")
+                                      .sort
+                                      .reverse
 
-    query = query.limit(limit) if limit
+    gameweeks_with_forecasts = gameweeks_with_forecasts.first(limit) if limit
 
-    query.map do |performance|
-      availability_score = performance.forecast_count.to_f / total_required_slots
-      total_score = performance.avg_accuracy.to_f * availability_score
+    gameweeks_with_forecasts.map do |gw_fpl_id|
+      # Get all forecasts for this gameweek
+      all_forecasts = Forecast.where(user_id: user_id)
+                              .joins(:gameweek)
+                              .where("gameweeks.fpl_id = ?", gw_fpl_id)
+
+      # Get scored forecasts for accuracy calculation
+      scored_forecasts = all_forecasts.where.not(accuracy: nil)
+
+      # Calculate availability from ALL forecasts, accuracy from SCORED forecasts
+      forecast_count = all_forecasts.count
+      avg_accuracy = scored_forecasts.any? ? scored_forecasts.average(:accuracy).to_f : 0.0
+      availability_score = forecast_count.to_f / total_required_slots
+      total_score = avg_accuracy * availability_score
 
       {
-        gameweek: performance.week,
+        gameweek: gw_fpl_id,
         total_score: total_score.round(4),
-        accuracy_score: performance.avg_accuracy.to_f.round(4),
+        accuracy_score: avg_accuracy.round(4),
         availability_score: availability_score.round(4),
-        forecast_count: performance.forecast_count
+        forecast_count: forecast_count
       }
     end
   end
