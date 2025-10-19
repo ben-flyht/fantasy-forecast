@@ -117,12 +117,33 @@ class Forecast < ApplicationRecord
     # Group by position and rank by gameweek_score
     performances.values.group_by { |p| p.player.position }.each do |position, position_performances|
       sorted_performances = position_performances.sort_by(&:gameweek_score).reverse
+      total_in_position = sorted_performances.size
 
+      # Check if there are any negative scores
+      has_negative_scores = sorted_performances.any? { |p| p.gameweek_score < 0 }
+
+      # Handle tied rankings - players with the same score get the same rank
+      current_rank = 1
       sorted_performances.each_with_index do |performance, index|
+        # For tied scores, use the same rank as previous player
+        if index > 0 && performance.gameweek_score == sorted_performances[index - 1].gameweek_score
+          # Keep the current_rank (tied with previous)
+        else
+          current_rank = index + 1
+        end
+
+        # Special case: players who scored 0 when no one scored negative
+        # should all be ranked last (worst possible rank)
+        final_rank = if !has_negative_scores && performance.gameweek_score == 0
+          total_in_position
+        else
+          current_rank
+        end
+
         rankings[performance.player_id] = {
           position: position,
-          rank: index + 1,
-          total_in_position: sorted_performances.size,
+          rank: final_rank,
+          total_in_position: total_in_position,
           score: performance.gameweek_score
         }
       end

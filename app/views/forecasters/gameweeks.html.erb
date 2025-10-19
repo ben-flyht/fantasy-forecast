@@ -13,18 +13,21 @@
     </div>
 
     <!-- Gameweek Summary -->
-    <%= render 'summary',
-               forecast_count: @forecast_count,
-               avg_total_score: @avg_total_score,
-               gameweek_rank: @gameweek_rank,
-               gameweek_total_forecasters: @gameweek_total_forecasters %>
+    <% is_next_gameweek = @next_gameweek_id && @gameweek == @next_gameweek_id %>
+    <% unless is_next_gameweek %>
+      <%= render 'summary',
+                 forecast_count: @forecast_count,
+                 avg_total_score: @avg_total_score,
+                 gameweek_rank: @gameweek_rank,
+                 gameweek_total_forecasters: @gameweek_total_forecasters %>
+    <% end %>
   </div>
 
   <!-- 4 Column Grid for Positions -->
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-4">
     <% ["goalkeeper", "defender", "midfielder", "forward"].each do |position| %>
       <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
-      <% forecasts = (@forecasts_by_position[position] || []).sort_by { |f| -(f.accuracy || 0) } %>
+      <% forecasts = (@forecasts_by_position[position] || []).sort_by { |f| [f.accuracy.present? ? 0 : 1, -(f.accuracy || 0)] } %>
       <% required_slots = position_config[:slots] %>
       <% empty_slots = required_slots - forecasts.size %>
 
@@ -46,6 +49,10 @@
                 </div>
                 <div class="flex-shrink-0 text-right">
                   <%= render OpponentComponent.new(player: forecast.player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
+                  <% unless is_next_gameweek %>
+                    <% tag_color = forecast.accuracy.present? ? "border-amber-200 bg-amber-100" : "border-gray-200 bg-gray-50" %>
+                    <span class="text-xs px-2 py-0.5 rounded border <%= tag_color %>  text-gray-800 whitespace-nowrap"><%= forecast.accuracy.present? ? "#{(forecast.accuracy * 100).round(1)}%" : "0.0%" %></span>
+                  <% end %>
                 </div>
               </div>
             </div>
@@ -54,7 +61,16 @@
           <!-- Empty slots -->
           <% empty_slots.times do %>
             <div class="px-3 md:px-4 py-2 md:py-3 bg-gray-50">
-              <%= render PlayerCardComponent.new(player: nil, selection_url: players_path(gameweek: @gameweek, position: position)) %>
+              <div class="flex items-center justify-between space-x-2">
+                <div class="flex-1 min-w-0">
+                  <%= render PlayerCardComponent.new(player: nil, selection_url: players_path(gameweek: @gameweek, position: position)) %>
+                </div>
+                <div class="flex-shrink-0 text-right">
+                  <% unless is_next_gameweek %>
+                    <span class="text-xs px-2 py-0.5 rounded border border-gray-200 bg-gray-50  text-gray-800 whitespace-nowrap">0.0%</span>
+                  <% end %>
+                </div>
+              </div>
             </div>
           <% end %>
         </div>
