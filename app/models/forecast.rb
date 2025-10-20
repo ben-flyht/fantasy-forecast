@@ -153,11 +153,12 @@ class Forecast < ApplicationRecord
   end
 
   # Calculate accuracy score based on actual performance (0.0 to 1.0)
-  # Simple formula: 1.0 - (rank / total)
-  # Rank 1 of 81: 1.0 - (1 / 81) = 98.8%
-  # Rank 10 of 81: 1.0 - (10 / 81) = 87.7%
-  # Rank 81 of 81: 1.0 - (81 / 81) = 0.0%
-  # Negative scoring players will be ranked last automatically
+  # Formula: (total - rank) / (total - 1)
+  # This ensures:
+  #   Rank 1 of 81: (81 - 1) / (81 - 1) = 100%
+  #   Rank 10 of 81: (81 - 10) / (81 - 1) = 88.75%
+  #   Rank 81 of 81: (81 - 81) / (81 - 1) = 0%
+  # Players scoring 0 when 0 is the bottom score all get 0% (they're ranked last)
   def self.calculate_accuracy_score(forecast, performance, position_rankings)
     ranking = position_rankings[forecast.player_id]
     return 0.0 unless ranking
@@ -168,8 +169,8 @@ class Forecast < ApplicationRecord
     # Return 0 if only one player in position (can't calculate)
     return 0.0 if position_total <= 1
 
-    # Formula: 1.0 - (rank / total)
-    1.0 - (rank.to_f / position_total)
+    # Formula: (total - rank) / (total - 1)
+    (position_total - rank).to_f / (position_total - 1)
   end
 
   private
