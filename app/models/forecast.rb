@@ -72,37 +72,21 @@ class Forecast < ApplicationRecord
   def self.calculate_scores_for_gameweek!(gameweek)
     gameweek_id = gameweek.is_a?(Gameweek) ? gameweek.id : gameweek
 
-    # Get all forecasts for this gameweek
-    forecasts = includes(:player, :user).where(gameweek_id: gameweek_id)
+    # Get all forecasts for this gameweek (load into memory for efficiency)
+    forecasts = includes(:player, :user).where(gameweek_id: gameweek_id).to_a
 
     # Get performance data for this gameweek
     performances = Performance.includes(:player)
                              .where(gameweek_id: gameweek_id)
                              .index_by(&:player_id)
 
-    # Calculate rankings by position for this gameweek
-    position_rankings = calculate_position_rankings(performances)
-
-    # Group forecasts by user to calculate availability
-    forecasts_by_user = forecasts.group_by(&:user_id)
-
-    # Calculate total required slots across all positions
-    total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
-
-    # Calculate availability score for each user
-    availability_by_user = {}
-    forecasts_by_user.each do |user_id, user_forecasts|
-      actual_slots = user_forecasts.count
-      availability_score = actual_slots.to_f / total_required_slots
-      availability_by_user[user_id] = availability_score
-    end
-
     # Process each forecast
-    forecasts.find_each do |forecast|
+    forecasts.each do |forecast|
       performance = performances[forecast.player_id]
       next unless performance # Skip if no performance data
 
-      accuracy = calculate_accuracy_score(forecast, performance, position_rankings)
+      # Calculate accuracy by comparing against other users' forecasts in same position
+      accuracy = calculate_accuracy_score(forecast, forecasts, performances)
 
       forecast.update!(accuracy: accuracy)
     end
@@ -110,55 +94,50 @@ class Forecast < ApplicationRecord
 
   private
 
-  # Calculate position-based rankings for the gameweek
-  def self.calculate_position_rankings(performances)
-    rankings = {}
-
-    # Group by position and rank by gameweek_score
-    performances.values.group_by { |p| p.player.position }.each do |position, position_performances|
-      # Get unique scores, sorted from best to worst
-      unique_scores = position_performances.map(&:gameweek_score).uniq.sort.reverse
-      total_unique_scores = unique_scores.size
-
-      # Rank each performance based on where its score appears in unique scores
-      position_performances.each do |performance|
-        # Find the rank (1-indexed position) of this score in unique scores
-        rank = unique_scores.index(performance.gameweek_score) + 1
-
-        rankings[performance.player_id] = {
-          position: position,
-          rank: rank,
-          total_in_position: total_unique_scores,
-          score: performance.gameweek_score
-        }
-      end
-    end
-
-    rankings
-  end
-
-  # Calculate accuracy score based on actual performance (0.0 to 1.0)
+  # Calculate accuracy score based on actual performance compared to all players in position (0.0 to 1.0)
   # Formula: (total_unique_scores - rank) / (total_unique_scores - 1)
   # This ensures:
   #   Rank 1 of 13 unique scores: (13 - 1) / (13 - 1) = 100%
   #   Rank 7 of 13 unique scores: (13 - 7) / (13 - 1) = 50%
   #   Rank 13 of 13 unique scores: (13 - 13) / (13 - 1) = 0%
-  # Players are ranked by unique score tiers, not by beating individual players
-  def self.calculate_accuracy_score(forecast, performance, position_rankings)
-    ranking = position_rankings[forecast.player_id]
-    return 0.0 unless ranking
+  # Players are ranked by unique score tiers among all performances,
+  # but excluding this user's other forecasted players in the same position
+  def self.calculate_accuracy_score(forecast, all_forecasts, performances)
+    current_performance = performances[forecast.player_id]
+    return 0.0 unless current_performance
 
-    position_total = ranking[:total_in_position]
-    rank = ranking[:rank]
+    current_score = current_performance.gameweek_score
+    current_position = forecast.player.position
 
-    # Return 0 if only one player in position (can't calculate)
-    return 0.0 if position_total <= 1
+    # Get player IDs that this user forecasted in the same position (excluding current player)
+    user_forecasted_player_ids = all_forecasts
+      .select { |f| f.user_id == forecast.user_id && f.player.position == current_position && f.player_id != forecast.player_id }
+      .map(&:player_id)
 
-    # Formula: (total - rank) / (total - 1)
-    (position_total - rank).to_f / (position_total - 1)
+    # Get all performances in this position, excluding the user's other forecasted players
+    position_performances = performances.values.select do |perf|
+      perf.player.position == current_position && !user_forecasted_player_ids.include?(perf.player_id)
+    end
+
+    # Get all scores for ranking
+    scores = position_performances.map(&:gameweek_score)
+
+    # If only one score, can't calculate accuracy
+    return 0.0 if scores.size <= 1
+
+    # Get unique scores and rank them from best to worst
+    unique_scores = scores.uniq.sort.reverse
+    total_unique_scores = unique_scores.size
+
+    # Return 0 if only one unique score
+    return 0.0 if total_unique_scores <= 1
+
+    # Find rank of current score (1-indexed)
+    rank = unique_scores.index(current_score) + 1
+
+    # Calculate accuracy: (total - rank) / (total - 1)
+    (total_unique_scores - rank).to_f / (total_unique_scores - 1)
   end
-
-  private
 
   # Validate position slot limits based on POSITION_CONFIG
   def position_slot_limit
