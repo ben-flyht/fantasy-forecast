@@ -116,34 +116,19 @@ class Forecast < ApplicationRecord
 
     # Group by position and rank by gameweek_score
     performances.values.group_by { |p| p.player.position }.each do |position, position_performances|
-      sorted_performances = position_performances.sort_by(&:gameweek_score).reverse
-      total_in_position = sorted_performances.size
+      # Get unique scores, sorted from best to worst
+      unique_scores = position_performances.map(&:gameweek_score).uniq.sort.reverse
+      total_unique_scores = unique_scores.size
 
-      # Check if there are any negative scores
-      has_negative_scores = sorted_performances.any? { |p| p.gameweek_score < 0 }
-
-      # Handle tied rankings - players with the same score get the same rank
-      current_rank = 1
-      sorted_performances.each_with_index do |performance, index|
-        # For tied scores, use the same rank as previous player
-        if index > 0 && performance.gameweek_score == sorted_performances[index - 1].gameweek_score
-          # Keep the current_rank (tied with previous)
-        else
-          current_rank = index + 1
-        end
-
-        # Special case: players who scored 0 when no one scored negative
-        # should all be ranked last (worst possible rank)
-        final_rank = if !has_negative_scores && performance.gameweek_score == 0
-          total_in_position
-        else
-          current_rank
-        end
+      # Rank each performance based on where its score appears in unique scores
+      position_performances.each do |performance|
+        # Find the rank (1-indexed position) of this score in unique scores
+        rank = unique_scores.index(performance.gameweek_score) + 1
 
         rankings[performance.player_id] = {
           position: position,
-          rank: final_rank,
-          total_in_position: total_in_position,
+          rank: rank,
+          total_in_position: total_unique_scores,
           score: performance.gameweek_score
         }
       end
@@ -153,12 +138,12 @@ class Forecast < ApplicationRecord
   end
 
   # Calculate accuracy score based on actual performance (0.0 to 1.0)
-  # Formula: (total - rank) / (total - 1)
+  # Formula: (total_unique_scores - rank) / (total_unique_scores - 1)
   # This ensures:
-  #   Rank 1 of 81: (81 - 1) / (81 - 1) = 100%
-  #   Rank 10 of 81: (81 - 10) / (81 - 1) = 88.75%
-  #   Rank 81 of 81: (81 - 81) / (81 - 1) = 0%
-  # Players scoring 0 when 0 is the bottom score all get 0% (they're ranked last)
+  #   Rank 1 of 13 unique scores: (13 - 1) / (13 - 1) = 100%
+  #   Rank 7 of 13 unique scores: (13 - 7) / (13 - 1) = 50%
+  #   Rank 13 of 13 unique scores: (13 - 13) / (13 - 1) = 0%
+  # Players are ranked by unique score tiers, not by beating individual players
   def self.calculate_accuracy_score(forecast, performance, position_rankings)
     ranking = position_rankings[forecast.player_id]
     return 0.0 unless ranking
