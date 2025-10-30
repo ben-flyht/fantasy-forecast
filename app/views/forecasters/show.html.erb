@@ -16,6 +16,7 @@
     <%= render 'summary',
                forecast_count: @total_forecast_count,
                avg_total_score: @overall_total_score,
+               avg_accuracy_score: @overall_accuracy_score,
                gameweek_rank: @overall_rank,
                gameweek_total_forecasters: @total_forecasters %>
   </div>
@@ -26,17 +27,20 @@
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
-            <th class="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+            <th class="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+              Rank
+            </th>
+            <th class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Gameweek
             </th>
             <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-              Rank
+              Forecasts
             </th>
-            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-              Selections
-            </th>
-            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
               Accuracy
+            </th>
+            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+              Score
             </th>
           </tr>
         </thead>
@@ -45,7 +49,12 @@
             <% is_next_gameweek = @next_gameweek_id && ranking[:gameweek] == @next_gameweek_id %>
             <% has_no_selections = ranking[:forecast_count] == 0 %>
             <tr class="<%= 'bg-gray-50' if has_no_selections %> <%= 'hover:bg-gray-50 cursor-pointer' unless has_no_selections %>" <%= "onclick=\"window.location='#{gameweeks_forecaster_path(@user.id, ranking[:gameweek])}'\"" unless has_no_selections %>>
-              <td class="px-2 md:px-4 py-2 md:py-4 w-32">
+              <td class="px-2 md:px-4 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium <%= has_no_selections ? 'text-gray-400' : 'text-gray-800' %> w-16">
+                <% if ranking[:rank] %>
+                  <%= ranking[:rank] %>
+                <% end %>
+              </td>
+              <td class="px-3 md:px-6 py-2 md:py-4">
                 <% if has_no_selections %>
                   <span class="text-xs md:text-sm font-medium text-gray-400">Gameweek <%= ranking[:gameweek] %></span>
                 <% else %>
@@ -54,17 +63,17 @@
                   <% end %>
                 <% end %>
               </td>
-              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium <%= has_no_selections ? 'text-gray-400' : 'text-gray-800' %> w-24">
-                <% if ranking[:rank] %>
-                  <%= ranking[:rank] %>
+              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm <%= has_no_selections ? 'text-gray-400' : 'text-gray-600' %> w-24">
+                <%= ranking[:forecast_count] %>
+              </td>
+              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm <%= has_no_selections ? 'text-gray-400' : 'text-gray-600' %> w-24">
+                <% unless is_next_gameweek %>
+                  <%= (ranking[:accuracy_score] * 100).round(1) %>%
                 <% end %>
               </td>
-              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium <%= has_no_selections ? 'text-gray-400' : 'text-gray-800' %> w-32">
-                <%= ranking[:forecast_count] %>/30
-              </td>
-              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium <%= has_no_selections ? 'text-gray-400' : 'text-gray-800' %> w-32">
+              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium <%= has_no_selections ? 'text-gray-400' : 'text-gray-800' %> w-24">
                 <% unless is_next_gameweek %>
-                  <%= (ranking[:total_score] * 100).round(1) %>%
+                  <%= ranking[:total_score].round(2) %>
                 <% end %>
               </td>
             </tr>

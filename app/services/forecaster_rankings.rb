@@ -25,25 +25,22 @@ class ForecasterRankings
       user_score_records = gameweek_scores[user.id] || []
 
       if user_score_records.any?
-        avg_score = user_score_records.sum { |s| s.total_score.to_f } / user_score_records.size
         avg_accuracy = user_score_records.sum { |s| s.accuracy.to_f } / user_score_records.size
         forecast_count = user_score_records.size
       else
         # User didn't forecast this gameweek - give them 0 scores
-        avg_score = 0.0
         avg_accuracy = 0.0
         forecast_count = 0
       end
 
-      # Calculate availability (forecasts made / total required)
-      availability_score = forecast_count.to_f / total_required_slots
+      # Score = average accuracy * forecast count
+      total_score = avg_accuracy * forecast_count
 
       {
         user_id: user.id,
         username: user.username,
-        total_score: avg_score.round(4),
+        total_score: total_score.round(4),
         accuracy_score: avg_accuracy.round(4),
-        availability_score: availability_score.round(4),
         forecast_count: forecast_count
       }
     end
@@ -78,7 +75,6 @@ class ForecasterRankings
           username: user.username,
           total_score: 0.0,
           accuracy_score: 0.0,
-          availability_score: 0.0,
           forecast_count: 0,
           gameweeks_participated: 0,
           rank: "1="
@@ -110,7 +106,6 @@ class ForecasterRankings
       user_scores_by_gw = (all_scores[user.id] || []).group_by(&:gameweek_fpl_id)
 
       # Calculate average across gameweeks participated
-      total_score_sum = 0.0
       accuracy_sum = 0.0
       gameweeks_participated = 0
       total_forecasts_made = 0
@@ -118,30 +113,26 @@ class ForecasterRankings
       gameweeks_with_scores.each do |gw_fpl_id|
         gameweek_forecasts = user_scores_by_gw[gw_fpl_id]
         if gameweek_forecasts&.any?
-          # Average accuracy and total_score across all forecasts in this gameweek
+          # Average accuracy across all forecasts in this gameweek
           avg_gw_accuracy = gameweek_forecasts.sum { |f| f.accuracy.to_f } / gameweek_forecasts.size
-          avg_gw_total_score = gameweek_forecasts.sum { |f| f.total_score.to_f } / gameweek_forecasts.size
 
-          total_score_sum += avg_gw_total_score
           accuracy_sum += avg_gw_accuracy
           gameweeks_participated += 1
           total_forecasts_made += gameweek_forecasts.size
         end
       end
 
-      # Average across gameweeks participated (not all gameweeks)
-      avg_score = gameweeks_participated > 0 ? total_score_sum / gameweeks_participated : 0.0
+      # Average accuracy across gameweeks participated
       avg_accuracy = gameweeks_participated > 0 ? accuracy_sum / gameweeks_participated : 0.0
 
-      # Calculate availability (gameweeks participated / total gameweeks)
-      availability_score = gameweeks_participated.to_f / total_gameweeks
+      # Score = average accuracy * forecast count
+      total_score = avg_accuracy * total_forecasts_made
 
       {
         user_id: user.id,
         username: user.username,
-        total_score: avg_score.round(4),
+        total_score: total_score.round(4),
         accuracy_score: avg_accuracy.round(4),
-        availability_score: availability_score.round(4),
         forecast_count: total_forecasts_made,
         gameweeks_participated: gameweeks_participated
       }
@@ -219,17 +210,15 @@ class ForecasterRankings
       # Get scored forecasts for accuracy calculation
       scored_forecasts = all_forecasts.where.not(accuracy: nil)
 
-      # Calculate availability from ALL forecasts, accuracy from SCORED forecasts
+      # Calculate score from SCORED forecasts
       forecast_count = all_forecasts.count
       avg_accuracy = scored_forecasts.any? ? scored_forecasts.average(:accuracy).to_f : 0.0
-      availability_score = forecast_count.to_f / total_required_slots
-      total_score = avg_accuracy * availability_score
+      total_score = avg_accuracy * forecast_count
 
       {
         gameweek: gw_fpl_id,
         total_score: total_score.round(4),
         accuracy_score: avg_accuracy.round(4),
-        availability_score: availability_score.round(4),
         forecast_count: forecast_count
       }
     end
