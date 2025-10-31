@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_31_190252) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -88,6 +88,20 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
     t.index ["team_id"], name: "index_players_on_team_id"
   end
 
+  create_table "statistics", force: :cascade do |t|
+    t.bigint "player_id", null: false
+    t.bigint "gameweek_id", null: false
+    t.string "type", null: false
+    t.decimal "value", precision: 10, scale: 2
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["gameweek_id", "type"], name: "index_statistics_on_gameweek_type"
+    t.index ["gameweek_id"], name: "index_statistics_on_gameweek_id"
+    t.index ["player_id", "gameweek_id", "type"], name: "index_statistics_on_player_gameweek_type", unique: true
+    t.index ["player_id", "type"], name: "index_statistics_on_player_type"
+    t.index ["player_id"], name: "index_statistics_on_player_id"
+  end
+
   create_table "teams", force: :cascade do |t|
     t.string "name"
     t.string "short_name"
@@ -127,4 +141,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
   add_foreign_key "performances", "players"
   add_foreign_key "performances", "teams"
   add_foreign_key "players", "teams"
+  add_foreign_key "statistics", "gameweeks"
+  add_foreign_key "statistics", "players"
 end
