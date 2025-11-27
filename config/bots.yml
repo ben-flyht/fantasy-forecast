@@ -14,70 +14,76 @@
 # Empty config {} defaults to random selection
 
 bots:
-  - username: Bot1
-    description: Random selection (baseline)
+  - username: RandomBot1
+    description: Random selection
     config: {}
 
-  - username: Bot2
-    description: Selects players based on total points over last 5 gameweeks (equal weighting)
+  - username: ClaudeBot1
+    description: Prioritises players with strong expected goal contributions over recent gameweeks, weighted towards recent performances, while ensuring consistent minutes
     config:
       strategies:
-        - metric: total_points
-          weight: 1.0
+        - metric: expected_goals
+          weight: 0.35
           lookback: 5
-          recency: none
-
-  - username: Bot3
-    description: Selects players based on total points over last 3 gameweeks (equal weighting)
-    config:
-      strategies:
+          recency: exponential
+        - metric: expected_assists
+          weight: 0.25
+          lookback: 5
+          recency: exponential
         - metric: total_points
-          weight: 1.0
+          weight: 0.25
+          lookback: 4
+          recency: linear
+        - metric: minutes
+          weight: 0.15
           lookback: 3
           recency: none
+      filters:
+        availability:
+          min_chance_of_playing: 75
 
-  - username: Bot4
-    description: Selects players based on last 5 gameweeks with linear recency weighting (more recent matches matter more)
+  - username: OpenAIBot1
+    description: A balanced, data-driven strategy combining expected stats, ICT Index, and recent reliability to maximize consistent returns.
     config:
       strategies:
-        - metric: total_points
-          weight: 1.0
+        - metric: expected_goals
+          weight: 0.35
+          lookback: 5
+          recency: exponential
+        - metric: expected_assists
+          weight: 0.25
+          lookback: 5
+          recency: exponential
+        - metric: ict_index
+          weight: 0.25
+          lookback: 4
+          recency: linear
+        - metric: minutes
+          weight: 0.15
+          lookback: 3
+          recency: none
+      filters:
+        availability:
+          min_chance_of_playing: 70
+
+  - username: GeminiBot1
+    description: Prioritizes attacking players (fullbacks, wingers) with high Expected Goal Involvement (XGI = xG + xA) over the last 5 gameweeks, with a bias towards players with the most recent good performance. Filters out players with less than a 50% chance of playing.
+    config:
+      strategies:
+        # Primary metric: Expected Goal Involvement (xG + xA) - the best measure of attacking potential.
+        - metric: expected_goals
+          weight: 0.45
           lookback: 5
           recency: linear
-
-  - username: Bot5
-    description: Selects players based on last 3 gameweeks with exponential recency weighting (heavily favors most recent form)
-    config:
-      strategies:
+        - metric: expected_assists
+          weight: 0.45
+          lookback: 5
+          recency: linear
+        # Secondary metric: Total Points over a shorter, more recent window to capture hot form/confidence.
         - metric: total_points
-          weight: 1.0
+          weight: 0.1
           lookback: 3
           recency: exponential
-
-  - username: Bot6
-    description: Selects players based on minutes over last 5 gameweeks, only considering players 100% likely to play
-    config:
-      strategies:
-        - metric: minutes
-          weight: 1.0
-          lookback: 5
-          recency: none
       filters:
         availability:
-          min_chance_of_playing: 100
-
-  - username: Bot7
-    description: Balances points (60%) and minutes (40%) over last 5 gameweeks, only considering players 100% likely to play
-    config:
-      strategies:
-        - metric: total_points
-          weight: 0.6
-          lookback: 5
-          recency: none
-        - metric: minutes
-          weight: 0.4
-          lookback: 5
-          recency: none
-      filters:
-        availability:
-          min_chance_of_playing: 100
+          min_chance_of_playing: 50
