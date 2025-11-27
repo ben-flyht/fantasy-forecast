@@ -6,6 +6,7 @@ class ForecastersController < ApplicationController
 
   def show
     @user = User.find(params[:id])
+    @strategy = Strategy.find_by(user: @user) if @user.bot?
 
     # Determine the range of gameweeks to show (starting gameweek to next)
     next_gw = Gameweek.next_gameweek

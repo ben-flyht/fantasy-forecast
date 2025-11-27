@@ -55,18 +55,35 @@ class ConsensusRanking
   end
 
   def forecast_scores_by_player
+    # Get forecaster accuracy scores (only those with at least 25% accuracy)
+    forecaster_rankings = ForecasterRankings.overall
+                                            .select { |r| r[:accuracy_score] >= 0.25 }
+                                            .map { |r| [ r[:user_id], r[:accuracy_score] ] }
+                                            .to_h
+
+    # If no qualified forecasters, return empty hash (no consensus)
+    return {} if forecaster_rankings.empty?
+
+    # Get all forecasts for this gameweek from qualified forecasters
     forecasts = Forecast.joins(:gameweek)
                        .where(gameweeks: { fpl_id: @gameweek })
-                       .group(:player_id)
-                       .select(
-                         "player_id",
-                         "COUNT(*) as votes"
-                       )
+                       .where(user_id: forecaster_rankings.keys)
+                       .select(:player_id, :user_id)
 
-    forecasts.each_with_object({}) do |forecast, hash|
-      hash[forecast.player_id] = {
-        score: forecast.votes,
-        votes: forecast.votes
+    # Calculate weighted scores by player
+    player_scores = Hash.new { |h, k| h[k] = { weighted_score: 0.0, vote_count: 0 } }
+
+    forecasts.each do |forecast|
+      accuracy_weight = forecaster_rankings[forecast.user_id]
+      player_scores[forecast.player_id][:weighted_score] += accuracy_weight
+      player_scores[forecast.player_id][:vote_count] += 1
+    end
+
+    # Return hash with weighted scores
+    player_scores.transform_values do |data|
+      {
+        score: data[:weighted_score],
+        votes: data[:vote_count]
       }
     end
   end

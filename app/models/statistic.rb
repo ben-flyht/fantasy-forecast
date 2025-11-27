@@ -7,7 +7,7 @@ class Statistic < ApplicationRecord
 
   validates :type, presence: true
   validates :value, presence: true, numericality: true
-  validates :player_id, uniqueness: { scope: [:gameweek_id, :type] }
+  validates :player_id, uniqueness: { scope: [ :gameweek_id, :type ] }
 
   # Scopes for common queries
   scope :for_gameweek, ->(gameweek) { where(gameweek: gameweek) }

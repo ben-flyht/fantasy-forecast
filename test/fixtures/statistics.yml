@@ -3,11 +3,11 @@
 one:
   player: one
   gameweek: one
-  stat_type: MyString
+  type: MyString
   value: 9.99
 
 two:
   player: two
   gameweek: two
-  stat_type: MyString
+  type: MyString
   value: 9.99
