@@ -1,0 +1,83 @@
+# Bot Forecaster Configurations
+# Each bot has a username and a strategy configuration
+#
+# Strategy format:
+#   strategies:
+#     - metric: 'total_points' (or any Statistic type: assists, goals_scored, minutes, etc.)
+#       weight: 1.0 (relative weight of this metric)
+#       lookback: 5 (number of gameweeks to look back)
+#       recency: 'none' | 'linear' | 'exponential' (how to weight recent gameweeks)
+#
+# Available metrics: total_points, goals_scored, assists, minutes, bonus, ict_index,
+#                    influence, creativity, threat, expected_goals, expected_assists, etc.
+#
+# Empty config {} defaults to random selection
+
+bots:
+  - username: Bot1
+    description: Random selection (baseline)
+    config: {}
+
+  - username: Bot2
+    description: Selects players based on total points over last 5 gameweeks (equal weighting)
+    config:
+      strategies:
+        - metric: total_points
+          weight: 1.0
+          lookback: 5
+          recency: none
+
+  - username: Bot3
+    description: Selects players based on total points over last 3 gameweeks (equal weighting)
+    config:
+      strategies:
+        - metric: total_points
+          weight: 1.0
+          lookback: 3
+          recency: none
+
+  - username: Bot4
+    description: Selects players based on last 5 gameweeks with linear recency weighting (more recent matches matter more)
+    config:
+      strategies:
+        - metric: total_points
+          weight: 1.0
+          lookback: 5
+          recency: linear
+
+  - username: Bot5
+    description: Selects players based on last 3 gameweeks with exponential recency weighting (heavily favors most recent form)
+    config:
+      strategies:
+        - metric: total_points
+          weight: 1.0
+          lookback: 3
+          recency: exponential
+
+  - username: Bot6
+    description: Selects players based on minutes over last 5 gameweeks, only considering players 100% likely to play
+    config:
+      strategies:
+        - metric: minutes
+          weight: 1.0
+          lookback: 5
+          recency: none
+      filters:
+        availability:
+          min_chance_of_playing: 100
+
+  - username: Bot7
+    description: Balances points (60%) and minutes (40%) over last 5 gameweeks, only considering players 100% likely to play
+    config:
+      strategies:
+        - metric: total_points
+          weight: 0.6
+          lookback: 5
+          recency: none
+        - metric: minutes
+          weight: 0.4
+          lookback: 5
+          recency: none
+      filters:
+        availability:
+          min_chance_of_playing: 100

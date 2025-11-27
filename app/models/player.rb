@@ -21,6 +21,7 @@ class Player < ApplicationRecord
   belongs_to :team, optional: true  # Optional for now during migration
   has_many :forecasts, dependent: :destroy
   has_many :performances, dependent: :destroy
+  has_many :statistics, dependent: :destroy
 
   def full_name
     "#{first_name} #{last_name}".strip

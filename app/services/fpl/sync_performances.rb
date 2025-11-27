@@ -40,21 +40,16 @@ module Fpl
         player = Player.find_by(fpl_id: fpl_id)
         next unless player
 
-        gameweek_score = element.dig("stats", "total_points") || 0
+        stats = element["stats"] || {}
 
-        performance_attributes = {
-          gameweek_score: gameweek_score,
-          team: player.team
-        }
-
-        performance = Performance.find_or_initialize_by(player: player, gameweek: gameweek)
-        performance.assign_attributes(performance_attributes)
-
-        if performance.save
+        # Save all statistics (features + target variable)
+        if sync_statistics_for_player(player, gameweek, stats)
           synced_count += 1
-          Rails.logger.debug "Synced performance for #{player.full_name} - GW#{gameweek.fpl_id}: #{gameweek_score} pts"
-        else
-          Rails.logger.warn "Failed to sync performance for #{player.full_name}: #{performance.errors.full_messages.join(', ')}"
+          total_points = stats["total_points"] || 0
+          Rails.logger.debug "Synced statistics for #{player.full_name} - GW#{gameweek.fpl_id}: #{total_points} pts"
+
+          # Also create/update Performance record for backward compatibility
+          sync_performance_record(player, gameweek, stats)
         end
       end
 
@@ -66,6 +61,83 @@ module Fpl
     end
 
     private
+
+    # All stat types to sync from the FPL API stats object
+    STAT_TYPES = %w[
+      total_points
+      minutes
+      goals_scored
+      assists
+      clean_sheets
+      goals_conceded
+      own_goals
+      penalties_saved
+      penalties_missed
+      yellow_cards
+      red_cards
+      saves
+      bonus
+      bps
+      influence
+      creativity
+      threat
+      ict_index
+      starts
+      expected_goals
+      expected_assists
+      expected_goal_involvements
+      expected_goals_conceded
+      clearances_blocks_interceptions
+      recoveries
+      tackles
+      defensive_contribution
+    ].freeze
+
+    def sync_statistics_for_player(player, gameweek, stats)
+      stat_count = 0
+
+      STAT_TYPES.each do |stat_type|
+        value = stats[stat_type]
+        next if value.nil?
+
+        # Convert string values to decimals
+        value = value.to_f if value.is_a?(String)
+
+        statistic = Statistic.find_or_initialize_by(
+          player: player,
+          gameweek: gameweek,
+          type: stat_type
+        )
+
+        statistic.value = value
+
+        if statistic.save
+          stat_count += 1
+        else
+          Rails.logger.warn "Failed to save statistic #{stat_type} for #{player.full_name}: #{statistic.errors.full_messages.join(', ')}"
+        end
+      end
+
+      stat_count > 0
+    rescue => e
+      Rails.logger.error "Failed to sync statistics for #{player.full_name}: #{e.message}"
+      false
+    end
+
+    def sync_performance_record(player, gameweek, stats)
+      # Maintain Performance record for backward compatibility
+      gameweek_score = stats["total_points"] || 0
+
+      performance = Performance.find_or_initialize_by(player: player, gameweek: gameweek)
+      performance.assign_attributes(
+        gameweek_score: gameweek_score,
+        team: player.team
+      )
+
+      unless performance.save
+        Rails.logger.warn "Failed to sync performance record for #{player.full_name}: #{performance.errors.full_messages.join(', ')}"
+      end
+    end
 
     def fetch_gameweek_live_data(gameweek_id)
       uri = URI("#{FPL_LIVE_URL}#{gameweek_id}/live/")
