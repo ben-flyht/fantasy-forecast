@@ -9,11 +9,12 @@ class BotForecasterTest < ActiveSupport::TestCase
 
     # Create enough players for each position
     @players = {}
+    position_index = 0
     FantasyForecast::POSITION_CONFIG.each do |position, config|
       @players[position] = []
       (config[:slots] + 2).times do |i|
         player = Player.create!(
-          fpl_id: 4000 + position.hash.abs % 1000 + i,
+          fpl_id: 10000 + (position_index * 100) + i,
           first_name: "Bot",
           last_name: "#{position.capitalize}#{i}",
           position: position,
@@ -21,6 +22,7 @@ class BotForecasterTest < ActiveSupport::TestCase
         )
         @players[position] << player
       end
+      position_index += 1
     end
 
     # Create gameweeks
