@@ -31,29 +31,18 @@ module Fpl
       gameweek_data = fetch_gameweek_live_data(gameweek.fpl_id)
       return false unless gameweek_data
 
-      # Process each player's performance data
       elements = gameweek_data["elements"] || []
-      synced_count = 0
 
-      elements.each do |element|
-        fpl_id = element["id"]
-        player = Player.find_by(fpl_id: fpl_id)
-        next unless player
+      # Pre-load all players in one query
+      fpl_ids = elements.map { |e| e["id"] }
+      players_by_fpl_id = Player.where(fpl_id: fpl_ids).index_by(&:fpl_id)
 
-        stats = element["stats"] || {}
+      # Bulk upsert statistics and performances
+      statistics_count = sync_all_statistics(gameweek, elements, players_by_fpl_id)
+      performance_count = sync_all_performances(gameweek, elements, players_by_fpl_id)
 
-        # Save all statistics (features + target variable)
-        if sync_statistics_for_player(player, gameweek, stats)
-          synced_count += 1
-          total_points = stats["total_points"] || 0
-          Rails.logger.debug "Synced statistics for #{player.full_name} - GW#{gameweek.fpl_id}: #{total_points} pts"
-
-          # Also create/update Performance record for backward compatibility
-          sync_performance_record(player, gameweek, stats)
-        end
-      end
-
-      Rails.logger.info "FPL performance sync completed for gameweek #{gameweek.name}. Synced: #{synced_count} performances"
+      Rails.logger.info "FPL performance sync completed for gameweek #{gameweek.name}. " \
+                        "Statistics: #{statistics_count}, Performances: #{performance_count}"
       true
     rescue => e
       Rails.logger.error "FPL performance sync failed: #{e.message}"
@@ -93,50 +82,66 @@ module Fpl
       defensive_contribution
     ].freeze
 
-    def sync_statistics_for_player(player, gameweek, stats)
-      stat_count = 0
+    def sync_all_statistics(gameweek, elements, players_by_fpl_id)
+      now = Time.current
+      statistics_data = []
 
-      STAT_TYPES.each do |stat_type|
-        value = stats[stat_type]
-        next if value.nil?
+      elements.each do |element|
+        player = players_by_fpl_id[element["id"]]
+        next unless player
 
-        # Convert string values to decimals
-        value = value.to_f if value.is_a?(String)
+        stats = element["stats"] || {}
 
-        statistic = Statistic.find_or_initialize_by(
-          player: player,
-          gameweek: gameweek,
-          type: stat_type
-        )
+        STAT_TYPES.each do |stat_type|
+          value = stats[stat_type]
+          next if value.nil?
 
-        statistic.value = value
-
-        if statistic.save
-          stat_count += 1
-        else
-          Rails.logger.warn "Failed to save statistic #{stat_type} for #{player.full_name}: #{statistic.errors.full_messages.join(', ')}"
+          statistics_data << {
+            player_id: player.id,
+            gameweek_id: gameweek.id,
+            type: stat_type,
+            value: value.to_f,
+            created_at: now,
+            updated_at: now
+          }
         end
       end
 
-      stat_count > 0
-    rescue => e
-      Rails.logger.error "Failed to sync statistics for #{player.full_name}: #{e.message}"
-      false
-    end
+      return 0 if statistics_data.empty?
 
-    def sync_performance_record(player, gameweek, stats)
-      # Maintain Performance record for backward compatibility
-      gameweek_score = stats["total_points"] || 0
-
-      performance = Performance.find_or_initialize_by(player: player, gameweek: gameweek)
-      performance.assign_attributes(
-        gameweek_score: gameweek_score,
-        team: player.team
+      Statistic.upsert_all(
+        statistics_data,
+        unique_by: %i[player_id gameweek_id type]
       )
 
-      unless performance.save
-        Rails.logger.warn "Failed to sync performance record for #{player.full_name}: #{performance.errors.full_messages.join(', ')}"
+      statistics_data.size
+    end
+
+    def sync_all_performances(gameweek, elements, players_by_fpl_id)
+      now = Time.current
+
+      performance_data = elements.filter_map do |element|
+        player = players_by_fpl_id[element["id"]]
+        next unless player
+
+        {
+          player_id: player.id,
+          gameweek_id: gameweek.id,
+          gameweek_score: element.dig("stats", "total_points") || 0,
+          team_id: player.team_id,
+          created_at: now,
+          updated_at: now
+        }
       end
+
+      return 0 if performance_data.empty?
+
+      Performance.upsert_all(
+        performance_data,
+        unique_by: %i[player_id gameweek_id]
+      )
+
+      performance_data.size
     end
 
     def fetch_gameweek_live_data(gameweek_id)
