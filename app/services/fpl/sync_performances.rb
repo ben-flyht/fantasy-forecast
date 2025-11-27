@@ -31,34 +31,18 @@ module Fpl
       gameweek_data = fetch_gameweek_live_data(gameweek.fpl_id)
       return false unless gameweek_data
 
-      # Process each player's performance data
       elements = gameweek_data["elements"] || []
-      synced_count = 0
 
-      elements.each do |element|
-        fpl_id = element["id"]
-        player = Player.find_by(fpl_id: fpl_id)
-        next unless player
+      # Pre-load all players in one query
+      fpl_ids = elements.map { |e| e["id"] }
+      players_by_fpl_id = Player.where(fpl_id: fpl_ids).index_by(&:fpl_id)
 
-        gameweek_score = element.dig("stats", "total_points") || 0
+      # Bulk upsert statistics and performances
+      statistics_count = sync_all_statistics(gameweek, elements, players_by_fpl_id)
+      performance_count = sync_all_performances(gameweek, elements, players_by_fpl_id)
 
-        performance_attributes = {
-          gameweek_score: gameweek_score,
-          team: player.team
-        }
-
-        performance = Performance.find_or_initialize_by(player: player, gameweek: gameweek)
-        performance.assign_attributes(performance_attributes)
-
-        if performance.save
-          synced_count += 1
-          Rails.logger.debug "Synced performance for #{player.full_name} - GW#{gameweek.fpl_id}: #{gameweek_score} pts"
-        else
-          Rails.logger.warn "Failed to sync performance for #{player.full_name}: #{performance.errors.full_messages.join(', ')}"
-        end
-      end
-
-      Rails.logger.info "FPL performance sync completed for gameweek #{gameweek.name}. Synced: #{synced_count} performances"
+      Rails.logger.info "FPL performance sync completed for gameweek #{gameweek.name}. " \
+                        "Statistics: #{statistics_count}, Performances: #{performance_count}"
       true
     rescue => e
       Rails.logger.error "FPL performance sync failed: #{e.message}"
@@ -66,6 +50,99 @@ module Fpl
     end
 
     private
+
+    # All stat types to sync from the FPL API stats object
+    STAT_TYPES = %w[
+      total_points
+      minutes
+      goals_scored
+      assists
+      clean_sheets
+      goals_conceded
+      own_goals
+      penalties_saved
+      penalties_missed
+      yellow_cards
+      red_cards
+      saves
+      bonus
+      bps
+      influence
+      creativity
+      threat
+      ict_index
+      starts
+      expected_goals
+      expected_assists
+      expected_goal_involvements
+      expected_goals_conceded
+      clearances_blocks_interceptions
+      recoveries
+      tackles
+      defensive_contribution
+    ].freeze
+
+    def sync_all_statistics(gameweek, elements, players_by_fpl_id)
+      now = Time.current
+      statistics_data = []
+
+      elements.each do |element|
+        player = players_by_fpl_id[element["id"]]
+        next unless player
+
+        stats = element["stats"] || {}
+
+        STAT_TYPES.each do |stat_type|
+          value = stats[stat_type]
+          next if value.nil?
+
+          statistics_data << {
+            player_id: player.id,
+            gameweek_id: gameweek.id,
+            type: stat_type,
+            value: value.to_f,
+            created_at: now,
+            updated_at: now
+          }
+        end
+      end
+
+      return 0 if statistics_data.empty?
+
+      Statistic.upsert_all(
+        statistics_data,
+        unique_by: %i[player_id gameweek_id type]
+      )
+
+      statistics_data.size
+    end
+
+    def sync_all_performances(gameweek, elements, players_by_fpl_id)
+      now = Time.current
+
+      performance_data = elements.filter_map do |element|
+        player = players_by_fpl_id[element["id"]]
+        next unless player
+
+        {
+          player_id: player.id,
+          gameweek_id: gameweek.id,
+          gameweek_score: element.dig("stats", "total_points") || 0,
+          team_id: player.team_id,
+          created_at: now,
+          updated_at: now
+        }
+      end
+
+      return 0 if performance_data.empty?
+
+      Performance.upsert_all(
+        performance_data,
+        unique_by: %i[player_id gameweek_id]
+      )
+
+      performance_data.size
+    end
 
     def fetch_gameweek_live_data(gameweek_id)
       uri = URI("#{FPL_LIVE_URL}#{gameweek_id}/live/")

@@ -27,7 +27,6 @@ class Forecast < ApplicationRecord
 
   # Scopes
   scope :by_gameweek, ->(gameweek_id) { where(gameweek_id: gameweek_id) }
-  scope :for_gameweek, ->(gameweek_id) { where(gameweek_id: gameweek_id) }
   scope :for_player, ->(player_id) { where(player_id: player_id) }
   scope :for_user, ->(user_id) { where(user_id: user_id) }
   scope :scored, -> { where.not(accuracy: nil) }
@@ -35,38 +34,6 @@ class Forecast < ApplicationRecord
 
   # Map week to gameweek fpl_id
   scope :by_week, ->(week) { joins(:gameweek).where(gameweeks: { fpl_id: week }) }
-  scope :for_week, ->(week) { joins(:gameweek).where(gameweeks: { fpl_id: week }) }
-
-  # Class methods for consensus scoring
-  def self.consensus_scores_for_week(week)
-    joins(:gameweek, player: :team)
-      .where(gameweeks: { fpl_id: week })
-      .group("players.id, players.first_name, players.last_name, teams.name, players.position")
-      .select("players.id as player_id, CONCAT(players.first_name, ' ', players.last_name) as name, players.first_name, players.last_name, teams.name as team, players.position, COUNT(*) as total_forecasts")
-      .order("total_forecasts DESC")
-  end
-
-  # Class method for consensus scoring filtered by position
-  def self.consensus_scores_for_week_by_position(week, position)
-    joins(:gameweek, player: :team)
-      .where(gameweeks: { fpl_id: week }, players: { position: position })
-      .group("players.id, players.first_name, players.last_name, teams.name, players.position")
-      .select("players.id as player_id, CONCAT(players.first_name, ' ', players.last_name) as name, players.first_name, players.last_name, teams.name as team, players.position, COUNT(*) as total_forecasts")
-      .order("total_forecasts DESC")
-  end
-
-
-  # Class method for auto-assignment
-  def self.assign_current_gameweek!
-    current_gameweek = Gameweek.current_gameweek
-    current_gameweek&.id
-  end
-
-  # Class method for assigning next gameweek
-  def self.assign_next_gameweek!
-    next_gameweek = Gameweek.next_gameweek
-    next_gameweek&.id
-  end
 
   # Calculate scores for all forecasts in a given gameweek
   def self.calculate_scores_for_gameweek!(gameweek)

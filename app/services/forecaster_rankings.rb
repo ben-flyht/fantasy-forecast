@@ -82,10 +82,6 @@ class ForecasterRankings
       end
     end
 
-    # Calculate total required slots across all positions
-    total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
-    total_possible_forecasts = total_required_slots * total_gameweeks
-
     # Get all users who have scores
     all_forecasters = User.joins(:forecasts)
                          .joins("JOIN gameweeks ON forecasts.gameweek_id = gameweeks.id")
@@ -141,46 +137,6 @@ class ForecasterRankings
     # Sort by total_score, then accuracy_score
     user_scores.sort_by { |u| [ -u[:total_score], -u[:accuracy_score] ] }.each_with_index.map do |ranking, index|
       ranking.merge(rank: index + 1)
-    end
-  end
-
-  private
-
-  def self.calculate_weighted_scores
-    # Get the most recent gameweek to calculate recency weights
-    latest_gameweek = Gameweek.joins("JOIN forecasts ON forecasts.gameweek_id = gameweeks.id")
-                             .where.not(forecasts: { total_score: nil })
-                             .maximum(:fpl_id) || 1
-
-    # Get all forecasts with their gameweek fpl_id
-    forecasts = Forecast.joins(:gameweek, :user)
-                       .where.not(total_score: nil)
-                       .select(
-                         "forecasts.*",
-                         "gameweeks.fpl_id as gameweek_fpl_id",
-                         "users.email"
-                       )
-
-    # Calculate weighted scores
-    forecasts.map do |forecast|
-      weeks_ago = latest_gameweek - forecast.gameweek_fpl_id
-
-      # Weight calculation: more recent weeks get higher weights
-      # Week 0 (current): weight = 1.0
-      # Week 1 back: weight = 0.9
-      # Week 2 back: weight = 0.8
-      # etc., with minimum weight of 0.1
-      weight = [ 1.0 - (weeks_ago * 0.1), 0.1 ].max
-
-      {
-        user_id: forecast.user_id,
-        gameweek_fpl_id: forecast.gameweek_fpl_id,
-        total_score: forecast.total_score.to_f,
-        accuracy_score: forecast.accuracy_score.to_f,
-        differential_score: forecast.differential_score.to_f,
-        weight: weight,
-        weighted_score: forecast.total_score.to_f * weight
-      }
     end
   end
 

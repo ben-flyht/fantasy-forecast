@@ -12,4 +12,17 @@ class User < ApplicationRecord
 
   # Associations
   has_many :forecasts, dependent: :destroy
+
+  # Scopes
+  scope :bots, -> { where(bot: true) }
+  scope :humans, -> { where(bot: false) }
+
+  # Class methods
+  def self.find_or_create_bot(username)
+    find_or_create_by!(username: username, bot: true) do |user|
+      user.email = "#{username}@fantasyforecast.bot"
+      user.password = SecureRandom.hex(32)
+      user.confirmed_at = Time.current
+    end
+  end
 end
