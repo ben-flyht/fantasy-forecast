@@ -3,7 +3,7 @@ require "test_helper"
 class StrategyTest < ActiveSupport::TestCase
   def setup
     @bot_user = User.find_or_create_bot("teststrategybot")
-    @valid_config = { strategies: [{ metric: "total_points", weight: 1.0, lookback: 3, recency: "none" }] }
+    @valid_config = { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] }
   end
 
   test "valid strategy with config" do
@@ -73,7 +73,7 @@ class StrategyTest < ActiveSupport::TestCase
     inactive_strategy = Strategy.create!(
       user: another_user,
       description: "Inactive",
-      strategy_config: { strategies: [{ metric: "goals_scored", weight: 1.0, lookback: 1, recency: "none" }] },
+      strategy_config: { strategies: [ { metric: "goals_scored", weight: 1.0, lookback: 1, recency: "none" } ] },
       active: false
     )
 
@@ -91,7 +91,7 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "create_with_user! creates bot user and strategy" do
     username = "newstrategybot#{SecureRandom.hex(4)}"
-    config = { strategies: [{ metric: "total_points", weight: 1.0, lookback: 5, recency: "linear" }] }
+    config = { strategies: [ { metric: "total_points", weight: 1.0, lookback: 5, recency: "linear" } ] }
 
     strategy = Strategy.create_with_user!(
       username: username,
@@ -109,8 +109,8 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "create_with_user! updates existing strategy for same user" do
     username = "updatebot#{SecureRandom.hex(4)}"
-    original_config = { strategies: [{ metric: "total_points", weight: 1.0, lookback: 3, recency: "none" }] }
-    updated_config = { strategies: [{ metric: "goals_scored", weight: 1.0, lookback: 5, recency: "linear" }] }
+    original_config = { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] }
+    updated_config = { strategies: [ { metric: "goals_scored", weight: 1.0, lookback: 5, recency: "linear" } ] }
 
     original_strategy = Strategy.create_with_user!(
       username: username,
@@ -153,7 +153,7 @@ class StrategyTest < ActiveSupport::TestCase
     strategy = Strategy.new(
       user: @bot_user,
       description: nil,
-      strategy_config: { strategies: [{ metric: "total_points", weight: 1.0, lookback: 3, recency: "none" }] }
+      strategy_config: { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] }
     )
 
     assert_equal "Selects players based on points over the last 3 gameweeks (equal weighting)", strategy.strategy_explanation
@@ -163,7 +163,7 @@ class StrategyTest < ActiveSupport::TestCase
     strategy = Strategy.new(
       user: @bot_user,
       description: nil,
-      strategy_config: { strategies: [{ metric: "goals_scored", weight: 1.0, lookback: 5, recency: "linear" }] }
+      strategy_config: { strategies: [ { metric: "goals_scored", weight: 1.0, lookback: 5, recency: "linear" } ] }
     )
 
     assert_equal "Selects players based on goals over the last 5 gameweeks, with linear weighting toward more recent matches", strategy.strategy_explanation
@@ -173,7 +173,7 @@ class StrategyTest < ActiveSupport::TestCase
     strategy = Strategy.new(
       user: @bot_user,
       description: nil,
-      strategy_config: { strategies: [{ metric: "expected_goals", weight: 1.0, lookback: 4, recency: "exponential" }] }
+      strategy_config: { strategies: [ { metric: "expected_goals", weight: 1.0, lookback: 4, recency: "exponential" } ] }
     )
 
     assert_equal "Selects players based on expected goals (xG) over the last 4 gameweeks, with exponential weighting heavily favoring most recent matches", strategy.strategy_explanation
@@ -204,7 +204,7 @@ class StrategyTest < ActiveSupport::TestCase
       user: @bot_user,
       description: nil,
       strategy_config: {
-        strategies: [{ metric: "total_points", weight: 1.0, lookback: 3, recency: "none" }],
+        strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ],
         filters: { availability: { min_chance_of_playing: 75 } }
       }
     )
@@ -258,7 +258,7 @@ class StrategyTest < ActiveSupport::TestCase
     strategy = Strategy.create!(
       user: @bot_user,
       description: "Test strategy",
-      strategy_config: { strategies: [{ metric: "total_points", weight: 1.0, lookback: 3, recency: "none" }] },
+      strategy_config: { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] },
       active: true
     )
 

@@ -51,7 +51,7 @@ class BotForecasterTest < ActiveSupport::TestCase
 
     @bot_user = User.find_or_create_bot("botforecastertest")
     @strategy_config = {
-      strategies: [{ metric: "total_points", weight: 1.0, lookback: 3, recency: "none" }]
+      strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ]
     }
   end
 

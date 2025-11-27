@@ -104,7 +104,7 @@ class StrategyRunnerTest < ActiveSupport::TestCase
     # With linear weighting, improving player should rank higher than declining player
     # Improving: (1×1 + 5×2 + 25×3) / 6 = 86/6 ≈ 14.33
     # Declining: (25×1 + 5×2 + 1×3) / 6 = 38/6 ≈ 6.33
-    assert_equal [@player_improving], result
+    assert_equal [ @player_improving ], result
   end
 
   test "exponential recency weighting heavily favors recent performance" do
@@ -129,7 +129,7 @@ class StrategyRunnerTest < ActiveSupport::TestCase
     # With exponential weighting (2^0, 2^1, 2^2 = 1, 2, 4):
     # Improving: (0×1 + 0×2 + 25×4) / 7 = 100/7 ≈ 14.29
     # High scorer: (10×1 + 12×2 + 15×4) / 7 = 94/7 ≈ 13.43
-    assert_equal [@player_improving], result
+    assert_equal [ @player_improving ], result
   end
 
   test "composite strategy combines multiple metrics" do
