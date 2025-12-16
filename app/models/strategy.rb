@@ -2,6 +2,11 @@ class Strategy < ApplicationRecord
   belongs_to :user
   has_many :forecasts, dependent: :nullify
 
+  # Always return strategy_config with symbol keys for consistent access
+  def strategy_config
+    super&.deep_symbolize_keys
+  end
+
   validate :strategy_config_present
   validate :position_valid, if: -> { position.present? }
 
@@ -34,14 +39,14 @@ class Strategy < ApplicationRecord
       # Position-specific strategy: only generate for this position
       PositionForecaster.call(
         user:,
-        strategy_config: strategy_config.deep_symbolize_keys,
+        strategy_config:,
         position:,
         gameweek:,
         strategy: self  # Link forecasts to this strategy
       )
     else
       # Global strategy: generate for all positions
-      BotForecaster.call(user:, strategy_config: strategy_config.deep_symbolize_keys, gameweek:, strategy: self)
+      BotForecaster.call(user:, strategy_config:, gameweek:, strategy: self)
     end
   end
 
@@ -49,7 +54,7 @@ class Strategy < ApplicationRecord
   def strategy_explanation
     return description if description.present?
 
-    config = strategy_config.deep_symbolize_keys
+    config = strategy_config
 
     if config.empty? || config[:strategies].nil?
       return "Selects players completely at random (no strategy)"
