@@ -2,6 +2,7 @@ class Forecast < ApplicationRecord
   belongs_to :user
   belongs_to :player
   belongs_to :gameweek
+  belongs_to :strategy, optional: true  # Only set for bot-generated forecasts
 
   # Callbacks
   before_validation :assign_next_gameweek!
@@ -22,8 +23,8 @@ class Forecast < ApplicationRecord
   # Uniqueness constraint: one forecast per user/player/gameweek
   validates :user_id, uniqueness: { scope: [ :player_id, :gameweek_id ] }
 
-  # Position slot limit validation
-  validate :position_slot_limit
+  # Position slot limit validation (only on create - allows updating legacy forecasts)
+  validate :position_slot_limit, on: :create
 
   # Scopes
   scope :by_gameweek, ->(gameweek_id) { where(gameweek_id: gameweek_id) }
@@ -47,16 +48,72 @@ class Forecast < ApplicationRecord
                              .where(gameweek_id: gameweek_id)
                              .index_by(&:player_id)
 
+    # Get gameweek fpl_id for legacy slot detection
+    gameweek_record = gameweek.is_a?(Gameweek) ? gameweek : Gameweek.find(gameweek_id)
+    gameweek_fpl_id = gameweek_record.fpl_id
+
+    # Identify which forecasts should be scored (top X per position)
+    scorable_bot_forecast_ids = scorable_bot_forecasts(forecasts, gameweek_fpl_id)
+    scorable_human_forecast_ids = scorable_human_forecasts(forecasts, performances)
+    scorable_forecast_ids = scorable_bot_forecast_ids + scorable_human_forecast_ids
+
+    # Build a set of scorable forecasts for accuracy calculation
+    scorable_forecasts = forecasts.select { |f| scorable_forecast_ids.include?(f.id) }
+
     # Process each forecast
     forecasts.each do |forecast|
+      # Skip forecasts outside their top picks per position
+      unless scorable_forecast_ids.include?(forecast.id)
+        forecast.update!(accuracy: nil) if forecast.accuracy.present?
+        next
+      end
+
       performance = performances[forecast.player_id]
       next unless performance # Skip if no performance data
 
-      # Calculate accuracy by comparing against other users' forecasts in same position
-      accuracy = calculate_accuracy_score(forecast, forecasts, performances)
+      # Calculate accuracy - only exclude user's OTHER scorable forecasts, not all forecasts
+      accuracy = calculate_accuracy_score(forecast, scorable_forecasts, performances)
 
       forecast.update!(accuracy: accuracy)
     end
+  end
+
+  # Legacy slot config (GW15 and earlier)
+  LEGACY_SLOTS = {
+    "goalkeeper" => 5,
+    "defender" => 10,
+    "midfielder" => 10,
+    "forward" => 5
+  }.freeze
+
+  # Returns IDs of bot forecasts that should be scored (top X per position based on rank)
+  def self.scorable_bot_forecasts(forecasts, gameweek_fpl_id)
+    bot_forecasts = forecasts.select { |f| f.user.bot? && f.rank.present? }
+
+    scorable_ids = []
+    FantasyForecast::POSITION_CONFIG.each do |position, config|
+      # Use legacy slots for GW15 and earlier, current config for GW16+
+      slots = if gameweek_fpl_id && gameweek_fpl_id <= 15
+                LEGACY_SLOTS[position]
+      else
+                config[:slots]
+      end
+
+      position_forecasts = bot_forecasts
+        .select { |f| f.player.position == position }
+        .sort_by(&:rank)
+        .first(slots)
+
+      scorable_ids.concat(position_forecasts.map(&:id))
+    end
+
+    scorable_ids
+  end
+
+  # Returns IDs of human forecasts that should be scored
+  # All human forecasts are scored (legacy data may have more than slot limits)
+  def self.scorable_human_forecasts(forecasts, performances)
+    forecasts.select { |f| !f.user.bot? }.map(&:id)
   end
 
   private
@@ -107,8 +164,10 @@ class Forecast < ApplicationRecord
   end
 
   # Validate position slot limits based on POSITION_CONFIG
+  # Bot forecasts are exempt - they create forecasts for all players to provide rankings
   def position_slot_limit
     return unless player&.position && user_id && gameweek_id
+    return if user&.bot?  # Bots can create unlimited forecasts (for rankings)
 
     position_config = FantasyForecast::POSITION_CONFIG[player.position]
     return unless position_config

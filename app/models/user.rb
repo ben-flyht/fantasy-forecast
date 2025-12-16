@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  BOT_USERNAME = "ForecasterBot".freeze
+
   # Include default devise modules. Others available are:
   # :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
@@ -12,17 +14,30 @@ class User < ApplicationRecord
 
   # Associations
   has_many :forecasts, dependent: :destroy
+  has_many :strategies, dependent: :destroy
 
   # Scopes
   scope :bots, -> { where(bot: true) }
   scope :humans, -> { where(bot: false) }
 
-  # Class methods
-  def self.find_or_create_bot(username)
-    find_or_create_by!(username: username, bot: true) do |user|
-      user.email = "#{username}@fantasyforecast.bot"
-      user.password = SecureRandom.hex(32)
-      user.confirmed_at = Time.current
+  def self.bot
+    find_by!(username: BOT_USERNAME, bot: true)
+  end
+
+  # Instance methods
+  def display_name
+    username
+  end
+
+  # Returns emoji badge based on user status
+  # beats_bot: true if human has higher accuracy than bot
+  def self.badge_for(bot:, beats_bot: false)
+    if bot
+      "🤖"
+    elsif beats_bot
+      "🦸" # Superhuman - beats the bot
+    else
+      nil
     end
   end
 end

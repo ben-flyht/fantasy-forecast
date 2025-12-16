@@ -1,22 +1,48 @@
 class Strategy < ApplicationRecord
   belongs_to :user
+  has_many :forecasts, dependent: :nullify
 
   validate :strategy_config_present
+  validate :position_valid, if: -> { position.present? }
 
   def strategy_config_present
     errors.add(:strategy_config, "can't be nil") if strategy_config.nil?
   end
 
+  def position_valid
+    valid_positions = FantasyForecast::POSITION_CONFIG.keys
+    errors.add(:position, "must be one of: #{valid_positions.join(', ')}") unless valid_positions.include?(position)
+  end
+
   scope :active, -> { where(active: true) }
+  scope :for_position, ->(pos) { where(position: pos) }
 
   delegate :username, to: :user
 
+  # Check if this is a position-specific strategy
+  def position_specific?
+    position.present?
+  end
+
   # Generate forecasts for this strategy
+  # Position-specific strategies only generate forecasts for their position
   def generate_forecasts(gameweek = nil)
     gameweek ||= Gameweek.next_gameweek
     return [] unless gameweek
 
-    BotForecaster.call(user:, strategy_config: strategy_config.deep_symbolize_keys, gameweek:)
+    if position_specific?
+      # Position-specific strategy: only generate for this position
+      PositionForecaster.call(
+        user:,
+        strategy_config: strategy_config.deep_symbolize_keys,
+        position:,
+        gameweek:,
+        strategy: self  # Link forecasts to this strategy
+      )
+    else
+      # Global strategy: generate for all positions
+      BotForecaster.call(user:, strategy_config: strategy_config.deep_symbolize_keys, gameweek:, strategy: self)
+    end
   end
 
   # Generate a human-readable explanation of the strategy
@@ -106,20 +132,5 @@ class Strategy < ApplicationRecord
     end
 
     "Composite strategy: #{parts.join(', ')}"
-  end
-
-  # Create or update a strategy with its user
-  def self.create_with_user!(username:, description:, strategy_config:, active: true)
-    user = User.find_or_create_bot(username)
-
-    # Find existing strategy for this user or create new one
-    strategy = find_or_initialize_by(user: user)
-    strategy.assign_attributes(
-      description: description,
-      strategy_config: strategy_config,
-      active: active
-    )
-    strategy.save!
-    strategy
   end
 end
