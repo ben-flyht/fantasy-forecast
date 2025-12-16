@@ -63,7 +63,6 @@ class SetupFantasyForecasterBot < ActiveRecord::Migration[8.0]
       Strategy.find_or_create_by!(user: bot, position: position) do |s|
         s.strategy_config = config
         s.active = true
-        s.role = "primary"
       end
     end
   end
