@@ -52,7 +52,6 @@ class ForecastersController < ApplicationController
     @weekly_rankings = (starting_gw..max_gameweek).map do |gw|
       performance_by_gw[gw] || {
         gameweek: gw,
-        total_score: 0.0,
         accuracy_score: 0.0,
         forecast_count: forecast_counts[gw] || 0,
         rank: nil
@@ -62,7 +61,6 @@ class ForecastersController < ApplicationController
     # Calculate total forecasts for overall summary
     @total_forecast_count = forecast_counts.values.sum
     @overall_rank = @overall_ranking&.dig(:rank)
-    @overall_total_score = @overall_ranking&.dig(:total_score) || 0.0
     @overall_accuracy_score = @overall_ranking&.dig(:accuracy_score) || 0.0
 
     @page_title = "#{@user.username}'s Forecasts"
@@ -123,11 +121,9 @@ class ForecastersController < ApplicationController
 
     if gameweek_performance
       @forecast_count = gameweek_performance[:forecast_count]
-      @avg_total_score = gameweek_performance[:total_score]
       @avg_accuracy_score = gameweek_performance[:accuracy_score]
     else
       @forecast_count = 0
-      @avg_total_score = nil
       @avg_accuracy_score = nil
     end
 
