@@ -30,13 +30,25 @@ class User < ApplicationRecord
     username
   end
 
+  def beats_bot?
+    return false if bot?
+
+    rankings = ForecasterRankings.overall
+    my_ranking = rankings.find { |r| r[:user_id] == id }
+    my_ranking&.dig(:beats_bot) || false
+  end
+
+  def badge
+    self.class.badge_for(bot: bot?, beats_bot: beats_bot?)
+  end
+
   # Returns emoji badge based on user status
   # beats_bot: true if human has higher accuracy than bot
   def self.badge_for(bot:, beats_bot: false)
     if bot
       "🤖"
     elsif beats_bot
-      "🦸" # Superhuman - beats the bot
+      "⚡" # Lightning - beats the bot
     else
       nil
     end

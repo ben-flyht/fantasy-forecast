@@ -66,6 +66,15 @@ class Player < ApplicationRecord
     "https://resources.premierleague.com/premierleague25/photos/players/#{size}/#{code}.png"
   end
 
+  # Get chance_of_playing from statistics for the current/next gameweek
+  def chance_of_playing(gameweek = nil)
+    gameweek ||= Gameweek.current_gameweek || Gameweek.next_gameweek
+    return 100 unless gameweek
+
+    stat = statistics.find_by(gameweek: gameweek, type: "chance_of_playing")
+    stat&.value&.to_i || 100
+  end
+
   # Returns expected goals for this player's team in the given gameweek
   def expected_goals_for(gameweek)
     match = find_match_for_gameweek(gameweek)

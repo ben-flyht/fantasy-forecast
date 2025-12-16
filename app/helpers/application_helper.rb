@@ -1,4 +1,18 @@
 module ApplicationHelper
+  def user_badge(user: nil, is_bot: nil, beats_bot: false)
+    # Support both User object and raw booleans
+    if user
+      badge = user.badge
+      is_bot = user.bot?
+    else
+      badge = User.badge_for(bot: is_bot, beats_bot: beats_bot)
+    end
+    return nil unless badge
+
+    title = is_bot ? "Bot forecaster" : "More accurate than the bot"
+    tag.span(badge, title: title)
+  end
+
   def meta_title
     content_for?(:meta_title) ? content_for(:meta_title) : "Fantasy Forecast - FPL Player Rankings & Consensus"
   end

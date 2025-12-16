@@ -9,7 +9,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "valid strategy with config" do
     strategy = Strategy.new(
       user: @bot_user,
-      description: "Test strategy",
       strategy_config: @valid_config,
       active: true
     )
@@ -20,7 +19,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "requires strategy_config to be present" do
     strategy = Strategy.new(
       user: @bot_user,
-      description: "Test strategy",
       strategy_config: nil,
       active: true
     )
@@ -32,7 +30,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "allows duplicate strategy_config" do
     Strategy.create!(
       user: @bot_user,
-      description: "First strategy",
       strategy_config: @valid_config,
       active: true
     )
@@ -40,7 +37,6 @@ class StrategyTest < ActiveSupport::TestCase
     another_user = create_test_bot
     duplicate_strategy = Strategy.create!(
       user: another_user,
-      description: "Duplicate strategy",
       strategy_config: @valid_config,
       active: true
     )
@@ -51,12 +47,11 @@ class StrategyTest < ActiveSupport::TestCase
   test "allows updating strategy" do
     strategy = Strategy.create!(
       user: @bot_user,
-      description: "Original description",
       strategy_config: @valid_config,
       active: true
     )
 
-    strategy.description = "Updated description"
+    strategy.active = false
     assert strategy.valid?
     assert strategy.save
   end
@@ -64,7 +59,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "active scope returns only active strategies" do
     active_strategy = Strategy.create!(
       user: @bot_user,
-      description: "Active",
       strategy_config: @valid_config,
       active: true
     )
@@ -72,7 +66,6 @@ class StrategyTest < ActiveSupport::TestCase
     another_user = create_test_bot
     inactive_strategy = Strategy.create!(
       user: another_user,
-      description: "Inactive",
       strategy_config: { strategies: [ { metric: "goals_scored", weight: 1.0, lookback: 1, recency: "none" } ] },
       active: false
     )
@@ -89,20 +82,9 @@ class StrategyTest < ActiveSupport::TestCase
     assert_equal @bot_user.username, strategy.username
   end
 
-  test "strategy_explanation returns description if present" do
-    strategy = Strategy.new(
-      user: @bot_user,
-      description: "My custom description",
-      strategy_config: @valid_config
-    )
-
-    assert_equal "My custom description", strategy.strategy_explanation
-  end
-
   test "strategy_explanation generates explanation for empty config" do
     strategy = Strategy.new(
       user: @bot_user,
-      description: nil,
       strategy_config: {}
     )
 
@@ -112,7 +94,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "strategy_explanation generates explanation for single strategy with no recency" do
     strategy = Strategy.new(
       user: @bot_user,
-      description: nil,
       strategy_config: { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] }
     )
 
@@ -122,7 +103,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "strategy_explanation generates explanation for single strategy with linear recency" do
     strategy = Strategy.new(
       user: @bot_user,
-      description: nil,
       strategy_config: { strategies: [ { metric: "goals_scored", weight: 1.0, lookback: 5, recency: "linear" } ] }
     )
 
@@ -132,7 +112,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "strategy_explanation generates explanation for single strategy with exponential recency" do
     strategy = Strategy.new(
       user: @bot_user,
-      description: nil,
       strategy_config: { strategies: [ { metric: "expected_goals", weight: 1.0, lookback: 4, recency: "exponential" } ] }
     )
 
@@ -142,7 +121,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "strategy_explanation generates explanation for composite strategy" do
     strategy = Strategy.new(
       user: @bot_user,
-      description: nil,
       strategy_config: {
         strategies: [
           { metric: "total_points", weight: 0.6, lookback: 3, recency: "none" },
@@ -162,7 +140,6 @@ class StrategyTest < ActiveSupport::TestCase
   test "strategy_explanation includes availability filter" do
     strategy = Strategy.new(
       user: @bot_user,
-      description: nil,
       strategy_config: {
         strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ],
         filters: { availability: { min_chance_of_playing: 75 } }
@@ -217,7 +194,6 @@ class StrategyTest < ActiveSupport::TestCase
 
     strategy = Strategy.create!(
       user: @bot_user,
-      description: "Test strategy",
       strategy_config: { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] },
       active: true
     )

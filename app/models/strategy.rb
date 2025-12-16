@@ -52,8 +52,6 @@ class Strategy < ApplicationRecord
 
   # Generate a human-readable explanation of the strategy
   def strategy_explanation
-    return description if description.present?
-
     config = strategy_config
 
     if config.empty? || config[:strategies].nil?
