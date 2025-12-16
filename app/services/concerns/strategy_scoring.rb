@@ -35,10 +35,10 @@ module StrategyScoring
       end
     end
 
-    # Apply availability multiplier if configured
+    # Apply availability if configured
     if config[:availability]
       weight = config[:availability][:weight] || 1.0
-      total_score *= calculate_availability_multiplier(player, weight)
+      total_score = apply_availability(total_score, player, weight)
     end
 
     total_score
@@ -139,14 +139,19 @@ module StrategyScoring
     end
   end
 
-  # Calculate availability multiplier based on chance_of_playing and weight
-  # weight=1.0: 0% available → 0.0, 100% available → 1.0
-  # weight=0.5: 0% available → 0.5, 100% available → 1.0
-  def calculate_availability_multiplier(player, weight)
+  # Apply availability to score
+  # Returns [multiplier, bonus] where:
+  # - multiplier scales the performance score (0% = 0.0, 100% = 1.0)
+  # - bonus is a tiny tiebreaker so available players rank above unavailable ones
+  def apply_availability(score, player, weight)
     chance = player.chance_of_playing
-    return 1.0 if chance.nil?
+    return score if chance.nil?
 
     availability_ratio = chance / 100.0
-    1.0 - (weight * (1.0 - availability_ratio))
+    multiplier = 1.0 - (weight * (1.0 - availability_ratio))
+
+    # Multiply score by availability, then add tiny bonus for being available
+    # This ensures a 100% available player with 0 form beats a 0% available player with great form
+    (score * multiplier) + (availability_ratio * 0.0001)
   end
 end
