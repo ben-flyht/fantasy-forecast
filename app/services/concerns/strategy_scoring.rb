@@ -140,14 +140,22 @@ module StrategyScoring
   end
 
   # Apply availability to score
-  # - multiplier scales the performance score (0% = 0.0, 100% = 1.0)
-  # - bonus is a tiny tiebreaker so available players rank above unavailable ones
+  # - multiplier scales the performance score based on availability
+  # - large penalty only for 0% availability (injured/suspended) to push to bottom
   def apply_availability(score, player, weight)
-    availability_ratio = player.chance_of_playing / 100.0
+    chance = player.chance_of_playing || 100  # Default to fully available
+    availability_ratio = chance / 100.0
     multiplier = 1.0 - (weight * (1.0 - availability_ratio))
 
-    # Multiply score by availability, then add tiny bonus for being available
-    # This ensures a 100% available player with 0 form beats a 0% available player with great form
-    (score * multiplier) + (availability_ratio * 0.0001)
+    # Apply multiplier to scale score by availability
+    adjusted_score = score * multiplier
+
+    # Only apply large penalty for completely unavailable players (0%)
+    # This ensures injured players rank below everyone else
+    if chance == 0
+      adjusted_score -= 1000.0 * weight
+    end
+
+    adjusted_score
   end
 end
