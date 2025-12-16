@@ -20,8 +20,14 @@
             <th class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Forecaster
             </th>
-            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+              Forecasts
+            </th>
+            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
               Accuracy
+            </th>
+            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+              Score
             </th>
           </tr>
         </thead>
@@ -35,10 +41,20 @@
               <td class="px-3 md:px-6 py-2 md:py-4">
                 <%= link_to forecaster_path(ranking[:user_id]), data: { turbo_frame: "_top" }, class: "text-xs md:text-sm font-medium text-gray-800 hover:text-yellow-500 break-words underline" do %>
                   <%= ranking[:username] %>
+                  <% badge = User.badge_for(bot: ranking[:is_bot], beats_bot: ranking[:beats_bot]) %>
+                  <% if badge %>
+                    <span class="ml-1" title="<%= ranking[:is_bot] ? 'Bot forecaster' : 'Superhuman - more accurate than the bot' %>"><%= badge %></span>
+                  <% end %>
                 <% end %>
               </td>
-              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-gray-800 w-32">
-                <%= (ranking[:total_score] * 100).round(1) %>%
+              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm text-gray-600 w-24">
+                <%= ranking[:forecast_count] %>
+              </td>
+              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm text-gray-600 w-24">
+                <%= (ranking[:accuracy_score] * 100).round(1) %>%
+              </td>
+              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-gray-800 w-24">
+                <%= ranking[:total_score].round(2) %>
               </td>
             </tr>
           <% end %>

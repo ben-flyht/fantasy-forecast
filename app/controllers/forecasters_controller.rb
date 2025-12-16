@@ -54,7 +54,6 @@ class ForecastersController < ApplicationController
         gameweek: gw,
         total_score: 0.0,
         accuracy_score: 0.0,
-        availability_score: 0.0,
         forecast_count: forecast_counts[gw] || 0,
         rank: nil
       }
@@ -64,6 +63,7 @@ class ForecastersController < ApplicationController
     @total_forecast_count = forecast_counts.values.sum
     @overall_rank = @overall_ranking&.dig(:rank)
     @overall_total_score = @overall_ranking&.dig(:total_score) || 0.0
+    @overall_accuracy_score = @overall_ranking&.dig(:accuracy_score) || 0.0
 
     @page_title = "#{@user.username}'s Forecasts"
   end

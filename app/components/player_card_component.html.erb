@@ -13,6 +13,11 @@
       <% if @player.team %>
         <div class="flex flex-wrap items-center gap-1 mt-0.5">
           <span class="text-xs px-2 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-800 whitespace-nowrap"><%= @player.team.name %></span>
+          <% if show_ff_rank? %>
+            <span class="text-xs px-2 py-0.5 rounded border border-amber-200 bg-amber-50 text-amber-800 whitespace-nowrap" title="FantasyForecaster Rank">
+              FF #<%= ff_rank %>
+            </span>
+          <% end %>
           <% if show_status_info? %>
             <span class="text-xs px-2 py-0.5 rounded <%= status_badge_class %> whitespace-nowrap">
               <%= status_text %>
