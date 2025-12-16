@@ -19,6 +19,7 @@ class User < ApplicationRecord
   # Scopes
   scope :bots, -> { where(bot: true) }
   scope :humans, -> { where(bot: false) }
+  scope :active, -> { joins(:forecasts).where("forecasts.created_at >= ?", 30.days.ago).distinct }
 
   def self.bot
     find_by!(username: BOT_USERNAME, bot: true)
