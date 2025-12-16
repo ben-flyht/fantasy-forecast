@@ -23,6 +23,9 @@ module Fpl
 
     sync_players(elements, teams)
 
+    # Store historical availability data for current gameweek
+    sync_availability_statistics(elements)
+
     Rails.logger.info "FPL player sync completed. Total players: #{Player.count}"
     true
   rescue => e
@@ -141,6 +144,49 @@ module Fpl
     end
 
     Rails.logger.info "Player sync results: #{success_count} synced, #{skip_count} skipped, #{error_count} errors"
+  end
+
+  # Store chance_of_playing as a historical Statistic per gameweek
+  # This allows us to track availability over time and exclude injured periods from lookback
+  def sync_availability_statistics(elements)
+    current_gameweek = Gameweek.current_gameweek || Gameweek.next_gameweek
+    return unless current_gameweek
+
+    Rails.logger.info "Syncing availability statistics for gameweek #{current_gameweek.fpl_id}..."
+
+    # Build map of fpl_id to player_id
+    fpl_ids = elements.map { |e| e["id"] }
+    players_by_fpl_id = Player.where(fpl_id: fpl_ids).pluck(:fpl_id, :id).to_h
+
+    now = Time.current
+    availability_data = []
+
+    elements.each do |element|
+      player_id = players_by_fpl_id[element["id"]]
+      next unless player_id
+
+      # chance_of_playing_this_round is the availability for the current gameweek
+      chance = element["chance_of_playing_this_round"]
+      next if chance.nil?
+
+      availability_data << {
+        player_id: player_id,
+        gameweek_id: current_gameweek.id,
+        type: "chance_of_playing",
+        value: chance.to_f,
+        created_at: now,
+        updated_at: now
+      }
+    end
+
+    return if availability_data.empty?
+
+    Statistic.upsert_all(
+      availability_data,
+      unique_by: %i[player_id gameweek_id type]
+    )
+
+    Rails.logger.info "Synced #{availability_data.size} availability statistics"
   end
   end
 end

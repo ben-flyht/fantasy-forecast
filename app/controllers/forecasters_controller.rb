@@ -54,7 +54,6 @@ class ForecastersController < ApplicationController
         gameweek: gw,
         total_score: 0.0,
         accuracy_score: 0.0,
-        availability_score: 0.0,
         forecast_count: forecast_counts[gw] || 0,
         rank: nil
       }

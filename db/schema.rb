@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
+ActiveRecord::Schema[8.0].define(version: 2025_12_16_170720) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_stat_statements"
 
   create_table "forecasts", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -20,10 +21,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
     t.bigint "gameweek_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.decimal "accuracy"
+    t.decimal "accuracy", precision: 8, scale: 2
+    t.bigint "strategy_id"
+    t.integer "rank"
     t.index ["gameweek_id", "player_id"], name: "index_forecasts_on_gameweek_id_and_player_id"
     t.index ["gameweek_id"], name: "index_forecasts_on_gameweek_id"
     t.index ["player_id"], name: "index_forecasts_on_player_id"
+    t.index ["strategy_id"], name: "index_forecasts_on_strategy_id"
     t.index ["user_id", "gameweek_id"], name: "index_forecasts_on_user_id_and_gameweek_id"
     t.index ["user_id", "player_id", "gameweek_id"], name: "index_forecasts_on_unique_constraint", unique: true
     t.index ["user_id"], name: "index_forecasts_on_user_id"
@@ -49,6 +53,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "fpl_id"
+    t.decimal "home_team_expected_goals", precision: 4, scale: 2
+    t.decimal "away_team_expected_goals", precision: 4, scale: 2
     t.index ["away_team_id"], name: "index_matches_on_away_team_id"
     t.index ["fpl_id"], name: "index_matches_on_fpl_id", unique: true
     t.index ["gameweek_id", "away_team_id"], name: "index_matches_on_gameweek_id_and_away_team_id"
@@ -82,10 +88,37 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
     t.bigint "team_id"
     t.integer "code"
     t.string "status"
-    t.integer "chance_of_playing"
+    t.integer "chance_of_playing", default: 100
     t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
     t.index ["position", "team_id"], name: "index_players_on_position_and_team_id"
     t.index ["team_id"], name: "index_players_on_team_id"
+  end
+
+  create_table "statistics", force: :cascade do |t|
+    t.bigint "player_id", null: false
+    t.bigint "gameweek_id", null: false
+    t.string "type", null: false
+    t.decimal "value", precision: 10, scale: 2
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["gameweek_id", "type"], name: "index_statistics_on_gameweek_type"
+    t.index ["gameweek_id"], name: "index_statistics_on_gameweek_id"
+    t.index ["player_id", "gameweek_id", "type"], name: "index_statistics_on_player_gameweek_type", unique: true
+    t.index ["player_id", "type"], name: "index_statistics_on_player_type"
+    t.index ["player_id"], name: "index_statistics_on_player_id"
+  end
+
+  create_table "strategies", force: :cascade do |t|
+    t.text "description"
+    t.jsonb "strategy_config", default: {}, null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "position"
+    t.index ["active"], name: "index_strategies_on_active"
+    t.index ["user_id", "position"], name: "index_strategies_on_user_id_and_position"
+    t.index ["user_id"], name: "index_strategies_on_user_id"
   end
 
   create_table "teams", force: :cascade do |t|
@@ -95,6 +128,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "code"
+    t.integer "api_football_id"
+    t.index ["api_football_id"], name: "index_teams_on_api_football_id", unique: true
     t.index ["fpl_id"], name: "index_teams_on_fpl_id", unique: true
   end
 
@@ -111,6 +146,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
     t.datetime "confirmed_at"
     t.datetime "confirmation_sent_at"
     t.string "unconfirmed_email"
+    t.boolean "bot", default: false, null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
@@ -119,6 +155,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
 
   add_foreign_key "forecasts", "gameweeks"
   add_foreign_key "forecasts", "players"
+  add_foreign_key "forecasts", "strategies"
   add_foreign_key "forecasts", "users"
   add_foreign_key "matches", "gameweeks"
   add_foreign_key "matches", "teams", column: "away_team_id"
@@ -127,4 +164,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_11_202931) do
   add_foreign_key "performances", "players"
   add_foreign_key "performances", "teams"
   add_foreign_key "players", "teams"
+  add_foreign_key "statistics", "gameweeks"
+  add_foreign_key "statistics", "players"
+  add_foreign_key "strategies", "users"
 end

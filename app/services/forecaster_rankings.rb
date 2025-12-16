@@ -8,7 +8,7 @@ class ForecasterRankings
     all_forecasters = User.joins(:forecasts)
                          .where.not(forecasts: { accuracy: nil })
                          .distinct
-                         .select(:id, :username)
+                         .select(:id, :username, :bot)
 
     # Get scores for this specific gameweek
     gameweek_scores = Forecast.joins(:user)
@@ -38,7 +38,7 @@ class ForecasterRankings
 
       {
         user_id: user.id,
-        username: user.username,
+        username: user.display_name,
         total_score: total_score.round(4),
         accuracy_score: avg_accuracy.round(4),
         forecast_count: forecast_count
@@ -66,25 +66,23 @@ class ForecasterRankings
     if total_gameweeks == 0
       all_forecasters = User.joins(:forecasts)
                            .distinct
-                           .select(:id, :username)
+                           .select(:id, :username, :bot)
                            .order(:username)
 
       return all_forecasters.map do |user|
         {
           user_id: user.id,
-          username: user.username,
+          username: user.display_name,
+          is_bot: user.bot?,
           total_score: 0.0,
           accuracy_score: 0.0,
           forecast_count: 0,
           gameweeks_participated: 0,
+          beats_bot: false,
           rank: "1="
         }
       end
     end
-
-    # Calculate total required slots across all positions
-    total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
-    total_possible_forecasts = total_required_slots * total_gameweeks
 
     # Get all users who have scores
     all_forecasters = User.joins(:forecasts)
@@ -92,7 +90,7 @@ class ForecasterRankings
                          .where.not(forecasts: { accuracy: nil })
                          .where("gameweeks.fpl_id >= ?", starting_gameweek)
                          .distinct
-                         .select(:id, :username)
+                         .select(:id, :username, :bot)
 
     # Get all scores with their gameweek data (from starting gameweek onwards)
     all_scores = Forecast.joins(:gameweek, :user)
@@ -130,7 +128,8 @@ class ForecasterRankings
 
       {
         user_id: user.id,
-        username: user.username,
+        username: user.display_name,
+        is_bot: user.bot?,
         total_score: total_score.round(4),
         accuracy_score: avg_accuracy.round(4),
         forecast_count: total_forecasts_made,
@@ -139,48 +138,15 @@ class ForecasterRankings
     end
 
     # Sort by total_score, then accuracy_score
-    user_scores.sort_by { |u| [ -u[:total_score], -u[:accuracy_score] ] }.each_with_index.map do |ranking, index|
+    ranked_scores = user_scores.sort_by { |u| [ -u[:total_score], -u[:accuracy_score] ] }.each_with_index.map do |ranking, index|
       ranking.merge(rank: index + 1)
     end
-  end
 
-  private
+    # Find bot accuracy and mark humans who beat it
+    bot_accuracy = ranked_scores.find { |r| r[:is_bot] }&.dig(:accuracy_score) || 0.0
 
-  def self.calculate_weighted_scores
-    # Get the most recent gameweek to calculate recency weights
-    latest_gameweek = Gameweek.joins("JOIN forecasts ON forecasts.gameweek_id = gameweeks.id")
-                             .where.not(forecasts: { total_score: nil })
-                             .maximum(:fpl_id) || 1
-
-    # Get all forecasts with their gameweek fpl_id
-    forecasts = Forecast.joins(:gameweek, :user)
-                       .where.not(total_score: nil)
-                       .select(
-                         "forecasts.*",
-                         "gameweeks.fpl_id as gameweek_fpl_id",
-                         "users.email"
-                       )
-
-    # Calculate weighted scores
-    forecasts.map do |forecast|
-      weeks_ago = latest_gameweek - forecast.gameweek_fpl_id
-
-      # Weight calculation: more recent weeks get higher weights
-      # Week 0 (current): weight = 1.0
-      # Week 1 back: weight = 0.9
-      # Week 2 back: weight = 0.8
-      # etc., with minimum weight of 0.1
-      weight = [ 1.0 - (weeks_ago * 0.1), 0.1 ].max
-
-      {
-        user_id: forecast.user_id,
-        gameweek_fpl_id: forecast.gameweek_fpl_id,
-        total_score: forecast.total_score.to_f,
-        accuracy_score: forecast.accuracy_score.to_f,
-        differential_score: forecast.differential_score.to_f,
-        weight: weight,
-        weighted_score: forecast.total_score.to_f * weight
-      }
+    ranked_scores.map do |ranking|
+      ranking.merge(beats_bot: !ranking[:is_bot] && ranking[:accuracy_score] > bot_accuracy)
     end
   end
 
@@ -202,16 +168,13 @@ class ForecasterRankings
     gameweeks_with_forecasts = gameweeks_with_forecasts.first(limit) if limit
 
     gameweeks_with_forecasts.map do |gw_fpl_id|
-      # Get all forecasts for this gameweek
-      all_forecasts = Forecast.where(user_id: user_id)
-                              .joins(:gameweek)
-                              .where("gameweeks.fpl_id = ?", gw_fpl_id)
+      # Get scored forecasts only (bot has many unscored forecasts for rankings)
+      scored_forecasts = Forecast.where(user_id: user_id)
+                                 .joins(:gameweek)
+                                 .where("gameweeks.fpl_id = ?", gw_fpl_id)
+                                 .where.not(accuracy: nil)
 
-      # Get scored forecasts for accuracy calculation
-      scored_forecasts = all_forecasts.where.not(accuracy: nil)
-
-      # Calculate score from SCORED forecasts
-      forecast_count = all_forecasts.count
+      forecast_count = scored_forecasts.count
       avg_accuracy = scored_forecasts.any? ? scored_forecasts.average(:accuracy).to_f : 0.0
       total_score = avg_accuracy * forecast_count
 
@@ -229,9 +192,13 @@ class ForecasterRankings
     gameweek = Gameweek.find_by(fpl_id: gameweek_number)
     return [] unless gameweek
 
-    # Get forecasts with player data (including unscored forecasts for next gameweek)
-    Forecast.includes(player: :team)
-           .where(user_id: user_id, gameweek: gameweek)
-           .order("accuracy DESC NULLS LAST")
+    user = User.find(user_id)
+    forecasts = Forecast.includes(player: :team).where(user_id: user_id, gameweek: gameweek)
+
+    # For bots, only show scored forecasts (they have many unscored for rankings)
+    # For humans, show all forecasts (including unscored for next gameweek)
+    forecasts = forecasts.where.not(accuracy: nil) if user.bot? && gameweek.is_finished?
+
+    forecasts.order("accuracy DESC NULLS LAST")
   end
 end

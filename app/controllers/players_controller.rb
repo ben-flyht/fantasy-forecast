@@ -6,16 +6,13 @@ class PlayersController < ApplicationController
     @position_filter = params[:position] || "forward"  # Default to forward if no position specified
     @team_filter = params[:team_id].present? ? params[:team_id].to_i : nil
 
-    # Check if the requested gameweek has forecasts (or is next)
+    # Check if gameweek exists
     next_gw = Gameweek.next_gameweek
-    is_next = (@gameweek == next_gw&.fpl_id)
+    gameweek_exists = Gameweek.exists?(fpl_id: @gameweek)
 
-    unless is_next
-      has_forecasts = Forecast.joins(:gameweek).where(gameweeks: { fpl_id: @gameweek }).exists?
-      unless has_forecasts
-        redirect_to players_path(gameweek: next_gw&.fpl_id || @gameweek, position: @position_filter, team_id: @team_filter), alert: "Gameweek #{@gameweek} has no forecasts yet"
-        return
-      end
+    unless gameweek_exists
+      redirect_to players_path(gameweek: next_gw&.fpl_id || 1, position: @position_filter, team_id: @team_filter), alert: "Gameweek #{@gameweek} not found"
+      return
     end
 
     # Get consensus scores for the gameweek with position and team filtering
@@ -170,23 +167,12 @@ class PlayersController < ApplicationController
     next_gw = Gameweek.next_gameweek
     starting_gw = Gameweek::STARTING_GAMEWEEK
 
-    # Get all gameweeks that have forecasts
-    gameweeks_with_forecasts = Forecast.joins(:gameweek)
-                                       .distinct
-                                       .pluck("gameweeks.fpl_id")
-                                       .select { |gw| gw >= starting_gw }
-                                       .sort
-                                       .reverse
-
     if next_gw
-      # Show gameweeks from starting gameweek to next gameweek, but only if they have forecasts (except next)
-      all_gameweeks = (starting_gw..next_gw.fpl_id).to_a.reverse
-      all_gameweeks.select do |gw|
-        gameweeks_with_forecasts.include?(gw) || gw == next_gw.fpl_id
-      end
+      # Show all gameweeks from starting gameweek to next gameweek
+      (starting_gw..next_gw.fpl_id).to_a.reverse
     else
-      # Fallback: show gameweeks that have forecasts
-      gameweeks_with_forecasts.empty? ? [ starting_gw ] : gameweeks_with_forecasts
+      # Fallback: show starting gameweek
+      [ starting_gw ]
     end
   end
 end

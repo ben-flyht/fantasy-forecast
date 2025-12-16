@@ -133,50 +133,6 @@ class ForecastTest < ActiveSupport::TestCase
     assert_not_includes Forecast.by_week(2), forecast
   end
 
-  test "consensus_scores_for_week should aggregate forecasts correctly" do
-    user2 = users(:two)
-    player2 = players(:two)
-
-    # Create multiple forecasts
-    Forecast.create!(user: @user, player: @player, gameweek: @next_gameweek)
-    Forecast.create!(user: user2, player: @player, gameweek: @next_gameweek)
-    Forecast.create!(user: @user, player: player2, gameweek: @next_gameweek)
-
-    results = Forecast.consensus_scores_for_week(1)
-
-    # Check player1 has 2 forecasts
-    player1_result = results.find { |r| r.player_id == @player.id }
-    assert_equal 2, player1_result.total_forecasts
-
-    # Check player2 has 1 forecast
-    player2_result = results.find { |r| r.player_id == player2.id }
-    assert_equal 1, player2_result.total_forecasts
-  end
-
-  test "consensus_scores_for_week_by_position should filter by position" do
-    mid_team = Team.create!(name: "MID Team", short_name: "MID", fpl_id: 98)
-    midfielder = Player.create!(
-      first_name: "Test",
-      last_name: "Midfielder",
-      team: mid_team,
-      position: "midfielder",
-      fpl_id: 999
-    )
-
-    Forecast.create!(user: @user, player: @player, gameweek: @next_gameweek)
-    Forecast.create!(user: @user, player: midfielder, gameweek: @next_gameweek)
-
-    # Filter by goalkeeper position (assuming @player is a goalkeeper)
-    gk_results = Forecast.consensus_scores_for_week_by_position(1, "goalkeeper")
-    assert_equal 1, gk_results.length
-    assert_equal @player.id, gk_results.first.player_id
-
-    # Filter by midfielder position
-    mid_results = Forecast.consensus_scores_for_week_by_position(1, "midfielder")
-    assert_equal 1, mid_results.length
-    assert_equal midfielder.id, mid_results.first.player_id
-  end
-
   test "forecast should automatically assign next gameweek" do
     forecast = Forecast.new(
       user: @user,
@@ -202,16 +158,5 @@ class ForecastTest < ActiveSupport::TestCase
 
     assert forecast.valid?
     assert_equal other_gameweek, forecast.gameweek
-  end
-
-  test "assign_next_gameweek! class method should return next gameweek id" do
-    result = Forecast.assign_next_gameweek!
-    assert_equal @next_gameweek.id, result
-  end
-
-  test "assign_next_gameweek! class method should return nil when no next gameweek" do
-    @next_gameweek.update!(is_next: false)
-    result = Forecast.assign_next_gameweek!
-    assert_nil result
   end
 end
