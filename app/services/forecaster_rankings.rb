@@ -17,10 +17,7 @@ class ForecasterRankings
                            .select("forecasts.*", "users.username")
                            .group_by(&:user_id)
 
-    # Calculate total required slots across all positions
-    total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
-
-    # Calculate scores for all forecasters
+    # Calculate rankings for all forecasters
     user_scores = all_forecasters.map do |user|
       user_score_records = gameweek_scores[user.id] || []
 
@@ -28,25 +25,20 @@ class ForecasterRankings
         avg_accuracy = user_score_records.sum { |s| s.accuracy.to_f } / user_score_records.size
         forecast_count = user_score_records.size
       else
-        # User didn't forecast this gameweek - give them 0 scores
         avg_accuracy = 0.0
         forecast_count = 0
       end
 
-      # Score = average accuracy * forecast count
-      total_score = avg_accuracy * forecast_count
-
       {
         user_id: user.id,
         username: user.display_name,
-        total_score: total_score.round(4),
         accuracy_score: avg_accuracy.round(4),
         forecast_count: forecast_count
       }
     end
 
-    # Sort by total_score, then accuracy_score
-    user_scores.sort_by { |u| [ -u[:total_score], -u[:accuracy_score] ] }.each_with_index.map do |ranking, index|
+    # Sort by accuracy_score
+    user_scores.sort_by { |u| -u[:accuracy_score] }.each_with_index.map do |ranking, index|
       ranking.merge(rank: index + 1)
     end
   end
@@ -74,7 +66,6 @@ class ForecasterRankings
           user_id: user.id,
           username: user.display_name,
           is_bot: user.bot?,
-          total_score: 0.0,
           accuracy_score: 0.0,
           forecast_count: 0,
           gameweeks_participated: 0,
@@ -84,12 +75,11 @@ class ForecasterRankings
       end
     end
 
-    # Get all users who have scores
-    all_forecasters = User.joins(:forecasts)
-                         .joins("JOIN gameweeks ON forecasts.gameweek_id = gameweeks.id")
+    # Get all active users who have scored forecasts
+    all_forecasters = User.active
+                         .joins(forecasts: :gameweek)
                          .where.not(forecasts: { accuracy: nil })
                          .where("gameweeks.fpl_id >= ?", starting_gameweek)
-                         .distinct
                          .select(:id, :username, :bot)
 
     # Get all scores with their gameweek data (from starting gameweek onwards)
@@ -111,7 +101,6 @@ class ForecasterRankings
       gameweeks_with_scores.each do |gw_fpl_id|
         gameweek_forecasts = user_scores_by_gw[gw_fpl_id]
         if gameweek_forecasts&.any?
-          # Average accuracy across all forecasts in this gameweek
           avg_gw_accuracy = gameweek_forecasts.sum { |f| f.accuracy.to_f } / gameweek_forecasts.size
 
           accuracy_sum += avg_gw_accuracy
@@ -123,22 +112,18 @@ class ForecasterRankings
       # Average accuracy across gameweeks participated
       avg_accuracy = gameweeks_participated > 0 ? accuracy_sum / gameweeks_participated : 0.0
 
-      # Score = average accuracy * forecast count
-      total_score = avg_accuracy * total_forecasts_made
-
       {
         user_id: user.id,
         username: user.display_name,
         is_bot: user.bot?,
-        total_score: total_score.round(4),
         accuracy_score: avg_accuracy.round(4),
         forecast_count: total_forecasts_made,
         gameweeks_participated: gameweeks_participated
       }
     end
 
-    # Sort by total_score, then accuracy_score
-    ranked_scores = user_scores.sort_by { |u| [ -u[:total_score], -u[:accuracy_score] ] }.each_with_index.map do |ranking, index|
+    # Sort by accuracy_score only
+    ranked_scores = user_scores.sort_by { |u| -u[:accuracy_score] }.each_with_index.map do |ranking, index|
       ranking.merge(rank: index + 1)
     end
 
@@ -152,8 +137,6 @@ class ForecasterRankings
 
   def self.weekly_performance(user_id, limit: nil)
     # Get weekly performance for a specific user (from starting gameweek onwards)
-    # Calculate total required slots across all positions
-    total_required_slots = FantasyForecast::POSITION_CONFIG.values.sum { |config| config[:slots] }
     starting_gameweek = Gameweek::STARTING_GAMEWEEK
 
     # Get all gameweeks this user has forecasts for
@@ -176,11 +159,9 @@ class ForecasterRankings
 
       forecast_count = scored_forecasts.count
       avg_accuracy = scored_forecasts.any? ? scored_forecasts.average(:accuracy).to_f : 0.0
-      total_score = avg_accuracy * forecast_count
 
       {
         gameweek: gw_fpl_id,
-        total_score: total_score.round(4),
         accuracy_score: avg_accuracy.round(4),
         forecast_count: forecast_count
       }
