@@ -44,6 +44,9 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
       is_next: false,
       is_finished: false
     )
+
+    # Create bot user for rankings (ConsensusRanking requires bot forecasts with ranks)
+    @bot_user = create_test_bot(User::BOT_USERNAME)
   end
 
   test "players index should not require authentication" do
@@ -65,7 +68,11 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "consensus should show forecasts data when available" do
-    # Create test forecasts
+    # Create bot forecasts with ranks (required for ConsensusRanking)
+    Forecast.create!(user: @bot_user, player: @player, gameweek: @gameweek5, rank: 1)
+    Forecast.create!(user: @bot_user, player: @player2, gameweek: @gameweek5, rank: 2)
+
+    # Create human forecasts (votes)
     Forecast.create!(user: @forecaster_user, player: @player, gameweek: @gameweek5)
     Forecast.create!(user: @admin_user, player: @player, gameweek: @gameweek5)
     Forecast.create!(user: @forecaster_user, player: @player2, gameweek: @gameweek5)

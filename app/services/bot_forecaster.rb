@@ -1,10 +1,13 @@
 class BotForecaster < ApplicationService
-  attr_reader :user, :gameweek, :strategy_config
+  include StrategyScoring
 
-  def initialize(user:, strategy_config:, gameweek:)
+  attr_reader :user, :gameweek, :strategy_config, :strategy
+
+  def initialize(user:, strategy_config:, gameweek:, strategy: nil)
     @user = user
     @strategy_config = strategy_config
     @gameweek = gameweek
+    @strategy = strategy
   end
 
   def call
@@ -15,12 +18,12 @@ class BotForecaster < ApplicationService
 
     forecasts = []
 
-    FantasyForecast::POSITION_CONFIG.each do |position, config|
-      slots = config[:slots]
-      selected_players = StrategyRunner.call(strategy_config, position:, count: slots, gameweek:)
+    FantasyForecast::POSITION_CONFIG.each_key do |position|
+      position_config = config_for_position(position)
+      ranked_players = rank_all_players(position, position_config)
 
-      selected_players.each do |player|
-        forecasts << create_forecast(player)
+      ranked_players.each do |player_data|
+        forecasts << create_forecast(player_data[:player], player_data[:rank])
       end
     end
 
@@ -29,11 +32,44 @@ class BotForecaster < ApplicationService
 
   private
 
-  def clear_existing_forecasts
-    Forecast.where(user:, gameweek:).destroy_all
+  def config_for_position(position)
+    if strategy_config[:positions]&.key?(position.to_sym)
+      strategy_config[:positions][position.to_sym]
+    else
+      strategy_config
+    end
   end
 
-  def create_forecast(player)
-    Forecast.create!(user:, player:, gameweek:)
+  def rank_all_players(position, config)
+    players = Player.where(position: position).includes(:statistics, :team)
+
+    # Apply availability filter if configured
+    if config[:filters]&.dig(:availability)
+      min_chance = config[:filters][:availability][:min_chance_of_playing]
+      if min_chance
+        players = players.where("chance_of_playing >= ? OR chance_of_playing IS NULL", min_chance)
+      end
+    end
+
+    # Score each player
+    current_fpl_id = gameweek.fpl_id
+    players_with_scores = players.map do |player|
+      score = calculate_player_score(player, config, current_fpl_id)
+      { player: player, score: score }
+    end
+
+    # Sort by score descending and assign ranks
+    sorted = players_with_scores.sort_by { |p| -p[:score] }
+    sorted.each_with_index.map do |item, index|
+      { player: item[:player], rank: index + 1 }
+    end
+  end
+
+  def clear_existing_forecasts
+    Forecast.where(user: user, gameweek: gameweek).destroy_all
+  end
+
+  def create_forecast(player, rank)
+    Forecast.create!(user: user, player: player, gameweek: gameweek, strategy: strategy, rank: rank)
   end
 end

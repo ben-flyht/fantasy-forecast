@@ -12,6 +12,12 @@ module ActiveSupport
     fixtures :all
 
     # Add more helper methods to be used by all tests here...
+
+    def create_test_bot(username = nil)
+      username ||= "testbot#{SecureRandom.hex(4)}"
+      User.insert!({ username: username, bot: true, email: "#{username}@test.local", encrypted_password: "x" })
+      User.find_by!(username: username)
+    end
   end
 end
 

@@ -2,7 +2,7 @@ require "test_helper"
 
 class StrategyTest < ActiveSupport::TestCase
   def setup
-    @bot_user = User.find_or_create_bot("teststrategybot")
+    @bot_user = create_test_bot
     @valid_config = { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] }
   end
 
@@ -37,7 +37,7 @@ class StrategyTest < ActiveSupport::TestCase
       active: true
     )
 
-    another_user = User.find_or_create_bot("anothertestbot")
+    another_user = create_test_bot
     duplicate_strategy = Strategy.create!(
       user: another_user,
       description: "Duplicate strategy",
@@ -69,7 +69,7 @@ class StrategyTest < ActiveSupport::TestCase
       active: true
     )
 
-    another_user = User.find_or_create_bot("inactivebot")
+    another_user = create_test_bot
     inactive_strategy = Strategy.create!(
       user: another_user,
       description: "Inactive",
@@ -87,46 +87,6 @@ class StrategyTest < ActiveSupport::TestCase
     strategy = Strategy.new(user: @bot_user, strategy_config: @valid_config)
 
     assert_equal @bot_user.username, strategy.username
-  end
-
-  test "create_with_user! creates bot user and strategy" do
-    username = "newstrategybot#{SecureRandom.hex(4)}"
-    config = { strategies: [ { metric: "total_points", weight: 1.0, lookback: 5, recency: "linear" } ] }
-
-    strategy = Strategy.create_with_user!(
-      username: username,
-      description: "Created via class method",
-      strategy_config: config,
-      active: true
-    )
-
-    assert strategy.persisted?
-    assert_equal username, strategy.username
-    assert strategy.user.bot?
-    assert_equal "Created via class method", strategy.description
-    assert_equal config.deep_stringify_keys, strategy.strategy_config
-  end
-
-  test "create_with_user! updates existing strategy for same user" do
-    username = "updatebot#{SecureRandom.hex(4)}"
-    original_config = { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] }
-    updated_config = { strategies: [ { metric: "goals_scored", weight: 1.0, lookback: 5, recency: "linear" } ] }
-
-    original_strategy = Strategy.create_with_user!(
-      username: username,
-      description: "Original",
-      strategy_config: original_config
-    )
-
-    updated_strategy = Strategy.create_with_user!(
-      username: username,
-      description: "Updated",
-      strategy_config: updated_config
-    )
-
-    assert_equal original_strategy.id, updated_strategy.id
-    assert_equal "Updated", updated_strategy.description
-    assert_equal updated_config.deep_stringify_keys, updated_strategy.strategy_config
   end
 
   test "strategy_explanation returns description if present" do
@@ -264,9 +224,11 @@ class StrategyTest < ActiveSupport::TestCase
 
     forecasts = strategy.generate_forecasts(next_gw)
 
-    expected_total = FantasyForecast::POSITION_CONFIG.values.sum { |c| c[:slots] }
+    # Bot now creates forecasts for ALL players (for rankings), not just slot count
+    expected_total = Player.count
     assert_equal expected_total, forecasts.count
     assert forecasts.all? { |f| f.user == @bot_user }
     assert forecasts.all? { |f| f.gameweek == next_gw }
+    assert forecasts.all? { |f| f.rank.present? }, "All forecasts should have ranks"
   end
 end

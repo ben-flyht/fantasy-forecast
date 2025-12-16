@@ -9,145 +9,70 @@ task bots: :environment do
 
   puts "Generating strategy forecasts for Gameweek #{gameweek.fpl_id}..."
 
-  strategies = Strategy.active.includes(:user)
+  # Group strategies by user to handle users with multiple position-specific strategies
+  strategies_by_user = Strategy.active.includes(:user).group_by(&:user)
   total_forecasts = 0
+  total_users = 0
 
-  strategies.each do |strategy|
-    puts "\n#{strategy.username}: #{strategy.description}"
+  strategies_by_user.each do |user, strategies|
+    total_users += 1
+    user_forecasts = 0
 
-    forecasts = strategy.generate_forecasts(gameweek)
+    # Clear existing forecasts for this user/gameweek before generating new ones
+    Forecast.where(user: user, gameweek: gameweek).destroy_all
 
-    puts "  ✓ Created #{forecasts.count} forecasts"
-    total_forecasts += forecasts.count
+    puts "\n#{user.username}:"
+
+    strategies.each do |strategy|
+      position_info = strategy.position_specific? ? " [#{strategy.position}]" : " [general]"
+      puts "  Strategy#{position_info}"
+
+      forecasts = strategy.generate_forecasts(gameweek)
+      user_forecasts += forecasts.count
+    end
+
+    puts "  ✓ Created #{user_forecasts} forecasts"
+    total_forecasts += user_forecasts
   end
 
   puts "\n" + "=" * 60
   puts "Strategy forecast generation complete!"
-  puts "Total: #{total_forecasts} forecasts for #{strategies.count} strategies"
+  puts "Total: #{total_forecasts} forecasts for #{total_users} bot users"
   puts "=" * 60
 end
 
 namespace :bots do
-  desc "Backfill strategy forecasts for finished gameweeks (usage: rake bots:backfill or rake bots:backfill[5] or rake bots:backfill[1,8])"
+  desc "Backfill bot forecasts for finished gameweeks (usage: rake bots:backfill or rake bots:backfill[5] or rake bots:backfill[1,8])"
   task :backfill, [ :start_gameweek, :end_gameweek ] => :environment do |t, args|
-    # Determine which gameweeks to backfill
     if args[:start_gameweek] && args[:end_gameweek]
-      start_gw = args[:start_gameweek].to_i
-      end_gw = args[:end_gameweek].to_i
-      gameweeks = Gameweek.where(fpl_id: start_gw..end_gw).order(:fpl_id)
+      gameweeks = Gameweek.where(fpl_id: args[:start_gameweek].to_i..args[:end_gameweek].to_i).order(:fpl_id)
     elsif args[:start_gameweek]
-      gw_id = args[:start_gameweek].to_i
-      gameweeks = Gameweek.where(fpl_id: gw_id)
+      gameweeks = Gameweek.where(fpl_id: args[:start_gameweek].to_i)
     else
-      # Default: all finished gameweeks
       gameweeks = Gameweek.finished.order(:fpl_id)
     end
 
-    if gameweeks.empty?
-      puts "No gameweeks found to backfill"
-      exit
-    end
+    abort "No gameweeks found" if gameweeks.empty?
 
-    # Get all active strategies
-    strategies = Strategy.active.includes(:user)
-
-    if strategies.empty?
-      puts "No active strategies found. Run 'rake bots:seed' first."
-      exit
-    end
-
-    puts "=" * 70
-    puts "Backfilling Strategy Forecasts"
-    puts "=" * 70
-    puts "Strategies: #{strategies.map(&:username).join(', ')}"
-    puts "Gameweeks: #{gameweeks.map { |gw| "GW#{gw.fpl_id}" }.join(', ')}"
-    puts "=" * 70
-    puts
+    strategies_by_user = Strategy.active.includes(:user).group_by(&:user)
+    abort "No active strategies found" if strategies_by_user.empty?
 
     total_forecasts = 0
-    total_cleared = 0
 
     gameweeks.each do |gameweek|
-      puts "Gameweek #{gameweek.fpl_id}: #{gameweek.name}"
-      puts "-" * 70
+      next if Performance.where(gameweek: gameweek).none?
 
-      # Check if this gameweek has performance data
-      performance_count = Performance.where(gameweek: gameweek).count
-      if performance_count == 0
-        puts "  ⚠ Skipping - no performance data available"
-        puts
-        next
-      end
+      strategies_by_user.each do |user, user_strategies|
+        Forecast.where(user: user, gameweek: gameweek).destroy_all
 
-      strategies.each do |strategy|
-        # Clear existing forecasts for this strategy and gameweek
-        cleared = Forecast.where(user: strategy.user, gameweek: gameweek).count
-        Forecast.where(user: strategy.user, gameweek: gameweek).destroy_all
-        total_cleared += cleared
-
-        # Generate forecasts using only data that would have been available at the time
-        begin
+        user_strategies.each do |strategy|
           forecasts = strategy.generate_forecasts(gameweek)
-          puts "  #{strategy.username}: ✓ #{forecasts.count} forecasts (cleared #{cleared})"
           total_forecasts += forecasts.count
-        rescue => e
-          puts "  #{strategy.username}: ✗ Error - #{e.message}"
         end
       end
-
-      puts
+      puts "#{gameweek.name}: ✓"
     end
 
-    puts "=" * 70
-    puts "Backfill Complete!"
-    puts "Cleared: #{total_cleared} forecasts"
-    puts "Created: #{total_forecasts} forecasts"
-    puts "Gameweeks processed: #{gameweeks.count}"
-    puts "Strategies: #{strategies.count}"
-    puts "=" * 70
-  end
-
-  desc "Seed strategies from config/bots.yml"
-  task seed: :environment do
-    strategy_configs = YAML.load_file(Rails.root.join("config", "bots.yml"))
-
-    puts "Seeding strategies from config/bots.yml..."
-
-    strategy_configs["bots"].each do |config|
-      username = config["username"]
-      description = config["description"]
-      strategy_config = config["config"]
-
-      begin
-        strategy = Strategy.create_with_user!(
-          username: username,
-          description: description,
-          strategy_config: strategy_config,
-          active: true
-        )
-        puts "  ✓ #{username}"
-      rescue ActiveRecord::RecordInvalid => e
-        puts "  ✗ #{username}: #{e.message}"
-      end
-    end
-
-    puts "\nStrategy seeding complete! Total: #{Strategy.count} strategies"
-  end
-
-  desc "Clear all strategy forecasts for next gameweek"
-  task clear_forecasts: :environment do
-    gameweek = Gameweek.next_gameweek
-
-    unless gameweek
-      puts "No next gameweek available"
-      exit
-    end
-
-    strategy_users = User.bots
-    count = Forecast.where(user: strategy_users, gameweek: gameweek).count
-
-    Forecast.where(user: strategy_users, gameweek: gameweek).destroy_all
-
-    puts "Cleared #{count} strategy forecasts for Gameweek #{gameweek.fpl_id}"
+    puts "Created #{total_forecasts} forecasts"
   end
 end

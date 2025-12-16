@@ -9,6 +9,12 @@ class Match < ApplicationRecord
   validates :gameweek_id, presence: true
   validate :teams_must_be_different
 
+  scope :with_expected_goals, -> { where.not(home_team_expected_goals: nil) }
+
+  def has_expected_goals?
+    home_team_expected_goals.present? && away_team_expected_goals.present?
+  end
+
   private
 
   def teams_must_be_different

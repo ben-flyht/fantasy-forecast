@@ -65,4 +65,29 @@ class Player < ApplicationRecord
     return nil unless code.present?
     "https://resources.premierleague.com/premierleague25/photos/players/#{size}/#{code}.png"
   end
+
+  # Returns expected goals for this player's team in the given gameweek
+  def expected_goals_for(gameweek)
+    match = find_match_for_gameweek(gameweek)
+    return nil unless match
+
+    team_id == match.home_team_id ? match.home_team_expected_goals : match.away_team_expected_goals
+  end
+
+  # Returns expected goals against this player's team in the given gameweek
+  def expected_goals_against(gameweek)
+    match = find_match_for_gameweek(gameweek)
+    return nil unless match
+
+    team_id == match.home_team_id ? match.away_team_expected_goals : match.home_team_expected_goals
+  end
+
+  private
+
+  def find_match_for_gameweek(gameweek)
+    return nil unless team_id
+
+    team.home_matches.find_by(gameweek: gameweek) ||
+      team.away_matches.find_by(gameweek: gameweek)
+  end
 end
