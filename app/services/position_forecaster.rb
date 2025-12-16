@@ -30,14 +30,6 @@ class PositionForecaster < ApplicationService
   def rank_all_players
     players = Player.where(position: position).includes(:statistics, :team)
 
-    # Apply availability filter if configured
-    if strategy_config[:filters]&.dig(:availability)
-      min_chance = strategy_config[:filters][:availability][:min_chance_of_playing]
-      if min_chance
-        players = players.where("chance_of_playing >= ? OR chance_of_playing IS NULL", min_chance)
-      end
-    end
-
     # Score each player
     current_fpl_id = gameweek.fpl_id
     players_with_scores = players.map do |player|

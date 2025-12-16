@@ -14,48 +14,48 @@ class SetupFantasyForecasterBot < ActiveRecord::Migration[8.0]
 
     strategies = {
       "goalkeeper" => {
-        strategies: [
+        performance: [
           { metric: "total_points", weight: 0.4, lookback: 5, recency: "linear" },
           { metric: "saves", weight: 0.3, lookback: 5, recency: "linear" },
           { metric: "clean_sheets", weight: 0.3, lookback: 5, recency: "linear" }
         ],
-        fixture_strategies: [
+        fixture: [
           { metric: "expected_goals_against", weight: -0.2 }
         ],
-        filters: { availability: { min_chance_of_playing: 75 } }
+        availability: { weight: 1.0 }
       },
       "defender" => {
-        strategies: [
+        performance: [
           { metric: "total_points", weight: 0.5, lookback: 5, recency: "linear" },
           { metric: "clean_sheets", weight: 0.3, lookback: 5, recency: "linear" },
           { metric: "bonus", weight: 0.2, lookback: 5, recency: "linear" }
         ],
-        fixture_strategies: [
+        fixture: [
           { metric: "expected_goals_against", weight: -0.3 }
         ],
-        filters: { availability: { min_chance_of_playing: 75 } }
+        availability: { weight: 1.0 }
       },
       "midfielder" => {
-        strategies: [
+        performance: [
           { metric: "expected_goal_involvements", weight: 0.5, lookback: 5, recency: "exponential" },
           { metric: "total_points", weight: 0.3, lookback: 5, recency: "linear" },
           { metric: "ict_index", weight: 0.2, lookback: 5, recency: "linear" }
         ],
-        fixture_strategies: [
+        fixture: [
           { metric: "expected_goals_for", weight: 0.2 }
         ],
-        filters: { availability: { min_chance_of_playing: 75 } }
+        availability: { weight: 1.0 }
       },
       "forward" => {
-        strategies: [
+        performance: [
           { metric: "expected_goals", weight: 0.5, lookback: 3, recency: "exponential" },
           { metric: "goals_scored", weight: 0.3, lookback: 5, recency: "linear" },
           { metric: "ict_index", weight: 0.2, lookback: 3, recency: "linear" }
         ],
-        fixture_strategies: [
+        fixture: [
           { metric: "expected_goals_for", weight: 0.3 }
         ],
-        filters: { availability: { min_chance_of_playing: 75 } }
+        availability: { weight: 1.0 }
       }
     }
 

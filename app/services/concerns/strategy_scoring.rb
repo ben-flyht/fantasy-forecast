@@ -10,29 +10,35 @@ module StrategyScoring
   private
 
   def calculate_player_score(player, config, current_fpl_id)
-    return 0.0 if config.empty? || config[:strategies].nil?
+    return 0.0 if config.empty? || config[:performance].nil?
 
     total_score = 0.0
 
-    config[:strategies].each do |strategy_config|
-      metric = strategy_config[:metric]
-      weight = strategy_config[:weight]
-      lookback = strategy_config[:lookback]
-      recency = strategy_config[:recency]
-      min_availability = strategy_config[:min_availability] || DEFAULT_MIN_AVAILABILITY
+    config[:performance].each do |perf_config|
+      metric = perf_config[:metric]
+      weight = perf_config[:weight]
+      lookback = perf_config[:lookback]
+      recency = perf_config[:recency]
+      min_availability = perf_config[:min_availability] || DEFAULT_MIN_AVAILABILITY
 
       metric_score = calculate_metric_score(player, metric, current_fpl_id, lookback, recency, min_availability)
       total_score += metric_score * weight
     end
 
-    if config[:fixture_strategies]
-      config[:fixture_strategies].each do |fixture_strategy|
-        metric = fixture_strategy[:metric]
-        weight = fixture_strategy[:weight]
+    if config[:fixture]
+      config[:fixture].each do |fixture_config|
+        metric = fixture_config[:metric]
+        weight = fixture_config[:weight]
 
         metric_score = get_fixture_metric_value(player, metric)
         total_score += metric_score * weight
       end
+    end
+
+    # Apply availability multiplier if configured
+    if config[:availability]
+      weight = config[:availability][:weight] || 1.0
+      total_score *= calculate_availability_multiplier(player, weight)
     end
 
     total_score
@@ -131,5 +137,16 @@ module StrategyScoring
     else
       1.0
     end
+  end
+
+  # Calculate availability multiplier based on chance_of_playing and weight
+  # weight=1.0: 0% available → 0.0, 100% available → 1.0
+  # weight=0.5: 0% available → 0.5, 100% available → 1.0
+  def calculate_availability_multiplier(player, weight)
+    chance = player.chance_of_playing
+    return 1.0 if chance.nil?
+
+    availability_ratio = chance / 100.0
+    1.0 - (weight * (1.0 - availability_ratio))
   end
 end
