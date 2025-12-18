@@ -67,11 +67,12 @@ class Player < ApplicationRecord
   end
 
   # Get chance_of_playing from statistics for the current/next gameweek
+  # Uses find on loaded association to avoid N+1 queries when statistics are preloaded
   def chance_of_playing(gameweek = nil)
-    gameweek ||= Gameweek.current_gameweek || Gameweek.next_gameweek
-    return 100 unless gameweek
+    gw_id = resolve_gameweek_id(gameweek)
+    return 100 unless gw_id
 
-    stat = statistics.find_by(gameweek: gameweek, type: "chance_of_playing")
+    stat = statistics.find { |s| s.gameweek_id == gw_id && s.type == "chance_of_playing" }
     stat&.value&.to_i || 100
   end
 
@@ -92,6 +93,13 @@ class Player < ApplicationRecord
   end
 
   private
+
+  def resolve_gameweek_id(gameweek)
+    gameweek ||= Gameweek.current_gameweek || Gameweek.next_gameweek
+    return nil unless gameweek
+
+    gameweek.is_a?(Gameweek) ? gameweek.id : Gameweek.find_by(fpl_id: gameweek)&.id
+  end
 
   def find_match_for_gameweek(gameweek)
     return nil unless team_id

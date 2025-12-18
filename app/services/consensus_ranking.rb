@@ -38,12 +38,20 @@ class ConsensusRanking
   end
 
   def build_rankings
-    rankings = bot_forecasts.map { |forecast| build_ranking(forecast) }
-    rankings.sort_by { |r| [ -r.consensus_score, r.name ] }
+    ranked, unranked = bot_forecasts.partition { |f| f.rank.present? }
+    build_ranked_results(ranked) + build_unranked_results(unranked)
+  end
+
+  def build_ranked_results(forecasts)
+    forecasts.map { |f| build_ranking(f) }.sort_by { |r| [ -r.consensus_score, r.name ] }
+  end
+
+  def build_unranked_results(forecasts)
+    forecasts.map { |f| build_ranking(f) }.sort_by { |r| r.name.downcase }
   end
 
   def bot_forecasts
-    forecasts = bot.forecasts.includes(player: :team).where(gameweek: gameweek_record).where.not(rank: nil)
+    forecasts = bot.forecasts.includes(player: :team).where(gameweek: gameweek_record)
     forecasts = forecasts.joins(:player).where(players: { position: @position }) if @position.present?
     forecasts = forecasts.joins(:player).where(players: { team_id: @team_id }) if @team_id.present?
     forecasts
@@ -58,7 +66,7 @@ class ConsensusRanking
       bot_rank: forecast.rank,
       human_votes: vote_count_by_player[player.id],
       weighted_votes: weighted.round(2),
-      consensus_score: weighted - forecast.rank
+      consensus_score: forecast.rank ? weighted - forecast.rank : nil
     )
   end
 
@@ -106,15 +114,19 @@ class ConsensusRanking
     def call
       return {} if bot_accuracy == 0.0
 
-      ForecasterRankings.overall.select { |r| r[:beats_bot] }.each_with_object({}) do |r, weights|
+      overall_rankings.select { |r| r[:beats_bot] }.each_with_object({}) do |r, weights|
         weights[r[:user_id]] = (r[:accuracy_score] / bot_accuracy) * BASE_VOTE_WEIGHT
       end
     end
 
     private
 
+    def overall_rankings
+      @overall_rankings ||= ForecasterRankings.overall
+    end
+
     def bot_accuracy
-      @bot_accuracy ||= ForecasterRankings.overall.find { |r| r[:is_bot] }&.dig(:accuracy_score) || 0.0
+      @bot_accuracy ||= overall_rankings.find { |r| r[:is_bot] }&.dig(:accuracy_score) || 0.0
     end
   end
 
