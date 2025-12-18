@@ -1,6 +1,7 @@
 module ApplicationHelper
+  BASE_URL = "https://www.fantasyforecast.co.uk"
+
   def user_badge(user: nil, is_bot: nil, beats_bot: false)
-    # Support both User object and raw booleans
     if user
       badge = user.badge
       is_bot = user.bot?
@@ -22,7 +23,7 @@ module ApplicationHelper
   end
 
   def meta_image
-    content_for?(:meta_image) ? content_for(:meta_image) : "https://www.fantasyforecast.co.uk/icon.png"
+    content_for?(:meta_image) ? content_for(:meta_image) : "#{BASE_URL}/icon.png"
   end
 
   def meta_url
@@ -30,30 +31,23 @@ module ApplicationHelper
   end
 
   def structured_data
-    base_schema = {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebSite",
-          "@id": "https://www.fantasyforecast.co.uk/#website",
-          "url": "https://www.fantasyforecast.co.uk/",
-          "name": "Fantasy Forecast",
-          "description": "Challenge the most accurate FPL forecasting bot and track your prediction accuracy"
-        },
-        {
-          "@type": "Organization",
-          "@id": "https://www.fantasyforecast.co.uk/#organization",
-          "name": "Fantasy Forecast",
-          "url": "https://www.fantasyforecast.co.uk/",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://www.fantasyforecast.co.uk/icon.png"
-          },
-          "sameAs": []
-        }
-      ]
-    }
+    tag.script(structured_data_schema.to_json.html_safe, type: "application/ld+json")
+  end
 
-    tag.script(base_schema.to_json.html_safe, type: "application/ld+json")
+  private
+
+  def structured_data_schema
+    { "@context": "https://schema.org", "@graph": [ website_schema, organization_schema ] }
+  end
+
+  def website_schema
+    { "@type": "WebSite", "@id": "#{BASE_URL}/#website", "url": "#{BASE_URL}/",
+      "name": "Fantasy Forecast",
+      "description": "Challenge the most accurate FPL forecasting bot and track your prediction accuracy" }
+  end
+
+  def organization_schema
+    { "@type": "Organization", "@id": "#{BASE_URL}/#organization", "name": "Fantasy Forecast",
+      "url": "#{BASE_URL}/", "logo": { "@type": "ImageObject", "url": "#{BASE_URL}/icon.png" }, "sameAs": [] }
   end
 end

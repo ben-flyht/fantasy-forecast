@@ -2,10 +2,8 @@ require "net/http"
 require "json"
 
 module Fpl
-  class SyncMatches
-    def self.call
-      new.call
-    end
+  class SyncMatches < ApplicationService
+    FPL_FIXTURES_URL = "https://fantasy.premierleague.com/api/fixtures/"
 
     def call
       sync_matches
@@ -14,37 +12,40 @@ module Fpl
     private
 
     def sync_matches
-      response = fetch_fixtures_data
-      return false unless response
-
-      fixtures = parse_fixtures(response)
+      fixtures = fetch_and_parse_fixtures
       return false unless fixtures
 
-      ActiveRecord::Base.transaction do
-        fixtures.each do |fixture|
-          sync_match(fixture)
-        end
-      end
-
-      true
+      process_fixtures(fixtures)
     rescue StandardError => e
-      Rails.logger.error "Error syncing matches: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
+      log_error(e)
       false
     end
 
-    def fetch_fixtures_data
-      uri = URI("https://fantasy.premierleague.com/api/fixtures/")
-      response = Net::HTTP.get_response(uri)
+    def fetch_and_parse_fixtures
+      response = fetch_fixtures_data
+      response ? parse_fixtures(response) : nil
+    end
 
-      if response.code == "200"
-        response.body
-      else
-        Rails.logger.error "Failed to fetch fixtures data: HTTP #{response.code}"
-        nil
+    def process_fixtures(fixtures)
+      ActiveRecord::Base.transaction do
+        fixtures.each { |fixture| sync_match(fixture) }
       end
+      true
+    end
+
+    def fetch_fixtures_data
+      uri = URI(FPL_FIXTURES_URL)
+      response = Net::HTTP.get_response(uri)
+      handle_response(response)
     rescue StandardError => e
       Rails.logger.error "Error fetching fixtures data: #{e.message}"
+      nil
+    end
+
+    def handle_response(response)
+      return response.body if response.code == "200"
+
+      Rails.logger.error "Failed to fetch fixtures data: HTTP #{response.code}"
       nil
     end
 
@@ -56,25 +57,34 @@ module Fpl
     end
 
     def sync_match(fixture_data)
-      return unless fixture_data["event"] # Skip if no gameweek assigned
+      match_data = extract_match_data(fixture_data)
+      return unless match_data
 
-      gameweek = Gameweek.find_by(fpl_id: fixture_data["event"])
-      return unless gameweek # Skip if gameweek doesn't exist
-
-      home_team = Team.find_by(fpl_id: fixture_data["team_h"])
-      away_team = Team.find_by(fpl_id: fixture_data["team_a"])
-
-      return unless home_team && away_team # Skip if teams don't exist
-
-      match = Match.find_or_initialize_by(fpl_id: fixture_data["id"])
-      match.assign_attributes(
-        home_team: home_team,
-        away_team: away_team,
-        gameweek: gameweek
-      )
-      match.save!
+      save_match(fixture_data, match_data)
     rescue StandardError => e
       Rails.logger.warn "Failed to sync match #{fixture_data['id']}: #{e.message}"
+    end
+
+    def extract_match_data(fixture_data)
+      return nil unless fixture_data["event"]
+
+      gameweek = Gameweek.find_by(fpl_id: fixture_data["event"])
+      home_team = Team.find_by(fpl_id: fixture_data["team_h"])
+      away_team = Team.find_by(fpl_id: fixture_data["team_a"])
+      return nil unless gameweek && home_team && away_team
+
+      { gameweek: gameweek, home_team: home_team, away_team: away_team }
+    end
+
+    def save_match(fixture_data, match_data)
+      match = Match.find_or_initialize_by(fpl_id: fixture_data["id"])
+      match.assign_attributes(match_data)
+      match.save!
+    end
+
+    def log_error(error)
+      Rails.logger.error "Error syncing matches: #{error.message}"
+      Rails.logger.error error.backtrace.join("\n")
     end
   end
 end

@@ -1,185 +1,188 @@
 class ForecasterRankings
   def self.for_gameweek(gameweek)
-    # Get rankings for a specific gameweek
-    gameweek_record = Gameweek.find_by(fpl_id: gameweek)
-    return [] unless gameweek_record
-
-    # Get all users who have ever made forecasts
-    all_forecasters = User.joins(:forecasts)
-                         .where.not(forecasts: { accuracy: nil })
-                         .distinct
-                         .select(:id, :username, :bot)
-
-    # Get scores for this specific gameweek
-    gameweek_scores = Forecast.joins(:user)
-                           .where(gameweek: gameweek_record)
-                           .where.not(accuracy: nil)
-                           .select("forecasts.*", "users.username")
-                           .group_by(&:user_id)
-
-    # Calculate rankings for all forecasters
-    user_scores = all_forecasters.map do |user|
-      user_score_records = gameweek_scores[user.id] || []
-
-      if user_score_records.any?
-        avg_accuracy = user_score_records.sum { |s| s.accuracy.to_f } / user_score_records.size
-        forecast_count = user_score_records.size
-      else
-        avg_accuracy = 0.0
-        forecast_count = 0
-      end
-
-      {
-        user_id: user.id,
-        username: user.display_name,
-        accuracy_score: avg_accuracy.round(4),
-        forecast_count: forecast_count
-      }
-    end
-
-    # Sort by accuracy_score
-    user_scores.sort_by { |u| -u[:accuracy_score] }.each_with_index.map do |ranking, index|
-      ranking.merge(rank: index + 1)
-    end
+    GameweekRankings.new(gameweek).call
   end
 
   def self.overall
-    # Get all gameweeks that have scores (from starting gameweek onwards)
-    starting_gameweek = Gameweek::STARTING_GAMEWEEK
-    gameweeks_with_scores = Forecast.joins(:gameweek)
-                                  .where.not(accuracy: nil)
-                                  .where("gameweeks.fpl_id >= ?", starting_gameweek)
-                                  .distinct
-                                  .pluck("gameweeks.fpl_id")
-
-    total_gameweeks = gameweeks_with_scores.size
-
-    # If no scored gameweeks yet, show all forecasters with 0 scores and rank 1=
-    if total_gameweeks == 0
-      all_forecasters = User.joins(:forecasts)
-                           .distinct
-                           .select(:id, :username, :bot)
-                           .order(:username)
-
-      return all_forecasters.map do |user|
-        {
-          user_id: user.id,
-          username: user.display_name,
-          is_bot: user.bot?,
-          accuracy_score: 0.0,
-          forecast_count: 0,
-          gameweeks_participated: 0,
-          beats_bot: false,
-          rank: "1="
-        }
-      end
-    end
-
-    # Get all active users who have scored forecasts
-    all_forecasters = User.active
-                         .joins(forecasts: :gameweek)
-                         .where.not(forecasts: { accuracy: nil })
-                         .where("gameweeks.fpl_id >= ?", starting_gameweek)
-                         .select(:id, :username, :bot)
-
-    # Get all scores with their gameweek data (from starting gameweek onwards)
-    all_scores = Forecast.joins(:gameweek, :user)
-                      .where.not(accuracy: nil)
-                      .where("gameweeks.fpl_id >= ?", starting_gameweek)
-                      .select("forecasts.*", "gameweeks.fpl_id as gameweek_fpl_id", "users.username")
-                      .group_by(&:user_id)
-
-    # Calculate scores for all forecasters
-    user_scores = all_forecasters.map do |user|
-      user_scores_by_gw = (all_scores[user.id] || []).group_by(&:gameweek_fpl_id)
-
-      # Calculate average across gameweeks participated
-      accuracy_sum = 0.0
-      gameweeks_participated = 0
-      total_forecasts_made = 0
-
-      gameweeks_with_scores.each do |gw_fpl_id|
-        gameweek_forecasts = user_scores_by_gw[gw_fpl_id]
-        if gameweek_forecasts&.any?
-          avg_gw_accuracy = gameweek_forecasts.sum { |f| f.accuracy.to_f } / gameweek_forecasts.size
-
-          accuracy_sum += avg_gw_accuracy
-          gameweeks_participated += 1
-          total_forecasts_made += gameweek_forecasts.size
-        end
-      end
-
-      # Average accuracy across gameweeks participated
-      avg_accuracy = gameweeks_participated > 0 ? accuracy_sum / gameweeks_participated : 0.0
-
-      {
-        user_id: user.id,
-        username: user.display_name,
-        is_bot: user.bot?,
-        accuracy_score: avg_accuracy.round(4),
-        forecast_count: total_forecasts_made,
-        gameweeks_participated: gameweeks_participated
-      }
-    end
-
-    # Sort by accuracy_score only
-    ranked_scores = user_scores.sort_by { |u| -u[:accuracy_score] }.each_with_index.map do |ranking, index|
-      ranking.merge(rank: index + 1)
-    end
-
-    # Find bot accuracy and mark humans who beat it
-    bot_accuracy = ranked_scores.find { |r| r[:is_bot] }&.dig(:accuracy_score) || 0.0
-
-    ranked_scores.map do |ranking|
-      ranking.merge(beats_bot: !ranking[:is_bot] && ranking[:accuracy_score] > bot_accuracy)
-    end
+    OverallRankings.new.call
   end
 
   def self.weekly_performance(user_id, limit: nil)
-    # Get weekly performance for a specific user (from starting gameweek onwards)
-    starting_gameweek = Gameweek::STARTING_GAMEWEEK
-
-    # Get all gameweeks this user has forecasts for
-    gameweeks_with_forecasts = Forecast.joins(:gameweek)
-                                      .where(user_id: user_id)
-                                      .where("gameweeks.fpl_id >= ?", starting_gameweek)
-                                      .group("gameweeks.fpl_id")
-                                      .pluck("gameweeks.fpl_id")
-                                      .sort
-                                      .reverse
-
-    gameweeks_with_forecasts = gameweeks_with_forecasts.first(limit) if limit
-
-    gameweeks_with_forecasts.map do |gw_fpl_id|
-      # Get scored forecasts only (bot has many unscored forecasts for rankings)
-      scored_forecasts = Forecast.where(user_id: user_id)
-                                 .joins(:gameweek)
-                                 .where("gameweeks.fpl_id = ?", gw_fpl_id)
-                                 .where.not(accuracy: nil)
-
-      forecast_count = scored_forecasts.count
-      avg_accuracy = scored_forecasts.any? ? scored_forecasts.average(:accuracy).to_f : 0.0
-
-      {
-        gameweek: gw_fpl_id,
-        accuracy_score: avg_accuracy.round(4),
-        forecast_count: forecast_count
-      }
-    end
+    WeeklyPerformance.new(user_id, limit: limit).call
   end
 
   def self.weekly_forecasts(user_id, gameweek_number)
-    # Get detailed forecasts for a specific user and gameweek with scores
     gameweek = Gameweek.find_by(fpl_id: gameweek_number)
     return [] unless gameweek
 
     user = User.find(user_id)
     forecasts = Forecast.includes(player: :team).where(user_id: user_id, gameweek: gameweek)
-
-    # For bots, only show scored forecasts (they have many unscored for rankings)
-    # For humans, show all forecasts (including unscored for next gameweek)
     forecasts = forecasts.where.not(accuracy: nil) if user.bot? && gameweek.is_finished?
-
     forecasts.order("accuracy DESC NULLS LAST")
+  end
+
+  # Inner class for gameweek rankings
+  class GameweekRankings
+    def initialize(gameweek)
+      @gameweek = gameweek
+      @gameweek_record = Gameweek.find_by(fpl_id: gameweek)
+    end
+
+    def call
+      return [] unless @gameweek_record
+
+      user_scores = calculate_user_scores
+      add_ranks(user_scores)
+    end
+
+    private
+
+    def calculate_user_scores
+      all_forecasters.map { |user| build_user_score(user) }
+    end
+
+    def all_forecasters
+      User.joins(:forecasts).where.not(forecasts: { accuracy: nil }).distinct.select(:id, :username, :bot)
+    end
+
+    def gameweek_scores
+      @gameweek_scores ||= Forecast.joins(:user)
+                                   .where(gameweek: @gameweek_record)
+                                   .where.not(accuracy: nil)
+                                   .select("forecasts.*", "users.username")
+                                   .group_by(&:user_id)
+    end
+
+    def build_user_score(user)
+      records = gameweek_scores[user.id] || []
+      avg_accuracy = records.any? ? records.sum { |s| s.accuracy.to_f } / records.size : 0.0
+
+      { user_id: user.id, username: user.display_name, accuracy_score: avg_accuracy.round(4), forecast_count: records.size }
+    end
+
+    def add_ranks(scores)
+      scores.sort_by { |u| -u[:accuracy_score] }.each_with_index.map { |r, i| r.merge(rank: i + 1) }
+    end
+  end
+
+  # Inner class for overall rankings
+  class OverallRankings
+    def initialize
+      @starting_gameweek = Gameweek::STARTING_GAMEWEEK
+    end
+
+    def call
+      return empty_rankings if gameweeks_with_scores.empty?
+
+      user_scores = calculate_user_scores
+      ranked_scores = add_ranks(user_scores)
+      add_beats_bot(ranked_scores)
+    end
+
+    private
+
+    def gameweeks_with_scores
+      @gameweeks_with_scores ||= Forecast.joins(:gameweek)
+                                         .where.not(accuracy: nil)
+                                         .where("gameweeks.fpl_id >= ?", @starting_gameweek)
+                                         .distinct
+                                         .pluck("gameweeks.fpl_id")
+    end
+
+    def empty_rankings
+      User.joins(:forecasts).distinct.select(:id, :username, :bot).order(:username).map do |user|
+        { user_id: user.id, username: user.display_name, is_bot: user.bot?, accuracy_score: 0.0,
+          forecast_count: 0, gameweeks_participated: 0, beats_bot: false, rank: "1=" }
+      end
+    end
+
+    def calculate_user_scores
+      all_forecasters.map { |user| build_user_score(user) }
+    end
+
+    def all_forecasters
+      User.active.joins(forecasts: :gameweek)
+          .where.not(forecasts: { accuracy: nil })
+          .where("gameweeks.fpl_id >= ?", @starting_gameweek)
+          .select(:id, :username, :bot)
+    end
+
+    def all_scores_by_user
+      @all_scores_by_user ||= Forecast.joins(:gameweek, :user)
+                                      .where.not(accuracy: nil)
+                                      .where("gameweeks.fpl_id >= ?", @starting_gameweek)
+                                      .select("forecasts.*", "gameweeks.fpl_id as gameweek_fpl_id")
+                                      .group_by(&:user_id)
+    end
+
+    def build_user_score(user)
+      user_scores_by_gw = (all_scores_by_user[user.id] || []).group_by(&:gameweek_fpl_id)
+      stats = calculate_user_stats(user_scores_by_gw)
+
+      { user_id: user.id, username: user.display_name, is_bot: user.bot?,
+        accuracy_score: stats[:avg_accuracy].round(4), forecast_count: stats[:total_forecasts],
+        gameweeks_participated: stats[:gameweeks_participated] }
+    end
+
+    def calculate_user_stats(user_scores_by_gw)
+      stats = { accuracy_sum: 0.0, gameweeks: 0, forecasts: 0 }
+      gameweeks_with_scores.each { |gw| accumulate_gameweek_stats(stats, user_scores_by_gw[gw]) }
+
+      avg = stats[:gameweeks] > 0 ? stats[:accuracy_sum] / stats[:gameweeks] : 0.0
+      { avg_accuracy: avg, gameweeks_participated: stats[:gameweeks], total_forecasts: stats[:forecasts] }
+    end
+
+    def accumulate_gameweek_stats(stats, forecasts)
+      return unless forecasts&.any?
+
+      stats[:accuracy_sum] += forecasts.sum { |f| f.accuracy.to_f } / forecasts.size
+      stats[:gameweeks] += 1
+      stats[:forecasts] += forecasts.size
+    end
+
+    def add_ranks(scores)
+      scores.sort_by { |u| -u[:accuracy_score] }.each_with_index.map { |r, i| r.merge(rank: i + 1) }
+    end
+
+    def add_beats_bot(ranked_scores)
+      bot_accuracy = ranked_scores.find { |r| r[:is_bot] }&.dig(:accuracy_score) || 0.0
+      ranked_scores.map { |r| r.merge(beats_bot: !r[:is_bot] && r[:accuracy_score] > bot_accuracy) }
+    end
+  end
+
+  # Inner class for weekly performance
+  class WeeklyPerformance
+    def initialize(user_id, limit: nil)
+      @user_id = user_id
+      @limit = limit
+      @starting_gameweek = Gameweek::STARTING_GAMEWEEK
+    end
+
+    def call
+      gameweeks = fetch_gameweeks
+      gameweeks.map { |gw_fpl_id| build_gameweek_stats(gw_fpl_id) }
+    end
+
+    private
+
+    def fetch_gameweeks
+      gameweeks = Forecast.joins(:gameweek)
+                          .where(user_id: @user_id)
+                          .where("gameweeks.fpl_id >= ?", @starting_gameweek)
+                          .group("gameweeks.fpl_id")
+                          .pluck("gameweeks.fpl_id")
+                          .sort
+                          .reverse
+      @limit ? gameweeks.first(@limit) : gameweeks
+    end
+
+    def build_gameweek_stats(gw_fpl_id)
+      scored = Forecast.where(user_id: @user_id)
+                       .joins(:gameweek)
+                       .where("gameweeks.fpl_id = ?", gw_fpl_id)
+                       .where.not(accuracy: nil)
+
+      { gameweek: gw_fpl_id, accuracy_score: (scored.average(:accuracy)&.to_f || 0.0).round(4), forecast_count: scored.count }
+    end
   end
 end

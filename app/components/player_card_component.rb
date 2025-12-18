@@ -8,6 +8,11 @@ class PlayerCardComponent < ViewComponent::Base
     "green" => "border border-green-200 bg-green-50 text-green-800"
   }.freeze
 
+  STATUS_TEXTS = {
+    "a" => "Available", "i" => "Injured", "s" => "Suspended",
+    "u" => "Unavailable", "n" => "Ineligible"
+  }.freeze
+
   def initialize(player: nil, show_position: false, selection_url: nil, show_ff_rank: false, gameweek: nil)
     @player = player
     @show_position = show_position
@@ -31,29 +36,9 @@ class PlayerCardComponent < ViewComponent::Base
   end
 
   def status_text
-    case @player&.status
-    when "a"
-      "Available"
-    when "i"
-      "Injured"
-    when "s"
-      "Suspended"
-    when "u"
-      "Unavailable"
-    when "d"
-      doubtful_status_text
-    when "n"
-      "Ineligible"
-    end
-  end
+    return doubtful_status_text if @player&.status == "d"
 
-  def doubtful_status_text
-    case chance_of_playing
-    when 0..74
-      "Doubtful"
-    else
-      "Slight Doubt"
-    end
+    STATUS_TEXTS[@player&.status]
   end
 
   def show_status_info?
@@ -61,6 +46,10 @@ class PlayerCardComponent < ViewComponent::Base
   end
 
   private
+
+  def doubtful_status_text
+    chance_of_playing <= 74 ? "Doubtful" : "Slight Doubt"
+  end
 
   def bot_forecast
     @bot_forecast ||= begin
