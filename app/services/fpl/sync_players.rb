@@ -105,7 +105,7 @@ module Fpl
 
       { first_name: element["first_name"], last_name: element["second_name"],
         short_name: element["web_name"] || element["second_name"], code: element["code"],
-        team: team_record, position: position, status: element["status"] }
+        team: team_record, position: position }
     end
 
     def save_player(player, element, counts)

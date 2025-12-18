@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_12_16_214801) do
+ActiveRecord::Schema[8.1].define(version: 2025_12_18_172351) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -85,7 +85,6 @@ ActiveRecord::Schema[8.1].define(version: 2025_12_16_214801) do
     t.string "last_name", null: false
     t.string "position", null: false
     t.string "short_name"
-    t.string "status"
     t.bigint "team_id"
     t.datetime "updated_at", null: false
     t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
