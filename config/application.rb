@@ -23,5 +23,8 @@ module FantasyForecast
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+
+    # Disable Active Storage variant processing (not using image attachments)
+    config.active_storage.variant_processor = :disabled
   end
 end
