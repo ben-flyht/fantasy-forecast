@@ -2,7 +2,14 @@
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
 # Overwrite or add rules to create your own house style
-#
-# # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
-# Layout/SpaceInsideArrayLiteralBrackets:
-#   Enabled: false
+Metrics/MethodLength:
+  Enabled: true
+  Exclude:
+    - "db/migrate/**/*"
+    - "test/**/*"
+
+Metrics/AbcSize:
+  Enabled: true
+  Exclude:
+    - "db/migrate/**/*"
+    - "test/**/*"

@@ -2,209 +2,171 @@ require "net/http"
 require "json"
 
 module Fpl
-  class SyncPlayers
-  FPL_API_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
+  class SyncPlayers < ApplicationService
+    FPL_API_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
+    POSITION_MAP = { 1 => "goalkeeper", 2 => "defender", 3 => "midfielder", 4 => "forward" }.freeze
 
-  def self.call
-    new.call
-  end
+    def call
+      Rails.logger.info "Starting FPL player sync..."
 
-  def call
-    Rails.logger.info "Starting FPL player sync..."
+      data = fetch_fpl_data
+      return false unless data
 
-    data = fetch_fpl_data
-    return false unless data
+      process_sync(data)
+      true
+    rescue => e
+      log_error(e)
+      false
+    end
 
-    # Sync teams first
-    sync_teams(data["teams"])
+    private
 
-    teams = build_teams_hash(data["teams"])
-    elements = data["elements"]
+    def process_sync(data)
+      sync_teams(data["teams"])
+      sync_players(data["elements"], build_teams_hash(data["teams"]))
+      sync_availability_statistics(data["elements"])
+      Rails.logger.info "FPL player sync completed. Total players: #{Player.count}"
+    end
 
-    sync_players(elements, teams)
+    def log_error(error)
+      Rails.logger.error "FPL sync failed: #{error.message}"
+      Rails.logger.error "Backtrace: #{error.backtrace.join("\n")}"
+    end
 
-    # Store historical availability data for current gameweek
-    sync_availability_statistics(elements)
+    def fetch_fpl_data
+      uri = URI(FPL_API_URL)
+      response = make_http_request(uri)
+      response.code == "200" ? JSON.parse(response.body) : log_api_error(response)
+    end
 
-    Rails.logger.info "FPL player sync completed. Total players: #{Player.count}"
-    true
-  rescue => e
-    Rails.logger.error "FPL sync failed: #{e.message}"
-    Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
-    false
-  end
-
-  private
-
-  def fetch_fpl_data
-    uri = URI(FPL_API_URL)
-
-    Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
-      request = Net::HTTP::Get.new(uri)
-      request["User-Agent"] = "Fantasy Forecast App"
-
-      response = http.request(request)
-
-      if response.code == "200"
-        JSON.parse(response.body)
-      else
-        Rails.logger.error "FPL API returned #{response.code}: #{response.message}"
-        nil
+    def make_http_request(uri)
+      Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+        request = Net::HTTP::Get.new(uri)
+        request["User-Agent"] = "Fantasy Forecast App"
+        http.request(request)
       end
     end
-  end
 
-  def sync_teams(teams_data)
-    Rails.logger.info "Syncing teams..."
+    def log_api_error(response)
+      Rails.logger.error "FPL API returned #{response.code}: #{response.message}"
+      nil
+    end
 
-    teams_data.each do |team_data|
+    def sync_teams(teams_data)
+      Rails.logger.info "Syncing teams..."
+      teams_data.each { |team_data| sync_team(team_data) }
+      Rails.logger.info "Teams sync completed. Total teams: #{Team.count}"
+    end
+
+    def sync_team(team_data)
       team = Team.find_or_initialize_by(fpl_id: team_data["id"])
+      team.assign_attributes(team_attributes(team_data))
+      log_team_result(team, team_data)
+    end
 
-      team.assign_attributes(
-        name: team_data["name"],
-        short_name: team_data["short_name"],
-        code: team_data["code"]
-      )
+    def team_attributes(data)
+      { name: data["name"], short_name: data["short_name"], code: data["code"] }
+    end
 
+    def log_team_result(team, data)
       if team.save
         Rails.logger.debug "Synced team: #{team.name} (#{team.short_name})"
       else
-        Rails.logger.error "Failed to sync team #{team_data['name']}: #{team.errors.full_messages.join(', ')}"
+        Rails.logger.error "Failed to sync team #{data['name']}: #{team.errors.full_messages.join(', ')}"
       end
     end
 
-    Rails.logger.info "Teams sync completed. Total teams: #{Team.count}"
-  end
-
-  def build_teams_hash(teams_data)
-    teams_hash = {}
-    teams_data.each do |team|
-      teams_hash[team["id"]] = team["name"]
+    def build_teams_hash(teams_data)
+      teams_data.to_h { |team| [ team["id"], team["name"] ] }
     end
-    teams_hash
-  end
 
-  def sync_players(elements, teams)
-    position_map = {
-      1 => "goalkeeper",
-      2 => "defender",
-      3 => "midfielder",
-      4 => "forward"
-    }
+    def sync_players(elements, _teams)
+      counts = { success: 0, skip: 0, error: 0 }
+      elements.each { |element| sync_player(element, counts) }
+      Rails.logger.info "Player sync results: #{counts[:success]} synced, #{counts[:skip]} skipped, #{counts[:error]} errors"
+    end
 
-    success_count = 0
-    skip_count = 0
-    error_count = 0
+    def sync_player(element, counts)
+      attrs = build_player_attributes(element)
+      return counts[:skip] += 1 unless attrs
 
-    elements.each do |element|
-      begin
-        fpl_id = element["id"]
-        first_name = element["first_name"]
-        last_name = element["second_name"]
-        short_name = element["web_name"] || element["second_name"] # Fallback to second_name if web_name missing
-        code = element["code"]
-        team_fpl_id = element["team"]
-        position = position_map[element["element_type"]]
+      player = Player.find_or_initialize_by(fpl_id: element["id"])
+      player.assign_attributes(attrs)
+      save_player(player, element, counts)
+    rescue => e
+      Rails.logger.error "Exception syncing player #{element['first_name']} #{element['second_name']}: #{e.message}"
+      counts[:error] += 1
+    end
 
-        # Find the team record
-        team_record = Team.find_by(fpl_id: team_fpl_id)
+    def build_player_attributes(element)
+      position = POSITION_MAP[element["element_type"]]
+      team_record = Team.find_by(fpl_id: element["team"])
+      return nil unless position && team_record
 
-        # Skip if we can't determine position or team
-        unless position && team_record
-          Rails.logger.warn "Skipping player #{first_name} #{last_name}: position=#{position}, team_record=#{team_record&.name}"
-          skip_count += 1
-          next
-        end
+      { first_name: element["first_name"], last_name: element["second_name"],
+        short_name: element["web_name"] || element["second_name"], code: element["code"],
+        team: team_record, position: position, status: element["status"] }
+    end
 
-        player_attributes = {
-          first_name: first_name,
-          last_name: last_name,
-          short_name: short_name,
-          code: code,
-          team: team_record,
-          position: position,
-          status: element["status"]
-        }
-
-        player = Player.find_or_initialize_by(fpl_id: fpl_id)
-        player.assign_attributes(player_attributes)
-
-        if player.save
-          Rails.logger.debug "Synced player: #{first_name} #{last_name} (#{short_name}) (#{team_record.name}, #{position})"
-          success_count += 1
-        else
-          Rails.logger.error "Failed to sync player #{first_name} #{last_name}: #{player.errors.full_messages.join(', ')}"
-          error_count += 1
-        end
-      rescue => e
-        Rails.logger.error "Exception syncing player #{element['first_name']} #{element['second_name']}: #{e.message}"
-        error_count += 1
+    def save_player(player, element, counts)
+      if player.save
+        log_player_success(player)
+        counts[:success] += 1
+      else
+        log_player_error(player, element)
+        counts[:error] += 1
       end
     end
 
-    Rails.logger.info "Player sync results: #{success_count} synced, #{skip_count} skipped, #{error_count} errors"
-  end
+    def log_player_success(player)
+      Rails.logger.debug "Synced player: #{player.first_name} #{player.last_name} (#{player.team.name}, #{player.position})"
+    end
 
-  # Store chance_of_playing as a historical Statistic per gameweek
-  # This allows us to track availability over time and exclude injured periods from lookback
-  def sync_availability_statistics(elements)
-    current_gameweek = Gameweek.current_gameweek
-    next_gameweek = Gameweek.next_gameweek
+    def log_player_error(player, element)
+      Rails.logger.error "Failed to sync player #{element['first_name']} #{element['second_name']}: #{player.errors.full_messages.join(', ')}"
+    end
 
-    return unless current_gameweek || next_gameweek
+    def sync_availability_statistics(elements)
+      current_gw = Gameweek.current_gameweek
+      next_gw = Gameweek.next_gameweek
+      return unless current_gw || next_gw
 
-    # Build map of fpl_id to player_id
-    fpl_ids = elements.map { |e| e["id"] }
-    players_by_fpl_id = Player.where(fpl_id: fpl_ids).pluck(:fpl_id, :id).to_h
+      availability_data = build_availability_data(elements, current_gw, next_gw)
+      return if availability_data.empty?
 
-    now = Time.current
-    availability_data = []
+      Statistic.upsert_all(availability_data, unique_by: %i[player_id gameweek_id type])
+      log_availability_sync(availability_data.size, current_gw, next_gw)
+    end
 
-    elements.each do |element|
-      player_id = players_by_fpl_id[element["id"]]
-      next unless player_id
+    def build_availability_data(elements, current_gw, next_gw)
+      players_by_fpl_id = Player.where(fpl_id: elements.map { |e| e["id"] }).pluck(:fpl_id, :id).to_h
+      now = Time.current
 
-      # chance_of_playing_this_round is the availability for the current gameweek
-      if current_gameweek
-        chance_this_round = element["chance_of_playing_this_round"]
-        if chance_this_round.present?
-          availability_data << {
-            player_id: player_id,
-            gameweek_id: current_gameweek.id,
-            type: "chance_of_playing",
-            value: chance_this_round.to_f,
-            created_at: now,
-            updated_at: now
-          }
-        end
-      end
+      elements.flat_map do |element|
+        player_id = players_by_fpl_id[element["id"]]
+        next [] unless player_id
 
-      # chance_of_playing_next_round is the availability for the next gameweek
-      # This is critical for forecasting upcoming gameweeks
-      if next_gameweek
-        chance_next_round = element["chance_of_playing_next_round"]
-        if chance_next_round.present?
-          availability_data << {
-            player_id: player_id,
-            gameweek_id: next_gameweek.id,
-            type: "chance_of_playing",
-            value: chance_next_round.to_f,
-            created_at: now,
-            updated_at: now
-          }
-        end
+        build_player_availability(element, player_id, current_gw, next_gw, now)
       end
     end
 
-    return if availability_data.empty?
+    def build_player_availability(element, player_id, current_gw, next_gw, now)
+      data = []
+      data << availability_record(player_id, current_gw, element["chance_of_playing_this_round"], now) if current_gw
+      data << availability_record(player_id, next_gw, element["chance_of_playing_next_round"], now) if next_gw
+      data.compact
+    end
 
-    Statistic.upsert_all(
-      availability_data,
-      unique_by: %i[player_id gameweek_id type]
-    )
+    def availability_record(player_id, gameweek, chance, now)
+      return nil unless chance.present?
 
-    gameweeks_synced = [ current_gameweek&.fpl_id, next_gameweek&.fpl_id ].compact.join(", ")
-    Rails.logger.info "Synced #{availability_data.size} availability statistics for gameweeks #{gameweeks_synced}"
-  end
+      { player_id: player_id, gameweek_id: gameweek.id, type: "chance_of_playing",
+        value: chance.to_f, created_at: now, updated_at: now }
+    end
+
+    def log_availability_sync(count, current_gw, next_gw)
+      gameweeks = [ current_gw&.fpl_id, next_gw&.fpl_id ].compact.join(", ")
+      Rails.logger.info "Synced #{count} availability statistics for gameweeks #{gameweeks}"
+    end
   end
 end

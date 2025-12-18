@@ -41,47 +41,51 @@ module ApiFootball
     private
 
     def get(endpoint, params)
+      uri = build_uri(endpoint, params)
+      response = make_request(uri)
+      handle_response(response)
+    end
+
+    def build_uri(endpoint, params)
       uri = URI("#{BASE_URL}#{endpoint}")
       uri.query = URI.encode_www_form(params) unless params.empty?
+      uri
+    end
 
+    def make_request(uri)
       request = Net::HTTP::Get.new(uri)
       request["x-apisports-key"] = @api_key
 
-      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
-        http.request(request)
-      end
-
-      handle_response(response)
+      Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(request) }
     end
 
     def handle_response(response)
       case response.code.to_i
-      when 200
-        data = JSON.parse(response.body)
-        check_for_errors(data)
-        data["response"]
-      when 401, 403
-        raise AuthenticationError, "Invalid API key"
-      when 429
-        raise RateLimitError, "Rate limit exceeded"
-      else
-        raise Error, "API request failed: #{response.code} - #{response.body}"
+      when 200 then parse_successful_response(response)
+      when 401, 403 then raise AuthenticationError, "Invalid API key"
+      when 429 then raise RateLimitError, "Rate limit exceeded"
+      else raise Error, "API request failed: #{response.code} - #{response.body}"
       end
+    end
+
+    def parse_successful_response(response)
+      data = JSON.parse(response.body)
+      check_for_errors(data)
+      data["response"]
     end
 
     def check_for_errors(data)
       errors = data["errors"]
       return if errors.nil? || errors.empty?
+      return unless errors.is_a?(Hash)
 
-      if errors.is_a?(Hash)
-        if errors["token"]
-          raise AuthenticationError, errors["token"]
-        elsif errors["plan"]
-          raise Error, errors["plan"]
-        else
-          raise Error, errors.values.join(", ")
-        end
-      end
+      raise_appropriate_error(errors)
+    end
+
+    def raise_appropriate_error(errors)
+      raise AuthenticationError, errors["token"] if errors["token"]
+      raise Error, errors["plan"] if errors["plan"]
+      raise Error, errors.values.join(", ")
     end
   end
 end

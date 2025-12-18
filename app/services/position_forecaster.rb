@@ -12,16 +12,17 @@ class PositionForecaster < ApplicationService
   end
 
   def call
-    raise ArgumentError, "User must be a bot" unless user.bot?
-    raise ArgumentError, "No gameweek available" unless gameweek
-    raise ArgumentError, "Invalid position" unless valid_position?
-
-    rank_all_players.map do |player_data|
-      create_or_update_forecast(player_data[:player], player_data[:rank])
-    end
+    validate_inputs!
+    rank_all_players.map { |data| create_or_update_forecast(data[:player], data[:rank]) }
   end
 
   private
+
+  def validate_inputs!
+    raise ArgumentError, "User must be a bot" unless user.bot?
+    raise ArgumentError, "No gameweek available" unless gameweek
+    raise ArgumentError, "Invalid position" unless valid_position?
+  end
 
   def valid_position?
     FantasyForecast::POSITION_CONFIG.key?(position)
@@ -29,19 +30,17 @@ class PositionForecaster < ApplicationService
 
   def rank_all_players
     players = Player.where(position: position).includes(:statistics, :team)
+    score_and_rank_players(players)
+  end
 
-    # Score each player
+  def score_and_rank_players(players)
     current_fpl_id = gameweek.fpl_id
-    players_with_scores = players.map do |player|
-      score = calculate_player_score(player, strategy_config, current_fpl_id)
-      { player: player, score: score }
-    end
+    scored = players.map { |p| { player: p, score: calculate_player_score(p, strategy_config, current_fpl_id) } }
+    assign_ranks(scored)
+  end
 
-    # Sort by score descending and assign ranks
-    sorted = players_with_scores.sort_by { |p| -p[:score] }
-    sorted.each_with_index.map do |item, index|
-      { player: item[:player], rank: index + 1 }
-    end
+  def assign_ranks(scored_players)
+    scored_players.sort_by { |p| -p[:score] }.each_with_index.map { |item, i| { player: item[:player], rank: i + 1 } }
   end
 
   def create_or_update_forecast(player, rank)
