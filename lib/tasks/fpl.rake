@@ -25,8 +25,7 @@ namespace :fpl do
   task sync_teams: :environment do
     puts "Starting FPL team sync..."
 
-    service = Fpl::SyncTeams.new
-    if service.call
+    if Fpl::SyncTeams.call
       puts "✅ Successfully synced #{Team.count} teams from FPL API"
     else
       puts "❌ Team sync failed. Check logs for details."
