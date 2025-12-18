@@ -16,7 +16,16 @@ class PlayersController < ApplicationController
     end
 
     # Get consensus scores for the gameweek with position and team filtering
-    @consensus_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
+    all_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
+
+    # Limit to 10 rankings for non-logged-in users
+    if user_signed_in?
+      @consensus_rankings = all_rankings
+      @rankings_limited = false
+    else
+      @consensus_rankings = all_rankings.first(10)
+      @rankings_limited = all_rankings.size > 10
+    end
 
     # Get total number of unique forecasters for this gameweek
     @gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
@@ -84,7 +93,7 @@ class PlayersController < ApplicationController
     @available_teams = Team.order(:name).select(:id, :name, :short_name)
 
     @page_title = "Player Rankings - Gameweek #{@gameweek}"
-    @page_title += " (#{@position_filter.capitalize}s)" if @position_filter.present?
+    @page_title += " #{@position_filter.capitalize}s" if @position_filter.present?
     if @team_filter
       team = Team.find_by(id: @team_filter)
       @page_title += " - #{team.name}" if team
