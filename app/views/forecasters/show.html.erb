@@ -33,9 +33,6 @@
               Gameweek
             </th>
             <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-              Forecasts
-            </th>
-            <th class="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
               Accuracy
             </th>
           </tr>
@@ -58,9 +55,6 @@
                     Gameweek <%= ranking[:gameweek] %>
                   <% end %>
                 <% end %>
-              </td>
-              <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm <%= has_no_selections ? 'text-gray-400' : 'text-gray-600' %> w-24">
-                <%= ranking[:forecast_count] %>
               </td>
               <td class="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm <%= has_no_selections ? 'text-gray-400' : 'text-gray-600' %> w-24">
                 <% unless is_next_gameweek %>

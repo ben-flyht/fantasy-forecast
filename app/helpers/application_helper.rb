@@ -14,11 +14,11 @@ module ApplicationHelper
   end
 
   def meta_title
-    content_for?(:meta_title) ? content_for(:meta_title) : "Fantasy Forecast - FPL Player Rankings & Consensus"
+    content_for?(:meta_title) ? content_for(:meta_title) : "Fantasy Forecast - Can You Beat the FPL Bot?"
   end
 
   def meta_description
-    content_for?(:meta_description) ? content_for(:meta_description) : "Crowd-sourced Fantasy Premier League player rankings updated every gameweek. Make better FPL transfer and captain decisions with consensus rankings from experienced managers."
+    content_for?(:meta_description) ? content_for(:meta_description) : "Challenge the most accurate FPL forecasting bot. Submit your player rankings each gameweek and see if you can beat the algorithm."
   end
 
   def meta_image
@@ -38,7 +38,7 @@ module ApplicationHelper
           "@id": "https://www.fantasyforecast.co.uk/#website",
           "url": "https://www.fantasyforecast.co.uk/",
           "name": "Fantasy Forecast",
-          "description": "Crowd-sourced Fantasy Premier League player rankings updated every gameweek"
+          "description": "Challenge the most accurate FPL forecasting bot and track your prediction accuracy"
         },
         {
           "@type": "Organization",

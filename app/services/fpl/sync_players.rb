@@ -148,10 +148,10 @@ module Fpl
   # Store chance_of_playing as a historical Statistic per gameweek
   # This allows us to track availability over time and exclude injured periods from lookback
   def sync_availability_statistics(elements)
-    current_gameweek = Gameweek.current_gameweek || Gameweek.next_gameweek
-    return unless current_gameweek
+    current_gameweek = Gameweek.current_gameweek
+    next_gameweek = Gameweek.next_gameweek
 
-    Rails.logger.info "Syncing availability statistics for gameweek #{current_gameweek.fpl_id}..."
+    return unless current_gameweek || next_gameweek
 
     # Build map of fpl_id to player_id
     fpl_ids = elements.map { |e| e["id"] }
@@ -165,17 +165,35 @@ module Fpl
       next unless player_id
 
       # chance_of_playing_this_round is the availability for the current gameweek
-      chance = element["chance_of_playing_this_round"]
-      next if chance.nil?
+      if current_gameweek
+        chance_this_round = element["chance_of_playing_this_round"]
+        if chance_this_round.present?
+          availability_data << {
+            player_id: player_id,
+            gameweek_id: current_gameweek.id,
+            type: "chance_of_playing",
+            value: chance_this_round.to_f,
+            created_at: now,
+            updated_at: now
+          }
+        end
+      end
 
-      availability_data << {
-        player_id: player_id,
-        gameweek_id: current_gameweek.id,
-        type: "chance_of_playing",
-        value: chance.to_f,
-        created_at: now,
-        updated_at: now
-      }
+      # chance_of_playing_next_round is the availability for the next gameweek
+      # This is critical for forecasting upcoming gameweeks
+      if next_gameweek
+        chance_next_round = element["chance_of_playing_next_round"]
+        if chance_next_round.present?
+          availability_data << {
+            player_id: player_id,
+            gameweek_id: next_gameweek.id,
+            type: "chance_of_playing",
+            value: chance_next_round.to_f,
+            created_at: now,
+            updated_at: now
+          }
+        end
+      end
     end
 
     return if availability_data.empty?
@@ -185,7 +203,8 @@ module Fpl
       unique_by: %i[player_id gameweek_id type]
     )
 
-    Rails.logger.info "Synced #{availability_data.size} availability statistics"
+    gameweeks_synced = [current_gameweek&.fpl_id, next_gameweek&.fpl_id].compact.join(", ")
+    Rails.logger.info "Synced #{availability_data.size} availability statistics for gameweeks #{gameweeks_synced}"
   end
   end
 end

@@ -143,7 +143,8 @@ module StrategyScoring
   # - multiplier scales the performance score based on availability
   # - large penalty only for 0% availability (injured/suspended) to push to bottom
   def apply_availability(score, player, weight)
-    chance = player.chance_of_playing || 100  # Default to fully available
+    # Use chance_of_playing for the target gameweek we're forecasting for
+    chance = player.chance_of_playing(gameweek) || 100  # Default to fully available
     availability_ratio = chance / 100.0
     multiplier = 1.0 - (weight * (1.0 - availability_ratio))
 
