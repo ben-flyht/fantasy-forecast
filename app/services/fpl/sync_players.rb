@@ -203,7 +203,7 @@ module Fpl
       unique_by: %i[player_id gameweek_id type]
     )
 
-    gameweeks_synced = [current_gameweek&.fpl_id, next_gameweek&.fpl_id].compact.join(", ")
+    gameweeks_synced = [ current_gameweek&.fpl_id, next_gameweek&.fpl_id ].compact.join(", ")
     Rails.logger.info "Synced #{availability_data.size} availability statistics for gameweeks #{gameweeks_synced}"
   end
   end
