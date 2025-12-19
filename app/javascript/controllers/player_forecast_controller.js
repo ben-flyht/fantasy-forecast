@@ -1,6 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
+  static values = { positionConfig: Object }
+
   async toggleForecast(event) {
     const button = event.currentTarget
     const playerId = button.dataset.playerId
@@ -61,16 +63,9 @@ export default class extends Controller {
 
   updatePositionCounters(forecastCounts) {
     // Update the position filter buttons with new counts
-    const positionConfig = {
-      'goalkeeper': 5,
-      'defender': 10,
-      'midfielder': 10,
-      'forward': 5
-    }
-
-    Object.keys(positionConfig).forEach(position => {
+    Object.keys(this.positionConfigValue).forEach(position => {
       const count = forecastCounts[position] || 0
-      const maxSlots = positionConfig[position]
+      const maxSlots = this.positionConfigValue[position]
 
       // Find the position button and update its counter
       const positionButtons = document.querySelectorAll('input[name="position"]')

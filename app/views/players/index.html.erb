@@ -85,7 +85,7 @@
     <% end %>
 
     <!-- Consensus Rankings Table -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden" data-controller="player-forecast">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden" data-controller="player-forecast" data-player-forecast-position-config-value="<%= FantasyForecast::POSITION_CONFIG.transform_values { |v| v[:slots] }.to_json %>">
 
     <% if @consensus_rankings.any? %>
       <table class="w-full divide-y divide-gray-200">
