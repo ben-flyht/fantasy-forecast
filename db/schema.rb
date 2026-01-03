@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_12_18_172351) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_03_171424) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -119,14 +119,12 @@ ActiveRecord::Schema[8.1].define(version: 2025_12_18_172351) do
   end
 
   create_table "teams", force: :cascade do |t|
-    t.integer "api_football_id"
     t.integer "code"
     t.datetime "created_at", null: false
     t.integer "fpl_id"
     t.string "name"
     t.string "short_name"
     t.datetime "updated_at", null: false
-    t.index ["api_football_id"], name: "index_teams_on_api_football_id", unique: true
     t.index ["fpl_id"], name: "index_teams_on_fpl_id", unique: true
   end
 
