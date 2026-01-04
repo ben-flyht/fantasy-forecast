@@ -50,7 +50,7 @@ class BotForecasterTest < ActiveSupport::TestCase
       is_finished: false
     )
 
-    # Create statistics for all players
+    # Create statistics for all players (both total_points and minutes to indicate they played)
     @players.values.flatten.each do |player|
       Statistic.create!(
         player: player,
@@ -58,11 +58,17 @@ class BotForecasterTest < ActiveSupport::TestCase
         type: "total_points",
         value: rand(1..15)
       )
+      Statistic.create!(
+        player: player,
+        gameweek: @finished_gw,
+        type: "minutes",
+        value: rand(60..90)
+      )
     end
 
     @bot_user = create_test_bot
     @strategy_config = {
-      strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ]
+      performance: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ]
     }
   end
 
@@ -191,16 +197,16 @@ class BotForecasterTest < ActiveSupport::TestCase
     position_config = {
       positions: {
         goalkeeper: {
-          strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ]
+          performance: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ]
         },
         defender: {
-          strategies: [ { metric: "total_points", weight: 1.0, lookback: 5, recency: "linear" } ]
+          performance: [ { metric: "total_points", weight: 1.0, lookback: 5, recency: "linear" } ]
         },
         midfielder: {
-          strategies: [ { metric: "total_points", weight: 1.0, lookback: 1, recency: "exponential" } ]
+          performance: [ { metric: "total_points", weight: 1.0, lookback: 1, recency: "exponential" } ]
         },
         forward: {
-          strategies: [ { metric: "total_points", weight: 1.0, lookback: 2, recency: "none" } ]
+          performance: [ { metric: "total_points", weight: 1.0, lookback: 2, recency: "none" } ]
         }
       }
     }
@@ -220,10 +226,10 @@ class BotForecasterTest < ActiveSupport::TestCase
   test "falls back to global config when position-specific config not provided" do
     # Config with only some positions defined
     partial_config = {
-      strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ],
+      performance: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ],
       positions: {
         goalkeeper: {
-          strategies: [ { metric: "total_points", weight: 1.0, lookback: 5, recency: "linear" } ]
+          performance: [ { metric: "total_points", weight: 1.0, lookback: 5, recency: "linear" } ]
         }
       }
     }
@@ -242,11 +248,14 @@ class BotForecasterTest < ActiveSupport::TestCase
 
     player = @players["midfielder"].first
 
-    # Player was available in all gameweeks (chance_of_playing = 100)
+    # Player was available and played in all gameweeks
     [ gw398, gw399, @finished_gw ].each_with_index do |gw, i|
       # Use find_or_create to handle existing statistics from setup
       Statistic.find_or_create_by!(player: player, gameweek: gw, type: "total_points") do |s|
         s.value = 10 + i
+      end
+      Statistic.find_or_create_by!(player: player, gameweek: gw, type: "minutes") do |s|
+        s.value = 90
       end
       Statistic.find_or_create_by!(player: player, gameweek: gw, type: "chance_of_playing") do |s|
         s.value = 100.0
@@ -268,17 +277,20 @@ class BotForecasterTest < ActiveSupport::TestCase
 
     player = @players["midfielder"].first
 
-    # GW398: Player scored 15 points, was available
+    # GW398: Player scored 15 points, was available and played
     Statistic.find_or_create_by!(player: player, gameweek: gw398, type: "total_points") { |s| s.value = 15 }
+    Statistic.find_or_create_by!(player: player, gameweek: gw398, type: "minutes") { |s| s.value = 90 }
     Statistic.find_or_create_by!(player: player, gameweek: gw398, type: "chance_of_playing") { |s| s.value = 100.0 }
 
-    # GW399: Player was injured (0% chance), scored 0 points
+    # GW399: Player was injured (0% chance), didn't play (0 minutes)
     Statistic.find_or_create_by!(player: player, gameweek: gw399, type: "total_points") { |s| s.value = 0 }
+    Statistic.find_or_create_by!(player: player, gameweek: gw399, type: "minutes") { |s| s.value = 0 }
     Statistic.find_or_create_by!(player: player, gameweek: gw399, type: "chance_of_playing") { |s| s.value = 0.0 }
 
-    # GW400 (@finished_gw): Player recovered, scored 12 points
+    # GW400 (@finished_gw): Player recovered and played
     Statistic.find_by(player: player, gameweek: @finished_gw, type: "total_points")&.update!(value: 12)
     Statistic.find_or_create_by!(player: player, gameweek: @finished_gw, type: "chance_of_playing") { |s| s.value = 100.0 }
+    # minutes already created in setup
 
     forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
 
@@ -295,13 +307,16 @@ class BotForecasterTest < ActiveSupport::TestCase
 
     player = @players["midfielder"].first
 
-    # Create performance stats WITHOUT availability data (backward compatibility)
+    # Create performance stats WITH minutes but WITHOUT availability data (backward compatibility)
     [ gw398, gw399, @finished_gw ].each_with_index do |gw, i|
       stat = Statistic.find_by(player: player, gameweek: gw, type: "total_points")
       if stat
         stat.update!(value: 8 + i)
       else
         Statistic.create!(player: player, gameweek: gw, type: "total_points", value: 8 + i)
+      end
+      Statistic.find_or_create_by!(player: player, gameweek: gw, type: "minutes") do |s|
+        s.value = 90
       end
       # Note: NOT creating chance_of_playing statistics - simulating old data
     end
@@ -321,21 +336,24 @@ class BotForecasterTest < ActiveSupport::TestCase
 
     player = @players["midfielder"].first
 
-    # GW398: Player was fully available (100%)
+    # GW398: Player was fully available (100%) and played
     Statistic.find_or_create_by!(player: player, gameweek: gw398, type: "total_points") { |s| s.value = 15 }
+    Statistic.find_or_create_by!(player: player, gameweek: gw398, type: "minutes") { |s| s.value = 90 }
     Statistic.find_or_create_by!(player: player, gameweek: gw398, type: "chance_of_playing") { |s| s.value = 100.0 }
 
-    # GW399: Player had 50% chance (would be included with default, excluded with higher threshold)
+    # GW399: Player had 50% chance but still played
     Statistic.find_or_create_by!(player: player, gameweek: gw399, type: "total_points") { |s| s.value = 5 }
+    Statistic.find_or_create_by!(player: player, gameweek: gw399, type: "minutes") { |s| s.value = 60 }
     Statistic.find_or_create_by!(player: player, gameweek: gw399, type: "chance_of_playing") { |s| s.value = 50.0 }
 
-    # GW400: Player was fully available
+    # GW400: Player was fully available and played
     Statistic.find_by(player: player, gameweek: @finished_gw, type: "total_points")&.update!(value: 10)
     Statistic.find_or_create_by!(player: player, gameweek: @finished_gw, type: "chance_of_playing") { |s| s.value = 100.0 }
+    # minutes already created in setup
 
     # Config with higher min_availability threshold (75%)
     high_threshold_config = {
-      strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none", min_availability: 75 } ]
+      performance: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none", min_availability: 75 } ]
     }
 
     forecasts = BotForecaster.call(user: @bot_user, strategy_config: high_threshold_config, gameweek: @next_gw)
@@ -344,5 +362,96 @@ class BotForecasterTest < ActiveSupport::TestCase
     player_forecast = forecasts.find { |f| f.player_id == player.id }
     assert_not_nil player_forecast
     assert player_forecast.rank.present?
+  end
+
+  test "lookback excludes gameweeks where player team has not played yet" do
+    # This tests the scenario where:
+    # - Current gameweek (GW400) is in progress
+    # - Player A's team played on Saturday (has stats including minutes)
+    # - Player B's team plays Sunday (no stats synced yet - no minutes stat at all)
+    # - Bot generates forecasts for next gameweek (GW401)
+    # - Player B should NOT be penalized for missing GW400 stats
+
+    # Create additional gameweeks
+    gw398 = Gameweek.create!(fpl_id: 398, name: "Gameweek 398", start_time: 4.weeks.ago, is_finished: true)
+    gw399 = Gameweek.create!(fpl_id: 399, name: "Gameweek 399", start_time: 3.weeks.ago, is_finished: true)
+
+    # Mark @finished_gw (GW400) as current (in progress, not finished)
+    @finished_gw.update!(is_finished: false, is_current: true)
+
+    player_played = @players["forward"].first
+    player_not_played = @players["forward"].second
+
+    # GW398 & GW399: Both players played and scored well
+    [ gw398, gw399 ].each_with_index do |gw, i|
+      # Player who played
+      Statistic.find_or_create_by!(player: player_played, gameweek: gw, type: "total_points") { |s| s.value = 10 + i }
+      Statistic.find_or_create_by!(player: player_played, gameweek: gw, type: "minutes") { |s| s.value = 90 }
+
+      # Player whose team hasn't played yet (but historically performed well)
+      Statistic.find_or_create_by!(player: player_not_played, gameweek: gw, type: "total_points") { |s| s.value = 12 + i }
+      Statistic.find_or_create_by!(player: player_not_played, gameweek: gw, type: "minutes") { |s| s.value = 90 }
+    end
+
+    # GW400 (current, in progress):
+    # - player_played's team has played (has minutes stat)
+    # - player_not_played's team hasn't played yet (NO minutes stat - match not synced)
+
+    # Player who played in current GW - keep their stats from setup
+    Statistic.find_by(player: player_played, gameweek: @finished_gw, type: "total_points")&.update!(value: 8)
+    # minutes already exists from setup
+
+    # Player whose team hasn't played - DELETE their minutes stat to simulate match not played
+    # (In real sync, a minutes stat is only created after a match is played)
+    Statistic.find_by(player: player_not_played, gameweek: @finished_gw, type: "minutes")&.destroy
+    Statistic.find_by(player: player_not_played, gameweek: @finished_gw, type: "total_points")&.destroy
+
+    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+
+    player_played_forecast = forecasts.find { |f| f.player_id == player_played.id }
+    player_not_played_forecast = forecasts.find { |f| f.player_id == player_not_played.id }
+
+    # Both players should be ranked
+    assert_not_nil player_played_forecast
+    assert_not_nil player_not_played_forecast
+    assert player_played_forecast.rank.present?
+    assert player_not_played_forecast.rank.present?
+
+    # Player who hasn't played yet should be ranked HIGHER because their historical
+    # average (12, 13 = avg 12.5) is better than player_played's (10, 11, 8 = avg 9.67 with GW400 included)
+    # GW400 should be excluded from player_not_played's lookback since no minutes stat exists
+    assert player_not_played_forecast.rank < player_played_forecast.rank,
+      "Player whose team hasn't played should be ranked higher based on historical performance, not penalized for missing stats in current GW"
+  end
+
+  test "lookback includes gameweeks where player got zero minutes but match was played" do
+    # A player who was on the bench (0 minutes) should still have that gameweek counted
+    # because the match was played - they just didn't come on
+
+    gw398 = Gameweek.create!(fpl_id: 398, name: "Gameweek 398", start_time: 4.weeks.ago, is_finished: true)
+    gw399 = Gameweek.create!(fpl_id: 399, name: "Gameweek 399", start_time: 3.weeks.ago, is_finished: true)
+
+    player = @players["midfielder"].first
+
+    # GW398: Player played 90 mins and scored 10 points
+    Statistic.find_or_create_by!(player: player, gameweek: gw398, type: "total_points") { |s| s.value = 10 }
+    Statistic.find_or_create_by!(player: player, gameweek: gw398, type: "minutes") { |s| s.value = 90 }
+
+    # GW399: Player was on bench (0 mins, 0 points) - but match WAS played
+    Statistic.find_or_create_by!(player: player, gameweek: gw399, type: "total_points") { |s| s.value = 0 }
+    Statistic.find_or_create_by!(player: player, gameweek: gw399, type: "minutes") { |s| s.value = 0 }
+
+    # GW400: Player played and scored
+    Statistic.find_by(player: player, gameweek: @finished_gw, type: "total_points")&.update!(value: 8)
+    # minutes already exists from setup
+
+    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+
+    player_forecast = forecasts.find { |f| f.player_id == player.id }
+    assert_not_nil player_forecast
+    assert player_forecast.rank.present?
+
+    # The 0-point gameweek should be INCLUDED in the average (match was played, player just didn't play)
+    # Average should be (10 + 0 + 8) / 3 = 6.0, not (10 + 8) / 2 = 9.0
   end
 end
