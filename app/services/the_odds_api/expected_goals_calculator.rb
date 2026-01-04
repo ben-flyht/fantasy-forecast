@@ -41,9 +41,12 @@ module TheOddsApi
 
       home_xg = calculate_team_xg(outcomes, @home_team)
       away_xg = calculate_team_xg(outcomes, @away_team)
-
       return nil unless home_xg && away_xg
 
+      build_team_totals_result(outcomes, home_xg, away_xg)
+    end
+
+    def build_team_totals_result(outcomes, home_xg, away_xg)
       {
         home_xg: home_xg.round(2),
         away_xg: away_xg.round(2),
@@ -108,22 +111,15 @@ module TheOddsApi
     end
 
     def find_lambda_for_over_probability(point, target_over_prob)
-      # Binary search for lambda
-      low = 0.1
-      high = 6.0
-
-      20.times do
-        mid = (low + high) / 2.0
-        current_over = 1.0 - poisson_cdf(point.floor, mid)
-
-        if current_over < target_over_prob
-          low = mid
-        else
-          high = mid
-        end
-      end
-
+      low, high = 0.1, 6.0
+      20.times { low, high = binary_search_step(point, target_over_prob, low, high) }
       (low + high) / 2.0
+    end
+
+    def binary_search_step(point, target_over_prob, low, high)
+      mid = (low + high) / 2.0
+      current_over = 1.0 - poisson_cdf(point.floor, mid)
+      current_over < target_over_prob ? [ mid, high ] : [ low, mid ]
     end
 
     def poisson_cdf(k, lambda)
@@ -175,19 +171,23 @@ module TheOddsApi
     end
 
     def estimate_total_xg(outcomes)
-      # Find the 2.5 line as reference
-      over_25 = outcomes.find { |o| o["name"] == "Over" && o["point"] == 2.5 }
-      under_25 = outcomes.find { |o| o["name"] == "Under" && o["point"] == 2.5 }
-
+      over_25, under_25 = find_25_line_outcomes(outcomes)
       return nil unless over_25 && under_25
 
-      over_prob = implied_probability(over_25["price"])
-      under_prob = implied_probability(under_25["price"])
-
-      total = over_prob + under_prob
-      over_prob /= total
-
+      over_prob = normalize_probability(over_25["price"], under_25["price"])
       find_lambda_for_over_probability(2.5, over_prob)
+    end
+
+    def find_25_line_outcomes(outcomes)
+      over = outcomes.find { |o| o["name"] == "Over" && o["point"] == 2.5 }
+      under = outcomes.find { |o| o["name"] == "Under" && o["point"] == 2.5 }
+      [ over, under ]
+    end
+
+    def normalize_probability(over_price, under_price)
+      over_prob = implied_probability(over_price)
+      under_prob = implied_probability(under_price)
+      over_prob / (over_prob + under_prob)
     end
   end
 end
