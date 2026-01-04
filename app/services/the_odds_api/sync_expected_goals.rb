@@ -1,5 +1,21 @@
 module TheOddsApi
   class SyncExpectedGoals < ApplicationService
+    TEAM_NAME_VARIATIONS = {
+      "manchesterunited" => %w[manutd manunited],
+      "manchestercity" => %w[mancity],
+      "tottenhamhotspur" => %w[tottenham spurs],
+      "wolverhamptonwanderers" => %w[wolves wolverhampton],
+      "brightonandhovealbin" => %w[brighton],
+      "westhamunited" => %w[westham],
+      "newcastleunited" => %w[newcastle],
+      "nottinghamforest" => %w[nottmforest forest],
+      "afcbournemouth" => %w[bournemouth],
+      "crystalpalace" => %w[palace],
+      "leicestercity" => %w[leicester],
+      "leedsunited" => %w[leeds],
+      "ipswichtown" => %w[ipswich]
+    }.freeze
+
     def initialize(gameweek: nil)
       @gameweek = gameweek || Gameweek.next_gameweek || Gameweek.current_gameweek
     end
@@ -95,27 +111,14 @@ module TheOddsApi
     end
 
     def fuzzy_match?(api_name, db_name)
-      # Handle common variations
-      variations = {
-        "manchesterunited" => %w[manutd manunited],
-        "manchestercity" => %w[mancity],
-        "tottenhamhotspur" => %w[tottenham spurs],
-        "wolverhamptonwanderers" => %w[wolves wolverhampton],
-        "brightonandhovealbin" => %w[brighton],
-        "westhamunited" => %w[westham],
-        "newcastleunited" => %w[newcastle],
-        "nottinghamforest" => %w[nottmforest forest],
-        "afcbournemouth" => %w[bournemouth],
-        "crystalpalace" => %w[palace],
-        "leicestercity" => %w[leicester],
-        "leedsunited" => %w[leeds],
-        "ipswichtown" => %w[ipswich]
-      }
-
-      variations.any? do |full, shorts|
-        (api_name.include?(full) || shorts.any? { |s| api_name.include?(s) }) &&
-          (db_name.include?(full) || shorts.any? { |s| db_name.include?(s) })
+      TEAM_NAME_VARIATIONS.any? do |full, shorts|
+        name_matches_variation?(api_name, full, shorts) &&
+          name_matches_variation?(db_name, full, shorts)
       end
+    end
+
+    def name_matches_variation?(name, full, shorts)
+      name.include?(full) || shorts.any? { |s| name.include?(s) }
     end
 
     def log_no_event(match)

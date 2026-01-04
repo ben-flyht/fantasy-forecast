@@ -21,7 +21,7 @@ module TheOddsApi
       get("/sports/#{SPORT_KEY}/events", {})
     end
 
-    def odds(markets: %w[h2h spreads totals], bookmakers: [DEFAULT_BOOKMAKER])
+    def odds(markets: %w[h2h spreads totals], bookmakers: [ DEFAULT_BOOKMAKER ])
       params = {
         regions: "eu,uk",
         markets: markets.join(","),
@@ -32,7 +32,7 @@ module TheOddsApi
       get("/sports/#{SPORT_KEY}/odds", params)
     end
 
-    def event_odds(event_id:, markets: %w[team_totals alternate_totals], bookmakers: [DEFAULT_BOOKMAKER])
+    def event_odds(event_id:, markets: %w[team_totals alternate_totals], bookmakers: [ DEFAULT_BOOKMAKER ])
       params = {
         regions: "eu,uk",
         markets: markets.join(","),

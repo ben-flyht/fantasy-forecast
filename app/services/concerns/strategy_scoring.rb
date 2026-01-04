@@ -76,16 +76,22 @@ module StrategyScoring
 
   def get_available_gameweeks(player, current_fpl_id, min_availability)
     availability_by_gw_id = player_availability_map(player)
-    filter_available_gameweeks(current_fpl_id, availability_by_gw_id, min_availability)
+    minutes_by_gw_id = player_minutes_map(player)
+    filter_available_gameweeks(current_fpl_id, availability_by_gw_id, minutes_by_gw_id, min_availability)
   end
 
   def player_availability_map(player)
     player.statistics.select { |s| s.type == "chance_of_playing" }.index_by(&:gameweek_id)
   end
 
-  def filter_available_gameweeks(current_fpl_id, availability_by_gw_id, min_availability)
+  def player_minutes_map(player)
+    player.statistics.select { |s| s.type == "minutes" }.index_by(&:gameweek_id)
+  end
+
+  def filter_available_gameweeks(current_fpl_id, availability_by_gw_id, minutes_by_gw_id, min_availability)
     (1...current_fpl_id).select do |fpl_id|
-      gameweek_available?(fpl_id, availability_by_gw_id, min_availability)
+      team_has_played?(fpl_id, minutes_by_gw_id) &&
+        gameweek_available?(fpl_id, availability_by_gw_id, min_availability)
     end
   end
 
@@ -95,6 +101,19 @@ module StrategyScoring
 
     availability_stat = availability_by_gw_id[gw.id]
     availability_stat.nil? || availability_stat.value >= min_availability
+  end
+
+  # Check if the team has played their match in this gameweek.
+  # For finished gameweeks: always true (all matches complete).
+  # For in-progress gameweeks: check if player has minutes > 0 (their specific match happened).
+  def team_has_played?(fpl_id, minutes_by_gw_id)
+    gw = gameweeks_by_fpl_id[fpl_id]
+    return false unless gw
+    return true if gw.is_finished
+
+    # For current GW, only include if player's match has been played
+    minutes_stat = minutes_by_gw_id[gw.id]
+    minutes_stat.present? && minutes_stat.value > 0
   end
 
   def get_metric_value(player, metric, fpl_id)
