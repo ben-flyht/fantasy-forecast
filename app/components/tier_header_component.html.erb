@@ -1,0 +1,14 @@
+<thead class="<%= background_class %> border-y">
+  <tr>
+    <th colspan="4" class="px-2 md:px-4 py-3">
+      <div class="flex items-center gap-2 md:gap-3">
+        <span class="text-xl md:text-2xl"><%= symbol %></span>
+        <div class="flex-1">
+          <span class="font-semibold text-gray-800 text-sm md:text-base"><%= name %></span>
+          <span class="text-xs md:text-sm text-gray-500 ml-2 hidden sm:inline"><%= description %></span>
+        </div>
+        <span class="text-xs md:text-sm text-gray-400"><%= @player_count %> players</span>
+      </div>
+    </th>
+  </tr>
+</thead>

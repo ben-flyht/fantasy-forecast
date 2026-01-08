@@ -4,6 +4,7 @@ class ConsensusRanking
   Ranking = Struct.new(
     :player_id, :name, :first_name, :last_name, :team, :team_id,
     :position, :bot_rank, :human_votes, :weighted_votes, :consensus_score,
+    :tier, :tier_symbol, :tier_name,
     keyword_init: true
   )
 

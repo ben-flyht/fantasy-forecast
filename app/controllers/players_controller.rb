@@ -42,7 +42,9 @@ class PlayersController < ApplicationController
   end
 
   def load_consensus_rankings
-    @consensus_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
+    rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
+    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter).call
+    @tier_groups = @consensus_rankings.group_by(&:tier)
   end
 
   def load_gameweek_data

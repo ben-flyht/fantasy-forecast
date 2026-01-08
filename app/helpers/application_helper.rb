@@ -34,6 +34,16 @@ module ApplicationHelper
     tag.script(structured_data_schema.to_json.html_safe, type: "application/ld+json")
   end
 
+  def tier_row_class(tier)
+    {
+      1 => "bg-amber-50",
+      2 => "bg-sky-50",
+      3 => "bg-gray-50",
+      4 => "bg-slate-100",
+      5 => "bg-blue-50"
+    }[tier] || ""
+  end
+
   private
 
   def structured_data_schema
