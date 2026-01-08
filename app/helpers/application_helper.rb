@@ -23,12 +23,16 @@ module ApplicationHelper
 
   def tier_row_class(tier)
     {
-      1 => "bg-amber-50",
-      2 => "bg-sky-50",
-      3 => "bg-gray-50",
-      4 => "bg-slate-100",
-      5 => "bg-blue-50"
+      1 => "bg-amber-100",      # ☀️ Sunshine - warm yellow
+      2 => "bg-amber-50",        # 🌤️ Partly Cloudy - lighter yellow
+      3 => "bg-gray-100",       # ☁️ Cloudy - gray
+      4 => "bg-blue-50",         # 🌧️ Rainy - light blue
+      5 => "bg-blue-100"          # ❄️ Snow - deeper blue
     }[tier] || ""
+  end
+
+  def tier_divide_class(_tier)
+    "divide-y divide-white"
   end
 
   private

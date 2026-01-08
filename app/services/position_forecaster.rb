@@ -12,7 +12,7 @@ class PositionForecaster < ApplicationService
 
   def call
     validate_inputs!
-    rank_all_players.map { |data| create_or_update_forecast(data[:player], data[:rank]) }
+    rank_all_players.map { |data| create_or_update_forecast(data[:player], data[:rank], data[:score]) }
   end
 
   private
@@ -54,17 +54,18 @@ class PositionForecaster < ApplicationService
   end
 
   def rank_by_score(players)
-    players.sort_by { |p| -p[:score] }.each_with_index.map { |item, i| { player: item[:player], rank: i + 1 } }
+    players.sort_by { |p| -p[:score] }.each_with_index.map { |item, i| { player: item[:player], rank: i + 1, score: item[:score] } }
   end
 
   def sort_alphabetically(players)
-    players.sort_by { |p| p[:player].short_name.downcase }.map { |item| { player: item[:player], rank: nil } }
+    players.sort_by { |p| p[:player].short_name.downcase }.map { |item| { player: item[:player], rank: nil, score: item[:score] } }
   end
 
-  def create_or_update_forecast(player, rank)
+  def create_or_update_forecast(player, rank, score)
     forecast = Forecast.find_or_initialize_by(player: player, gameweek: gameweek)
     forecast.strategy = strategy if strategy
     forecast.rank = rank
+    forecast.score = score
     forecast.save!
     forecast
   end

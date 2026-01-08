@@ -1,5 +1,5 @@
-# Assigns weather-themed tiers to player rankings based on their rank position.
-# Uses position-aware tier boundaries to account for different pool sizes.
+# Assigns weather-themed tiers to player rankings based on their score
+# relative to the top-ranked player (percentage from top score).
 class TierCalculator
   TIERS = {
     1 => { symbol: "☀️", name: "Sunshine", description: "Must-start premium picks" },
@@ -9,20 +9,23 @@ class TierCalculator
     5 => { symbol: "❄️", name: "Snow", description: "Avoid - Loss/injury risks" }
   }.freeze
 
-  # Position-aware tier boundaries (max rank for each tier)
-  TIER_BOUNDARIES = {
-    "goalkeeper" => { t1: 2, t2: 5, t3: 10, t4: 15 },
-    "defender"   => { t1: 5, t2: 12, t3: 25, t4: 40 },
-    "midfielder" => { t1: 5, t2: 12, t3: 25, t4: 40 },
-    "forward"    => { t1: 3, t2: 8, t3: 15, t4: 25 }
+  # Percentage thresholds from top score (higher % = further from top)
+  # Tier 1: Within 10% of top score
+  # Tier 2: 10-25% below top score
+  # Tier 3: 25-50% below top score
+  # Tier 4: 50-75% below top score
+  # Tier 5: More than 75% below top score (or unavailable)
+  PERCENTAGE_THRESHOLDS = {
+    t1: 10,
+    t2: 25,
+    t3: 50,
+    t4: 75
   }.freeze
 
-  DEFAULT_BOUNDARIES = { t1: 5, t2: 12, t3: 25, t4: 40 }.freeze
-
-  def initialize(rankings, position:)
+  def initialize(rankings, position: nil)
     @rankings = rankings
     @position = position
-    @boundaries = TIER_BOUNDARIES[position] || DEFAULT_BOUNDARIES
+    @top_score = find_top_score
   end
 
   def call
@@ -37,8 +40,13 @@ class TierCalculator
 
   private
 
+  def find_top_score
+    ranked = @rankings.select { |r| r.score.present? && r.score.positive? }
+    ranked.map(&:score).max || 0
+  end
+
   def assign_tier(ranking)
-    tier = calculate_tier(ranking.bot_rank)
+    tier = calculate_tier(ranking.score)
     tier_info = TIERS[tier]
 
     ranking.tier = tier
@@ -47,14 +55,16 @@ class TierCalculator
     ranking
   end
 
-  def calculate_tier(rank)
-    return 5 if rank.nil? # Unranked players (unavailable) go to Snow tier
+  def calculate_tier(score)
+    return 5 if score.nil? || @top_score.zero?
 
-    case rank
-    when 1..@boundaries[:t1] then 1
-    when (@boundaries[:t1] + 1)..@boundaries[:t2] then 2
-    when (@boundaries[:t2] + 1)..@boundaries[:t3] then 3
-    when (@boundaries[:t3] + 1)..@boundaries[:t4] then 4
+    percentage_from_top = ((@top_score - score) / @top_score.to_f) * 100
+
+    case percentage_from_top
+    when -Float::INFINITY..PERCENTAGE_THRESHOLDS[:t1] then 1
+    when PERCENTAGE_THRESHOLDS[:t1]..PERCENTAGE_THRESHOLDS[:t2] then 2
+    when PERCENTAGE_THRESHOLDS[:t2]..PERCENTAGE_THRESHOLDS[:t3] then 3
+    when PERCENTAGE_THRESHOLDS[:t3]..PERCENTAGE_THRESHOLDS[:t4] then 4
     else 5
     end
   end

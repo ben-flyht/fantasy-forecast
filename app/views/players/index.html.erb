@@ -80,17 +80,14 @@
           <% tier_players = @tier_groups[tier_num] %>
           <% next if tier_players.blank? %>
 
-          <%= render TierHeaderComponent.new(tier: tier_num, player_count: tier_players.count) %>
+          <%= render TierHeaderComponent.new(tier: tier_num) %>
 
-          <tbody class="divide-y divide-gray-200">
+          <tbody class="<%= tier_divide_class(tier_num) %>">
             <% tier_players.each do |ranking| %>
               <% player = @players_by_id[ranking.player_id] %>
               <tr class="<%= tier_row_class(tier_num) %>">
-                <td class="px-1 md:px-4 py-2 md:py-4 whitespace-nowrap text-sm md:text-lg font-medium text-gray-800 w-10 md:w-16">
-                  <span class="flex items-center gap-1">
-                    <span class="text-base"><%= ranking.tier_symbol %></span>
-                    <span><%= ranking.bot_rank || '-' %></span>
-                  </span>
+                <td class="px-1 md:px-4 py-2 md:py-4 whitespace-nowrap text-sm md:text-lg font-medium text-gray-800 w-10 md:w-16 text-center">
+                  <%= ranking.bot_rank || '-' %>
                 </td>
                 <td class="px-2 md:px-6 py-2 md:py-4">
                   <%= render PlayerCardComponent.new(player: player) %>

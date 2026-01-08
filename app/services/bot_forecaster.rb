@@ -27,7 +27,7 @@ class BotForecaster < ApplicationService
 
   def generate_position_forecasts(position)
     config = config_for_position(position)
-    rank_all_players(position, config).map { |data| create_forecast(data[:player], data[:rank]) }
+    rank_all_players(position, config).map { |data| create_forecast(data[:player], data[:rank], data[:score]) }
   end
 
   def config_for_position(position)
@@ -62,18 +62,18 @@ class BotForecaster < ApplicationService
   end
 
   def rank_by_score(players)
-    players.sort_by { |p| -p[:score] }.each_with_index.map { |item, i| { player: item[:player], rank: i + 1 } }
+    players.sort_by { |p| -p[:score] }.each_with_index.map { |item, i| { player: item[:player], rank: i + 1, score: item[:score] } }
   end
 
   def sort_alphabetically(players)
-    players.sort_by { |p| p[:player].short_name.downcase }.map { |item| { player: item[:player], rank: nil } }
+    players.sort_by { |p| p[:player].short_name.downcase }.map { |item| { player: item[:player], rank: nil, score: item[:score] } }
   end
 
   def clear_existing_forecasts
     Forecast.where(gameweek: gameweek).destroy_all
   end
 
-  def create_forecast(player, rank)
-    Forecast.create!(player: player, gameweek: gameweek, strategy: strategy, rank: rank)
+  def create_forecast(player, rank, score)
+    Forecast.create!(player: player, gameweek: gameweek, strategy: strategy, rank: rank, score: score)
   end
 end

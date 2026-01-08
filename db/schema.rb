@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_08_163132) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_08_171154) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -20,6 +20,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_08_163132) do
     t.bigint "gameweek_id", null: false
     t.bigint "player_id", null: false
     t.integer "rank"
+    t.decimal "score", precision: 10, scale: 4
     t.bigint "strategy_id"
     t.datetime "updated_at", null: false
     t.index ["gameweek_id", "player_id"], name: "index_forecasts_on_gameweek_id_and_player_id"

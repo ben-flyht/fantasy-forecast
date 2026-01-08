@@ -3,7 +3,7 @@
 class ConsensusRanking
   Ranking = Struct.new(
     :player_id, :name, :first_name, :last_name, :team, :team_id,
-    :position, :bot_rank, :tier, :tier_symbol, :tier_name,
+    :position, :bot_rank, :score, :tier, :tier_symbol, :tier_name,
     keyword_init: true
   )
 
@@ -54,7 +54,8 @@ class ConsensusRanking
 
     Ranking.new(
       **player_attributes(player),
-      bot_rank: forecast.rank
+      bot_rank: forecast.rank,
+      score: forecast.score
     )
   end
 
