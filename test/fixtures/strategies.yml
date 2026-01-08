@@ -3,9 +3,7 @@
 one:
   strategy_config: {}
   active: true
-  user: one
 
 two:
   strategy_config: {}
   active: true
-  user: two

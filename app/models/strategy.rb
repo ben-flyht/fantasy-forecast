@@ -1,5 +1,4 @@
 class Strategy < ApplicationRecord
-  belongs_to :user
   has_many :forecasts, dependent: :nullify
 
   # Always return strategy_config with symbol keys for consistent access
@@ -22,8 +21,6 @@ class Strategy < ApplicationRecord
   scope :active, -> { where(active: true) }
   scope :for_position, ->(pos) { where(position: pos) }
 
-  delegate :username, to: :user
-
   def position_specific?
     position.present?
   end
@@ -45,11 +42,11 @@ class Strategy < ApplicationRecord
   private
 
   def generate_position_forecasts(gameweek)
-    PositionForecaster.call(user:, strategy_config:, position:, gameweek:, strategy: self)
+    PositionForecaster.call(strategy_config:, position:, gameweek:, strategy: self)
   end
 
   def generate_all_forecasts(gameweek)
-    BotForecaster.call(user:, strategy_config:, gameweek:, strategy: self)
+    BotForecaster.call(strategy_config:, gameweek:, strategy: self)
   end
 
   def build_explanation(config)

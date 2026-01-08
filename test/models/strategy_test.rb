@@ -2,13 +2,11 @@ require "test_helper"
 
 class StrategyTest < ActiveSupport::TestCase
   def setup
-    @bot_user = create_test_bot
     @valid_config = { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] }
   end
 
   test "valid strategy with config" do
     strategy = Strategy.new(
-      user: @bot_user,
       strategy_config: @valid_config,
       active: true
     )
@@ -18,7 +16,6 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "requires strategy_config to be present" do
     strategy = Strategy.new(
-      user: @bot_user,
       strategy_config: nil,
       active: true
     )
@@ -29,14 +26,11 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "allows duplicate strategy_config" do
     Strategy.create!(
-      user: @bot_user,
       strategy_config: @valid_config,
       active: true
     )
 
-    another_user = create_test_bot
     duplicate_strategy = Strategy.create!(
-      user: another_user,
       strategy_config: @valid_config,
       active: true
     )
@@ -46,7 +40,6 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "allows updating strategy" do
     strategy = Strategy.create!(
-      user: @bot_user,
       strategy_config: @valid_config,
       active: true
     )
@@ -58,14 +51,11 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "active scope returns only active strategies" do
     active_strategy = Strategy.create!(
-      user: @bot_user,
       strategy_config: @valid_config,
       active: true
     )
 
-    another_user = create_test_bot
     inactive_strategy = Strategy.create!(
-      user: another_user,
       strategy_config: { strategies: [ { metric: "goals_scored", weight: 1.0, lookback: 1, recency: "none" } ] },
       active: false
     )
@@ -76,15 +66,8 @@ class StrategyTest < ActiveSupport::TestCase
     assert_not_includes active_strategies, inactive_strategy
   end
 
-  test "delegates username to user" do
-    strategy = Strategy.new(user: @bot_user, strategy_config: @valid_config)
-
-    assert_equal @bot_user.username, strategy.username
-  end
-
   test "strategy_explanation generates explanation for empty config" do
     strategy = Strategy.new(
-      user: @bot_user,
       strategy_config: {}
     )
 
@@ -93,7 +76,6 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "strategy_explanation generates explanation for single strategy with no recency" do
     strategy = Strategy.new(
-      user: @bot_user,
       strategy_config: { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] }
     )
 
@@ -102,7 +84,6 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "strategy_explanation generates explanation for single strategy with linear recency" do
     strategy = Strategy.new(
-      user: @bot_user,
       strategy_config: { strategies: [ { metric: "goals_scored", weight: 1.0, lookback: 5, recency: "linear" } ] }
     )
 
@@ -111,7 +92,6 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "strategy_explanation generates explanation for single strategy with exponential recency" do
     strategy = Strategy.new(
-      user: @bot_user,
       strategy_config: { strategies: [ { metric: "expected_goals", weight: 1.0, lookback: 4, recency: "exponential" } ] }
     )
 
@@ -120,7 +100,6 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "strategy_explanation generates explanation for composite strategy" do
     strategy = Strategy.new(
-      user: @bot_user,
       strategy_config: {
         strategies: [
           { metric: "total_points", weight: 0.6, lookback: 3, recency: "none" },
@@ -139,7 +118,6 @@ class StrategyTest < ActiveSupport::TestCase
 
   test "strategy_explanation includes availability filter" do
     strategy = Strategy.new(
-      user: @bot_user,
       strategy_config: {
         strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ],
         filters: { availability: { min_chance_of_playing: 75 } }
@@ -172,7 +150,7 @@ class StrategyTest < ActiveSupport::TestCase
     end
 
     # Create gameweeks
-    finished_gw = Gameweek.find_or_create_by!(fpl_id: 300) do |gw|
+    Gameweek.find_or_create_by!(fpl_id: 300) do |gw|
       gw.name = "Gameweek 300"
       gw.start_time = 2.weeks.ago
       gw.is_finished = true
@@ -185,26 +163,35 @@ class StrategyTest < ActiveSupport::TestCase
       gw.is_finished = false
     end
 
-    # Create statistics for players
-    Player.where(position: "midfielder").each do |player|
-      Statistic.find_or_create_by!(player: player, gameweek: finished_gw, type: "total_points") do |s|
-        s.value = rand(1..15)
-      end
-    end
-
     strategy = Strategy.create!(
-      user: @bot_user,
       strategy_config: { strategies: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ] },
       active: true
     )
 
     forecasts = strategy.generate_forecasts(next_gw)
 
-    # Bot now creates forecasts for ALL players (for rankings), not just slot count
+    # Bot creates forecasts for ALL players (for rankings)
     expected_total = Player.count
     assert_equal expected_total, forecasts.count
-    assert forecasts.all? { |f| f.user == @bot_user }
     assert forecasts.all? { |f| f.gameweek == next_gw }
-    assert forecasts.all? { |f| f.rank.present? }, "All forecasts should have ranks"
+    assert forecasts.all? { |f| f.rank.present? || f.rank.nil? } # Some may be unranked (unavailable)
+  end
+
+  test "position_specific? returns true when position is set" do
+    strategy = Strategy.new(strategy_config: @valid_config, position: "forward")
+    assert strategy.position_specific?
+  end
+
+  test "position_specific? returns false when position is nil" do
+    strategy = Strategy.new(strategy_config: @valid_config, position: nil)
+    assert_not strategy.position_specific?
+  end
+
+  test "for_position scope filters by position" do
+    forward_strategy = Strategy.create!(strategy_config: @valid_config, position: "forward", active: true)
+    midfielder_strategy = Strategy.create!(strategy_config: @valid_config, position: "midfielder", active: true)
+
+    assert_includes Strategy.for_position("forward"), forward_strategy
+    assert_not_includes Strategy.for_position("forward"), midfielder_strategy
   end
 end

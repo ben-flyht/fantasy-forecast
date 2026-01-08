@@ -1,10 +1,9 @@
 class PositionForecaster < ApplicationService
   include StrategyScoring
 
-  attr_reader :user, :gameweek, :strategy_config, :position, :strategy
+  attr_reader :gameweek, :strategy_config, :position, :strategy
 
-  def initialize(user:, strategy_config:, position:, gameweek:, strategy: nil)
-    @user = user
+  def initialize(strategy_config:, position:, gameweek:, strategy: nil)
     @strategy_config = strategy_config
     @position = position
     @gameweek = gameweek
@@ -19,7 +18,6 @@ class PositionForecaster < ApplicationService
   private
 
   def validate_inputs!
-    raise ArgumentError, "User must be a bot" unless user.bot?
     raise ArgumentError, "No gameweek available" unless gameweek
     raise ArgumentError, "Invalid position" unless valid_position?
   end
@@ -64,7 +62,7 @@ class PositionForecaster < ApplicationService
   end
 
   def create_or_update_forecast(player, rank)
-    forecast = Forecast.find_or_initialize_by(user: user, player: player, gameweek: gameweek)
+    forecast = Forecast.find_or_initialize_by(player: player, gameweek: gameweek)
     forecast.strategy = strategy if strategy
     forecast.rank = rank
     forecast.save!

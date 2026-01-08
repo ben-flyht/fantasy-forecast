@@ -1,25 +1,12 @@
 module ApplicationHelper
   BASE_URL = "https://www.fantasyforecast.co.uk"
 
-  def user_badge(user: nil, is_bot: nil, beats_bot: false)
-    if user
-      badge = user.badge
-      is_bot = user.bot?
-    else
-      badge = User.badge_for(bot: is_bot, beats_bot: beats_bot)
-    end
-    return nil unless badge
-
-    title = is_bot ? "Bot forecaster" : "More accurate than the bot"
-    tag.span(badge, title: title)
-  end
-
   def meta_title
-    content_for?(:meta_title) ? content_for(:meta_title) : "Fantasy Forecast - Can You Beat the FPL Bot?"
+    content_for?(:meta_title) ? content_for(:meta_title) : "Fantasy Forecast - FPL Player Rankings"
   end
 
   def meta_description
-    content_for?(:meta_description) ? content_for(:meta_description) : "Challenge the most accurate FPL forecasting bot. Submit your player rankings each gameweek and see if you can beat the algorithm."
+    content_for?(:meta_description) ? content_for(:meta_description) : "Weather-tiered FPL player rankings. Our algorithm analyzes form, fixtures, and expected goals to help you make better Fantasy Premier League decisions."
   end
 
   def meta_image
@@ -53,7 +40,7 @@ module ApplicationHelper
   def website_schema
     { "@type": "WebSite", "@id": "#{BASE_URL}/#website", "url": "#{BASE_URL}/",
       "name": "Fantasy Forecast",
-      "description": "Challenge the most accurate FPL forecasting bot and track your prediction accuracy" }
+      "description": "Weather-tiered FPL player rankings to help you make better Fantasy Premier League decisions" }
   end
 
   def organization_schema

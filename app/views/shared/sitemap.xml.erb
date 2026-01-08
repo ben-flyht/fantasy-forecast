@@ -32,15 +32,9 @@
 
   <% %w[forward midfielder defender goalkeeper].each do |position| %>
   <url>
-    <loc><%= @base_url %><%= players_path(position: position) %></loc>
+    <loc><%= @base_url %><%= root_path(position: position) %></loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <% end %>
-
-  <url>
-    <loc><%= @base_url %><%= forecasters_path %></loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
 </urlset>

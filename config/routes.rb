@@ -1,7 +1,8 @@
 Rails.application.routes.draw do
-  devise_for :users
+  root "players#index"
 
-  root "pages#home"
+  # Redirect old /players path to root
+  get "players", to: redirect("/", status: 301)
 
   # Dynamic robots.txt based on environment
   get "robots.txt", to: "application#robots", defaults: { format: "text" }
@@ -14,20 +15,6 @@ Rails.application.routes.draw do
   get "terms-of-service", to: "pages#terms_of_service", as: :terms_of_service
   get "cookie-policy", to: "pages#cookie_policy", as: :cookie_policy
   get "contact-us", to: "pages#contact_us", as: :contact_us
-
-  # Player rankings routes
-  resources :players, only: [ :index ] do
-    collection do
-      post :toggle_forecast
-    end
-  end
-
-  # Forecaster rankings routes
-  resources :forecasters, only: [ :index, :show ] do
-    member do
-      get "gameweeks/:gameweek", to: "forecasters#gameweeks", as: "gameweeks"
-    end
-  end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

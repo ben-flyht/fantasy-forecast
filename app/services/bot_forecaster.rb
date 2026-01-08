@@ -1,10 +1,9 @@
 class BotForecaster < ApplicationService
   include StrategyScoring
 
-  attr_reader :user, :gameweek, :strategy_config, :strategy
+  attr_reader :gameweek, :strategy_config, :strategy
 
-  def initialize(user:, strategy_config:, gameweek:, strategy: nil)
-    @user = user
+  def initialize(strategy_config:, gameweek:, strategy: nil)
     @strategy_config = strategy_config
     @gameweek = gameweek
     @strategy = strategy
@@ -19,7 +18,6 @@ class BotForecaster < ApplicationService
   private
 
   def validate_inputs!
-    raise ArgumentError, "User must be a bot" unless user.bot?
     raise ArgumentError, "No gameweek available" unless gameweek
   end
 
@@ -72,10 +70,10 @@ class BotForecaster < ApplicationService
   end
 
   def clear_existing_forecasts
-    Forecast.where(user: user, gameweek: gameweek).destroy_all
+    Forecast.where(gameweek: gameweek).destroy_all
   end
 
   def create_forecast(player, rank)
-    Forecast.create!(user: user, player: player, gameweek: gameweek, strategy: strategy, rank: rank)
+    Forecast.create!(player: player, gameweek: gameweek, strategy: strategy, rank: rank)
   end
 end
