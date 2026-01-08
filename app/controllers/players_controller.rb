@@ -42,15 +42,7 @@ class PlayersController < ApplicationController
   end
 
   def load_consensus_rankings
-    all_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
-
-    if user_signed_in?
-      @consensus_rankings = all_rankings
-      @rankings_limited = false
-    else
-      @consensus_rankings = all_rankings.first(10)
-      @rankings_limited = all_rankings.size > 10
-    end
+    @consensus_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
   end
 
   def load_gameweek_data
