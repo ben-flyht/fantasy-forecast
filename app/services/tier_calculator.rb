@@ -10,16 +10,16 @@ class TierCalculator
   }.freeze
 
   # Percentage thresholds from top score (higher % = further from top)
-  # Tier 1: Within 10% of top score
-  # Tier 2: 10-25% below top score
-  # Tier 3: 25-50% below top score
-  # Tier 4: 50-75% below top score
-  # Tier 5: More than 75% below top score (or unavailable)
+  # Tier 1: Within 20% of top score
+  # Tier 2: 20-40% below top score
+  # Tier 3: 40-60% below top score
+  # Tier 4: 60-80% below top score
+  # Tier 5: More than 80% below top score (or unavailable)
   PERCENTAGE_THRESHOLDS = {
-    t1: 10,
-    t2: 25,
-    t3: 50,
-    t4: 75
+    t1: 20,
+    t2: 40,
+    t3: 60,
+    t4: 80
   }.freeze
 
   def initialize(rankings, position: nil)

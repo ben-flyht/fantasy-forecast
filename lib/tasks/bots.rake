@@ -7,43 +7,27 @@ task bots: :environment do
     exit
   end
 
-  puts "Generating strategy forecasts for Gameweek #{gameweek.fpl_id}..."
+  puts "Generating forecasts for Gameweek #{gameweek.fpl_id}..."
 
-  # Group strategies by user to handle users with multiple position-specific strategies
-  strategies_by_user = Strategy.active.includes(:user).group_by(&:user)
+  strategies = Strategy.active
   total_forecasts = 0
-  total_users = 0
 
-  strategies_by_user.each do |user, strategies|
-    total_users += 1
-    user_forecasts = 0
-
-    # Clear existing forecasts for this user/gameweek before generating new ones
-    Forecast.where(user: user, gameweek: gameweek).destroy_all
-
-    puts "\n#{user.username}:"
-
-    strategies.each do |strategy|
-      position_info = strategy.position_specific? ? " [#{strategy.position}]" : " [general]"
-      puts "  Strategy#{position_info}"
-
-      forecasts = strategy.generate_forecasts(gameweek)
-      user_forecasts += forecasts.count
-    end
-
-    puts "  ✓ Created #{user_forecasts} forecasts"
-    total_forecasts += user_forecasts
+  strategies.each do |strategy|
+    position_info = strategy.position_specific? ? "[#{strategy.position}]" : "[all positions]"
+    forecasts = strategy.generate_forecasts(gameweek)
+    puts "  Strategy #{strategy.id} #{position_info}: #{forecasts.count} forecasts"
+    total_forecasts += forecasts.count
   end
 
   puts "\n" + "=" * 60
-  puts "Strategy forecast generation complete!"
-  puts "Total: #{total_forecasts} forecasts for #{total_users} bot users"
+  puts "Forecast generation complete!"
+  puts "Total: #{total_forecasts} forecasts from #{strategies.count} strategies"
   puts "=" * 60
 end
 
 namespace :bots do
   desc "Backfill bot forecasts for finished gameweeks (usage: rake bots:backfill or rake bots:backfill[5] or rake bots:backfill[1,8])"
-  task :backfill, [ :start_gameweek, :end_gameweek ] => :environment do |t, args|
+  task :backfill, [ :start_gameweek, :end_gameweek ] => :environment do |_t, args|
     if args[:start_gameweek] && args[:end_gameweek]
       gameweeks = Gameweek.where(fpl_id: args[:start_gameweek].to_i..args[:end_gameweek].to_i).order(:fpl_id)
     elsif args[:start_gameweek]
@@ -54,21 +38,17 @@ namespace :bots do
 
     abort "No gameweeks found" if gameweeks.empty?
 
-    strategies_by_user = Strategy.active.includes(:user).group_by(&:user)
-    abort "No active strategies found" if strategies_by_user.empty?
+    strategies = Strategy.active
+    abort "No active strategies found" if strategies.empty?
 
     total_forecasts = 0
 
     gameweeks.each do |gameweek|
       next if Performance.where(gameweek: gameweek).none?
 
-      strategies_by_user.each do |user, user_strategies|
-        Forecast.where(user: user, gameweek: gameweek).destroy_all
-
-        user_strategies.each do |strategy|
-          forecasts = strategy.generate_forecasts(gameweek)
-          total_forecasts += forecasts.count
-        end
+      strategies.each do |strategy|
+        forecasts = strategy.generate_forecasts(gameweek)
+        total_forecasts += forecasts.count
       end
       puts "#{gameweek.name}: ✓"
     end
