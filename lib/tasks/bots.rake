@@ -14,7 +14,7 @@ task bots: :environment do
 
   strategies.each do |strategy|
     position_info = strategy.position_specific? ? "[#{strategy.position}]" : "[all positions]"
-    forecasts = strategy.generate_forecasts(gameweek)
+    forecasts = strategy.generate_forecasts(gameweek, generate_explanations: false)
     puts "  Strategy #{strategy.id} #{position_info}: #{forecasts.count} forecasts"
     total_forecasts += forecasts.count
   end
@@ -26,6 +26,64 @@ task bots: :environment do
 end
 
 namespace :bots do
+  desc "Generate AI explanations for forecasts (batched by position, 4 API calls)"
+  task explain: :environment do
+    gameweek = Gameweek.next_gameweek
+
+    unless gameweek
+      puts "No next gameweek available"
+      exit
+    end
+
+    unless ENV["ANTHROPIC_API_KEY"].present?
+      puts "ANTHROPIC_API_KEY not set"
+      exit
+    end
+
+    puts "Generating explanations for Gameweek #{gameweek.fpl_id}..."
+
+    strategies = Strategy.active
+    if strategies.empty?
+      puts "No active strategies found"
+      exit
+    end
+
+    total_updated = 0
+
+    strategies.each do |strategy|
+      position = strategy.position
+      position_label = position || "all positions"
+
+      forecasts = Forecast.joins(:player)
+                          .includes(player: [:team, :statistics, :performances])
+                          .where(gameweek: gameweek, strategy: strategy)
+                          .where.not(rank: nil)
+                          .order(:rank)
+
+      next if forecasts.empty?
+
+      puts "  #{position_label.capitalize}: #{forecasts.count} players..."
+
+      results = BatchExplanationGenerator.new(
+        forecasts: forecasts.to_a,
+        gameweek: gameweek,
+        strategy_config: strategy.strategy_config
+      ).call
+
+      results.each do |forecast_id, explanation|
+        Forecast.where(id: forecast_id).update_all(explanation: explanation)
+      end
+
+      total_updated += results.count
+      puts "    Updated #{results.count} explanations"
+    end
+
+    puts "\n" + "=" * 60
+    puts "Explanation generation complete!"
+    puts "Total: #{total_updated} explanations updated"
+    puts "=" * 60
+  end
+
   desc "Backfill bot forecasts for finished gameweeks (usage: rake bots:backfill or rake bots:backfill[5] or rake bots:backfill[1,8])"
   task :backfill, [ :start_gameweek, :end_gameweek ] => :environment do |_t, args|
     if args[:start_gameweek] && args[:end_gameweek]
@@ -47,7 +105,7 @@ namespace :bots do
       next if Performance.where(gameweek: gameweek).none?
 
       strategies.each do |strategy|
-        forecasts = strategy.generate_forecasts(gameweek)
+        forecasts = strategy.generate_forecasts(gameweek, generate_explanations: false)
         total_forecasts += forecasts.count
       end
       puts "#{gameweek.name}: ✓"

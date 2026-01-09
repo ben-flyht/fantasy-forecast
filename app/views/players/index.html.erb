@@ -82,20 +82,28 @@
 
           <%= render TierHeaderComponent.new(tier: tier_num) %>
 
-          <tbody class="<%= tier_divide_class(tier_num) %>">
-            <% tier_players.each do |ranking| %>
+          <tbody>
+            <% tier_players.each_with_index do |ranking, idx| %>
               <% player = @players_by_id[ranking.player_id] %>
-              <tr class="<%= tier_row_class(tier_num) %>">
-                <td class="px-1 md:px-4 py-2 md:py-4 whitespace-nowrap text-sm md:text-lg font-medium text-gray-800 w-10 md:w-16 text-center">
+              <% border_class = idx > 0 ? "border-t border-white" : "" %>
+              <tr class="<%= tier_row_class(tier_num) %> <%= border_class %>">
+                <td class="px-1 md:px-4 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> whitespace-nowrap text-sm md:text-lg font-medium text-gray-800 w-10 md:w-16 text-center align-top">
                   <%= ranking.bot_rank || '-' %>
                 </td>
-                <td class="px-2 md:px-6 py-2 md:py-4">
+                <td class="px-2 md:px-6 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> align-top">
                   <%= render PlayerCardComponent.new(player: player) %>
                 </td>
-                <td class="px-1 md:px-6 py-2 md:py-4 whitespace-nowrap text-right text-xs md:text-sm w-14 md:w-32">
+                <td class="px-1 md:px-6 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> whitespace-nowrap text-right text-xs md:text-sm w-14 md:w-32 align-top">
                   <%= render OpponentComponent.new(player: player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
                 </td>
               </tr>
+              <% if ranking.explanation.present? %>
+                <tr class="<%= tier_row_class(tier_num) %>">
+                  <td colspan="3" class="px-2 md:px-6 pb-2 md:pb-4 pt-0">
+                    <p class="text-xs md:text-sm text-gray-500 italic"><%= ranking.explanation %></p>
+                  </td>
+                </tr>
+              <% end %>
             <% end %>
           </tbody>
         <% end %>

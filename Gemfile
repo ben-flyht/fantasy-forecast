@@ -27,6 +27,9 @@ gem "jbuilder"
 # Mailgun API client for sending emails
 gem "mailgun-ruby"
 
+# Anthropic Claude API client for AI-generated explanations
+gem "anthropic"
+
 # A framework for building reusable, testable & encapsulated view components [https://viewcomponent.org]
 gem "view_component"
 

@@ -1,18 +1,21 @@
 class PositionForecaster < ApplicationService
   include StrategyScoring
 
-  attr_reader :gameweek, :strategy_config, :position, :strategy
+  attr_reader :gameweek, :strategy_config, :position, :strategy, :generate_explanations
 
-  def initialize(strategy_config:, position:, gameweek:, strategy: nil)
+  def initialize(strategy_config:, position:, gameweek:, strategy: nil, generate_explanations: true)
     @strategy_config = strategy_config
     @position = position
     @gameweek = gameweek
     @strategy = strategy
+    @generate_explanations = generate_explanations
   end
 
   def call
     validate_inputs!
-    rank_all_players.map { |data| create_or_update_forecast(data[:player], data[:rank], data[:score]) }
+    ranked_players = rank_all_players
+    @top_score = ranked_players.first&.dig(:score) || 0
+    ranked_players.map { |data| create_or_update_forecast(data[:player], data[:rank], data[:score]) }
   end
 
   private
@@ -66,7 +69,41 @@ class PositionForecaster < ApplicationService
     forecast.strategy = strategy if strategy
     forecast.rank = rank
     forecast.score = score
+    forecast.explanation = generate_explanation(player, rank, score) if generate_explanations && rank.present?
     forecast.save!
     forecast
+  end
+
+  def generate_explanation(player, rank, score)
+    breakdown = ScoringBreakdown.new(
+      player: player,
+      strategy_config: strategy_config,
+      gameweek: gameweek
+    ).call
+
+    ExplanationGenerator.new(
+      player: player,
+      rank: rank,
+      gameweek: gameweek,
+      breakdown: breakdown,
+      tier: calculate_tier(score)
+    ).call
+  rescue StandardError => e
+    Rails.logger.error("Failed to generate explanation for #{player.short_name}: #{e.message}")
+    nil
+  end
+
+  def calculate_tier(score)
+    return 5 if score.nil? || @top_score.zero?
+
+    percentage_from_top = ((@top_score - score) / @top_score.to_f) * 100
+
+    case percentage_from_top
+    when -Float::INFINITY..20 then 1
+    when 20..40 then 2
+    when 40..60 then 3
+    when 60..80 then 4
+    else 5
+    end
   end
 end

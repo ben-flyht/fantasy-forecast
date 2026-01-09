@@ -1,12 +1,13 @@
 class BotForecaster < ApplicationService
   include StrategyScoring
 
-  attr_reader :gameweek, :strategy_config, :strategy
+  attr_reader :gameweek, :strategy_config, :strategy, :generate_explanations
 
-  def initialize(strategy_config:, gameweek:, strategy: nil)
+  def initialize(strategy_config:, gameweek:, strategy: nil, generate_explanations: true)
     @strategy_config = strategy_config
     @gameweek = gameweek
     @strategy = strategy
+    @generate_explanations = generate_explanations
   end
 
   def call
@@ -27,7 +28,9 @@ class BotForecaster < ApplicationService
 
   def generate_position_forecasts(position)
     config = config_for_position(position)
-    rank_all_players(position, config).map { |data| create_forecast(data[:player], data[:rank], data[:score]) }
+    ranked_players = rank_all_players(position, config)
+    @current_top_score = ranked_players.first&.dig(:score) || 0
+    ranked_players.map { |data| create_forecast(data[:player], data[:rank], data[:score]) }
   end
 
   def config_for_position(position)
@@ -35,7 +38,7 @@ class BotForecaster < ApplicationService
   end
 
   def rank_all_players(position, config)
-    players = Player.where(position: position).includes(:statistics, :team)
+    players = Player.where(position: position).includes(:statistics, :team, :performances)
     score_and_rank_players(players, config)
   end
 
@@ -74,6 +77,42 @@ class BotForecaster < ApplicationService
   end
 
   def create_forecast(player, rank, score)
-    Forecast.create!(player: player, gameweek: gameweek, strategy: strategy, rank: rank, score: score)
+    explanation = generate_explanation(player, rank, score) if generate_explanations && rank.present?
+    Forecast.create!(player: player, gameweek: gameweek, strategy: strategy, rank: rank, score: score, explanation: explanation)
+  end
+
+  def generate_explanation(player, rank, score)
+    config = config_for_position(player.position)
+
+    breakdown = ScoringBreakdown.new(
+      player: player,
+      strategy_config: config,
+      gameweek: gameweek
+    ).call
+
+    ExplanationGenerator.new(
+      player: player,
+      rank: rank,
+      gameweek: gameweek,
+      breakdown: breakdown,
+      tier: calculate_tier(score)
+    ).call
+  rescue StandardError => e
+    Rails.logger.error("Failed to generate explanation for #{player.short_name}: #{e.message}")
+    nil
+  end
+
+  def calculate_tier(score)
+    return 5 if score.nil? || @current_top_score.zero?
+
+    percentage_from_top = ((@current_top_score - score) / @current_top_score.to_f) * 100
+
+    case percentage_from_top
+    when -Float::INFINITY..20 then 1
+    when 20..40 then 2
+    when 40..60 then 3
+    when 60..80 then 4
+    else 5
+    end
   end
 end
