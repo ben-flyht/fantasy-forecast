@@ -1,17 +1,34 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  first_name: "Test Player"
-  last_name: "One"
-  short_name: "Player One"
-  team: one
+goalkeeper:
+  first_name: "David"
+  last_name: "Raya"
+  short_name: "D.Raya"
+  team: arsenal
   position: "goalkeeper"
   fpl_id: 100
 
-two:
-  first_name: "Test Player"
-  last_name: "Two"
-  short_name: "Player Two"
-  team: two
+midfielder:
+  first_name: "Mohamed"
+  last_name: "Salah"
+  short_name: "M.Salah"
+  team: liverpool
   position: "midfielder"
   fpl_id: 200
+
+midfielder_two:
+  first_name: "Cole"
+  last_name: "Palmer"
+  short_name: "C.Palmer"
+  team: chelsea
+  position: "midfielder"
+  fpl_id: 201
+
+injured_player:
+  first_name: "Injured"
+  last_name: "Player"
+  short_name: "I.Player"
+  team: arsenal
+  position: "midfielder"
+  fpl_id: 202
+  news: "Hamstring injury - Expected back 15 Jan"

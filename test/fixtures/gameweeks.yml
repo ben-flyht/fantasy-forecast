@@ -1,17 +1,26 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  fpl_id: 1
-  name: "Gameweek 1"
-  start_time: <%= 1.week.from_now %>
-  end_time: <%= 2.weeks.from_now - 1.second %>
+finished:
+  fpl_id: 20
+  name: "Gameweek 20"
+  start_time: <%= 1.week.ago %>
+  end_time: <%= 6.days.ago %>
+  is_current: false
+  is_next: false
+  is_finished: true
+
+next_gw:
+  fpl_id: 21
+  name: "Gameweek 21"
+  start_time: <%= 1.day.from_now %>
+  end_time: <%= 2.days.from_now %>
   is_current: false
   is_next: true
   is_finished: false
 
-two:
-  fpl_id: 2
-  name: "Gameweek 2"
+future:
+  fpl_id: 22
+  name: "Gameweek 22"
   start_time: <%= 2.weeks.from_now %>
   end_time: <%= 3.weeks.from_now - 1.second %>
   is_current: false
