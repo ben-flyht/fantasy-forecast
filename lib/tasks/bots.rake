@@ -55,7 +55,7 @@ namespace :bots do
       position_label = position || "all positions"
 
       forecasts = Forecast.joins(:player)
-                          .includes(player: [:team, :statistics, :performances])
+                          .includes(player: [ :team, :statistics, :performances ])
                           .where(gameweek: gameweek, strategy: strategy)
                           .where.not(rank: nil)
                           .order(:rank)

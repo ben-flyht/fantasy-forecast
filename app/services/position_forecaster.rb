@@ -75,22 +75,19 @@ class PositionForecaster < ApplicationService
   end
 
   def generate_explanation(player, rank, score)
-    breakdown = ScoringBreakdown.new(
-      player: player,
-      strategy_config: strategy_config,
-      gameweek: gameweek
-    ).call
-
-    ExplanationGenerator.new(
-      player: player,
-      rank: rank,
-      gameweek: gameweek,
-      breakdown: breakdown,
-      tier: calculate_tier(score)
-    ).call
+    breakdown = build_breakdown(player)
+    build_explanation(player, rank, breakdown, score)
   rescue StandardError => e
     Rails.logger.error("Failed to generate explanation for #{player.short_name}: #{e.message}")
     nil
+  end
+
+  def build_breakdown(player)
+    ScoringBreakdown.new(player: player, strategy_config: strategy_config, gameweek: gameweek).call
+  end
+
+  def build_explanation(player, rank, breakdown, score)
+    ExplanationGenerator.new(player: player, rank: rank, gameweek: gameweek, breakdown: breakdown, tier: calculate_tier(score)).call
   end
 
   def calculate_tier(score)

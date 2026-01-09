@@ -24,22 +24,22 @@ class ExplanationGenerator
   def call
     return nil unless api_key_present?
 
-    response = client.messages.create(
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      messages: [ { role: "user", content: build_prompt } ]
-    )
-
+    response = call_api
     extract_text(response)
-  rescue Anthropic::APIError => e
-    Rails.logger.error("Anthropic API error for #{@player.short_name}: #{e.message}")
-    nil
-  rescue StandardError => e
+  rescue Anthropic::APIError, StandardError => e
     Rails.logger.error("Explanation generation failed for #{@player.short_name}: #{e.message}")
     nil
   end
 
   private
+
+  def call_api
+    client.messages.create(
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      messages: [ { role: "user", content: build_prompt } ]
+    )
+  end
 
   def client
     @client ||= Anthropic::Client.new(api_key: ENV["ANTHROPIC_API_KEY"])
@@ -95,71 +95,79 @@ class ExplanationGenerator
     return "" if matches.blank?
 
     lines = [ "Recent matches (most recent first):" ]
-
-    matches.reverse.each do |match|
-      stats_str = format_match_stats(match[:stats])
-      line = "- GW#{match[:gameweek]}: #{match[:points]}pts vs #{match[:opponent]}(#{match[:home_away]})"
-      line += " [#{stats_str}]" if stats_str.present?
-      lines << line
-    end
-
+    matches.reverse.each { |match| lines << format_match_line(match) }
     lines.join("\n")
+  end
+
+  def format_match_line(match)
+    line = "- GW#{match[:gameweek]}: #{match[:points]}pts vs #{match[:opponent]}(#{match[:home_away]})"
+    stats_str = format_match_stats(match[:stats])
+    stats_str.present? ? "#{line} [#{stats_str}]" : line
   end
 
   def format_match_stats(stats)
     return "" if stats.blank?
 
-    parts = []
-    parts << "#{stats['goals_scored'].to_i}G" if stats["goals_scored"].to_f > 0
-    parts << "#{stats['assists'].to_i}A" if stats["assists"].to_f > 0
-    parts << "CS" if stats["clean_sheets"].to_f > 0
-    parts << "#{stats['saves'].to_i} saves" if stats["saves"].to_f > 0
-    parts << "#{stats['bonus'].to_i}B" if stats["bonus"].to_f > 0
-    parts << "#{stats['goals_conceded'].to_i} conceded" if stats["goals_conceded"].to_f > 0 && stats["clean_sheets"].to_f == 0
+    build_stat_parts(stats).join(", ")
+  end
 
-    parts.join(", ")
+  def build_stat_parts(stats)
+    [
+      stat_part(stats, "goals_scored", "G"),
+      stat_part(stats, "assists", "A"),
+      ("CS" if stats["clean_sheets"].to_f > 0),
+      stat_part(stats, "saves", " saves"),
+      stat_part(stats, "bonus", "B"),
+      conceded_part(stats)
+    ].compact
+  end
+
+  def stat_part(stats, key, suffix)
+    value = stats[key].to_i
+    "#{value}#{suffix}" if stats[key].to_f > 0
+  end
+
+  def conceded_part(stats)
+    "#{stats['goals_conceded'].to_i} conceded" if stats["goals_conceded"].to_f > 0 && stats["clean_sheets"].to_f == 0
   end
 
   def performance_context
     return "" if @breakdown[:performance].blank?
 
     lines = [ "Recent form:" ]
-
-    @breakdown[:performance].each do |perf|
-      line = "- #{perf[:metric]}: #{perf[:weighted_average]} avg (#{perf[:lookback]}GW, #{perf[:recency]} weighting, #{(perf[:weight] * 100).to_i}% weight)"
-      lines << line
-
-      if perf[:context].present?
-        highlights = perf[:context].map { |c| "#{c[:value].to_i} vs #{c[:opponent]}(#{c[:home_away]})" }
-        lines << "  Notable: #{highlights.join(', ')}" if highlights.any?
-      end
-    end
-
+    @breakdown[:performance].each { |perf| add_performance_lines(perf, lines) }
     lines.join("\n")
+  end
+
+  def add_performance_lines(perf, lines)
+    lines << format_perf_line(perf)
+    lines << format_highlights(perf[:context]) if perf[:context].present?
+  end
+
+  def format_perf_line(perf)
+    "- #{perf[:metric]}: #{perf[:weighted_average]} avg (#{perf[:lookback]}GW, #{perf[:recency]} weighting, #{(perf[:weight] * 100).to_i}% weight)"
+  end
+
+  def format_highlights(context)
+    highlights = context.map { |c| "#{c[:value].to_i} vs #{c[:opponent]}(#{c[:home_away]})" }
+    "  Notable: #{highlights.join(', ')}" if highlights.any?
   end
 
   def fixture_context
     return "" if @breakdown[:fixture_difficulty].blank?
-
-    fixture = @breakdown[:upcoming_fixture]
-    return "" unless fixture
+    return "" unless @breakdown[:upcoming_fixture]
 
     lines = [ "Fixture:" ]
     @breakdown[:fixture_difficulty].each do |fd|
       lines << "- #{fd[:metric]}: #{fd[:value]} (#{(fd[:weight] * 100).to_i}% weight)"
     end
-
     lines.join("\n")
   end
 
   def availability_context
     avail = @breakdown[:availability]
-    return "" unless avail
+    return "" unless avail && avail[:chance_of_playing] < 100
 
-    if avail[:chance_of_playing] < 100
-      "Availability: #{avail[:chance_of_playing]}% chance of playing (#{avail[:status]})"
-    else
-      ""
-    end
+    "Availability: #{avail[:chance_of_playing]}% chance of playing (#{avail[:status]})"
   end
 end
