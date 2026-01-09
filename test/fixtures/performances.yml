@@ -1,13 +1,15 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  player: one
-  gameweek: one
+# Salah scored 10 points in GW20
+midfielder_gw20:
+  player: midfielder
+  gameweek: finished
   gameweek_score: 10
-  team: one
+  team: liverpool
 
-two:
-  player: two
-  gameweek: two
-  gameweek_score: 8
-  team: two
+# Raya scored 6 points in GW20
+goalkeeper_gw20:
+  player: goalkeeper
+  gameweek: finished
+  gameweek_score: 6
+  team: arsenal

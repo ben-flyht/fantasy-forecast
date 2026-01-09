@@ -1,11 +1,22 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  player: one
-  gameweek: one
+# Top tier forecast
+top_ranked:
+  player: midfielder
+  gameweek: next_gw
   rank: 1
+  score: 100
 
-two:
-  player: two
-  gameweek: two
+# Second tier forecast
+second_ranked:
+  player: midfielder_two
+  gameweek: next_gw
   rank: 2
+  score: 70
+
+# Snow tier forecast (nil score, injured)
+snow_tier:
+  player: injured_player
+  gameweek: next_gw
+  rank: 100
+  score:

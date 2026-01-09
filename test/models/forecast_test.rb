@@ -5,8 +5,8 @@ class ForecastTest < ActiveSupport::TestCase
     # Clear forecasts to avoid fixture conflicts
     Forecast.destroy_all
     Gameweek.destroy_all
-    @player = players(:one)
-    @player2 = players(:two)
+    @player = players(:midfielder)
+    @player2 = players(:midfielder_two)
 
     # Create a next gameweek for auto-assignment tests
     @next_gameweek = Gameweek.create!(

@@ -347,24 +347,26 @@ class BotForecasterTest < ActiveSupport::TestCase
     player_played = @players["forward"].first
     player_not_played = @players["forward"].second
 
+    # Clear setup statistics for these players to have full control
+    Statistic.where(player: [ player_played, player_not_played ]).delete_all
+
     # GW398 & GW399: Both players played and scored well
     [ gw398, gw399 ].each_with_index do |gw, i|
-      # Player who played
-      Statistic.find_or_create_by!(player: player_played, gameweek: gw, type: "total_points") { |s| s.value = 10 + i }
-      Statistic.find_or_create_by!(player: player_played, gameweek: gw, type: "minutes") { |s| s.value = 90 }
+      # Player who played - lower scores
+      Statistic.create!(player: player_played, gameweek: gw, type: "total_points", value: 5 + i)
+      Statistic.create!(player: player_played, gameweek: gw, type: "minutes", value: 90)
 
-      # Player whose team hasn't played yet (but historically performed well)
-      Statistic.find_or_create_by!(player: player_not_played, gameweek: gw, type: "total_points") { |s| s.value = 12 + i }
-      Statistic.find_or_create_by!(player: player_not_played, gameweek: gw, type: "minutes") { |s| s.value = 90 }
+      # Player whose team hasn't played yet - higher scores historically
+      Statistic.create!(player: player_not_played, gameweek: gw, type: "total_points", value: 15 + i)
+      Statistic.create!(player: player_not_played, gameweek: gw, type: "minutes", value: 90)
     end
 
     # GW400 (current, in progress):
-    # Player who played in current GW - keep their stats from setup
-    Statistic.find_by(player: player_played, gameweek: @finished_gw, type: "total_points")&.update!(value: 8)
+    # Player who played in current GW - give them a low score
+    Statistic.create!(player: player_played, gameweek: @finished_gw, type: "total_points", value: 2)
+    Statistic.create!(player: player_played, gameweek: @finished_gw, type: "minutes", value: 90)
 
-    # Player whose team hasn't played - DELETE their minutes stat to simulate match not played
-    Statistic.find_by(player: player_not_played, gameweek: @finished_gw, type: "minutes")&.destroy
-    Statistic.find_by(player: player_not_played, gameweek: @finished_gw, type: "total_points")&.destroy
+    # Player whose team hasn't played - NO stats for GW400
 
     forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
@@ -377,10 +379,11 @@ class BotForecasterTest < ActiveSupport::TestCase
     assert player_played_forecast.rank.present?
     assert player_not_played_forecast.rank.present?
 
-    # Player who hasn't played yet should be ranked HIGHER because their historical
-    # average is better than player_played's
+    # player_not_played average: (15 + 16) / 2 = 15.5
+    # player_played average: (5 + 6 + 2) / 3 = 4.33
+    # Player who hasn't played yet should be ranked HIGHER
     assert player_not_played_forecast.rank < player_played_forecast.rank,
-      "Player whose team hasn't played should be ranked higher based on historical performance"
+      "Player whose team hasn't played should be ranked higher based on historical performance (#{player_not_played_forecast.rank} vs #{player_played_forecast.rank})"
   end
 
   test "lookback includes gameweeks where player got zero minutes but match was played" do

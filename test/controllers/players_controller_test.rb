@@ -2,8 +2,8 @@ require "test_helper"
 
 class PlayersControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @player = players(:one)
-    @player2 = players(:two)
+    @player = players(:goalkeeper)
+    @player2 = players(:midfielder)
 
     # Create test team
     @test_team = Team.create!(name: "Test Team", short_name: "TST", fpl_id: 96)
@@ -57,8 +57,8 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     get root_path, params: { gameweek: 5, position: @player.position }
     assert_response :success
 
-    # Should show player names
-    assert_includes response.body, "Test Player"
+    # Should show player short name from fixture
+    assert_includes response.body, @player.short_name
   end
 
   test "should filter by gameweek parameter" do
