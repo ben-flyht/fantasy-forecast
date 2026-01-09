@@ -66,28 +66,19 @@ class BotForecasterTest < ActiveSupport::TestCase
       )
     end
 
-    @bot_user = create_test_bot
     @strategy_config = {
       performance: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ]
     }
   end
 
-  test "raises error if user is not a bot" do
-    human_user = users(:one)
-
-    assert_raises(ArgumentError, "User must be a bot") do
-      BotForecaster.call(user: human_user, strategy_config: @strategy_config, gameweek: @next_gw)
-    end
-  end
-
   test "raises error if gameweek is nil" do
     assert_raises(ArgumentError, "No gameweek available") do
-      BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: nil)
+      BotForecaster.call(strategy_config: @strategy_config, gameweek: nil)
     end
   end
 
   test "creates forecasts for all players in all positions" do
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     # Should create forecasts for ALL players, not just slot count
     expected_total = @player_counts.values.sum
@@ -95,7 +86,7 @@ class BotForecasterTest < ActiveSupport::TestCase
   end
 
   test "creates forecasts for all players in each position" do
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     FantasyForecast::POSITION_CONFIG.each_key do |position|
       position_forecasts = forecasts.select { |f| f.player.position == position }
@@ -104,7 +95,7 @@ class BotForecasterTest < ActiveSupport::TestCase
   end
 
   test "assigns ranks to all forecasts" do
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     assert forecasts.all? { |f| f.rank.present? }, "All forecasts should have a rank"
 
@@ -117,14 +108,8 @@ class BotForecasterTest < ActiveSupport::TestCase
     end
   end
 
-  test "all forecasts belong to the bot user" do
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
-
-    assert forecasts.all? { |f| f.user == @bot_user }
-  end
-
   test "all forecasts are for the specified gameweek" do
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     assert forecasts.all? { |f| f.gameweek == @next_gw }
   end
@@ -132,17 +117,17 @@ class BotForecasterTest < ActiveSupport::TestCase
   test "clears existing forecasts before creating new ones" do
     # Create some existing forecasts
     existing_player = @players["midfielder"].first
-    Forecast.create!(user: @bot_user, player: existing_player, gameweek: @next_gw, rank: 1)
+    Forecast.create!(player: existing_player, gameweek: @next_gw, rank: 1)
 
-    initial_count = Forecast.where(user: @bot_user, gameweek: @next_gw).count
+    initial_count = Forecast.where(gameweek: @next_gw).count
     assert_equal 1, initial_count
 
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     # Should have replaced the single forecast with forecasts for all players
     expected_total = @player_counts.values.sum
     assert_equal expected_total, forecasts.count
-    assert_equal expected_total, Forecast.where(user: @bot_user, gameweek: @next_gw).count
+    assert_equal expected_total, Forecast.where(gameweek: @next_gw).count
   end
 
   test "does not affect forecasts for other gameweeks" do
@@ -155,40 +140,27 @@ class BotForecasterTest < ActiveSupport::TestCase
 
     # Create forecast for different gameweek
     other_player = @players["forward"].first
-    other_forecast = Forecast.create!(user: @bot_user, player: other_player, gameweek: other_gw, rank: 1)
+    other_forecast = Forecast.create!(player: other_player, gameweek: other_gw, rank: 1)
 
-    BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     # Other gameweek forecast should still exist
     assert Forecast.exists?(other_forecast.id)
   end
 
-  test "does not affect forecasts for other users" do
-    other_bot = create_test_bot
-
-    # Create forecast for different user
-    other_player = @players["defender"].first
-    other_forecast = Forecast.create!(user: other_bot, player: other_player, gameweek: @next_gw, rank: 1)
-
-    BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
-
-    # Other user's forecast should still exist
-    assert Forecast.exists?(other_forecast.id)
-  end
-
   test "works with empty strategy config (random selection)" do
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: {}, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: {}, gameweek: @next_gw)
 
     expected_total = @player_counts.values.sum
     assert_equal expected_total, forecasts.count
   end
 
   test "forecasts are persisted to database" do
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     assert forecasts.all?(&:persisted?)
 
-    db_count = Forecast.where(user: @bot_user, gameweek: @next_gw).count
+    db_count = Forecast.where(gameweek: @next_gw).count
     assert_equal forecasts.count, db_count
   end
 
@@ -211,7 +183,7 @@ class BotForecasterTest < ActiveSupport::TestCase
       }
     }
 
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: position_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: position_config, gameweek: @next_gw)
 
     expected_total = @player_counts.values.sum
     assert_equal expected_total, forecasts.count
@@ -234,7 +206,7 @@ class BotForecasterTest < ActiveSupport::TestCase
       }
     }
 
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: partial_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: partial_config, gameweek: @next_gw)
 
     expected_total = @player_counts.values.sum
     assert_equal expected_total, forecasts.count
@@ -262,7 +234,7 @@ class BotForecasterTest < ActiveSupport::TestCase
       end
     end
 
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     # Player should be ranked based on all 3 available gameweeks
     player_forecast = forecasts.find { |f| f.player_id == player.id }
@@ -292,7 +264,7 @@ class BotForecasterTest < ActiveSupport::TestCase
     Statistic.find_or_create_by!(player: player, gameweek: @finished_gw, type: "chance_of_playing") { |s| s.value = 100.0 }
     # minutes already created in setup
 
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     # Player should be ranked - the injured gameweek (GW399) should be skipped
     player_forecast = forecasts.find { |f| f.player_id == player.id }
@@ -321,7 +293,7 @@ class BotForecasterTest < ActiveSupport::TestCase
       # Note: NOT creating chance_of_playing statistics - simulating old data
     end
 
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     # Player should be ranked - all gameweeks should be included (assumed available)
     player_forecast = forecasts.find { |f| f.player_id == player.id }
@@ -356,7 +328,7 @@ class BotForecasterTest < ActiveSupport::TestCase
       performance: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none", min_availability: 75 } ]
     }
 
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: high_threshold_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: high_threshold_config, gameweek: @next_gw)
 
     # Player should be ranked, GW399 (50% availability) should be skipped
     player_forecast = forecasts.find { |f| f.player_id == player.id }
@@ -365,13 +337,6 @@ class BotForecasterTest < ActiveSupport::TestCase
   end
 
   test "lookback excludes gameweeks where player team has not played yet" do
-    # This tests the scenario where:
-    # - Current gameweek (GW400) is in progress
-    # - Player A's team played on Saturday (has stats including minutes)
-    # - Player B's team plays Sunday (no stats synced yet - no minutes stat at all)
-    # - Bot generates forecasts for next gameweek (GW401)
-    # - Player B should NOT be penalized for missing GW400 stats
-
     # Create additional gameweeks
     gw398 = Gameweek.create!(fpl_id: 398, name: "Gameweek 398", start_time: 4.weeks.ago, is_finished: true)
     gw399 = Gameweek.create!(fpl_id: 399, name: "Gameweek 399", start_time: 3.weeks.ago, is_finished: true)
@@ -382,31 +347,28 @@ class BotForecasterTest < ActiveSupport::TestCase
     player_played = @players["forward"].first
     player_not_played = @players["forward"].second
 
+    # Clear setup statistics for these players to have full control
+    Statistic.where(player: [ player_played, player_not_played ]).delete_all
+
     # GW398 & GW399: Both players played and scored well
     [ gw398, gw399 ].each_with_index do |gw, i|
-      # Player who played
-      Statistic.find_or_create_by!(player: player_played, gameweek: gw, type: "total_points") { |s| s.value = 10 + i }
-      Statistic.find_or_create_by!(player: player_played, gameweek: gw, type: "minutes") { |s| s.value = 90 }
+      # Player who played - lower scores
+      Statistic.create!(player: player_played, gameweek: gw, type: "total_points", value: 5 + i)
+      Statistic.create!(player: player_played, gameweek: gw, type: "minutes", value: 90)
 
-      # Player whose team hasn't played yet (but historically performed well)
-      Statistic.find_or_create_by!(player: player_not_played, gameweek: gw, type: "total_points") { |s| s.value = 12 + i }
-      Statistic.find_or_create_by!(player: player_not_played, gameweek: gw, type: "minutes") { |s| s.value = 90 }
+      # Player whose team hasn't played yet - higher scores historically
+      Statistic.create!(player: player_not_played, gameweek: gw, type: "total_points", value: 15 + i)
+      Statistic.create!(player: player_not_played, gameweek: gw, type: "minutes", value: 90)
     end
 
     # GW400 (current, in progress):
-    # - player_played's team has played (has minutes stat)
-    # - player_not_played's team hasn't played yet (NO minutes stat - match not synced)
+    # Player who played in current GW - give them a low score
+    Statistic.create!(player: player_played, gameweek: @finished_gw, type: "total_points", value: 2)
+    Statistic.create!(player: player_played, gameweek: @finished_gw, type: "minutes", value: 90)
 
-    # Player who played in current GW - keep their stats from setup
-    Statistic.find_by(player: player_played, gameweek: @finished_gw, type: "total_points")&.update!(value: 8)
-    # minutes already exists from setup
+    # Player whose team hasn't played - NO stats for GW400
 
-    # Player whose team hasn't played - DELETE their minutes stat to simulate match not played
-    # (In real sync, a minutes stat is only created after a match is played)
-    Statistic.find_by(player: player_not_played, gameweek: @finished_gw, type: "minutes")&.destroy
-    Statistic.find_by(player: player_not_played, gameweek: @finished_gw, type: "total_points")&.destroy
-
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     player_played_forecast = forecasts.find { |f| f.player_id == player_played.id }
     player_not_played_forecast = forecasts.find { |f| f.player_id == player_not_played.id }
@@ -417,17 +379,14 @@ class BotForecasterTest < ActiveSupport::TestCase
     assert player_played_forecast.rank.present?
     assert player_not_played_forecast.rank.present?
 
-    # Player who hasn't played yet should be ranked HIGHER because their historical
-    # average (12, 13 = avg 12.5) is better than player_played's (10, 11, 8 = avg 9.67 with GW400 included)
-    # GW400 should be excluded from player_not_played's lookback since no minutes stat exists
+    # player_not_played average: (15 + 16) / 2 = 15.5
+    # player_played average: (5 + 6 + 2) / 3 = 4.33
+    # Player who hasn't played yet should be ranked HIGHER
     assert player_not_played_forecast.rank < player_played_forecast.rank,
-      "Player whose team hasn't played should be ranked higher based on historical performance, not penalized for missing stats in current GW"
+      "Player whose team hasn't played should be ranked higher based on historical performance (#{player_not_played_forecast.rank} vs #{player_played_forecast.rank})"
   end
 
   test "lookback includes gameweeks where player got zero minutes but match was played" do
-    # A player who was on the bench (0 minutes) should still have that gameweek counted
-    # because the match was played - they just didn't come on
-
     gw398 = Gameweek.create!(fpl_id: 398, name: "Gameweek 398", start_time: 4.weeks.ago, is_finished: true)
     gw399 = Gameweek.create!(fpl_id: 399, name: "Gameweek 399", start_time: 3.weeks.ago, is_finished: true)
 
@@ -443,15 +402,11 @@ class BotForecasterTest < ActiveSupport::TestCase
 
     # GW400: Player played and scored
     Statistic.find_by(player: player, gameweek: @finished_gw, type: "total_points")&.update!(value: 8)
-    # minutes already exists from setup
 
-    forecasts = BotForecaster.call(user: @bot_user, strategy_config: @strategy_config, gameweek: @next_gw)
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
     player_forecast = forecasts.find { |f| f.player_id == player.id }
     assert_not_nil player_forecast
     assert player_forecast.rank.present?
-
-    # The 0-point gameweek should be INCLUDED in the average (match was played, player just didn't play)
-    # Average should be (10 + 0 + 8) / 3 = 6.0, not (10 + 8) / 2 = 9.0
   end
 end

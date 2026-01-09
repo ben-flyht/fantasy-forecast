@@ -24,11 +24,11 @@ gem "jbuilder"
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
 
-# Flexible authentication solution for Rails with Warden [https://github.com/heartcombo/devise]
-gem "devise"
-
 # Mailgun API client for sending emails
 gem "mailgun-ruby"
+
+# Anthropic Claude API client for AI-generated explanations
+gem "anthropic"
 
 # A framework for building reusable, testable & encapsulated view components [https://viewcomponent.org]
 gem "view_component"
@@ -78,4 +78,6 @@ group :test do
   gem "webmock"
   # For testing controller assigns
   gem "rails-controller-testing"
+  # Lock minitest to 5.x for Rails 8.1 compatibility
+  gem "minitest", "~> 5.25"
 end

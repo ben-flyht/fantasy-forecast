@@ -1,13 +1,47 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  player: one
-  gameweek: one
-  type: MyString
-  value: 9.99
+# Salah stats in GW20
+midfielder_goals_gw20:
+  player: midfielder
+  gameweek: finished
+  type: "goals_scored"
+  value: 1
 
-two:
-  player: two
-  gameweek: two
-  type: MyString
-  value: 9.99
+midfielder_assists_gw20:
+  player: midfielder
+  gameweek: finished
+  type: "assists"
+  value: 1
+
+midfielder_bonus_gw20:
+  player: midfielder
+  gameweek: finished
+  type: "bonus"
+  value: 3
+
+# Raya stats in GW20
+goalkeeper_cs_gw20:
+  player: goalkeeper
+  gameweek: finished
+  type: "clean_sheets"
+  value: 1
+
+goalkeeper_saves_gw20:
+  player: goalkeeper
+  gameweek: finished
+  type: "saves"
+  value: 5
+
+# Injured player - ruled out for GW21
+injured_availability:
+  player: injured_player
+  gameweek: next_gw
+  type: "chance_of_playing"
+  value: 0
+
+# Minor doubt availability
+goalkeeper_availability:
+  player: goalkeeper
+  gameweek: next_gw
+  type: "chance_of_playing"
+  value: 75

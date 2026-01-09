@@ -1,13 +1,28 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  home_team: one
-  away_team: one
-  gameweek: one
+# Past match - Liverpool played Arsenal at home in GW20
+finished_match:
+  home_team: liverpool
+  away_team: arsenal
+  gameweek: finished
   fpl_id: 1
+  home_team_expected_goals: 2.1
+  away_team_expected_goals: 0.8
 
-two:
-  home_team: two
-  away_team: two
-  gameweek: two
+# Upcoming match - Liverpool vs Chelsea at home in GW21
+upcoming_match:
+  home_team: liverpool
+  away_team: chelsea
+  gameweek: next_gw
   fpl_id: 2
+  home_team_expected_goals: 1.8
+  away_team_expected_goals: 1.2
+
+# Upcoming match - Arsenal vs Chelsea in GW21
+upcoming_match_two:
+  home_team: arsenal
+  away_team: chelsea
+  gameweek: next_gw
+  fpl_id: 3
+  home_team_expected_goals: 1.5
+  away_team_expected_goals: 1.0

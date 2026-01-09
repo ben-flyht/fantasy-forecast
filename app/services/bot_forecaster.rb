@@ -1,13 +1,13 @@
 class BotForecaster < ApplicationService
   include StrategyScoring
 
-  attr_reader :user, :gameweek, :strategy_config, :strategy
+  attr_reader :gameweek, :strategy_config, :strategy, :generate_explanations
 
-  def initialize(user:, strategy_config:, gameweek:, strategy: nil)
-    @user = user
+  def initialize(strategy_config:, gameweek:, strategy: nil, generate_explanations: true)
     @strategy_config = strategy_config
     @gameweek = gameweek
     @strategy = strategy
+    @generate_explanations = generate_explanations
   end
 
   def call
@@ -19,7 +19,6 @@ class BotForecaster < ApplicationService
   private
 
   def validate_inputs!
-    raise ArgumentError, "User must be a bot" unless user.bot?
     raise ArgumentError, "No gameweek available" unless gameweek
   end
 
@@ -29,7 +28,9 @@ class BotForecaster < ApplicationService
 
   def generate_position_forecasts(position)
     config = config_for_position(position)
-    rank_all_players(position, config).map { |data| create_forecast(data[:player], data[:rank]) }
+    ranked_players = rank_all_players(position, config)
+    @current_top_score = ranked_players.first&.dig(:score) || 0
+    ranked_players.map { |data| create_forecast(data[:player], data[:rank], data[:score]) }
   end
 
   def config_for_position(position)
@@ -37,7 +38,7 @@ class BotForecaster < ApplicationService
   end
 
   def rank_all_players(position, config)
-    players = Player.where(position: position).includes(:statistics, :team)
+    players = Player.where(position: position).includes(:statistics, :team, :performances)
     score_and_rank_players(players, config)
   end
 
@@ -64,18 +65,49 @@ class BotForecaster < ApplicationService
   end
 
   def rank_by_score(players)
-    players.sort_by { |p| -p[:score] }.each_with_index.map { |item, i| { player: item[:player], rank: i + 1 } }
+    players.sort_by { |p| -p[:score] }.each_with_index.map { |item, i| { player: item[:player], rank: i + 1, score: item[:score] } }
   end
 
   def sort_alphabetically(players)
-    players.sort_by { |p| p[:player].short_name.downcase }.map { |item| { player: item[:player], rank: nil } }
+    players.sort_by { |p| p[:player].short_name.downcase }.map { |item| { player: item[:player], rank: nil, score: item[:score] } }
   end
 
   def clear_existing_forecasts
-    Forecast.where(user: user, gameweek: gameweek).destroy_all
+    Forecast.where(gameweek: gameweek).destroy_all
   end
 
-  def create_forecast(player, rank)
-    Forecast.create!(user: user, player: player, gameweek: gameweek, strategy: strategy, rank: rank)
+  def create_forecast(player, rank, score)
+    explanation = generate_explanation(player, rank, score) if generate_explanations && rank.present?
+    Forecast.create!(player: player, gameweek: gameweek, strategy: strategy, rank: rank, score: score, explanation: explanation)
+  end
+
+  def generate_explanation(player, rank, score)
+    breakdown = build_breakdown(player)
+    build_explanation(player, rank, breakdown, score)
+  rescue StandardError => e
+    Rails.logger.error("Failed to generate explanation for #{player.short_name}: #{e.message}")
+    nil
+  end
+
+  def build_breakdown(player)
+    ScoringBreakdown.new(player: player, strategy_config: config_for_position(player.position), gameweek: gameweek).call
+  end
+
+  def build_explanation(player, rank, breakdown, score)
+    ExplanationGenerator.new(player: player, rank: rank, gameweek: gameweek, breakdown: breakdown, tier: calculate_tier(score)).call
+  end
+
+  def calculate_tier(score)
+    return 5 if score.nil? || @current_top_score.zero?
+
+    percentage_from_top = ((@current_top_score - score) / @current_top_score.to_f) * 100
+
+    case percentage_from_top
+    when -Float::INFINITY..20 then 1
+    when 20..40 then 2
+    when 40..60 then 3
+    when 60..80 then 4
+    else 5
+    end
   end
 end

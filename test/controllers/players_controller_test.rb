@@ -2,10 +2,8 @@ require "test_helper"
 
 class PlayersControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @forecaster_user = users(:one)  # Forecaster user
-    @admin_user = users(:two)    # Admin user
-    @player = players(:one)
-    @player2 = players(:two)
+    @player = players(:goalkeeper)
+    @player2 = players(:midfielder)
 
     # Create test team
     @test_team = Team.create!(name: "Test Team", short_name: "TST", fpl_id: 96)
@@ -44,61 +42,40 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
       is_next: false,
       is_finished: false
     )
-
-    # Create bot user for rankings (ConsensusRanking requires bot forecasts with ranks)
-    @bot_user = create_test_bot(User::BOT_USERNAME)
   end
 
-  test "players index should not require authentication" do
-    get players_path
-    assert_response :success
-    assert_includes response.body, "Player Rankings"
-  end
-
-  test "forecaster should access players index" do
-    sign_in @forecaster_user
-    get players_path
+  test "players index should be accessible" do
+    get root_path
     assert_response :success
   end
 
-  test "admin should access players index" do
-    sign_in @admin_user
-    get players_path
-    assert_response :success
-  end
+  test "should show forecasts data when available" do
+    # Create bot forecasts with ranks
+    Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1)
+    Forecast.create!(player: @player2, gameweek: @gameweek5, rank: 2)
 
-  test "consensus should show forecasts data when available" do
-    # Create bot forecasts with ranks (required for ConsensusRanking)
-    Forecast.create!(user: @bot_user, player: @player, gameweek: @gameweek5, rank: 1)
-    Forecast.create!(user: @bot_user, player: @player2, gameweek: @gameweek5, rank: 2)
-
-    # Create human forecasts (votes)
-    Forecast.create!(user: @forecaster_user, player: @player, gameweek: @gameweek5)
-    Forecast.create!(user: @admin_user, player: @player, gameweek: @gameweek5)
-    Forecast.create!(user: @forecaster_user, player: @player2, gameweek: @gameweek5)
-
-    get players_path, params: { gameweek: 5, position: @player.position }
+    get root_path, params: { gameweek: 5, position: @player.position }
     assert_response :success
 
-    # Should show player names and consensus scores
-    assert_includes response.body, "Test Player"
+    # Should show player short name from fixture
+    assert_includes response.body, @player.short_name
   end
 
-  test "consensus should filter by gameweek parameter" do
+  test "should filter by gameweek parameter" do
     # Create forecasts for different gameweeks
-    Forecast.create!(user: @forecaster_user, player: @player, gameweek: @gameweek1)
-    Forecast.create!(user: @forecaster_user, player: @player2, gameweek: @gameweek2)
+    Forecast.create!(player: @player, gameweek: @gameweek1, rank: 1)
+    Forecast.create!(player: @player2, gameweek: @gameweek2, rank: 1)
 
     # Test gameweek 1
-    get players_path, params: { gameweek: 1 }
+    get root_path, params: { gameweek: 1 }
     assert_response :success
 
     # Test gameweek 2
-    get players_path, params: { gameweek: 2 }
+    get root_path, params: { gameweek: 2 }
     assert_response :success
   end
 
-  test "consensus should filter by position parameter" do
+  test "should filter by position parameter" do
     # Create midfielder player
     midfielder = Player.create!(
       first_name: "Test",
@@ -109,39 +86,39 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     )
 
     # Create forecasts for different positions
-    Forecast.create!(user: @forecaster_user, player: @player, gameweek: @gameweek5)  # goalkeeper
-    Forecast.create!(user: @forecaster_user, player: midfielder, gameweek: @gameweek5)
+    Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1)
+    Forecast.create!(player: midfielder, gameweek: @gameweek5, rank: 1)
 
-    # Test no position filter
-    get players_path, params: { gameweek: 5 }
+    # Test no position filter (defaults to forward)
+    get root_path, params: { gameweek: 5 }
     assert_response :success
 
     # Test goalkeeper filter
-    get players_path, params: { gameweek: 5, position: "goalkeeper" }
+    get root_path, params: { gameweek: 5, position: "goalkeeper" }
     assert_response :success
 
     # Test midfielder filter
-    get players_path, params: { gameweek: 5, position: "midfielder" }
+    get root_path, params: { gameweek: 5, position: "midfielder" }
     assert_response :success
   end
 
-  test "consensus should default to next gameweek" do
-    get players_path
+  test "should default to next gameweek" do
+    get root_path
     assert_response :success
 
     # Should see gameweek 2 (next gameweek) in page title or content
     assert_includes response.body, "Gameweek 2"
   end
 
-  test "consensus should handle empty forecasts gracefully" do
-    # No forecasts created - redirect to next gameweek
-    get players_path, params: { gameweek: 10 }
+  test "should handle invalid gameweek gracefully" do
+    # No such gameweek - redirect to next gameweek
+    get root_path, params: { gameweek: 10 }
     assert_response :redirect
   end
 
-  test "weekly consensus alias should work" do
-    get players_path(gameweek: 2)
-    assert_response :success
-    assert_includes response.body, "Player Rankings"
+  test "old /players path should redirect to root" do
+    get "/players"
+    assert_response :redirect
+    assert_redirected_to root_path
   end
 end

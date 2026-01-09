@@ -1,5 +1,5 @@
 class Gameweek < ApplicationRecord
-  STARTING_GAMEWEEK = 8
+  STARTING_GAMEWEEK = 22
 
   validates :fpl_id, presence: true, uniqueness: true
   validates :name, presence: true
