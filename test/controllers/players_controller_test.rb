@@ -121,4 +121,36 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     assert_redirected_to root_path
   end
+
+  test "should show player page with slugged URL" do
+    stub_google_news_api
+
+    get player_path(@player)
+    assert_response :success
+    assert_includes response.body, @player.full_name
+  end
+
+  test "should redirect old-style numeric ID to slugged URL" do
+    get "/players/#{@player.id}"
+    assert_response :moved_permanently
+    assert_redirected_to player_path(@player)
+  end
+
+  test "should redirect incorrect slug to canonical URL" do
+    get "/players/wrong-slug-#{@player.fpl_id}"
+    assert_response :moved_permanently
+    assert_redirected_to player_path(@player)
+  end
+
+  test "should return 404 for non-existent player" do
+    get "/players/non-existent-99999"
+    assert_response :not_found
+  end
+
+  private
+
+  def stub_google_news_api
+    stub_request(:get, /googleapis\.com\/customsearch/)
+      .to_return(status: 200, body: { items: [] }.to_json, headers: { "Content-Type" => "application/json" })
+  end
 end

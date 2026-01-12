@@ -21,6 +21,11 @@ module ApplicationHelper
     tag.script(structured_data_schema.to_json.html_safe, type: "application/ld+json")
   end
 
+  def player_structured_data(player)
+    schema = player_schema(player)
+    tag.script(schema.to_json.html_safe, type: "application/ld+json")
+  end
+
   def tier_badge_classes(tier)
     {
       1 => "bg-amber-400/20 text-amber-700",
@@ -75,5 +80,18 @@ module ApplicationHelper
   def organization_schema
     { "@type": "Organization", "@id": "#{BASE_URL}/#organization", "name": "Fantasy Forecast",
       "url": "#{BASE_URL}/", "logo": { "@type": "ImageObject", "url": "#{BASE_URL}/icon.png" }, "sameAs": [] }
+  end
+
+  def player_schema(player)
+    schema = {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": player.full_name,
+      "url": "#{BASE_URL}#{player_path(player)}",
+      "jobTitle": "Professional Football Player",
+      "description": "#{player.full_name} - #{player.position.capitalize} for #{player.team&.name || 'Premier League'}"
+    }
+    schema[:affiliation] = { "@type": "SportsTeam", "name": player.team.name } if player.team.present?
+    schema
   end
 end

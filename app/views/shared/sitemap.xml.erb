@@ -1,35 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Homepage -->
   <url>
-    <loc><%= @base_url %></loc>
-    <changefreq>weekly</changefreq>
+    <loc><%= @base_url %>/</loc>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <url>
-    <loc><%= @base_url %><%= privacy_policy_path %></loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-
-  <url>
-    <loc><%= @base_url %><%= terms_of_service_path %></loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-
-  <url>
-    <loc><%= @base_url %><%= cookie_policy_path %></loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-
-  <url>
-    <loc><%= @base_url %><%= contact_us_path %></loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-
+  <!-- Position Rankings Pages -->
   <% %w[forward midfielder defender goalkeeper].each do |position| %>
   <url>
     <loc><%= @base_url %><%= root_path(position: position) %></loc>
@@ -37,4 +15,37 @@
     <priority>0.9</priority>
   </url>
   <% end %>
+
+  <!-- Player Pages (grouped by position) -->
+  <% %w[forward midfielder defender goalkeeper].each do |position| %>
+    <% @players_by_position[position]&.each do |player| %>
+  <url>
+    <loc><%= @base_url %><%= player_path(player) %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+    <% end %>
+  <% end %>
+
+  <!-- Static Pages -->
+  <url>
+    <loc><%= @base_url %><%= contact_us_path %></loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc><%= @base_url %><%= privacy_policy_path %></loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc><%= @base_url %><%= terms_of_service_path %></loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc><%= @base_url %><%= cookie_policy_path %></loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
 </urlset>

@@ -1,5 +1,8 @@
 <% content_for :meta_title, "#{@player.full_name} - Fantasy Forecast" %>
 <% content_for :meta_description, "#{@player.full_name} fantasy football stats, rankings, and news. Get the latest forecast and performance data for your FPL decisions." %>
+<% content_for :head do %>
+  <%= player_structured_data(@player) %>
+<% end %>
 
 <!-- Back Link -->
 <%= link_to root_path(position: @player.position), class: "inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-950" do %>
