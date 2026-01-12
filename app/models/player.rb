@@ -61,7 +61,7 @@ class Player < ApplicationRecord
     end
   end
 
-  def photo_url(size: "110x140")
+  def photo_url(size: "40x40")
     return nil unless code.present?
     "https://resources.premierleague.com/premierleague25/photos/players/#{size}/#{code}.png"
   end

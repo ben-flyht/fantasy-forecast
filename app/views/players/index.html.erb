@@ -2,127 +2,131 @@
 <% content_for :meta_description, "Weather-tiered FPL player rankings for Gameweek #{@gameweek}. Our algorithm analyzes form, fixtures, and expected goals to rank every Premier League player from sunshine to snow." %>
 <% content_for :meta_url, root_url %>
 
-<div class="container mx-auto px-2 md:px-4 py-4 md:py-8">
-  <%= turbo_frame_tag "rankings_container" do %>
-    <div class="mb-4 md:mb-8">
-      <h1 class="text-xl md:text-3xl font-bold text-gray-800 mb-1 md:mb-2"><%= @page_title %></h1>
-      <p class="text-sm md:text-base text-gray-500">Our algorithm analyzes form, fixtures, and expected goals to rank every Premier League player into weather tiers - from must-start sunshine picks to avoid-at-all-costs snow.</p>
+<%= turbo_frame_tag "rankings_container" do %>
+    <div class="mb-6">
+      <h1 class="text-xl sm:text-2xl font-semibold text-zinc-900"><%= @page_title %></h1>
+      <p class="mt-1 text-sm text-zinc-500">Form, fixtures, and expected goals analyzed into weather tiers.</p>
     </div>
 
     <%= form_with url: root_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form" do |f| %>
-      <!-- Gameweek and Team Filters (not sticky) -->
-      <div class="pt-4 mb-3 md:mb-4">
-        <div class="flex flex-wrap gap-3 md:gap-4">
-          <!-- Gameweek Selector -->
-          <div class="flex items-center space-x-2">
-            <label for="gameweek-select" class="text-xs md:text-sm font-medium text-gray-700 whitespace-nowrap">Gameweek:</label>
-            <%= select_tag :gameweek,
-                options_for_select(@available_gameweeks.map { |w| [w, w] }, @gameweek),
-                {
-                  id: "gameweek-select",
-                  class: "border border-gray-300 rounded-md px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-amber-400",
-                  onchange: "this.form.requestSubmit()"
-                } %>
-          </div>
-
-          <!-- Team Selector -->
-          <div class="flex items-center space-x-2">
-            <label for="team-select" class="text-xs md:text-sm font-medium text-gray-700 whitespace-nowrap">Team:</label>
-            <%= select_tag :team_id,
-                options_for_select([['All Teams', '']] + @available_teams.map { |t| [t.name, t.id] }, @team_filter),
-                {
-                  id: "team-select",
-                  class: "border border-gray-300 rounded-md px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-amber-400",
-                  onchange: "this.form.requestSubmit()"
-                } %>
-          </div>
+      <div class="flex flex-wrap items-center gap-4 mb-6">
+        <!-- Gameweek Selector -->
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-zinc-500">Gameweek</span>
+          <%= render DropdownComponent.new(
+            label: "Gameweek",
+            name: "gameweek",
+            options: @available_gameweeks.map { |w| [w, w] },
+            selected: @gameweek
+          ) %>
         </div>
-      </div>
 
-      <!-- Position Filter (sticky with JS) -->
-      <div data-controller="sticky-shadow">
-        <div data-sticky-shadow-target="sentinel"></div>
-        <div data-sticky-shadow-target="placeholder" style="height: 0;"></div>
-        <div class="z-40 bg-white transition-shadow duration-200 -mx-2 md:-mx-4 mb-4 md:mb-6" data-sticky-shadow-target="container">
-          <div class="container mx-auto px-2 md:px-4">
-            <div class="flex flex-wrap items-center gap-2 py-3">
-              <span class="text-xs md:text-sm font-medium text-gray-700">Position:</span>
-              <div class="flex flex-wrap gap-2" role="radiogroup">
-                <% @available_positions.each do |position| %>
-                  <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
-                  <% is_active = @position_filter == position %>
-                  <%
-                    if is_active
-                      pill_classes = 'bg-amber-200 text-gray-800 border-amber-200 shadow-md'
-                    else
-                      pill_classes = 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    end
-                  %>
-                  <label class="px-2 md:px-3 py-1.5 md:py-2 text-xs font-medium rounded-md border transition-all cursor-pointer inline-block <%= pill_classes %>">
-                    <%= radio_button_tag :position, position, is_active,
-                        style: "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;",
-                        onchange: "this.form.requestSubmit()" %><%= position_config[:display_name] %>
-                  </label>
-                <% end %>
-              </div>
-            </div>
-          </div>
+        <!-- Team Selector -->
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-zinc-500">Team</span>
+          <%= render DropdownComponent.new(
+            label: "Team",
+            name: "team_id",
+            options: [['All', '']] + @available_teams.map { |t| [t.name, t.id] },
+            selected: @team_filter
+          ) %>
+        </div>
+
+        <!-- Position Filter -->
+        <div class="flex items-center gap-1" role="radiogroup">
+          <% @available_positions.each do |position| %>
+            <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
+            <% is_active = @position_filter == position %>
+            <label class="px-3 py-1.5 text-sm font-medium rounded-lg cursor-pointer transition-colors <%= is_active ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900' %>">
+              <%= radio_button_tag :position, position, is_active,
+                  class: "sr-only",
+                  onchange: "this.form.requestSubmit()" %><%= position_config[:display_name] %>
+            </label>
+          <% end %>
         </div>
       </div>
     <% end %>
 
-    <!-- Tiered Rankings Table -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-
+    <!-- Rankings Table -->
     <% if @consensus_rankings.any? %>
-      <table class="w-full">
-        <% (1..5).each do |tier_num| %>
-          <% tier_players = @tier_groups[tier_num] %>
-          <% next if tier_players.blank? %>
-
-          <%= render TierHeaderComponent.new(tier: tier_num) %>
-
+      <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <table class="min-w-full text-left text-sm/6 text-zinc-950">
+          <thead class="text-zinc-500">
+            <tr>
+              <th class="border-b border-zinc-200 px-2 sm:px-4 py-2 font-medium first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 w-px whitespace-nowrap">Rank</th>
+              <th class="border-b border-zinc-200 px-2 sm:px-4 py-2 font-medium first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6">Player</th>
+              <th class="border-b border-zinc-200 px-2 sm:px-4 py-2 font-medium first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 hidden lg:table-cell">Form</th>
+              <th class="border-b border-zinc-200 px-2 sm:px-4 py-2 font-medium first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 text-right hidden sm:table-cell">Fixture</th>
+            </tr>
+          </thead>
           <tbody>
-            <% tier_players.each_with_index do |ranking, idx| %>
+            <% @consensus_rankings.each do |ranking| %>
               <% player = @players_by_id[ranking.player_id] %>
-              <% border_class = idx > 0 ? "border-t border-white" : "" %>
-              <tr class="<%= tier_row_class(tier_num) %> <%= border_class %>">
-                <td class="px-1 md:px-4 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> whitespace-nowrap text-sm md:text-lg font-medium text-gray-800 w-10 md:w-16 text-center align-top">
-                  <%= ranking.bot_rank || '-' %>
+              <% tier = ranking.tier %>
+              <% tier_data = tier_info(tier) %>
+              <tr class="cursor-pointer hover:bg-zinc-50"
+                  onclick="Turbo.visit('<%= player_path(player) %>')"
+                  role="link"
+                  tabindex="0"
+                  onkeydown="if(event.key === 'Enter') Turbo.visit('<%= player_path(player) %>')">
+                <td class="border-b border-zinc-100 px-2 sm:px-4 py-4 first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 w-px whitespace-nowrap">
+                  <span class="inline-flex items-center gap-2">
+                    <span class="text-xl"><%= tier_data[:symbol] %></span>
+                    <span class="text-zinc-500"><%= ranking.bot_rank || '-' %></span>
+                  </span>
                 </td>
-                <td class="px-2 md:px-6 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> align-top">
-                  <%= render PlayerCardComponent.new(player: player) %>
+                <td class="border-b border-zinc-100 px-2 sm:px-4 py-4 first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6">
+                  <div class="flex items-center gap-3 sm:gap-4">
+                    <%= render PlayerAvatarComponent.new(player: player, size: :medium) %>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-lg"><%= player.short_name %></span>
+                        <% news_count = cached_news_count(player) %>
+                        <% if news_count && news_count > 0 %>
+                          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-600 rounded-full" title="<%= news_count %> recent news <%= news_count == 1 ? 'article' : 'articles' %>">
+                            <svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                            </svg>
+                            <%= news_count %>
+                          </span>
+                        <% end %>
+                      </div>
+                      <div class="text-zinc-500 flex items-center gap-1">
+                          <% if player.team&.badge_url %>
+                            <%= image_tag player.team.badge_url, alt: "", class: "size-5" %>
+                          <% end %>
+                          <%= player.team&.name %>
+                        </div>
+                    </div>
+                  </div>
                 </td>
-                <td class="px-1 md:px-6 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> whitespace-nowrap text-right text-xs md:text-sm w-14 md:w-32 align-top">
-                  <%= render OpponentComponent.new(player: player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
+                <td class="border-b border-zinc-100 px-2 sm:px-4 py-4 first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 hidden lg:table-cell">
+                  <%= render FormComponent.new(scores: @performances_by_player[player.id]) %>
+                </td>
+                <td class="border-b border-zinc-100 px-2 sm:px-4 py-4 first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 text-zinc-500 text-right hidden sm:table-cell">
+                  <div class="flex flex-col items-end gap-1">
+                    <% (@matches_by_team[player.team_id] || []).each do |match| %>
+                      <%= render FixtureComponent.new(match: match, player: player) %>
+                    <% end %>
+                  </div>
                 </td>
               </tr>
-              <% if ranking.explanation.present? %>
-                <tr class="<%= tier_row_class(tier_num) %>">
-                  <td colspan="3" class="px-2 md:px-6 pb-2 md:pb-4 pt-0">
-                    <p class="text-xs md:text-sm text-gray-500 italic"><%= ranking.explanation %></p>
-                  </td>
-                </tr>
-              <% end %>
             <% end %>
           </tbody>
-        <% end %>
-      </table>
+        </table>
+      </div>
     <% else %>
       <div class="px-6 py-8 text-center">
-        <div class="text-gray-500">
-          <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+        <div class="text-zinc-500">
+          <svg class="mx-auto h-12 w-12 text-zinc-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
             <path d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.713-3.714M14 40v-4c0-1.313.253-2.566.713-3.714m0 0A9.971 9.971 0 0124 24c4.004 0 7.625 2.31 9.287 5.286" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-800">No rankings yet</h3>
-          <p class="mt-1 text-sm text-gray-500">
+          <h3 class="mt-2 text-sm font-medium text-zinc-900">No rankings yet</h3>
+          <p class="mt-1 text-sm text-zinc-500">
             No ranking data available for gameweek <%= @gameweek %><%= " (#{@position_filter.capitalize}s)" if @position_filter.present? %>.
           </p>
         </div>
       </div>
     <% end %>
-    </div>
 
-  <% end %>
-
-</div>
+<% end %>

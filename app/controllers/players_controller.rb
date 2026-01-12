@@ -7,11 +7,82 @@ class PlayersController < ApplicationController
     load_consensus_rankings
     load_gameweek_data
     load_players
+    load_recent_performances
     set_available_filters
     build_page_title
   end
 
+  def show
+    @player = Player.includes(:team).find(params[:id])
+    @next_gameweek = Gameweek.next_gameweek
+    load_player_forecast
+    load_player_performances
+    load_upcoming_fixture
+    load_player_news
+  end
+
   private
+
+  def load_player_forecast
+    return unless @next_gameweek
+
+    forecast = @player.forecasts.includes(:gameweek).find_by(gameweek: @next_gameweek)
+    return unless forecast
+
+    @forecast = {
+      rank: forecast.rank,
+      score: forecast.score,
+      explanation: forecast.explanation,
+      gameweek: @next_gameweek.fpl_id
+    }
+
+    if forecast.score.present?
+      @forecast[:tier] = calculate_player_tier(forecast)
+    end
+  end
+
+  def calculate_player_tier(forecast)
+    top_score = Forecast.where(gameweek: @next_gameweek)
+                        .joins(:player)
+                        .where(players: { position: @player.position })
+                        .maximum(:score) || 0
+
+    return TierCalculator.tier_info(5) if top_score.zero? || forecast.score.nil?
+
+    percentage_from_top = ((top_score - forecast.score) / top_score.to_f) * 100
+
+    tier_number = case percentage_from_top
+                  when -Float::INFINITY..20 then 1
+                  when 20..40 then 2
+                  when 40..60 then 3
+                  when 60..80 then 4
+                  else 5
+                  end
+
+    TierCalculator.tier_info(tier_number)
+  end
+
+  def load_player_performances
+    @performances = @player.performances
+                           .includes(:gameweek)
+                           .joins(:gameweek)
+                           .order("gameweeks.fpl_id DESC")
+                           .limit(8)
+    @total_score = @player.total_score
+  end
+
+  def load_upcoming_fixture
+    return unless @next_gameweek && @player.team
+
+    @upcoming_match = Match.includes(:home_team, :away_team)
+                           .where(gameweek: @next_gameweek)
+                           .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
+                           .first
+  end
+
+  def load_player_news
+    @news = GoogleNews::FetchPlayerNews.call(player: @player)
+  end
 
   def set_filters
     @gameweek = params[:gameweek].present? ? params[:gameweek].to_i : current_gameweek
@@ -29,13 +100,31 @@ class PlayersController < ApplicationController
 
   def load_consensus_rankings
     rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
-    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter).call
+    top_score = position_top_score
+    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter, top_score: top_score).call
     @tier_groups = @consensus_rankings.group_by(&:tier)
+  end
+
+  def position_top_score
+    all_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, nil)
+    all_rankings.select { |r| r.score.present? && r.score.positive? }.map(&:score).max || 0
   end
 
   def load_gameweek_data
     @gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
     @matches_by_team = @gameweek_record ? build_matches_by_team : {}
+  end
+
+  def load_recent_performances
+    player_ids = @consensus_rankings.map(&:player_id)
+    performances = Performance.joins(:gameweek)
+                              .where(player_id: player_ids)
+                              .order("gameweeks.fpl_id DESC")
+                              .select(:player_id, :gameweek_score)
+
+    @performances_by_player = performances.group_by(&:player_id).transform_values do |perfs|
+      perfs.first(8).map(&:gameweek_score)
+    end
   end
 
   def build_matches_by_team

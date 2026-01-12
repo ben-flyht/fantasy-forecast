@@ -2,7 +2,7 @@
 class ExplanationGenerator
   class GenerationError < StandardError; end
 
-  MAX_TOKENS = 60
+  MAX_TOKENS = 150
   MODEL = "claude-3-5-haiku-latest".freeze
 
   TIER_INFO = {
@@ -55,7 +55,7 @@ class ExplanationGenerator
 
   def build_prompt
     <<~PROMPT
-      You are an FPL ranking assistant. Write a 12-word max explanation for this player's ranking.
+      You are an FPL ranking assistant. Write a 2-3 sentence explanation for this player's ranking that helps FPL managers understand the key factors.
 
       #{player_context}
       Rank: ##{@rank}#{tier_context}
@@ -64,13 +64,15 @@ class ExplanationGenerator
       #{fixture_context}
       #{availability_context}
 
-      IMPORTANT: Reference SPECIFIC recent matches by opponent name (e.g., "6 saves vs Liverpool", "scored vs Arsenal").
-      Avoid generic phrases like "clean sheet potential" or "home advantage". Be specific.
+      Your explanation should cover:
+      1. Recent form - reference SPECIFIC matches by opponent (e.g., "6 saves vs Liverpool", "scored vs Arsenal")
+      2. Key stats that influenced the ranking (xG, assists, clean sheets, etc.)
+      3. Upcoming fixture difficulty and why it matters
 
-      Output ONLY the explanation (12 words max). Examples:
-      - "8 saves vs Liverpool last week, only 1 clean sheet in 5 though."
-      - "Scored in 3 of last 5, including brace vs Newcastle."
-      - "Just 2 pts vs Wolves, but 11 pts at home vs Brighton before."
+      Avoid generic phrases. Be specific and data-driven.
+
+      Output ONLY the explanation (2-3 sentences, ~40 words). Example:
+      "Strong recent form with 8 saves vs Liverpool and a clean sheet vs Wolves. Averaging 5.2 points over last 5 with consistent minutes. Faces struggling Southampton at home who have conceded 2.1 xG per game."
     PROMPT
   end
 
