@@ -86,24 +86,40 @@
             <% tier_players.each_with_index do |ranking, idx| %>
               <% player = @players_by_id[ranking.player_id] %>
               <% border_class = idx > 0 ? "border-t border-white" : "" %>
-              <tr class="<%= tier_row_class(tier_num) %> <%= border_class %>">
-                <td class="px-1 md:px-4 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> whitespace-nowrap text-sm md:text-lg font-medium text-gray-800 w-10 md:w-16 text-center align-top">
+              <tr class="<%= tier_row_class(tier_num) %> <%= border_class %> cursor-pointer hover:brightness-95 transition-all"
+                  onclick="Turbo.visit('<%= player_path(player) %>')"
+                  role="link"
+                  tabindex="0"
+                  onkeydown="if(event.key === 'Enter') Turbo.visit('<%= player_path(player) %>')">
+                <td class="px-1 md:px-4 py-2 md:py-4 whitespace-nowrap text-sm md:text-lg font-medium text-gray-800 w-10 md:w-16 text-center align-top">
                   <%= ranking.bot_rank || '-' %>
                 </td>
-                <td class="px-2 md:px-6 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> align-top">
-                  <%= render PlayerCardComponent.new(player: player) %>
-                </td>
-                <td class="px-1 md:px-6 pt-2 md:pt-4 <%= ranking.explanation.present? ? 'pb-1' : 'pb-2 md:pb-4' %> whitespace-nowrap text-right text-xs md:text-sm w-14 md:w-32 align-top">
-                  <%= render OpponentComponent.new(player: player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
+                <td class="px-2 md:px-6 py-2 md:py-4 align-top" colspan="2">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex-1">
+                      <%= render PlayerCardComponent.new(player: player) %>
+                      <% if ranking.explanation.present? %>
+                        <p class="text-xs md:text-sm text-gray-500 italic mt-2"><%= ranking.explanation %></p>
+                      <% end %>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                      <div class="whitespace-nowrap text-right text-xs md:text-sm">
+                        <%= render OpponentComponent.new(player: player, gameweek: @gameweek, matches_by_team: @matches_by_team) %>
+                      </div>
+                      <% news_count = cached_news_count(player) %>
+                      <% if news_count && news_count > 0 %>
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 002 2H4a2 2 0 01-2-2V5zm3 1h6v4H5V6zm6 6H5v2h6v-2z" clip-rule="evenodd"/>
+                            <path d="M15 7h1a2 2 0 012 2v5.5a1.5 1.5 0 01-3 0V7z"/>
+                          </svg>
+                          <%= news_count %>
+                        </span>
+                      <% end %>
+                    </div>
+                  </div>
                 </td>
               </tr>
-              <% if ranking.explanation.present? %>
-                <tr class="<%= tier_row_class(tier_num) %>">
-                  <td colspan="3" class="px-2 md:px-6 pb-2 md:pb-4 pt-0">
-                    <p class="text-xs md:text-sm text-gray-500 italic"><%= ranking.explanation %></p>
-                  </td>
-                </tr>
-              <% end %>
             <% end %>
           </tbody>
         <% end %>

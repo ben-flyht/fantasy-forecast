@@ -35,6 +35,10 @@ module ApplicationHelper
     "divide-y divide-white"
   end
 
+  def cached_news_count(player)
+    GoogleNews::FetchPlayerNews.cached_count(player)
+  end
+
   private
 
   def structured_data_schema

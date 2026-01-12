@@ -11,7 +11,77 @@ class PlayersController < ApplicationController
     build_page_title
   end
 
+  def show
+    @player = Player.includes(:team).find(params[:id])
+    @next_gameweek = Gameweek.next_gameweek
+    load_player_forecast
+    load_player_performances
+    load_upcoming_fixture
+    load_player_news
+  end
+
   private
+
+  def load_player_forecast
+    return unless @next_gameweek
+
+    forecast = @player.forecasts.includes(:gameweek).find_by(gameweek: @next_gameweek)
+    return unless forecast
+
+    @forecast = {
+      rank: forecast.rank,
+      score: forecast.score,
+      explanation: forecast.explanation,
+      gameweek: @next_gameweek.fpl_id
+    }
+
+    if forecast.score.present?
+      @forecast[:tier] = calculate_player_tier(forecast)
+    end
+  end
+
+  def calculate_player_tier(forecast)
+    top_score = Forecast.where(gameweek: @next_gameweek)
+                        .joins(:player)
+                        .where(players: { position: @player.position })
+                        .maximum(:score) || 0
+
+    return TierCalculator.tier_info(5) if top_score.zero? || forecast.score.nil?
+
+    percentage_from_top = ((top_score - forecast.score) / top_score.to_f) * 100
+
+    tier_number = case percentage_from_top
+                  when -Float::INFINITY..20 then 1
+                  when 20..40 then 2
+                  when 40..60 then 3
+                  when 60..80 then 4
+                  else 5
+                  end
+
+    TierCalculator.tier_info(tier_number)
+  end
+
+  def load_player_performances
+    @performances = @player.performances
+                           .includes(:gameweek)
+                           .joins(:gameweek)
+                           .order("gameweeks.fpl_id DESC")
+                           .limit(5)
+    @total_score = @player.total_score
+  end
+
+  def load_upcoming_fixture
+    return unless @next_gameweek && @player.team
+
+    @upcoming_match = Match.includes(:home_team, :away_team)
+                           .where(gameweek: @next_gameweek)
+                           .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
+                           .first
+  end
+
+  def load_player_news
+    @news = GoogleNews::FetchPlayerNews.call(player: @player)
+  end
 
   def set_filters
     @gameweek = params[:gameweek].present? ? params[:gameweek].to_i : current_gameweek

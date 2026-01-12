@@ -4,6 +4,9 @@ Rails.application.routes.draw do
   # Redirect old /players path to root
   get "players", to: redirect("/", status: 301)
 
+  # Player detail page
+  resources :players, only: [:show]
+
   # Dynamic robots.txt based on environment
   get "robots.txt", to: "application#robots", defaults: { format: "text" }
 
