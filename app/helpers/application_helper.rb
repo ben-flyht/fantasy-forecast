@@ -39,6 +39,27 @@ module ApplicationHelper
     GoogleNews::FetchPlayerNews.cached_count(player)
   end
 
+  def forecast_tier_background(tier_name)
+    {
+      "Sunshine" => "bg-amber-100",
+      "Partly Cloudy" => "bg-amber-50",
+      "Cloudy" => "bg-gray-100",
+      "Rainy" => "bg-blue-50",
+      "Snow" => "bg-blue-100"
+    }[tier_name] || "bg-gray-50"
+  end
+
+  def performance_score_class(score)
+    score_int = score.to_i
+    if score_int >= 10
+      "text-green-600"
+    elsif score_int <= 2
+      "text-red-500"
+    else
+      "text-gray-800"
+    end
+  end
+
   private
 
   def structured_data_schema
