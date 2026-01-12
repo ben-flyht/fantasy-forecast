@@ -94,6 +94,39 @@ class PlayerTest < ActiveSupport::TestCase
     assert_equal "Test Player", player.name
   end
 
+  test "slug should return parameterized full name" do
+    player = Player.new(
+      first_name: "Marcus",
+      last_name: "Rashford",
+      team: @team,
+      position: "forward",
+      fpl_id: 405
+    )
+    assert_equal "marcus-rashford", player.slug
+  end
+
+  test "slug should handle special characters" do
+    player = Player.new(
+      first_name: "Raphaël",
+      last_name: "Varane",
+      team: @team,
+      position: "defender",
+      fpl_id: 500
+    )
+    assert_equal "raphael-varane", player.slug
+  end
+
+  test "to_param should return slug with fpl_id" do
+    player = Player.new(
+      first_name: "Marcus",
+      last_name: "Rashford",
+      team: @team,
+      position: "forward",
+      fpl_id: 405
+    )
+    assert_equal "marcus-rashford-405", player.to_param
+  end
+
   test "enum scopes should work" do
     # Clear existing players to ensure clean test
     Player.destroy_all

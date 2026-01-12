@@ -36,6 +36,14 @@ class Player < ApplicationRecord
     read_attribute(:short_name).presence || last_name
   end
 
+  def slug
+    full_name.parameterize
+  end
+
+  def to_param
+    "#{slug}-#{fpl_id}"
+  end
+
   def total_score(up_to_gameweek = nil)
     scope = performances
 
