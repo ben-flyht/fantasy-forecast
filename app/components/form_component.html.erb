@@ -1,0 +1,5 @@
+<div class="flex items-center gap-1">
+  <% scores.each_with_index do |score, index| %>
+    <span class="inline-flex items-center justify-center size-7 text-xs font-medium rounded bg-zinc-100 <%= opacities[index] %>"><%= score %></span>
+  <% end %>
+</div>

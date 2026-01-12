@@ -21,18 +21,18 @@ module ApplicationHelper
     tag.script(structured_data_schema.to_json.html_safe, type: "application/ld+json")
   end
 
-  def tier_row_class(tier)
+  def tier_badge_classes(tier)
     {
-      1 => "bg-amber-100",      # ☀️ Sunshine - warm yellow
-      2 => "bg-amber-50",        # 🌤️ Partly Cloudy - lighter yellow
-      3 => "bg-gray-100",       # ☁️ Cloudy - gray
-      4 => "bg-blue-50",         # 🌧️ Rainy - light blue
-      5 => "bg-blue-100"          # ❄️ Snow - deeper blue
-    }[tier] || ""
+      1 => "bg-amber-400/20 text-amber-700",
+      2 => "bg-lime-400/20 text-lime-700",
+      3 => "bg-zinc-600/10 text-zinc-700",
+      4 => "bg-sky-400/20 text-sky-700",
+      5 => "bg-blue-400/20 text-blue-700"
+    }[tier] || "bg-zinc-600/10 text-zinc-700"
   end
 
-  def tier_divide_class(_tier)
-    "divide-y divide-white"
+  def tier_info(tier)
+    TierCalculator::TIERS[tier]
   end
 
   def cached_news_count(player)
@@ -52,11 +52,11 @@ module ApplicationHelper
   def performance_score_class(score)
     score_int = score.to_i
     if score_int >= 10
-      "text-green-600"
+      "text-lime-700"
     elsif score_int <= 2
-      "text-red-500"
+      "text-red-700"
     else
-      "text-gray-800"
+      "text-zinc-950"
     end
   end
 

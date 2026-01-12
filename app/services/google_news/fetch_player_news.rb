@@ -1,6 +1,6 @@
 module GoogleNews
   class FetchPlayerNews < ApplicationService
-    CACHE_VERSION = "v1"
+    CACHE_VERSION = "v2"
     CACHE_TTL = 6.hours
 
     def initialize(player:)
@@ -50,7 +50,8 @@ module GoogleNews
       name_variants = [
         @player.full_name,
         @player.last_name,
-        @player.short_name
+        @player.short_name,
+        short_name_suffix
       ].compact.uniq.map { |n| %("#{n}") }
 
       name_part = "(#{name_variants.join(' OR ')})"
@@ -59,22 +60,74 @@ module GoogleNews
       [name_part, team_part].compact.join(" ")
     end
 
+    def short_name_suffix
+      return nil unless @player.short_name&.include?(".")
+
+      @player.short_name.split(".").last
+    end
+
     def client
       @client ||= GoogleNews::Client.new
     end
 
     def normalize_articles(items)
-      items.map { |item| normalize_article(item) }
+      items
+        .map { |item| normalize_article(item) }
+        .sort_by { |article| article[:published_at] || Time.at(0) }
+        .reverse
     end
 
     def normalize_article(item)
       {
         title: item[:title],
-        snippet: item[:snippet],
+        snippet: clean_snippet(item[:snippet]),
         url: item[:link],
-        image: item.dig(:pagemap, :cse_image, 0, :src),
-        source: item[:displayLink]
+        source: item[:displayLink],
+        published_at: extract_published_date(item)
       }
+    end
+
+    def clean_snippet(snippet)
+      return nil unless snippet.present?
+
+      # Remove relative date prefix (e.g., "17 hours ago ... ")
+      snippet.sub(/^\d+\s+(minute|hour|day|week|month)s?\s+ago\s*\.{0,3}\s*/i, "")
+    end
+
+    def extract_published_date(item)
+      # Try metatags first
+      metatags = item.dig(:pagemap, :metatags, 0) || {}
+
+      date_string = metatags[:article_published_time] ||
+                    metatags[:"article:published_time"] ||
+                    metatags[:og_updated_time] ||
+                    metatags[:"og:updated_time"] ||
+                    metatags[:datepublished] ||
+                    metatags[:date]
+
+      return Time.parse(date_string) if date_string.present?
+
+      # Try parsing relative date from snippet (e.g., "17 hours ago ...")
+      parse_relative_date_from_snippet(item[:snippet])
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def parse_relative_date_from_snippet(snippet)
+      return nil unless snippet.present?
+
+      if snippet =~ /^(\d+)\s+(minute|hour|day|week|month)s?\s+ago/i
+        amount = $1.to_i
+        unit = $2.downcase
+
+        case unit
+        when "minute" then amount.minutes.ago
+        when "hour" then amount.hours.ago
+        when "day" then amount.days.ago
+        when "week" then amount.weeks.ago
+        when "month" then amount.months.ago
+        end
+      end
     end
   end
 end

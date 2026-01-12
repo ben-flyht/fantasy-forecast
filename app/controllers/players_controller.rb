@@ -7,6 +7,7 @@ class PlayersController < ApplicationController
     load_consensus_rankings
     load_gameweek_data
     load_players
+    load_recent_performances
     set_available_filters
     build_page_title
   end
@@ -66,7 +67,7 @@ class PlayersController < ApplicationController
                            .includes(:gameweek)
                            .joins(:gameweek)
                            .order("gameweeks.fpl_id DESC")
-                           .limit(5)
+                           .limit(8)
     @total_score = @player.total_score
   end
 
@@ -99,13 +100,31 @@ class PlayersController < ApplicationController
 
   def load_consensus_rankings
     rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
-    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter).call
+    top_score = position_top_score
+    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter, top_score: top_score).call
     @tier_groups = @consensus_rankings.group_by(&:tier)
+  end
+
+  def position_top_score
+    all_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, nil)
+    all_rankings.select { |r| r.score.present? && r.score.positive? }.map(&:score).max || 0
   end
 
   def load_gameweek_data
     @gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
     @matches_by_team = @gameweek_record ? build_matches_by_team : {}
+  end
+
+  def load_recent_performances
+    player_ids = @consensus_rankings.map(&:player_id)
+    performances = Performance.joins(:gameweek)
+                              .where(player_id: player_ids)
+                              .order("gameweeks.fpl_id DESC")
+                              .select(:player_id, :gameweek_score)
+
+    @performances_by_player = performances.group_by(&:player_id).transform_values do |perfs|
+      perfs.first(8).map(&:gameweek_score)
+    end
   end
 
   def build_matches_by_team

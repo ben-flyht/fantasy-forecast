@@ -1,0 +1,5 @@
+<span class="<%= size_classes %> shrink-0 rounded-full ring-1 ring-black/10 overflow-hidden bg-zinc-100">
+  <% if photo_url %>
+    <%= image_tag photo_url, alt: "", class: "size-full object-cover", onerror: "this.onerror=null; this.parentElement.innerHTML=''" %>
+  <% end %>
+</span>

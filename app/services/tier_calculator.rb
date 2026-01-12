@@ -22,10 +22,10 @@ class TierCalculator
     t4: 80
   }.freeze
 
-  def initialize(rankings, position: nil)
+  def initialize(rankings, position: nil, top_score: nil)
     @rankings = rankings
     @position = position
-    @top_score = find_top_score
+    @top_score = top_score || find_top_score
   end
 
   def call

@@ -41,6 +41,10 @@
     <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
     <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="icon" href="/icon.png" type="image/png">
@@ -52,59 +56,46 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <nav class="bg-white text-gray-800 p-4 border-b border-gray-200 fixed top-0 left-0 right-0 z-50 shadow-md">
-      <div class="container mx-auto">
-        <%= link_to "⚡ Fantasy Forecast", root_path, class: "text-lg md:text-xl font-bold" %>
+  <body class="bg-white">
+    <nav class="border-b border-zinc-950/10">
+      <div class="container mx-auto px-4 py-4">
+        <%= link_to root_path, class: "text-base/6 font-semibold text-zinc-950" do %>
+          ⚡ Fantasy Forecast
+        <% end %>
       </div>
     </nav>
 
-    <div class="pt-20">
-      <% if notice %>
-        <div class="bg-amber-100 border border-amber-400 text-amber-800 px-4 py-3 rounded mb-4 mx-4 mt-4">
-          <%= notice %>
-        </div>
-      <% end %>
+    <% if notice %>
+      <div class="container mx-auto px-4 mt-4">
+        <div class="rounded-lg bg-lime-400/20 px-4 py-3 text-sm text-lime-700"><%= notice %></div>
+      </div>
+    <% end %>
 
-      <% if alert %>
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
-          <%= alert %>
-        </div>
-      <% end %>
-    </div>
+    <% if alert %>
+      <div class="container mx-auto px-4 mt-4">
+        <div class="rounded-lg bg-red-400/20 px-4 py-3 text-sm text-red-700"><%= alert %></div>
+      </div>
+    <% end %>
 
-    <main class="container mx-auto mt-4 md:mt-8 px-2 md:px-5">
+    <main class="container mx-auto px-4 py-8">
       <%= yield %>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-8 md:py-12 mt-12 md:mt-16">
-      <div class="container mx-auto px-4">
-        <div class="grid md:grid-cols-3 gap-6 md:gap-8">
-          <div class="md:col-span-2">
-            <h3 class="text-lg md:text-xl font-bold mb-3 md:mb-4">⚡ Fantasy Forecast</h3>
-            <p class="text-sm md:text-base text-gray-300 mb-3">
-              Weather-tiered FPL player rankings to help you make better decisions.
-            </p>
-            <p class="text-xs md:text-sm text-gray-400">
-              Our algorithm analyzes form, fixtures, and expected goals to rank every Premier League player.
-              Use our weather tiers to quickly identify must-starts, solid options, and players to avoid.
-            </p>
-          </div>
+    <footer class="border-t border-zinc-950/10 mt-16">
+      <div class="container mx-auto px-4 py-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h4 class="text-sm md:text-base font-semibold mb-3 md:mb-4">Legal</h4>
-            <ul class="space-y-2 text-xs md:text-sm text-gray-300">
-              <li><%= link_to "Privacy Policy", privacy_policy_path, class: "hover:text-white" %></li>
-              <li><%= link_to "Terms of Service", terms_of_service_path, class: "hover:text-white" %></li>
-              <li><%= link_to "Cookie Policy", cookie_policy_path, class: "hover:text-white" %></li>
-              <li><%= link_to "Contact Us", contact_us_path, class: "hover:text-white" %></li>
-            </ul>
+            <p class="text-sm font-semibold text-zinc-950">⚡ Fantasy Forecast</p>
+            <p class="text-xs/6 text-zinc-500 mt-1">Weather-tiered FPL player rankings.</p>
+          </div>
+          <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs/6 text-zinc-500">
+            <%= link_to "Privacy", privacy_policy_path, class: "hover:text-zinc-950" %>
+            <%= link_to "Terms", terms_of_service_path, class: "hover:text-zinc-950" %>
+            <%= link_to "Cookies", cookie_policy_path, class: "hover:text-zinc-950" %>
+            <%= link_to "Contact", contact_us_path, class: "hover:text-zinc-950" %>
           </div>
         </div>
-        <div class="border-t border-gray-700 mt-6 md:mt-8 pt-6 md:pt-8 text-center text-gray-300">
-          <p class="text-xs md:text-sm">&copy; 2025 Fantasy Forecast. All rights reserved.</p>
-          <p class="mt-2 text-xs">Not affiliated with the Premier League or Fantasy Premier League. All player and team names are trademarks of their respective owners.</p>
-        </div>
+        <p class="mt-6 text-xs text-zinc-400">Not affiliated with the Premier League or Fantasy Premier League.</p>
       </div>
     </footer>
   </body>
