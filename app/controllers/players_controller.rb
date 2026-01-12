@@ -33,33 +33,9 @@ class PlayersController < ApplicationController
       rank: forecast.rank,
       score: forecast.score,
       explanation: forecast.explanation,
-      gameweek: @next_gameweek.fpl_id
+      gameweek: @next_gameweek.fpl_id,
+      tier: TierCalculator.calculate_player_tier(forecast, @player.position)
     }
-
-    if forecast.score.present?
-      @forecast[:tier] = calculate_player_tier(forecast)
-    end
-  end
-
-  def calculate_player_tier(forecast)
-    top_score = Forecast.where(gameweek: @next_gameweek)
-                        .joins(:player)
-                        .where(players: { position: @player.position })
-                        .maximum(:score) || 0
-
-    return TierCalculator.tier_info(5) if top_score.zero? || forecast.score.nil?
-
-    percentage_from_top = ((top_score - forecast.score) / top_score.to_f) * 100
-
-    tier_number = case percentage_from_top
-                  when -Float::INFINITY..20 then 1
-                  when 20..40 then 2
-                  when 40..60 then 3
-                  when 60..80 then 4
-                  else 5
-                  end
-
-    TierCalculator.tier_info(tier_number)
   end
 
   def load_player_performances
