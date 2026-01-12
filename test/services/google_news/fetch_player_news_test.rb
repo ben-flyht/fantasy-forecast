@@ -57,7 +57,7 @@ class GoogleNews::FetchPlayerNewsTest < ActiveSupport::TestCase
     stub_request(:get, /googleapis.com\/customsearch/)
       .to_return(
         status: 200,
-        body: { items: [{ title: "Test Article", snippet: "Test", link: "http://test.com", displayLink: "test.com" }] }.to_json,
+        body: { items: [ { title: "Test Article", snippet: "Test", link: "http://test.com", displayLink: "test.com" } ] }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
@@ -65,7 +65,7 @@ class GoogleNews::FetchPlayerNewsTest < ActiveSupport::TestCase
     GoogleNews::FetchPlayerNews.call(player: @player)
 
     # Verify cache key was populated
-    cache_key = "player_news/v1/player:#{@player.id}"
+    cache_key = "player_news/v2/player:#{@player.id}"
     assert Rails.cache.exist?(cache_key), "Cache should have been populated"
   ensure
     Rails.cache = original_cache
@@ -82,7 +82,7 @@ class GoogleNews::FetchPlayerNewsTest < ActiveSupport::TestCase
       link: "https://example.com/article",
       displayLink: "example.com",
       pagemap: {
-        cse_image: [{ src: "https://example.com/image.jpg" }]
+        cse_image: [ { src: "https://example.com/image.jpg" } ]
       }
     }
 
@@ -91,8 +91,8 @@ class GoogleNews::FetchPlayerNewsTest < ActiveSupport::TestCase
     assert_equal "Player scores hat-trick", normalized[:title]
     assert_equal "Test Player scored three goals...", normalized[:snippet]
     assert_equal "https://example.com/article", normalized[:url]
-    assert_equal "https://example.com/image.jpg", normalized[:image]
     assert_equal "example.com", normalized[:source]
+    assert_equal "https://example.com/image.jpg", normalized[:image]
   end
 
   test "handles missing image gracefully" do

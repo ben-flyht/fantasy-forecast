@@ -57,7 +57,7 @@ module GoogleNews
       name_part = "(#{name_variants.join(' OR ')})"
       team_part = %("#{@player.team.name}") if @player.team.present?
 
-      [name_part, team_part].compact.join(" ")
+      [ name_part, team_part, @player.position ].compact.join(" ")
     end
 
     def short_name_suffix
@@ -83,6 +83,7 @@ module GoogleNews
         snippet: clean_snippet(item[:snippet]),
         url: item[:link],
         source: item[:displayLink],
+        image: item.dig(:pagemap, :cse_image, 0, :src),
         published_at: extract_published_date(item)
       }
     end
@@ -95,16 +96,7 @@ module GoogleNews
     end
 
     def extract_published_date(item)
-      # Try metatags first
-      metatags = item.dig(:pagemap, :metatags, 0) || {}
-
-      date_string = metatags[:article_published_time] ||
-                    metatags[:"article:published_time"] ||
-                    metatags[:og_updated_time] ||
-                    metatags[:"og:updated_time"] ||
-                    metatags[:datepublished] ||
-                    metatags[:date]
-
+      date_string = extract_date_from_metatags(item)
       return Time.parse(date_string) if date_string.present?
 
       # Try parsing relative date from snippet (e.g., "17 hours ago ...")
@@ -113,20 +105,32 @@ module GoogleNews
       nil
     end
 
+    def extract_date_from_metatags(item)
+      metatags = item.dig(:pagemap, :metatags, 0) || {}
+      metatags[:article_published_time] ||
+        metatags[:"article:published_time"] ||
+        metatags[:og_updated_time] ||
+        metatags[:"og:updated_time"] ||
+        metatags[:datepublished] ||
+        metatags[:date]
+    end
+
     def parse_relative_date_from_snippet(snippet)
       return nil unless snippet.present?
+      return unless snippet.match?(%r{^(\d+)\s+(minute|hour|day|week|month)s?\s+ago}i)
 
-      if snippet =~ /^(\d+)\s+(minute|hour|day|week|month)s?\s+ago/i
-        amount = $1.to_i
-        unit = $2.downcase
+      amount = Regexp.last_match(1).to_i
+      unit = Regexp.last_match(2).downcase
+      time_ago_from_unit(amount, unit)
+    end
 
-        case unit
-        when "minute" then amount.minutes.ago
-        when "hour" then amount.hours.ago
-        when "day" then amount.days.ago
-        when "week" then amount.weeks.ago
-        when "month" then amount.months.ago
-        end
+    def time_ago_from_unit(amount, unit)
+      case unit
+      when "minute" then amount.minutes.ago
+      when "hour" then amount.hours.ago
+      when "day" then amount.days.ago
+      when "week" then amount.weeks.ago
+      when "month" then amount.months.ago
       end
     end
   end
