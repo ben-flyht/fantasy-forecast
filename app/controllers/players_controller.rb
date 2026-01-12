@@ -13,7 +13,14 @@ class PlayersController < ApplicationController
   end
 
   def show
-    @player = Player.includes(:team).find(params[:id])
+    @player = find_player_from_param
+
+    # Redirect to canonical URL if accessed via old-style or incorrect slug
+    unless params[:id] == @player.to_param
+      redirect_to player_path(@player), status: :moved_permanently
+      return
+    end
+
     @next_gameweek = Gameweek.next_gameweek
     load_player_forecast
     load_player_performances
@@ -58,6 +65,19 @@ class PlayersController < ApplicationController
 
   def load_player_news
     @news = GoogleNews::FetchPlayerNews.call(player: @player)
+  end
+
+  def find_player_from_param
+    param = params[:id].to_s
+
+    # If param is just a number, it's an old-style database ID
+    if param.match?(/\A\d+\z/)
+      return Player.includes(:team).find(param)
+    end
+
+    # Otherwise, extract fpl_id from the end of the slug
+    fpl_id = param.split("-").last
+    Player.includes(:team).find_by!(fpl_id: fpl_id)
   end
 
   def set_filters
