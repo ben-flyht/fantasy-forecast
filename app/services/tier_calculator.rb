@@ -38,6 +38,34 @@ class TierCalculator
     TIERS[tier_number]
   end
 
+  def self.calculate_player_tier(forecast, position)
+    top_score = Forecast.joins(:player)
+                        .where(gameweek: forecast.gameweek, players: { position: position })
+                        .maximum(:score) || 0
+
+    return tier_info(5) if top_score.zero? || forecast.score.nil?
+
+    percentage = percentage_from_top(forecast.score, top_score)
+    tier_number = tier_number_from_percentage(percentage)
+    tier_info(tier_number)
+  end
+
+  def self.percentage_from_top(score, top_score)
+    return 100.0 if top_score.zero? || score.nil?
+
+    ((top_score - score) / top_score.to_f) * 100
+  end
+
+  def self.tier_number_from_percentage(percentage)
+    case percentage
+    when -Float::INFINITY..PERCENTAGE_THRESHOLDS[:t1] then 1
+    when PERCENTAGE_THRESHOLDS[:t1]..PERCENTAGE_THRESHOLDS[:t2] then 2
+    when PERCENTAGE_THRESHOLDS[:t2]..PERCENTAGE_THRESHOLDS[:t3] then 3
+    when PERCENTAGE_THRESHOLDS[:t3]..PERCENTAGE_THRESHOLDS[:t4] then 4
+    else 5
+    end
+  end
+
   private
 
   def find_top_score
@@ -58,14 +86,7 @@ class TierCalculator
   def calculate_tier(score)
     return 5 if score.nil? || @top_score.zero?
 
-    percentage_from_top = ((@top_score - score) / @top_score.to_f) * 100
-
-    case percentage_from_top
-    when -Float::INFINITY..PERCENTAGE_THRESHOLDS[:t1] then 1
-    when PERCENTAGE_THRESHOLDS[:t1]..PERCENTAGE_THRESHOLDS[:t2] then 2
-    when PERCENTAGE_THRESHOLDS[:t2]..PERCENTAGE_THRESHOLDS[:t3] then 3
-    when PERCENTAGE_THRESHOLDS[:t3]..PERCENTAGE_THRESHOLDS[:t4] then 4
-    else 5
-    end
+    percentage = self.class.percentage_from_top(score, @top_score)
+    self.class.tier_number_from_percentage(percentage)
   end
 end

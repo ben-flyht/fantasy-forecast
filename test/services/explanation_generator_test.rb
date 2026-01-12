@@ -269,7 +269,7 @@ class ExplanationGeneratorTest < ActiveSupport::TestCase
     assert_includes prompt, "Recent matches"
     assert_includes prompt, "Recent form"
     assert_includes prompt, "Fixture"
-    assert_includes prompt, "12 words max"
+    assert_includes prompt, "~40 words"
   end
 
   test "TIER_INFO contains all five tiers" do
