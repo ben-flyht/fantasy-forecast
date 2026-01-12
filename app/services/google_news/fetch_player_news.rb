@@ -117,10 +117,12 @@ module GoogleNews
 
     def parse_relative_date_from_snippet(snippet)
       return nil unless snippet.present?
-      return unless snippet.match?(%r{^(\d+)\s+(minute|hour|day|week|month)s?\s+ago}i)
 
-      amount = Regexp.last_match(1).to_i
-      unit = Regexp.last_match(2).downcase
+      match = snippet.match(%r{^(\d+)\s+(minute|hour|day|week|month)s?\s+ago}i)
+      return nil unless match
+
+      amount = match[1].to_i
+      unit = match[2].downcase
       time_ago_from_unit(amount, unit)
     end
 
