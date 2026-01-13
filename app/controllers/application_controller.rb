@@ -10,7 +10,7 @@ class ApplicationController < ActionController::Base
 
   def sitemap
     @base_url = "https://#{ENV.fetch('APP_HOST', 'www.fantasyforecast.co.uk')}"
-    @players_by_position = Player.select(:id, :position).order(:position, :id).group_by(&:position)
+    @players_by_position = Player.select(:id, :position, :first_name, :last_name, :fpl_id).order(:position, :id).group_by(&:position)
     render "shared/sitemap", formats: [ :xml ]
   end
 end
