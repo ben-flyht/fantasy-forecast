@@ -25,7 +25,6 @@ class PlayersController < ApplicationController
     load_player_forecast
     load_player_performances
     load_upcoming_fixture
-    load_player_news
   end
 
   private
@@ -61,10 +60,6 @@ class PlayersController < ApplicationController
                            .where(gameweek: @next_gameweek)
                            .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
                            .first
-  end
-
-  def load_player_news
-    @news = GoogleNews::FetchPlayerNews.call(player: @player)
   end
 
   def find_player_from_param

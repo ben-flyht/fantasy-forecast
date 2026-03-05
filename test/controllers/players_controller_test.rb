@@ -123,8 +123,6 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should show player page with slugged URL" do
-    stub_google_news_api
-
     get player_path(@player)
     assert_response :success
     assert_includes response.body, @player.full_name
@@ -147,10 +145,4 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  private
-
-  def stub_google_news_api
-    stub_request(:get, /googleapis\.com\/customsearch/)
-      .to_return(status: 200, body: { items: [] }.to_json, headers: { "Content-Type" => "application/json" })
-  end
 end
