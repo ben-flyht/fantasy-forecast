@@ -24,8 +24,8 @@ class ScoringBreakdownTest < ActiveSupport::TestCase
 
     assert_equal teams(:chelsea).short_name, result[:upcoming_fixture][:opponent]
     assert_equal "home", result[:upcoming_fixture][:home_away]
-    assert_equal 1.8, result[:upcoming_fixture][:expected_goals_for]
-    assert_equal 1.2, result[:upcoming_fixture][:expected_goals_against]
+    assert_equal 1.4, result[:upcoming_fixture][:expected_goals_for]
+    assert_equal 0.9, result[:upcoming_fixture][:expected_goals_against]
   end
 
   test "returns nil for upcoming fixture when no match exists" do
@@ -125,6 +125,7 @@ class ScoringBreakdownTest < ActiveSupport::TestCase
 
     Match.create!(fpl_id: 999, gameweek: in_progress_gw, home_team: teams(:liverpool), away_team: teams(:arsenal))
     Performance.create!(player: @player, gameweek: in_progress_gw, team: teams(:liverpool), gameweek_score: 12)
+    Statistic.create!(player: @player, gameweek: in_progress_gw, type: "minutes", value: 90)
 
     result = ScoringBreakdown.new(player: @player, strategy_config: @strategy_config, gameweek: @next_gw).call
 

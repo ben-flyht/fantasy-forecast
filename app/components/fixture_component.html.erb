@@ -1,7 +1,1 @@
-<span class="flex items-center gap-1">
-  vs. <%= opponent.name %>
-  <% if show_badge? && opponent.badge_url %>
-    <%= image_tag opponent.badge_url, alt: "", class: "size-5" %>
-  <% end %>
-  (<%= venue %>)
-</span>
+<span class="flex items-center gap-x-1">vs. <%= opponent.name %> <% if show_badge? %><%= render TeamBadgeComponent.new(team: opponent) %><% end %> (<%= venue %>)</span>

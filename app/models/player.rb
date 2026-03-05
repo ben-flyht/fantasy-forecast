@@ -84,22 +84,6 @@ class Player < ApplicationRecord
     stat&.value&.to_i || 100
   end
 
-  # Returns expected goals for this player's team in the given gameweek
-  def expected_goals_for(gameweek)
-    match = find_match_for_gameweek(gameweek)
-    return nil unless match
-
-    team_id == match.home_team_id ? match.home_team_expected_goals : match.away_team_expected_goals
-  end
-
-  # Returns expected goals against this player's team in the given gameweek
-  def expected_goals_against(gameweek)
-    match = find_match_for_gameweek(gameweek)
-    return nil unless match
-
-    team_id == match.home_team_id ? match.away_team_expected_goals : match.home_team_expected_goals
-  end
-
   private
 
   def resolve_gameweek_id(gameweek)
@@ -107,12 +91,5 @@ class Player < ApplicationRecord
     return nil unless gameweek
 
     gameweek.is_a?(Gameweek) ? gameweek.id : Gameweek.find_by(fpl_id: gameweek)&.id
-  end
-
-  def find_match_for_gameweek(gameweek)
-    return nil unless team_id
-
-    team.home_matches.find_by(gameweek: gameweek) ||
-      team.away_matches.find_by(gameweek: gameweek)
   end
 end

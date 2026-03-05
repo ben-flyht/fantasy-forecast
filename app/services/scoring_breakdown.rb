@@ -47,31 +47,49 @@ class ScoringBreakdown
 
   def build_fixture_info(match)
     is_home = match.home_team_id == @player.team_id
+    opponent_team_id = is_home ? match.away_team_id : match.home_team_id
+    lookback = default_fixture_lookback
     {
       opponent: (is_home ? match.away_team : match.home_team).short_name,
+      opponent_name: (is_home ? match.away_team : match.home_team).name,
       home_away: is_home ? "home" : "away",
-      expected_goals_for: is_home ? match.home_team_expected_goals : match.away_team_expected_goals,
-      expected_goals_against: is_home ? match.away_team_expected_goals : match.home_team_expected_goals
+      expected_goals_for: compute_xg_conceded(opponent_team_id, lookback),
+      expected_goals_against: compute_xg_scored(opponent_team_id, lookback)
     }
   end
 
   def recent_match_history
     available_gameweeks(5).filter_map do |gw|
-      match = find_match_for_gameweek(gw)
+      matches = find_matches_for_gameweek(gw)
       performance = @player.performances.find { |p| p.gameweek_id == gw.id }
-      build_match_summary(gw, match, performance) if match && performance
+      build_match_summary(gw, matches, performance) if matches.any? && performance
     end
   end
 
-  def build_match_summary(gw, match, performance)
-    is_home = match.home_team_id == @player.team_id
+  def build_match_summary(gw, matches, performance)
+    opponents = matches.map { |m| format_opponent(m) }
     {
       gameweek: gw.fpl_id,
-      opponent: (is_home ? match.away_team : match.home_team).short_name,
-      home_away: is_home ? "H" : "A",
+      opponents: opponents,
+      opponent: opponents.first[:name],
+      home_away: opponents.first[:venue],
       points: performance.gameweek_score,
-      stats: extract_match_stats(gw)
+      stats: extract_match_stats(gw),
+      double_gameweek: matches.size > 1
     }
+  end
+
+  def format_opponent(match)
+    is_home = match.home_team_id == @player.team_id
+    { name: (is_home ? match.away_team : match.home_team).short_name, venue: is_home ? "H" : "A" }
+  end
+
+  def find_matches_for_gameweek(gw)
+    return [] unless @player.team_id
+
+    Match.includes(:home_team, :away_team)
+         .where(gameweek: gw)
+         .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
   end
 
   def extract_match_stats(gw)
@@ -122,7 +140,7 @@ class ScoringBreakdown
       stat = @player.statistics.find { |s| s.gameweek_id == gw.id && s.type == metric }
       next unless stat&.value.to_f&.positive?
 
-      match = find_match_for_gameweek(gw)
+      match = find_matches_for_gameweek(gw).first
       build_context_entry(gw, stat, match) if match
     end
   end
@@ -138,22 +156,56 @@ class ScoringBreakdown
   end
 
   def available_gameweeks(lookback)
-    Gameweek.where("fpl_id < ?", @gameweek.fpl_id)
-            .where("is_finished = ? OR start_time < ?", true, Time.current)
-            .order(fpl_id: :desc)
-            .limit(lookback)
-            .reverse
+    played_gw_ids = played_gameweek_ids
+    gws = Gameweek.where("fpl_id < ?", @gameweek.fpl_id)
+                  .where(id: played_gw_ids)
+                  .order(fpl_id: :desc)
+
+    select_by_match_count(gws, lookback)
+  end
+
+  def played_gameweek_ids
+    @played_gameweek_ids ||= @player.statistics
+                                     .select { |s| s.type == "minutes" && s.value > 0 }
+                                     .map(&:gameweek_id)
+  end
+
+  def select_by_match_count(gameweeks, target_matches)
+    counts = team_matches_per_gameweek
+    selected = []
+    total = 0
+
+    gameweeks.each do |gw|
+      break if total >= target_matches
+
+      selected << gw
+      total += counts[gw.fpl_id] || 1
+    end
+
+    selected.reverse
   end
 
   def calculate_weighted_average(values, recency)
     return 0.0 if values.empty?
 
-    weighted_total, weight_sum = values.each_with_index.reduce([ 0.0, 0.0 ]) do |(total, sum), (item, idx)|
-      weight = recency_weight(idx, recency)
-      [ total + (item[:value] * weight), sum + weight ]
-    end
-
+    weighted_total, weight_sum = accumulate_weighted_values(values, recency)
     weight_sum.positive? ? weighted_total / weight_sum : 0.0
+  end
+
+  def accumulate_weighted_values(values, recency)
+    counts = team_matches_per_gameweek
+    values.each_with_index.reduce([ 0.0, 0.0 ]) do |(total, sum), (item, idx)|
+      per_match = item[:value] / (counts[item[:gameweek]] || 1)
+      w = recency_weight(idx, recency)
+      [ total + (per_match * w), sum + w ]
+    end
+  end
+
+  def team_matches_per_gameweek
+    @team_matches_per_gameweek ||= Match.joins(:gameweek)
+      .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
+      .group("gameweeks.fpl_id")
+      .count
   end
 
   def recency_weight(index, recency_type)
@@ -171,17 +223,18 @@ class ScoringBreakdown
   end
 
   def build_fixture_difficulty(config)
-    { metric: human_metric_name(config[:metric]), weight: config[:weight], value: get_fixture_value(config[:metric])&.round(2) }
+    lookback = config[:lookback] || default_fixture_lookback
+    { metric: human_metric_name(config[:metric]), weight: config[:weight], lookback: lookback, value: get_fixture_value(config[:metric], lookback)&.round(2) }
   end
 
-  def get_fixture_value(metric)
+  def get_fixture_value(metric, lookback)
     match = find_upcoming_match
     return nil unless match
 
-    is_home = match.home_team_id == @player.team_id
+    opponent_team_id = match.home_team_id == @player.team_id ? match.away_team_id : match.home_team_id
     case metric
-    when "expected_goals_for" then is_home ? match.home_team_expected_goals : match.away_team_expected_goals
-    when "expected_goals_against" then is_home ? match.away_team_expected_goals : match.home_team_expected_goals
+    when "expected_goals_for" then compute_xg_conceded(opponent_team_id, lookback)
+    when "expected_goals_against" then compute_xg_scored(opponent_team_id, lookback)
     end
   end
 
@@ -202,19 +255,49 @@ class ScoringBreakdown
   end
 
   def find_upcoming_match
-    find_match_for_gameweek(@gameweek)
-  end
-
-  def find_match_for_gameweek(gw)
-    return nil unless @player.team_id
-
-    Match.includes(:home_team, :away_team)
-         .where(gameweek: gw)
-         .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
-         .first
+    find_matches_for_gameweek(@gameweek).first
   end
 
   def human_metric_name(metric)
     METRIC_NAMES[metric] || metric.humanize.downcase
+  end
+
+  def default_fixture_lookback
+    fixture_config = @strategy_config[:fixture]&.first
+    fixture_config&.[](:lookback) || 6
+  end
+
+  def compute_xg_conceded(opponent_team_id, lookback)
+    finished_gw_ids = finished_gameweek_ids(lookback)
+    return 0.0 if finished_gw_ids.empty?
+
+    stats = opponent_stats(opponent_team_id, finished_gw_ids, "expected_goals_conceded")
+    by_gw = stats.group_by(&:gameweek_id)
+    gw_values = finished_gw_ids.filter_map { |gw_id| by_gw[gw_id]&.map(&:value)&.max }
+    gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
+  end
+
+  def compute_xg_scored(opponent_team_id, lookback)
+    finished_gw_ids = finished_gameweek_ids(lookback)
+    return 0.0 if finished_gw_ids.empty?
+
+    stats = opponent_stats(opponent_team_id, finished_gw_ids, "expected_goals")
+    by_gw = stats.group_by(&:gameweek_id)
+    gw_values = finished_gw_ids.filter_map { |gw_id| by_gw[gw_id]&.sum(&:value) }
+    gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
+  end
+
+  def opponent_stats(team_id, gw_ids, stat_type)
+    Statistic.joins(:player)
+             .where(players: { team_id: team_id })
+             .where(gameweek_id: gw_ids, type: stat_type)
+  end
+
+  def finished_gameweek_ids(lookback)
+    @finished_gameweek_ids ||= {}
+    @finished_gameweek_ids[lookback] ||= Gameweek.where(is_finished: true)
+                                                  .order(fpl_id: :desc)
+                                                  .limit(lookback)
+                                                  .pluck(:id)
   end
 end
