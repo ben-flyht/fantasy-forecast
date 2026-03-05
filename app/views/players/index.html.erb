@@ -49,60 +49,47 @@
 
     <!-- Rankings Table -->
     <% if @consensus_rankings.any? %>
-      <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-        <table class="min-w-full text-left text-sm/6 text-zinc-950">
-          <thead class="text-zinc-500">
-            <tr>
-              <th class="border-b border-zinc-200 px-2 sm:px-4 py-2 font-medium first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 w-px whitespace-nowrap">Rank</th>
-              <th class="border-b border-zinc-200 px-2 sm:px-4 py-2 font-medium first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6">Player</th>
-              <th class="border-b border-zinc-200 px-2 sm:px-4 py-2 font-medium first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 hidden lg:table-cell">Form</th>
-              <th class="border-b border-zinc-200 px-2 sm:px-4 py-2 font-medium first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 text-right hidden sm:table-cell">Fixture</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @consensus_rankings.each do |ranking| %>
-              <% player = @players_by_id[ranking.player_id] %>
-              <% tier = ranking.tier %>
-              <% tier_data = tier_info(tier) %>
-              <tr class="cursor-pointer hover:bg-zinc-50"
-                  onclick="Turbo.visit('<%= player_path(player) %>')"
-                  role="link"
-                  tabindex="0"
-                  onkeydown="if(event.key === 'Enter') Turbo.visit('<%= player_path(player) %>')">
-                <td class="border-b border-zinc-100 px-2 sm:px-4 py-4 first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 w-px whitespace-nowrap">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="text-xl"><%= tier_data[:symbol] %></span>
-                    <span class="text-zinc-500"><%= ranking.bot_rank || '-' %></span>
-                  </span>
-                </td>
-                <td class="border-b border-zinc-100 px-2 sm:px-4 py-4 first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6">
-                  <div class="flex items-center gap-3 sm:gap-4">
-                    <%= render PlayerAvatarComponent.new(player: player, size: :medium) %>
-                    <div>
-                      <span class="font-medium text-lg"><%= player.short_name %></span>
-                      <div class="text-zinc-500 flex items-center gap-1">
-                          <% if player.team&.badge_url %>
-                            <%= image_tag player.team.badge_url, alt: "", class: "size-5" %>
-                          <% end %>
-                          <%= player.team&.name %>
-                        </div>
-                    </div>
-                  </div>
-                </td>
-                <td class="border-b border-zinc-100 px-2 sm:px-4 py-4 first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 hidden lg:table-cell">
-                  <%= render FormComponent.new(scores: @performances_by_player[player.id]) %>
-                </td>
-                <td class="border-b border-zinc-100 px-2 sm:px-4 py-4 first:pl-3 first:sm:pl-6 last:pr-3 last:sm:pr-6 text-zinc-500 text-right hidden sm:table-cell">
-                  <div class="flex flex-col items-end gap-1">
+      <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white text-sm/6 text-zinc-950">
+        <div class="flex items-center gap-4 px-3 sm:px-6 py-2 text-zinc-500 font-medium border-b border-zinc-200">
+          <div class="shrink-0 w-12">Rank</div>
+          <div class="flex-1">Player</div>
+          <div class="hidden lg:block">Form</div>
+        </div>
+        <% @consensus_rankings.each do |ranking| %>
+          <% player = @players_by_id[ranking.player_id] %>
+          <% tier = ranking.tier %>
+          <% tier_data = tier_info(tier) %>
+          <div class="flex flex-wrap items-center gap-x-4 px-3 sm:px-6 py-3 border-b border-zinc-100 cursor-pointer hover:bg-zinc-50"
+               onclick="Turbo.visit('<%= player_path(player) %>')"
+               role="link"
+               tabindex="0"
+               onkeydown="if(event.key === 'Enter') Turbo.visit('<%= player_path(player) %>')">
+            <div class="shrink-0 w-12 whitespace-nowrap">
+              <span class="inline-flex items-center gap-2">
+                <span class="text-xl"><%= tier_data[:symbol] %></span>
+                <span class="text-zinc-500"><%= ranking.bot_rank || '-' %></span>
+              </span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 sm:gap-4">
+                <%= render PlayerAvatarComponent.new(player: player, size: :medium) %>
+                <div class="min-w-0 flex-1">
+                  <span class="font-medium text-lg"><%= player.short_name %></span>
+                  <div class="text-zinc-500 flex flex-wrap items-center gap-1">
+                    <%= render TeamBadgeComponent.new(team: player.team) %>
+                    <span><%= player.team&.name %></span>
                     <% (@matches_by_team[player.team_id] || []).each do |match| %>
                       <%= render FixtureComponent.new(match: match, player: player) %>
                     <% end %>
                   </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+                </div>
+              </div>
+            </div>
+            <div class="w-full lg:w-auto mt-2 lg:mt-0 pb-1 lg:pb-0 pl-[7.25rem] sm:pl-[8rem] lg:pl-0">
+              <%= render FormComponent.new(scores: @performances_by_player[player.id]) %>
+            </div>
+          </div>
+        <% end %>
       </div>
     <% else %>
       <div class="px-6 py-8 text-center">

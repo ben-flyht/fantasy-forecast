@@ -20,9 +20,7 @@
     <h1 class="text-2xl font-semibold text-zinc-950"><%= @player.full_name %></h1>
     <div class="text-sm text-zinc-500 mt-1">
       <p class="flex items-center gap-1.5">
-        <% if @player.team&.badge_url %>
-          <%= image_tag @player.team.badge_url, alt: "", class: "size-4" %>
-        <% end %>
+        <%= render TeamBadgeComponent.new(team: @player.team, size: 16) %>
         <%= @player.team&.name %>
       </p>
       <p class="mt-1"><%= @player.position.capitalize %></p>
