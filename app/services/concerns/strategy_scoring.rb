@@ -52,7 +52,14 @@ module StrategyScoring
 
   def calculate_weighted_metric(player, metric, current_fpl_id, lookback, recency, min_availability)
     gameweeks_to_score = available_gameweeks_for_lookback(player, current_fpl_id, lookback, min_availability)
-    compute_weighted_average(player, metric, gameweeks_to_score, recency)
+    avg = compute_weighted_average(player, metric, gameweeks_to_score, recency)
+    avg * sample_confidence(gameweeks_to_score, player.team_id, lookback)
+  end
+
+  def sample_confidence(gameweeks, team_id, target_matches)
+    match_counts = matches_per_gameweek(team_id)
+    actual = gameweeks.sum { |fpl_id| match_counts[fpl_id] || 1 }
+    [ actual.to_f / target_matches, 1.0 ].min
   end
 
   def available_gameweeks_for_lookback(player, current_fpl_id, lookback, min_availability)
