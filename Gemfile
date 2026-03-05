@@ -3,7 +3,7 @@ source "https://rubygems.org"
 ruby "3.4.6"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 8.1.1"
+gem "rails", "~> 8.1.2"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use postgresql as the database for Active Record
@@ -78,5 +78,5 @@ group :test do
   # For testing controller assigns
   gem "rails-controller-testing"
   # Lock minitest to 5.x for Rails 8.1 compatibility
-  gem "minitest", "~> 5.25"
+  gem "minitest", "~> 6.0"
 end
