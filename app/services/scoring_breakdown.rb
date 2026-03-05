@@ -156,11 +156,18 @@ class ScoringBreakdown
   end
 
   def available_gameweeks(lookback)
+    played_gw_ids = played_gameweek_ids
     gws = Gameweek.where("fpl_id < ?", @gameweek.fpl_id)
-                  .where("is_finished = ? OR start_time < ?", true, Time.current)
+                  .where(id: played_gw_ids)
                   .order(fpl_id: :desc)
 
     select_by_match_count(gws, lookback)
+  end
+
+  def played_gameweek_ids
+    @played_gameweek_ids ||= @player.statistics
+                                     .select { |s| s.type == "minutes" && s.value > 0 }
+                                     .map(&:gameweek_id)
   end
 
   def select_by_match_count(gameweeks, target_matches)

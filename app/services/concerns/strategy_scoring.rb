@@ -136,15 +136,12 @@ module StrategyScoring
     availability_stat.nil? || availability_stat.value >= min_availability
   end
 
-  # Check if the team has played their match in this gameweek.
-  # For finished gameweeks: always true (all matches complete).
-  # For in-progress gameweeks: check if player has minutes > 0 (their specific match happened).
+  # Check if the player actually played in this gameweek.
+  # Excludes gameweeks where the player had 0 minutes (rested, injured, suspended).
   def team_has_played?(fpl_id, minutes_by_gw_id)
     gw = gameweeks_by_fpl_id[fpl_id]
     return false unless gw
-    return true if gw.is_finished
 
-    # For current GW, only include if player's match has been played
     minutes_stat = minutes_by_gw_id[gw.id]
     minutes_stat.present? && minutes_stat.value > 0
   end

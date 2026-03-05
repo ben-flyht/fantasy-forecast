@@ -125,6 +125,7 @@ class ScoringBreakdownTest < ActiveSupport::TestCase
 
     Match.create!(fpl_id: 999, gameweek: in_progress_gw, home_team: teams(:liverpool), away_team: teams(:arsenal))
     Performance.create!(player: @player, gameweek: in_progress_gw, team: teams(:liverpool), gameweek_score: 12)
+    Statistic.create!(player: @player, gameweek: in_progress_gw, type: "minutes", value: 90)
 
     result = ScoringBreakdown.new(player: @player, strategy_config: @strategy_config, gameweek: @next_gw).call
 
