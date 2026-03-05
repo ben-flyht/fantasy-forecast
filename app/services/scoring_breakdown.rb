@@ -60,21 +60,36 @@ class ScoringBreakdown
 
   def recent_match_history
     available_gameweeks(5).filter_map do |gw|
-      match = find_match_for_gameweek(gw)
+      matches = find_matches_for_gameweek(gw)
       performance = @player.performances.find { |p| p.gameweek_id == gw.id }
-      build_match_summary(gw, match, performance) if match && performance
+      build_match_summary(gw, matches, performance) if matches.any? && performance
     end
   end
 
-  def build_match_summary(gw, match, performance)
-    is_home = match.home_team_id == @player.team_id
+  def build_match_summary(gw, matches, performance)
+    opponents = matches.map { |m| format_opponent(m) }
     {
       gameweek: gw.fpl_id,
-      opponent: (is_home ? match.away_team : match.home_team).short_name,
-      home_away: is_home ? "H" : "A",
+      opponents: opponents,
+      opponent: opponents.first[:name],
+      home_away: opponents.first[:venue],
       points: performance.gameweek_score,
-      stats: extract_match_stats(gw)
+      stats: extract_match_stats(gw),
+      double_gameweek: matches.size > 1
     }
+  end
+
+  def format_opponent(match)
+    is_home = match.home_team_id == @player.team_id
+    { name: (is_home ? match.away_team : match.home_team).short_name, venue: is_home ? "H" : "A" }
+  end
+
+  def find_matches_for_gameweek(gw)
+    return [] unless @player.team_id
+
+    Match.includes(:home_team, :away_team)
+         .where(gameweek: gw)
+         .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
   end
 
   def extract_match_stats(gw)
@@ -125,7 +140,7 @@ class ScoringBreakdown
       stat = @player.statistics.find { |s| s.gameweek_id == gw.id && s.type == metric }
       next unless stat&.value.to_f&.positive?
 
-      match = find_match_for_gameweek(gw)
+      match = find_matches_for_gameweek(gw).first
       build_context_entry(gw, stat, match) if match
     end
   end
@@ -141,22 +156,49 @@ class ScoringBreakdown
   end
 
   def available_gameweeks(lookback)
-    Gameweek.where("fpl_id < ?", @gameweek.fpl_id)
-            .where("is_finished = ? OR start_time < ?", true, Time.current)
-            .order(fpl_id: :desc)
-            .limit(lookback)
-            .reverse
+    gws = Gameweek.where("fpl_id < ?", @gameweek.fpl_id)
+                  .where("is_finished = ? OR start_time < ?", true, Time.current)
+                  .order(fpl_id: :desc)
+
+    select_by_match_count(gws, lookback)
+  end
+
+  def select_by_match_count(gameweeks, target_matches)
+    counts = team_matches_per_gameweek
+    selected = []
+    total = 0
+
+    gameweeks.each do |gw|
+      break if total >= target_matches
+
+      selected << gw
+      total += counts[gw.fpl_id] || 1
+    end
+
+    selected.reverse
   end
 
   def calculate_weighted_average(values, recency)
     return 0.0 if values.empty?
 
-    weighted_total, weight_sum = values.each_with_index.reduce([ 0.0, 0.0 ]) do |(total, sum), (item, idx)|
-      weight = recency_weight(idx, recency)
-      [ total + (item[:value] * weight), sum + weight ]
-    end
-
+    weighted_total, weight_sum = accumulate_weighted_values(values, recency)
     weight_sum.positive? ? weighted_total / weight_sum : 0.0
+  end
+
+  def accumulate_weighted_values(values, recency)
+    counts = team_matches_per_gameweek
+    values.each_with_index.reduce([ 0.0, 0.0 ]) do |(total, sum), (item, idx)|
+      per_match = item[:value] / (counts[item[:gameweek]] || 1)
+      w = recency_weight(idx, recency)
+      [ total + (per_match * w), sum + w ]
+    end
+  end
+
+  def team_matches_per_gameweek
+    @team_matches_per_gameweek ||= Match.joins(:gameweek)
+      .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
+      .group("gameweeks.fpl_id")
+      .count
   end
 
   def recency_weight(index, recency_type)
@@ -206,16 +248,7 @@ class ScoringBreakdown
   end
 
   def find_upcoming_match
-    find_match_for_gameweek(@gameweek)
-  end
-
-  def find_match_for_gameweek(gw)
-    return nil unless @player.team_id
-
-    Match.includes(:home_team, :away_team)
-         .where(gameweek: gw)
-         .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
-         .first
+    find_matches_for_gameweek(@gameweek).first
   end
 
   def human_metric_name(metric)

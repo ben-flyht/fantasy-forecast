@@ -57,21 +57,54 @@ module StrategyScoring
 
   def available_gameweeks_for_lookback(player, current_fpl_id, lookback, min_availability)
     available_fpl_ids = get_available_gameweeks(player, current_fpl_id, min_availability)
-    available_fpl_ids.last(lookback)
+    select_gameweeks_by_match_count(available_fpl_ids, player.team_id, lookback)
+  end
+
+  def select_gameweeks_by_match_count(fpl_ids, team_id, target_matches)
+    match_counts = matches_per_gameweek(team_id)
+    selected = []
+    total = 0
+
+    fpl_ids.reverse_each do |fpl_id|
+      break if total >= target_matches
+
+      selected.unshift(fpl_id)
+      total += match_counts[fpl_id] || 1
+    end
+
+    selected
   end
 
   def compute_weighted_average(player, metric, gameweeks_to_score, recency)
+    match_counts = matches_per_gameweek(player.team_id)
     weighted_total = 0.0
     weight_sum = 0.0
 
     gameweeks_to_score.each_with_index do |fpl_id, index|
-      value = get_metric_value(player, metric, fpl_id)
+      per_match_value = per_match_metric(player, metric, fpl_id, match_counts)
       recency_weight = calculate_recency_weight(index, recency)
-      weighted_total += value * recency_weight
+      weighted_total += per_match_value * recency_weight
       weight_sum += recency_weight
     end
 
     weight_sum > 0 ? weighted_total / weight_sum : 0.0
+  end
+
+  def per_match_metric(player, metric, fpl_id, match_counts)
+    value = get_metric_value(player, metric, fpl_id)
+    value / (match_counts[fpl_id] || 1)
+  end
+
+  def matches_per_gameweek(team_id)
+    @matches_per_gameweek ||= {}
+    @matches_per_gameweek[team_id] ||= build_matches_per_gameweek(team_id)
+  end
+
+  def build_matches_per_gameweek(team_id)
+    Match.joins(:gameweek)
+         .where("home_team_id = ? OR away_team_id = ?", team_id, team_id)
+         .group("gameweeks.fpl_id")
+         .count
   end
 
   def get_available_gameweeks(player, current_fpl_id, min_availability)

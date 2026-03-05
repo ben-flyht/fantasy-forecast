@@ -51,6 +51,7 @@ class PlayersController < ApplicationController
                            .order("gameweeks.fpl_id DESC")
                            .limit(8)
     @total_score = @player.total_score
+    @form_scores = expand_per_match_scores(@performances, build_match_counts_for(@performances)).first(8)
   end
 
   def load_upcoming_fixture
@@ -111,10 +112,12 @@ class PlayersController < ApplicationController
     performances = Performance.joins(:gameweek)
                               .where(player_id: player_ids)
                               .order("gameweeks.fpl_id DESC")
-                              .select(:player_id, :gameweek_score)
+                              .select(:player_id, :gameweek_score, :team_id, :gameweek_id)
+
+    match_counts = build_match_counts_for(performances)
 
     @performances_by_player = performances.group_by(&:player_id).transform_values do |perfs|
-      perfs.first(8).map(&:gameweek_score)
+      expand_per_match_scores(perfs, match_counts).first(8)
     end
   end
 
@@ -162,5 +165,29 @@ class PlayersController < ApplicationController
     return [ starting_gw ] unless next_gameweek
 
     (starting_gw..next_gameweek.fpl_id).to_a.reverse
+  end
+
+  def build_match_counts_for(performances)
+    team_ids = performances.map(&:team_id).uniq
+    gameweek_ids = performances.map(&:gameweek_id).uniq
+    counts = Hash.new(0)
+
+    Match.where(gameweek_id: gameweek_ids)
+         .where("home_team_id IN (?) OR away_team_id IN (?)", team_ids, team_ids)
+         .pluck(:home_team_id, :away_team_id, :gameweek_id)
+         .each do |home_id, away_id, gw_id|
+      counts[[home_id, gw_id]] += 1
+      counts[[away_id, gw_id]] += 1
+    end
+
+    counts
+  end
+
+  def expand_per_match_scores(performances, match_counts)
+    performances.flat_map do |perf|
+      count = [ match_counts[[perf.team_id, perf.gameweek_id]], 1 ].max
+      per_match = (perf.gameweek_score.to_f / count).round
+      Array.new(count, per_match)
+    end
   end
 end

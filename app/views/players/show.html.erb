@@ -51,7 +51,7 @@
     <h2 class="text-base/6 font-semibold text-zinc-950">Recent Form</h2>
     <% if @performances.any? %>
       <div class="mt-4">
-        <%= render FormComponent.new(scores: @performances.map(&:gameweek_score)) %>
+        <%= render FormComponent.new(scores: @form_scores) %>
       </div>
     <% else %>
       <p class="mt-4 text-sm text-zinc-500">No performance data available yet.</p>
