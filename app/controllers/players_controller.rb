@@ -170,22 +170,25 @@ class PlayersController < ApplicationController
   def build_match_counts_for(performances)
     team_ids = performances.map(&:team_id).uniq
     gameweek_ids = performances.map(&:gameweek_id).uniq
-    counts = Hash.new(0)
 
+    count_matches(team_ids, gameweek_ids)
+  end
+
+  def count_matches(team_ids, gameweek_ids)
+    counts = Hash.new(0)
     Match.where(gameweek_id: gameweek_ids)
          .where("home_team_id IN (?) OR away_team_id IN (?)", team_ids, team_ids)
          .pluck(:home_team_id, :away_team_id, :gameweek_id)
          .each do |home_id, away_id, gw_id|
-      counts[[home_id, gw_id]] += 1
-      counts[[away_id, gw_id]] += 1
+      counts[[ home_id, gw_id ]] += 1
+      counts[[ away_id, gw_id ]] += 1
     end
-
     counts
   end
 
   def expand_per_match_scores(performances, match_counts)
     performances.flat_map do |perf|
-      count = [ match_counts[[perf.team_id, perf.gameweek_id]], 1 ].max
+      count = [ match_counts[[ perf.team_id, perf.gameweek_id ]], 1 ].max
       per_match = (perf.gameweek_score.to_f / count).round
       Array.new(count, per_match)
     end

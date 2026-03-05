@@ -144,5 +144,4 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     get "/players/non-existent-99999"
     assert_response :not_found
   end
-
 end
