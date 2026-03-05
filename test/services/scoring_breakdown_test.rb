@@ -24,8 +24,8 @@ class ScoringBreakdownTest < ActiveSupport::TestCase
 
     assert_equal teams(:chelsea).short_name, result[:upcoming_fixture][:opponent]
     assert_equal "home", result[:upcoming_fixture][:home_away]
-    assert_equal 1.8, result[:upcoming_fixture][:expected_goals_for]
-    assert_equal 1.2, result[:upcoming_fixture][:expected_goals_against]
+    assert_equal 1.4, result[:upcoming_fixture][:expected_goals_for]
+    assert_equal 0.9, result[:upcoming_fixture][:expected_goals_against]
   end
 
   test "returns nil for upcoming fixture when no match exists" do

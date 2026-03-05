@@ -22,12 +22,4 @@ class FixtureComponent < ViewComponent::Base
   def venue
     home_match? ? "H" : "A"
   end
-
-  def player_xg
-    home_match? ? @match.home_team_expected_goals : @match.away_team_expected_goals
-  end
-
-  def opponent_xg
-    home_match? ? @match.away_team_expected_goals : @match.home_team_expected_goals
-  end
 end

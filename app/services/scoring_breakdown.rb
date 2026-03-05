@@ -47,11 +47,13 @@ class ScoringBreakdown
 
   def build_fixture_info(match)
     is_home = match.home_team_id == @player.team_id
+    opponent_team_id = is_home ? match.away_team_id : match.home_team_id
+    lookback = default_fixture_lookback
     {
       opponent: (is_home ? match.away_team : match.home_team).short_name,
       home_away: is_home ? "home" : "away",
-      expected_goals_for: is_home ? match.home_team_expected_goals : match.away_team_expected_goals,
-      expected_goals_against: is_home ? match.away_team_expected_goals : match.home_team_expected_goals
+      expected_goals_for: compute_xg_conceded(opponent_team_id, lookback),
+      expected_goals_against: compute_xg_scored(opponent_team_id, lookback)
     }
   end
 
@@ -171,17 +173,18 @@ class ScoringBreakdown
   end
 
   def build_fixture_difficulty(config)
-    { metric: human_metric_name(config[:metric]), weight: config[:weight], value: get_fixture_value(config[:metric])&.round(2) }
+    lookback = config[:lookback] || default_fixture_lookback
+    { metric: human_metric_name(config[:metric]), weight: config[:weight], lookback: lookback, value: get_fixture_value(config[:metric], lookback)&.round(2) }
   end
 
-  def get_fixture_value(metric)
+  def get_fixture_value(metric, lookback)
     match = find_upcoming_match
     return nil unless match
 
-    is_home = match.home_team_id == @player.team_id
+    opponent_team_id = match.home_team_id == @player.team_id ? match.away_team_id : match.home_team_id
     case metric
-    when "expected_goals_for" then is_home ? match.home_team_expected_goals : match.away_team_expected_goals
-    when "expected_goals_against" then is_home ? match.away_team_expected_goals : match.home_team_expected_goals
+    when "expected_goals_for" then compute_xg_conceded(opponent_team_id, lookback)
+    when "expected_goals_against" then compute_xg_scored(opponent_team_id, lookback)
     end
   end
 
@@ -216,5 +219,44 @@ class ScoringBreakdown
 
   def human_metric_name(metric)
     METRIC_NAMES[metric] || metric.humanize.downcase
+  end
+
+  def default_fixture_lookback
+    fixture_config = @strategy_config[:fixture]&.first
+    fixture_config&.[](:lookback) || 6
+  end
+
+  def compute_xg_conceded(opponent_team_id, lookback)
+    finished_gw_ids = finished_gameweek_ids(lookback)
+    return 0.0 if finished_gw_ids.empty?
+
+    stats = opponent_stats(opponent_team_id, finished_gw_ids, "expected_goals_conceded")
+    by_gw = stats.group_by(&:gameweek_id)
+    gw_values = finished_gw_ids.filter_map { |gw_id| by_gw[gw_id]&.map(&:value)&.max }
+    gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
+  end
+
+  def compute_xg_scored(opponent_team_id, lookback)
+    finished_gw_ids = finished_gameweek_ids(lookback)
+    return 0.0 if finished_gw_ids.empty?
+
+    stats = opponent_stats(opponent_team_id, finished_gw_ids, "expected_goals")
+    by_gw = stats.group_by(&:gameweek_id)
+    gw_values = finished_gw_ids.filter_map { |gw_id| by_gw[gw_id]&.sum(&:value) }
+    gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
+  end
+
+  def opponent_stats(team_id, gw_ids, stat_type)
+    Statistic.joins(:player)
+             .where(players: { team_id: team_id })
+             .where(gameweek_id: gw_ids, type: stat_type)
+  end
+
+  def finished_gameweek_ids(lookback)
+    @finished_gameweek_ids ||= {}
+    @finished_gameweek_ids[lookback] ||= Gameweek.where(is_finished: true)
+                                                  .order(fpl_id: :desc)
+                                                  .limit(lookback)
+                                                  .pluck(:id)
   end
 end

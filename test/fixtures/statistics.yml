@@ -32,6 +32,19 @@ goalkeeper_saves_gw20:
   type: "saves"
   value: 5
 
+# Chelsea player xG stats in GW20 (Palmer)
+chelsea_xg_gw20:
+  player: midfielder_two
+  gameweek: finished
+  type: "expected_goals"
+  value: 0.9
+
+chelsea_xgc_gw20:
+  player: midfielder_two
+  gameweek: finished
+  type: "expected_goals_conceded"
+  value: 1.4
+
 # Injured player - ruled out for GW21
 injured_availability:
   player: injured_player

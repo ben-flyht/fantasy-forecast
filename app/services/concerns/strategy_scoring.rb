@@ -28,7 +28,7 @@ module StrategyScoring
     return 0.0 unless config[:fixture]
 
     config[:fixture].sum do |fixture_config|
-      get_fixture_metric_value(player, fixture_config[:metric]) * fixture_config[:weight]
+      get_fixture_metric_value(player, fixture_config[:metric], fixture_config[:lookback] || 6) * fixture_config[:weight]
     end
   end
 
@@ -124,8 +124,8 @@ module StrategyScoring
     statistic&.value.to_f || 0.0
   end
 
-  def get_fixture_metric_value(player, metric)
-    xg = team_expected_goals[player.team_id]
+  def get_fixture_metric_value(player, metric, lookback = 6)
+    xg = team_expected_goals(lookback)[player.team_id]
     return 0.0 unless xg
 
     case metric
@@ -139,15 +139,66 @@ module StrategyScoring
     FIXTURE_METRICS.include?(metric)
   end
 
-  def team_expected_goals
-    @team_expected_goals ||= build_team_expected_goals
+  def team_expected_goals(lookback)
+    @team_expected_goals ||= {}
+    @team_expected_goals[lookback] ||= build_team_expected_goals(lookback)
   end
 
-  def build_team_expected_goals
-    Match.where(gameweek: gameweek).each_with_object({}) do |match, hash|
-      hash[match.home_team_id] = { for: match.home_team_expected_goals, against: match.away_team_expected_goals }
-      hash[match.away_team_id] = { for: match.away_team_expected_goals, against: match.home_team_expected_goals }
+  def build_team_expected_goals(lookback)
+    matches = Match.where(gameweek: gameweek)
+    finished_gw_ids = finished_gameweek_ids_for_lookback(lookback)
+    return {} if finished_gw_ids.empty?
+
+    team_stats = load_team_xg_stats(matches, finished_gw_ids)
+    map_match_xg(matches, team_stats, finished_gw_ids)
+  end
+
+  def finished_gameweek_ids_for_lookback(lookback)
+    Gameweek.where(is_finished: true).order(fpl_id: :desc).limit(lookback).pluck(:id)
+  end
+
+  def load_team_xg_stats(matches, finished_gw_ids)
+    team_ids = matches.flat_map { |m| [ m.home_team_id, m.away_team_id ] }.uniq
+
+    Statistic.joins(:player)
+             .where(players: { team_id: team_ids })
+             .where(gameweek_id: finished_gw_ids)
+             .where(type: %w[expected_goals expected_goals_conceded])
+             .select(:type, :value, :gameweek_id, "players.team_id AS team_id")
+             .group_by(&:team_id)
+  end
+
+  def map_match_xg(matches, team_stats, finished_gw_ids)
+    matches.each_with_object({}) do |match, hash|
+      hash[match.home_team_id] = xg_pair(team_stats[match.away_team_id], finished_gw_ids)
+      hash[match.away_team_id] = xg_pair(team_stats[match.home_team_id], finished_gw_ids)
     end
+  end
+
+  def xg_pair(opponent_stats, finished_gw_ids)
+    { for: avg_xg_conceded(opponent_stats, finished_gw_ids), against: avg_xg_scored(opponent_stats, finished_gw_ids) }
+  end
+
+  # Average of opponent's expected_goals_conceded per GW (max per team per GW for full-match value)
+  def avg_xg_conceded(stats, gw_ids)
+    return 0.0 unless stats
+
+    by_gw = stats.select { |s| s.type == "expected_goals_conceded" }.group_by(&:gameweek_id)
+    return 0.0 if by_gw.empty?
+
+    gw_values = gw_ids.filter_map { |gw_id| by_gw[gw_id]&.map(&:value)&.max }
+    gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
+  end
+
+  # Average of opponent's total expected_goals per GW (sum of all players per GW)
+  def avg_xg_scored(stats, gw_ids)
+    return 0.0 unless stats
+
+    by_gw = stats.select { |s| s.type == "expected_goals" }.group_by(&:gameweek_id)
+    return 0.0 if by_gw.empty?
+
+    gw_values = gw_ids.filter_map { |gw_id| by_gw[gw_id]&.sum(&:value) }
+    gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
   end
 
   def gameweeks_by_fpl_id
