@@ -1,14 +1,13 @@
 class PositionForecaster < ApplicationService
   include StrategyScoring
 
-  attr_reader :gameweek, :strategy_config, :position, :strategy, :generate_explanations
+  attr_reader :gameweek, :strategy_config, :position, :strategy
 
-  def initialize(strategy_config:, position:, gameweek:, strategy: nil, generate_explanations: true)
+  def initialize(strategy_config:, position:, gameweek:, strategy: nil, **)
     @strategy_config = strategy_config
     @position = position
     @gameweek = gameweek
     @strategy = strategy
-    @generate_explanations = generate_explanations
   end
 
   def call
@@ -69,25 +68,8 @@ class PositionForecaster < ApplicationService
     forecast.strategy = strategy if strategy
     forecast.rank = rank
     forecast.score = score
-    forecast.explanation = generate_explanation(player, rank, score) if generate_explanations && rank.present?
     forecast.save!
     forecast
-  end
-
-  def generate_explanation(player, rank, score)
-    breakdown = build_breakdown(player)
-    build_explanation(player, rank, breakdown, score)
-  rescue StandardError => e
-    Rails.logger.error("Failed to generate explanation for #{player.short_name}: #{e.message}")
-    nil
-  end
-
-  def build_breakdown(player)
-    ScoringBreakdown.new(player: player, strategy_config: strategy_config, gameweek: gameweek).call
-  end
-
-  def build_explanation(player, rank, breakdown, score)
-    ExplanationGenerator.new(player: player, rank: rank, gameweek: gameweek, breakdown: breakdown, tier: calculate_tier(score)).call
   end
 
   def calculate_tier(score)

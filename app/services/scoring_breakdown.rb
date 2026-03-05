@@ -51,6 +51,7 @@ class ScoringBreakdown
     lookback = default_fixture_lookback
     {
       opponent: (is_home ? match.away_team : match.home_team).short_name,
+      opponent_name: (is_home ? match.away_team : match.home_team).name,
       home_away: is_home ? "home" : "away",
       expected_goals_for: compute_xg_conceded(opponent_team_id, lookback),
       expected_goals_against: compute_xg_scored(opponent_team_id, lookback)

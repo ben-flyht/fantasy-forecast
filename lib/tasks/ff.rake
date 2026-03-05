@@ -1,33 +1,6 @@
-desc "Generate forecasts for all active strategies for the next gameweek"
-task bots: :environment do
-  gameweek = Gameweek.next_gameweek
-
-  unless gameweek
-    puts "No next gameweek available"
-    exit
-  end
-
-  puts "Generating forecasts for Gameweek #{gameweek.fpl_id}..."
-
-  strategies = Strategy.active
-  total_forecasts = 0
-
-  strategies.each do |strategy|
-    position_info = strategy.position_specific? ? "[#{strategy.position}]" : "[all positions]"
-    forecasts = strategy.generate_forecasts(gameweek, generate_explanations: false)
-    puts "  Strategy #{strategy.id} #{position_info}: #{forecasts.count} forecasts"
-    total_forecasts += forecasts.count
-  end
-
-  puts "\n" + "=" * 60
-  puts "Forecast generation complete!"
-  puts "Total: #{total_forecasts} forecasts from #{strategies.count} strategies"
-  puts "=" * 60
-end
-
-namespace :bots do
-  desc "Generate AI explanations for forecasts (batched by position, 4 API calls)"
-  task explain: :environment do
+namespace :ff do
+  desc "Generate forecasts and explanations for the next gameweek"
+  task generate: :environment do
     gameweek = Gameweek.next_gameweek
 
     unless gameweek
@@ -35,25 +8,27 @@ namespace :bots do
       exit
     end
 
-    unless ENV["ANTHROPIC_API_KEY"].present?
-      puts "ANTHROPIC_API_KEY not set"
-      exit
-    end
-
-    puts "Generating explanations for Gameweek #{gameweek.fpl_id}..."
-
     strategies = Strategy.active
     if strategies.empty?
       puts "No active strategies found"
       exit
     end
 
-    total_updated = 0
+    puts "Generating forecasts for Gameweek #{gameweek.fpl_id}..."
 
+    total_forecasts = 0
     strategies.each do |strategy|
-      position = strategy.position
-      position_label = position || "all positions"
+      position_info = strategy.position_specific? ? "[#{strategy.position}]" : "[all positions]"
+      forecasts = strategy.generate_forecasts(gameweek, generate_explanations: false)
+      puts "  #{position_info}: #{forecasts.count} forecasts"
+      total_forecasts += forecasts.count
+    end
 
+    puts "#{total_forecasts} forecasts from #{strategies.count} strategies"
+    puts "\nGenerating explanations..."
+
+    total_explained = 0
+    strategies.each do |strategy|
       forecasts = Forecast.joins(:player)
                           .includes(player: [ :team, :statistics, :performances ])
                           .where(gameweek: gameweek, strategy: strategy)
@@ -62,9 +37,7 @@ namespace :bots do
 
       next if forecasts.empty?
 
-      puts "  #{position_label.capitalize}: #{forecasts.count} players..."
-
-      results = BatchExplanationGenerator.new(
+      results = ExplanationBuilder.new(
         forecasts: forecasts.to_a,
         gameweek: gameweek,
         strategy_config: strategy.strategy_config
@@ -74,17 +47,15 @@ namespace :bots do
         Forecast.where(id: forecast_id).update_all(explanation: explanation)
       end
 
-      total_updated += results.count
-      puts "    Updated #{results.count} explanations"
+      position_label = strategy.position || "all positions"
+      puts "  [#{position_label}]: #{results.count} explanations"
+      total_explained += results.count
     end
 
-    puts "\n" + "=" * 60
-    puts "Explanation generation complete!"
-    puts "Total: #{total_updated} explanations updated"
-    puts "=" * 60
+    puts "#{total_explained} explanations generated"
   end
 
-  desc "Backfill bot forecasts for finished gameweeks (usage: rake bots:backfill or rake bots:backfill[5] or rake bots:backfill[1,8])"
+  desc "Backfill forecasts for finished gameweeks (usage: rake ff:backfill or ff:backfill[5] or ff:backfill[1,8])"
   task :backfill, [ :start_gameweek, :end_gameweek ] => :environment do |_t, args|
     if args[:start_gameweek] && args[:end_gameweek]
       gameweeks = Gameweek.where(fpl_id: args[:start_gameweek].to_i..args[:end_gameweek].to_i).order(:fpl_id)
@@ -108,7 +79,7 @@ namespace :bots do
         forecasts = strategy.generate_forecasts(gameweek, generate_explanations: false)
         total_forecasts += forecasts.count
       end
-      puts "#{gameweek.name}: ✓"
+      puts "#{gameweek.name}: done"
     end
 
     puts "Created #{total_forecasts} forecasts"
