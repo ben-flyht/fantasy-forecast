@@ -28,7 +28,7 @@ module StrategyScoring
     return 0.0 unless config[:fixture]
 
     config[:fixture].sum do |fixture_config|
-      get_fixture_metric_value(player, fixture_config[:metric]) * fixture_config[:weight]
+      get_fixture_metric_value(player, fixture_config[:metric], fixture_config[:lookback] || 6) * fixture_config[:weight]
     end
   end
 
@@ -52,26 +52,66 @@ module StrategyScoring
 
   def calculate_weighted_metric(player, metric, current_fpl_id, lookback, recency, min_availability)
     gameweeks_to_score = available_gameweeks_for_lookback(player, current_fpl_id, lookback, min_availability)
-    compute_weighted_average(player, metric, gameweeks_to_score, recency)
+    avg = compute_weighted_average(player, metric, gameweeks_to_score, recency)
+    avg * sample_confidence(gameweeks_to_score, player.team_id, lookback)
+  end
+
+  def sample_confidence(gameweeks, team_id, target_matches)
+    match_counts = matches_per_gameweek(team_id)
+    actual = gameweeks.sum { |fpl_id| match_counts[fpl_id] || 1 }
+    [ actual.to_f / target_matches, 1.0 ].min
   end
 
   def available_gameweeks_for_lookback(player, current_fpl_id, lookback, min_availability)
     available_fpl_ids = get_available_gameweeks(player, current_fpl_id, min_availability)
-    available_fpl_ids.last(lookback)
+    select_gameweeks_by_match_count(available_fpl_ids, player.team_id, lookback)
+  end
+
+  def select_gameweeks_by_match_count(fpl_ids, team_id, target_matches)
+    match_counts = matches_per_gameweek(team_id)
+    selected = []
+    total = 0
+
+    fpl_ids.reverse_each do |fpl_id|
+      break if total >= target_matches
+
+      selected.unshift(fpl_id)
+      total += match_counts[fpl_id] || 1
+    end
+
+    selected
   end
 
   def compute_weighted_average(player, metric, gameweeks_to_score, recency)
+    match_counts = matches_per_gameweek(player.team_id)
     weighted_total = 0.0
     weight_sum = 0.0
 
     gameweeks_to_score.each_with_index do |fpl_id, index|
-      value = get_metric_value(player, metric, fpl_id)
+      per_match_value = per_match_metric(player, metric, fpl_id, match_counts)
       recency_weight = calculate_recency_weight(index, recency)
-      weighted_total += value * recency_weight
+      weighted_total += per_match_value * recency_weight
       weight_sum += recency_weight
     end
 
     weight_sum > 0 ? weighted_total / weight_sum : 0.0
+  end
+
+  def per_match_metric(player, metric, fpl_id, match_counts)
+    value = get_metric_value(player, metric, fpl_id)
+    value / (match_counts[fpl_id] || 1)
+  end
+
+  def matches_per_gameweek(team_id)
+    @matches_per_gameweek ||= {}
+    @matches_per_gameweek[team_id] ||= build_matches_per_gameweek(team_id)
+  end
+
+  def build_matches_per_gameweek(team_id)
+    Match.joins(:gameweek)
+         .where("home_team_id = ? OR away_team_id = ?", team_id, team_id)
+         .group("gameweeks.fpl_id")
+         .count
   end
 
   def get_available_gameweeks(player, current_fpl_id, min_availability)
@@ -103,15 +143,12 @@ module StrategyScoring
     availability_stat.nil? || availability_stat.value >= min_availability
   end
 
-  # Check if the team has played their match in this gameweek.
-  # For finished gameweeks: always true (all matches complete).
-  # For in-progress gameweeks: check if player has minutes > 0 (their specific match happened).
+  # Check if the player actually played in this gameweek.
+  # Excludes gameweeks where the player had 0 minutes (rested, injured, suspended).
   def team_has_played?(fpl_id, minutes_by_gw_id)
     gw = gameweeks_by_fpl_id[fpl_id]
     return false unless gw
-    return true if gw.is_finished
 
-    # For current GW, only include if player's match has been played
     minutes_stat = minutes_by_gw_id[gw.id]
     minutes_stat.present? && minutes_stat.value > 0
   end
@@ -124,8 +161,8 @@ module StrategyScoring
     statistic&.value.to_f || 0.0
   end
 
-  def get_fixture_metric_value(player, metric)
-    xg = team_expected_goals[player.team_id]
+  def get_fixture_metric_value(player, metric, lookback = 6)
+    xg = team_expected_goals(lookback)[player.team_id]
     return 0.0 unless xg
 
     case metric
@@ -139,15 +176,66 @@ module StrategyScoring
     FIXTURE_METRICS.include?(metric)
   end
 
-  def team_expected_goals
-    @team_expected_goals ||= build_team_expected_goals
+  def team_expected_goals(lookback)
+    @team_expected_goals ||= {}
+    @team_expected_goals[lookback] ||= build_team_expected_goals(lookback)
   end
 
-  def build_team_expected_goals
-    Match.where(gameweek: gameweek).each_with_object({}) do |match, hash|
-      hash[match.home_team_id] = { for: match.home_team_expected_goals, against: match.away_team_expected_goals }
-      hash[match.away_team_id] = { for: match.away_team_expected_goals, against: match.home_team_expected_goals }
+  def build_team_expected_goals(lookback)
+    matches = Match.where(gameweek: gameweek)
+    finished_gw_ids = finished_gameweek_ids_for_lookback(lookback)
+    return {} if finished_gw_ids.empty?
+
+    team_stats = load_team_xg_stats(matches, finished_gw_ids)
+    map_match_xg(matches, team_stats, finished_gw_ids)
+  end
+
+  def finished_gameweek_ids_for_lookback(lookback)
+    Gameweek.where(is_finished: true).order(fpl_id: :desc).limit(lookback).pluck(:id)
+  end
+
+  def load_team_xg_stats(matches, finished_gw_ids)
+    team_ids = matches.flat_map { |m| [ m.home_team_id, m.away_team_id ] }.uniq
+
+    Statistic.joins(:player)
+             .where(players: { team_id: team_ids })
+             .where(gameweek_id: finished_gw_ids)
+             .where(type: %w[expected_goals expected_goals_conceded])
+             .select(:type, :value, :gameweek_id, "players.team_id AS team_id")
+             .group_by(&:team_id)
+  end
+
+  def map_match_xg(matches, team_stats, finished_gw_ids)
+    matches.each_with_object({}) do |match, hash|
+      hash[match.home_team_id] = xg_pair(team_stats[match.away_team_id], finished_gw_ids)
+      hash[match.away_team_id] = xg_pair(team_stats[match.home_team_id], finished_gw_ids)
     end
+  end
+
+  def xg_pair(opponent_stats, finished_gw_ids)
+    { for: avg_xg_conceded(opponent_stats, finished_gw_ids), against: avg_xg_scored(opponent_stats, finished_gw_ids) }
+  end
+
+  # Average of opponent's expected_goals_conceded per GW (max per team per GW for full-match value)
+  def avg_xg_conceded(stats, gw_ids)
+    return 0.0 unless stats
+
+    by_gw = stats.select { |s| s.type == "expected_goals_conceded" }.group_by(&:gameweek_id)
+    return 0.0 if by_gw.empty?
+
+    gw_values = gw_ids.filter_map { |gw_id| by_gw[gw_id]&.map(&:value)&.max }
+    gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
+  end
+
+  # Average of opponent's total expected_goals per GW (sum of all players per GW)
+  def avg_xg_scored(stats, gw_ids)
+    return 0.0 unless stats
+
+    by_gw = stats.select { |s| s.type == "expected_goals" }.group_by(&:gameweek_id)
+    return 0.0 if by_gw.empty?
+
+    gw_values = gw_ids.filter_map { |gw_id| by_gw[gw_id]&.sum(&:value) }
+    gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
   end
 
   def gameweeks_by_fpl_id

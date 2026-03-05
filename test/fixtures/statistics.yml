@@ -1,6 +1,12 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 # Salah stats in GW20
+midfielder_minutes_gw20:
+  player: midfielder
+  gameweek: finished
+  type: "minutes"
+  value: 90
+
 midfielder_goals_gw20:
   player: midfielder
   gameweek: finished
@@ -20,6 +26,12 @@ midfielder_bonus_gw20:
   value: 3
 
 # Raya stats in GW20
+goalkeeper_minutes_gw20:
+  player: goalkeeper
+  gameweek: finished
+  type: "minutes"
+  value: 90
+
 goalkeeper_cs_gw20:
   player: goalkeeper
   gameweek: finished
@@ -31,6 +43,19 @@ goalkeeper_saves_gw20:
   gameweek: finished
   type: "saves"
   value: 5
+
+# Chelsea player xG stats in GW20 (Palmer)
+chelsea_xg_gw20:
+  player: midfielder_two
+  gameweek: finished
+  type: "expected_goals"
+  value: 0.9
+
+chelsea_xgc_gw20:
+  player: midfielder_two
+  gameweek: finished
+  type: "expected_goals_conceded"
+  value: 1.4
 
 # Injured player - ruled out for GW21
 injured_availability:

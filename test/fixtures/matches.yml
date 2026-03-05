@@ -6,8 +6,6 @@ finished_match:
   away_team: arsenal
   gameweek: finished
   fpl_id: 1
-  home_team_expected_goals: 2.1
-  away_team_expected_goals: 0.8
 
 # Upcoming match - Liverpool vs Chelsea at home in GW21
 upcoming_match:
@@ -15,8 +13,6 @@ upcoming_match:
   away_team: chelsea
   gameweek: next_gw
   fpl_id: 2
-  home_team_expected_goals: 1.8
-  away_team_expected_goals: 1.2
 
 # Upcoming match - Arsenal vs Chelsea in GW21
 upcoming_match_two:
@@ -24,5 +20,3 @@ upcoming_match_two:
   away_team: chelsea
   gameweek: next_gw
   fpl_id: 3
-  home_team_expected_goals: 1.5
-  away_team_expected_goals: 1.0

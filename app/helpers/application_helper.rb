@@ -40,10 +40,6 @@ module ApplicationHelper
     TierCalculator::TIERS[tier]
   end
 
-  def cached_news_count(player)
-    GoogleNews::FetchPlayerNews.cached_count(player)
-  end
-
   def forecast_tier_background(tier_name)
     {
       "Sunshine" => "bg-amber-100",
