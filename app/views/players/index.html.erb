@@ -47,15 +47,32 @@
       <% end %>
 
       <!-- Draft League -->
-      <div class="flex items-center gap-2 lg:ml-auto">
+      <div class="flex flex-wrap items-center gap-2 lg:ml-auto">
         <% if @draft_entry_id.present? %>
-          <span class="text-sm text-zinc-500">Draft: <strong class="text-zinc-900"><%= @draft_entry_id %></strong></span>
-          <%= button_to "Disconnect", draft_league_path, method: :delete, class: "rounded-lg border border-zinc-950/10 bg-white px-3 py-1.5 text-sm/6 font-semibold text-red-600 hover:bg-zinc-950/[2.5%]", data: { turbo: false } %>
+          <div class="flex flex-wrap items-center gap-2">
+            <% if @draft_team_name.present? %>
+              <input type="text" value="<%= @draft_team_name %>" disabled class="rounded-lg border <%= draft_style(:mine, :border) %> px-3 py-1.5 text-sm/6 font-semibold <%= draft_style(:mine, :text) %> cursor-default">
+            <% end %>
+            <% if @draft_league_entries&.any? %>
+              <span class="text-sm text-zinc-400">vs</span>
+              <%= render DropdownComponent.new(
+                label: "Opponent",
+                name: "draft_team",
+                options: @draft_league_entries.map { |e| [e[:name], e[:id]] },
+                selected: @selected_draft_team,
+                form: "filters-form",
+                draft_category: :opponent
+              ) %>
+            <% end %>
+          </div>
+          <%= button_to "Disconnect", draft_league_path, method: :delete, class: "rounded-lg bg-zinc-900 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-zinc-700", data: { turbo: false } %>
         <% else %>
-          <%= form_with url: draft_league_path, method: :post, data: { turbo: false }, class: "flex items-center gap-2" do %>
+          <%= form_with url: draft_league_path, method: :post, data: { turbo: false }, class: "flex flex-wrap items-center gap-2" do %>
             <label for="entry_id" class="text-sm text-zinc-500 whitespace-nowrap">FPL Draft</label>
-            <input type="text" name="entry_id" id="entry_id" placeholder="Your team entry ID" title="Go to Points on FPL Draft. Your ID is the number in the URL: draft.premierleague.com/entry/YOUR_ID/event/1" class="rounded-lg border border-zinc-950/10 bg-white px-3 py-1.5 text-sm/6 w-38 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            <button type="submit" class="rounded-lg bg-zinc-900 text-white px-3 py-1.5 text-sm/6 font-semibold hover:bg-zinc-700">Connect</button>
+            <div class="flex items-center gap-2">
+              <input type="text" name="entry_id" id="entry_id" placeholder="Entry ID" title="Go to Points on FPL Draft. Your ID is the number in the URL: draft.premierleague.com/entry/YOUR_ID/event/1" class="rounded-lg border border-zinc-950/10 bg-white px-3 py-1.5 text-sm/6 w-28 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <button type="submit" class="rounded-lg bg-zinc-900 text-white px-3 py-1.5 text-sm/6 font-semibold hover:bg-zinc-700">Connect</button>
+            </div>
           <% end %>
         <% end %>
       </div>
@@ -73,7 +90,8 @@
           <% player = @players_by_id[ranking.player_id] %>
           <% tier = ranking.tier %>
           <% tier_data = tier_info(tier) %>
-          <div class="flex flex-wrap items-center gap-x-4 px-3 sm:px-6 py-3 border-b border-zinc-100 cursor-pointer hover:bg-zinc-50"
+          <% draft_category = @draft_player_categories&.dig(player.code) %>
+          <div class="flex flex-wrap items-center gap-x-4 px-3 sm:px-6 py-3 border-b border-zinc-100 cursor-pointer <%= draft_style(draft_category, :background) %>"
                onclick="Turbo.visit('<%= player_path(player) %>')"
                role="link"
                tabindex="0"
@@ -81,7 +99,7 @@
             <div class="shrink-0 w-12 whitespace-nowrap">
               <span class="inline-flex items-center gap-2">
                 <span class="text-xl"><%= tier_data[:symbol] %></span>
-                <span class="text-zinc-500"><%= ranking.bot_rank || '-' %></span>
+                <span class="<%= draft_style(draft_category, :text) %>"><%= ranking.bot_rank || '-' %></span>
               </span>
             </div>
             <div class="flex-1 min-w-0">
@@ -89,21 +107,9 @@
                 <%= render PlayerAvatarComponent.new(player: player, size: :medium) %>
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
-                    <span class="font-medium text-lg"><%= player.short_name %></span>
-                    <% if @draft_player_categories.present? %>
-                      <% case @draft_player_categories[player.code] %>
-                      <% when :mine %>
-                        <span class="inline-block px-1.5 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">Mine</span>
-                      <% when :opponent %>
-                        <span class="inline-block px-1.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Opponent</span>
-                      <% when :available %>
-                        <span class="inline-block px-1.5 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">Available</span>
-                      <% when :owned %>
-                        <span class="inline-block px-1.5 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800">Taken</span>
-                      <% end %>
-                    <% end %>
+                    <span class="font-medium text-lg <%= draft_style(draft_category, :text) %>"><%= player.short_name %></span>
                   </div>
-                  <div class="text-zinc-500 flex flex-wrap items-center gap-1">
+                  <div class="<%= draft_style(draft_category, :text) %> flex flex-wrap items-center gap-1">
                     <%= render TeamBadgeComponent.new(team: player.team) %>
                     <span><%= player.team&.name %></span>
                     <% (@matches_by_team[player.team_id] || []).each do |match| %>
@@ -114,7 +120,7 @@
               </div>
             </div>
             <div class="w-full lg:w-auto mt-2 lg:mt-0 pb-1 lg:pb-0 pl-[7.25rem] sm:pl-[8rem] lg:pl-0">
-              <%= render FormComponent.new(scores: @performances_by_player[player.id]) %>
+              <%= render FormComponent.new(scores: @performances_by_player[player.id], draft_category: draft_category) %>
             </div>
           </div>
         <% end %>
