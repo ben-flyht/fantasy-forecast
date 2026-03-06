@@ -8,8 +8,8 @@
       <p class="mt-1 text-sm text-zinc-500">Form, fixtures, and expected goals analyzed into weather tiers.</p>
     </div>
 
-    <%= form_with url: root_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form" do |f| %>
-      <div class="flex flex-wrap items-center gap-4 mb-6">
+    <div class="flex flex-wrap items-center gap-4 mb-6">
+      <%= form_with url: root_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance" }, id: "filters-form", class: "contents" do |f| %>
         <!-- Gameweek Selector -->
         <div class="flex items-center gap-2">
           <span class="text-sm text-zinc-500">Gameweek</span>
@@ -44,8 +44,22 @@
             </label>
           <% end %>
         </div>
+      <% end %>
+
+      <!-- Draft League -->
+      <div class="flex items-center gap-2 lg:ml-auto">
+        <% if @draft_entry_id.present? %>
+          <span class="text-sm text-zinc-500">Draft: <strong class="text-zinc-900"><%= @draft_entry_id %></strong></span>
+          <%= button_to "Disconnect", draft_league_path, method: :delete, class: "rounded-lg border border-zinc-950/10 bg-white px-3 py-1.5 text-sm/6 font-semibold text-red-600 hover:bg-zinc-950/[2.5%]", data: { turbo: false } %>
+        <% else %>
+          <%= form_with url: draft_league_path, method: :post, data: { turbo: false }, class: "flex items-center gap-2" do %>
+            <label for="entry_id" class="text-sm text-zinc-500 whitespace-nowrap">FPL Draft</label>
+            <input type="text" name="entry_id" id="entry_id" placeholder="Your team entry ID" title="Go to Points on FPL Draft. Your ID is the number in the URL: draft.premierleague.com/entry/YOUR_ID/event/1" class="rounded-lg border border-zinc-950/10 bg-white px-3 py-1.5 text-sm/6 w-38 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <button type="submit" class="rounded-lg bg-zinc-900 text-white px-3 py-1.5 text-sm/6 font-semibold hover:bg-zinc-700">Connect</button>
+          <% end %>
+        <% end %>
       </div>
-    <% end %>
+    </div>
 
     <!-- Rankings Table -->
     <% if @consensus_rankings.any? %>
@@ -74,7 +88,21 @@
               <div class="flex items-center gap-3 sm:gap-4">
                 <%= render PlayerAvatarComponent.new(player: player, size: :medium) %>
                 <div class="min-w-0 flex-1">
-                  <span class="font-medium text-lg"><%= player.short_name %></span>
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-lg"><%= player.short_name %></span>
+                    <% if @draft_player_categories.present? %>
+                      <% case @draft_player_categories[player.code] %>
+                      <% when :mine %>
+                        <span class="inline-block px-1.5 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">Mine</span>
+                      <% when :opponent %>
+                        <span class="inline-block px-1.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Opponent</span>
+                      <% when :available %>
+                        <span class="inline-block px-1.5 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">Available</span>
+                      <% when :owned %>
+                        <span class="inline-block px-1.5 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800">Taken</span>
+                      <% end %>
+                    <% end %>
+                  </div>
                   <div class="text-zinc-500 flex flex-wrap items-center gap-1">
                     <%= render TeamBadgeComponent.new(team: player.team) %>
                     <span><%= player.team&.name %></span>

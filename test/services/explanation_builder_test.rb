@@ -60,7 +60,7 @@ class ExplanationBuilderTest < ActiveSupport::TestCase
     explanation = result[forecast.id]
     assert_includes explanation, "faces Chelsea"
     assert_includes explanation, "who have allowed"
-    assert_includes explanation, "team xG"
+    assert_includes explanation, "xG per match"
     assert_includes explanation, "over the last 6 matches"
   end
 
