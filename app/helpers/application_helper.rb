@@ -26,39 +26,35 @@ module ApplicationHelper
     tag.script(schema.to_json.html_safe, type: "application/ld+json")
   end
 
-  def tier_badge_classes(tier)
-    {
-      1 => "bg-amber-400/20 text-amber-700",
-      2 => "bg-lime-400/20 text-lime-700",
-      3 => "bg-zinc-600/10 text-zinc-700",
-      4 => "bg-sky-400/20 text-sky-700",
-      5 => "bg-blue-400/20 text-blue-700"
-    }[tier] || "bg-zinc-600/10 text-zinc-700"
-  end
-
   def tier_info(tier)
     TierCalculator::TIERS[tier]
   end
 
-  def forecast_tier_background(tier_name)
-    {
-      "Sunshine" => "bg-amber-100",
-      "Partly Cloudy" => "bg-amber-50",
-      "Cloudy" => "bg-gray-100",
-      "Rainy" => "bg-blue-50",
-      "Snow" => "bg-blue-100"
-    }[tier_name] || "bg-gray-50"
-  end
+  DRAFT_STYLES = {
+    mine: {
+      background: "bg-amber-50 hover:bg-amber-100/50",
+      border: "border-amber-200 bg-amber-100",
+      text: "text-amber-900"
+    },
+    opponent: {
+      background: "bg-blue-50 hover:bg-blue-100/50",
+      border: "border-blue-200 bg-blue-100",
+      text: "text-blue-900"
+    },
+    owned: {
+      background: "bg-zinc-100",
+      border: "bg-zinc-100",
+      text: "text-zinc-500"
+    },
+    default: {
+      background: "hover:bg-zinc-50",
+      border: "bg-zinc-100",
+      text: "text-zinc-900"
+    }
+  }.freeze
 
-  def performance_score_class(score)
-    score_int = score.to_i
-    if score_int >= 10
-      "text-lime-700"
-    elsif score_int <= 2
-      "text-red-700"
-    else
-      "text-zinc-950"
-    end
+  def draft_style(category, key)
+    DRAFT_STYLES.fetch(category || :default, DRAFT_STYLES[:default])[key]
   end
 
   private

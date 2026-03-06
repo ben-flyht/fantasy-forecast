@@ -1,5 +1,5 @@
 <div class="flex items-center gap-1">
   <% scores.each_with_index do |score, index| %>
-    <span class="inline-flex items-center justify-center size-7 text-xs font-medium rounded bg-zinc-100 <%= opacities[index] %>"><%= score %></span>
+    <span class="inline-flex items-center justify-center size-7 text-xs font-medium rounded <%= draft_style(@draft_category, :border) %> <%= draft_style(@draft_category, :text) %> <%= opacities[index] %>"><%= score %></span>
   <% end %>
 </div>

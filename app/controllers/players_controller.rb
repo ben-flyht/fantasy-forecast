@@ -146,7 +146,13 @@ class PlayersController < ApplicationController
     league_id = cookies[:draft_league_id]
     return unless @draft_entry_id.present? && league_id.present?
 
-    @draft_player_categories = Fpl::DraftLeagueStatus.call(@draft_entry_id, league_id) # keyed by player code
+    league_info = Fpl::DraftLeagueStatus.league_info(league_id, @draft_entry_id)
+    @draft_team_name = league_info[:mine]
+    @draft_league_entries = league_info[:opponents]
+    @selected_draft_team = params[:draft_team].presence || league_info[:next_opponent_id]
+    @draft_player_categories = Fpl::DraftLeagueStatus.call(
+      @draft_entry_id, league_id, selected_entry_id: @selected_draft_team
+    )
   end
 
   def set_available_filters

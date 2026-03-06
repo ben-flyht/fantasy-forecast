@@ -7,13 +7,13 @@ class DraftLeaguesController < ApplicationController
     return redirect_with_alert("Draft team not found") unless league_id
 
     save_draft_cookies(entry_id, league_id)
-    redirect_back fallback_location: root_path, notice: "Draft league connected"
+    redirect_to root_path
   end
 
   def destroy
     cookies.delete(:draft_entry_id)
     cookies.delete(:draft_league_id)
-    redirect_back fallback_location: root_path, notice: "Draft league disconnected"
+    redirect_to root_path
   end
 
   private
