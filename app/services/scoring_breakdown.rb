@@ -224,7 +224,7 @@ class ScoringBreakdown
 
   def build_fixture_difficulty(config)
     lookback = config[:lookback] || default_fixture_lookback
-    { metric: human_metric_name(config[:metric]), weight: config[:weight], lookback: lookback, value: get_fixture_value(config[:metric], lookback)&.round(2) }
+    { metric: config[:metric], weight: config[:weight], lookback: lookback, value: get_fixture_value(config[:metric], lookback)&.round(2) }
   end
 
   def get_fixture_value(metric, lookback)

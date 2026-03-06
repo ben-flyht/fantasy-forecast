@@ -7,6 +7,9 @@ Rails.application.routes.draw do
   # Player detail page
   resources :players, only: [ :show ]
 
+  # FPL Draft league connection
+  resource :draft_league, only: [ :create, :destroy ]
+
   # Dynamic robots.txt based on environment
   get "robots.txt", to: "application#robots", defaults: { format: "text" }
 
