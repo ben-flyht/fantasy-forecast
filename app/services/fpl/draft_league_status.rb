@@ -50,16 +50,16 @@ module Fpl
         code = draft_id_to_code[entry["element"]]
         next unless code
 
-        result[code] = if entry["status"] == "a"
-          :available
-        elsif entry["owner"] == @entry_id
-          :mine
-        elsif opponent_entry_id && entry["owner"] == opponent_entry_id
-          :opponent
-        else
-          :owned
-        end
+        result[code] = player_category(entry, opponent_entry_id)
       end
+    end
+
+    def player_category(entry, opponent_entry_id)
+      return :available if entry["status"] == "a"
+      return :mine if entry["owner"] == @entry_id
+      return :opponent if opponent_entry_id && entry["owner"] == opponent_entry_id
+
+      :owned
     end
 
     def fetch_element_status
@@ -76,34 +76,46 @@ module Fpl
         response = self.class.make_request(uri)
         return nil unless response&.code == "200"
 
-        JSON.parse(response.body)["elements"].to_h { |e| [e["id"], e["code"]] }
+        JSON.parse(response.body)["elements"].to_h { |e| [ e["id"], e["code"] ] }
       end
     end
 
     def fetch_opponent_entry_id
+      data = fetch_league_details
+      return nil unless data
+
+      find_opponent_entry_id(data["league_entries"], data["matches"])
+    rescue StandardError
+      nil
+    end
+
+    def fetch_league_details
       uri = URI("https://#{DRAFT_API_HOST}/api/league/#{@league_id}/details")
       response = self.class.make_request(uri)
       return nil unless response&.code == "200"
 
-      data = JSON.parse(response.body)
-      league_entries = data["league_entries"]
-      matches = data["matches"]
+      JSON.parse(response.body)
+    end
 
+    def find_opponent_entry_id(league_entries, matches)
       my_league_entry_id = league_entries&.find { |e| e["entry_id"] == @entry_id }&.dig("id")
       return nil unless my_league_entry_id
 
-      next_match = matches&.find { |m| !m["finished"] && (m["league_entry_1"] == my_league_entry_id || m["league_entry_2"] == my_league_entry_id) }
+      next_match = find_next_match(matches, my_league_entry_id)
       return nil unless next_match
 
-      opponent_league_entry_id = if next_match["league_entry_1"] == my_league_entry_id
-        next_match["league_entry_2"]
-      else
-        next_match["league_entry_1"]
-      end
-
+      opponent_league_entry_id = opponent_from_match(next_match, my_league_entry_id)
       league_entries.find { |e| e["id"] == opponent_league_entry_id }&.dig("entry_id")
-    rescue StandardError
-      nil
+    end
+
+    def find_next_match(matches, my_league_entry_id)
+      matches&.find do |m|
+        !m["finished"] && (m["league_entry_1"] == my_league_entry_id || m["league_entry_2"] == my_league_entry_id)
+      end
+    end
+
+    def opponent_from_match(match, my_league_entry_id)
+      match["league_entry_1"] == my_league_entry_id ? match["league_entry_2"] : match["league_entry_1"]
     end
 
     def cache_key
