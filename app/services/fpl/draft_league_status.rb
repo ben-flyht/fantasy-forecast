@@ -7,9 +7,10 @@ module Fpl
     CACHE_TTL = 5.minutes
     TIMEOUT = 3
 
-    def initialize(entry_id, league_id)
+    def initialize(entry_id, league_id, selected_entry_id: nil)
       @entry_id = entry_id.to_i
       @league_id = league_id
+      @selected_entry_id = selected_entry_id&.to_i
     end
 
     def call
@@ -27,6 +28,14 @@ module Fpl
       data.dig("entry", "league_set")&.first
     rescue StandardError
       nil
+    end
+
+    def self.league_info(league_id, my_entry_id)
+      Rails.cache.fetch("fpl_draft_league_info:#{league_id}:#{my_entry_id}", expires_in: CACHE_TTL) do
+        fetch_league_info(league_id, my_entry_id)
+      end
+    rescue StandardError
+      { mine: nil, opponents: [], next_opponent_id: nil }
     end
 
     private
@@ -81,10 +90,12 @@ module Fpl
     end
 
     def fetch_opponent_entry_id
+      return @selected_entry_id if @selected_entry_id&.positive?
+
       data = fetch_league_details
       return nil unless data
 
-      find_opponent_entry_id(data["league_entries"], data["matches"])
+      find_opponent_from(data["league_entries"], data["matches"])
     rescue StandardError
       nil
     end
@@ -97,29 +108,63 @@ module Fpl
       JSON.parse(response.body)
     end
 
-    def find_opponent_entry_id(league_entries, matches)
-      my_league_entry_id = league_entries&.find { |e| e["entry_id"] == @entry_id }&.dig("id")
+    def self.fetch_league_info(league_id, my_entry_id)
+      empty = { mine: nil, opponents: [], next_opponent_id: nil }
+      data = fetch_league_details(league_id)
+      return empty unless data
+
+      entries = data["league_entries"] || []
+      my_id = my_entry_id.to_i
+
+      mine = entries.find { |e| e["entry_id"] == my_id }&.dig("entry_name")
+      opponents = build_opponents(entries, my_id)
+      next_opponent_id = find_next_opponent_id(entries, data["matches"], my_id)
+
+      { mine: mine, opponents: opponents, next_opponent_id: next_opponent_id }
+    end
+
+    def self.fetch_league_details(league_id)
+      uri = URI("https://#{DRAFT_API_HOST}/api/league/#{league_id}/details")
+      response = make_request(uri)
+      return nil unless response&.code == "200"
+
+      JSON.parse(response.body)
+    end
+
+    def self.build_opponents(entries, my_id)
+      entries.filter_map do |e|
+        next if e["entry_id"].nil? || e["entry_id"] == my_id
+        { id: e["entry_id"], name: e["entry_name"] }
+      end.sort_by { |e| e[:name].downcase }
+    end
+
+    def self.find_next_opponent_id(entries, matches, my_id)
+      my_league_entry_id = entries.find { |e| e["entry_id"] == my_id }&.dig("id")
       return nil unless my_league_entry_id
 
       next_match = find_next_match(matches, my_league_entry_id)
       return nil unless next_match
 
-      opponent_league_entry_id = opponent_from_match(next_match, my_league_entry_id)
-      league_entries.find { |e| e["id"] == opponent_league_entry_id }&.dig("entry_id")
+      opp_league_id = opponent_from_match(next_match, my_league_entry_id)
+      entries.find { |e| e["id"] == opp_league_id }&.dig("entry_id")&.to_s
     end
 
-    def find_next_match(matches, my_league_entry_id)
+    def self.find_next_match(matches, my_league_entry_id)
       matches&.find do |m|
         !m["finished"] && (m["league_entry_1"] == my_league_entry_id || m["league_entry_2"] == my_league_entry_id)
       end
     end
 
-    def opponent_from_match(match, my_league_entry_id)
+    def self.opponent_from_match(match, my_league_entry_id)
       match["league_entry_1"] == my_league_entry_id ? match["league_entry_2"] : match["league_entry_1"]
     end
 
+    def find_opponent_from(league_entries, matches)
+      self.class.find_next_opponent_id(league_entries, matches, @entry_id)&.to_i
+    end
+
     def cache_key
-      "fpl_draft_status:#{@league_id}:#{@entry_id}"
+      "fpl_draft_status:#{@league_id}:#{@entry_id}:#{@selected_entry_id}"
     end
 
     def self.make_request(uri)
