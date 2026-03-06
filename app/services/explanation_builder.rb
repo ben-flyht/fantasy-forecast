@@ -111,13 +111,18 @@ class ExplanationBuilder
     return "" unless fd[:value]
 
     lookback = fd[:lookback] || 6
-    ", who have allowed #{fd[:value]} #{fd[:metric]} over the last #{pluralize_match(lookback)}"
+    case fd[:metric]
+    when "expected_goals_against"
+      ", who have averaged #{fd[:value]} xG per match over the last #{pluralize_match(lookback)}"
+    else
+      ", who have allowed #{fd[:value]} xG per match over the last #{pluralize_match(lookback)}"
+    end
   end
 
   def availability_sentence(forecast, breakdown)
     avail = breakdown[:availability]
     player = forecast.player
-    news = player.news
+    news = strip_chance_from_news(player.news)
 
     if avail && avail[:chance_of_playing] < 100
       base = "#{avail[:chance_of_playing]}% chance of playing (#{avail[:status]})"
@@ -125,6 +130,14 @@ class ExplanationBuilder
     elsif news.present?
       "Note: #{news}."
     end
+  end
+
+  def strip_chance_from_news(news)
+    return nil if news.blank?
+
+    # FPL news format: "Calf injury - 75% chance of playing" or "Knee injury - Expected back 01 Jun"
+    # Strip the "- X% chance of playing" suffix to avoid duplicating the chance we already show
+    news.sub(/\s*-\s*\d+%\s*chance\s*of\s*playing\z/i, "").strip.presence
   end
 
   def snow_explanation(forecast)
