@@ -9,6 +9,7 @@ class PlayersController < ApplicationController
     load_players
     load_recent_performances
     set_available_filters
+    load_draft_availability
     build_page_title
   end
 
@@ -138,6 +139,14 @@ class PlayersController < ApplicationController
                      .group("players.id")
                      .order("total_score_cached DESC, first_name, last_name")
     @players_by_id = @players.index_by(&:id)
+  end
+
+  def load_draft_availability
+    @draft_entry_id = cookies[:draft_entry_id]
+    league_id = cookies[:draft_league_id]
+    return unless @draft_entry_id.present? && league_id.present?
+
+    @draft_player_categories = Fpl::DraftLeagueStatus.call(@draft_entry_id, league_id) # keyed by player code
   end
 
   def set_available_filters
