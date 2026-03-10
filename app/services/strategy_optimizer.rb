@@ -197,7 +197,7 @@ class StrategyOptimizer < ApplicationService
   end
 
   def deep_copy(config)
-    Marshal.load(Marshal.dump(config))
+    JSON.parse(JSON.generate(config), symbolize_names: true)
   end
 
   def build_result(baseline, best)
