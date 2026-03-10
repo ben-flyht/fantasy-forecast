@@ -150,7 +150,10 @@ namespace :ff do
 end
 
 def apply_optimization!(strategy, result)
-  strategy.update!(
+  strategy.update!(active: false)
+  Strategy.create!(
+    position: strategy.position,
+    active: true,
     strategy_config: result[:best_config],
     last_optimized_at: Time.current,
     optimization_log: strategy.optimization_log + [ optimization_log_entry(result) ]
