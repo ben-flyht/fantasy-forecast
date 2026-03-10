@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_05_211438) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_10_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -50,6 +50,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_05_211438) do
     t.integer "fpl_id"
     t.bigint "gameweek_id", null: false
     t.bigint "home_team_id", null: false
+    t.decimal "odds_away_win", precision: 6, scale: 3
+    t.decimal "odds_draw", precision: 6, scale: 3
+    t.decimal "odds_home_win", precision: 6, scale: 3
     t.datetime "updated_at", null: false
     t.index ["away_team_id"], name: "index_matches_on_away_team_id"
     t.index ["fpl_id"], name: "index_matches_on_fpl_id", unique: true
@@ -106,6 +109,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_05_211438) do
   create_table "strategies", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
+    t.datetime "last_optimized_at"
+    t.jsonb "optimization_log", default: [], null: false
     t.string "position"
     t.jsonb "strategy_config", default: {}, null: false
     t.datetime "updated_at", null: false

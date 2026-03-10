@@ -87,13 +87,6 @@ namespace :fpl do
       puts "Gameweek: #{synced_gw&.name || 'None'} (#{status})"
       puts "Performances synced: #{performance_count}"
 
-      # Auto-calculate forecast scores for the synced gameweek
-      if synced_gw
-        puts "\nCalculating forecast scores for #{synced_gw.name}..."
-        Forecast.calculate_scores_for_gameweek!(synced_gw)
-        scored_count = Forecast.where(gameweek: synced_gw).where.not(accuracy: nil).count
-        puts "✅ Updated scores for #{scored_count} forecasts"
-      end
     else
       puts "❌ FPL performance sync failed. Check logs for details."
       exit 1
