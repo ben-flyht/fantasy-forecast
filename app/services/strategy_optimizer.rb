@@ -109,16 +109,14 @@ class StrategyOptimizer < ApplicationService
   def vary_weights(base_config)
     vary_performance(base_config) do |perf, delta|
       new_weight = (perf[:weight] + delta).round(2)
-      next if new_weight <= 0.05 || new_weight > 1.0
+      next if new_weight <= 0 || new_weight > 1.0
 
       perf[:weight] = new_weight
     end
   end
 
   def vary_lookbacks(base_config)
-    return [] unless base_config[:performance]
-
-    base_config[:performance].each_index.flat_map do |idx|
+    active_performance_indices(base_config).flat_map do |idx|
       LOOKBACK_OPTIONS.filter_map do |lookback|
         next if lookback == base_config[:performance][idx][:lookback]
 
@@ -130,9 +128,7 @@ class StrategyOptimizer < ApplicationService
   end
 
   def vary_recency(base_config)
-    return [] unless base_config[:performance]
-
-    base_config[:performance].each_index.flat_map do |idx|
+    active_performance_indices(base_config).flat_map do |idx|
       RECENCY_OPTIONS.filter_map do |recency|
         next if recency == base_config[:performance][idx][:recency]
 
@@ -161,9 +157,7 @@ class StrategyOptimizer < ApplicationService
   end
 
   def vary_home_away(base_config)
-    return [] unless base_config[:performance]
-
-    base_config[:performance].each_index.flat_map do |idx|
+    active_performance_indices(base_config).flat_map do |idx|
       HOME_AWAY_WEIGHT_OPTIONS.filter_map do |ha_weight|
         next if ha_weight == base_config[:performance][idx][:home_away_weight]
 
@@ -172,6 +166,12 @@ class StrategyOptimizer < ApplicationService
         new_config
       end
     end
+  end
+
+  def active_performance_indices(base_config)
+    return [] unless base_config[:performance]
+
+    base_config[:performance].each_index.reject { |idx| base_config[:performance][idx][:weight]&.zero? }
   end
 
   def vary_performance(base_config)
