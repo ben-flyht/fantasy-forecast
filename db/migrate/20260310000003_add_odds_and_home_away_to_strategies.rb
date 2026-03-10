@@ -40,8 +40,6 @@ class AddOddsAndHomeAwayToStrategies < ActiveRecord::Migration[8.1]
       )
 
       puts "  #{position}: #{full_config[:performance].size} performance + #{full_config[:fixture].size} fixture metrics"
-
-      run_inline_optimization!(new_strategy)
     end
   end
 
@@ -102,40 +100,5 @@ class AddOddsAndHomeAwayToStrategies < ActiveRecord::Migration[8.1]
     FIXTURE_METRICS.map do |metric|
       existing_by_metric[metric] || { metric: metric, weight: 0 }
     end
-  end
-
-  def run_inline_optimization!(strategy)
-    result = StrategyOptimizer.call(
-      strategy: strategy,
-      generations: 1,
-      candidates_per_generation: 12
-    )
-
-    if result[:improvement] > 0
-      strategy.update!(
-        strategy_config: result[:best_config],
-        last_optimized_at: Time.current,
-        optimization_log: strategy.optimization_log + [ inline_log_entry(result) ]
-      )
-      puts "    Optimized: #{format('%+.1f', result[:improvement])}% (p=#{result[:p_value]&.round(3)})"
-    else
-      puts "    No improvement from inline optimization"
-    end
-  rescue => e
-    puts "    Inline optimization failed: #{e.message} — keeping base palette"
-  end
-
-  def inline_log_entry(result)
-    {
-      timestamp: Time.current.iso8601,
-      source: "migration_inline",
-      position: result[:position],
-      baseline_capture_rate: result[:baseline_capture_rate],
-      new_capture_rate: result[:best_capture_rate],
-      improvement: result[:improvement],
-      win_rate: result[:win_rate],
-      p_value: result[:p_value],
-      gameweeks_evaluated: result[:gameweeks_evaluated]
-    }
   end
 end
