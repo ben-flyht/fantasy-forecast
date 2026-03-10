@@ -19,6 +19,8 @@ module StrategyScoring
 
   def calculate_performance_score(player, config, current_fpl_id)
     config[:performance].sum do |perf_config|
+      next 0.0 if perf_config[:weight]&.zero?
+
       metric_score = calculate_metric_score(player, perf_config, current_fpl_id)
       metric_score * perf_config[:weight]
     end
@@ -28,6 +30,8 @@ module StrategyScoring
     return 0.0 unless config[:fixture]
 
     config[:fixture].sum do |fixture_config|
+      next 0.0 if fixture_config[:weight]&.zero?
+
       get_fixture_metric_value(player, fixture_config[:metric], fixture_config[:lookback] || 6) * fixture_config[:weight]
     end
   end

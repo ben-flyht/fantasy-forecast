@@ -108,4 +108,40 @@ class StrategyOptimizerTest < ActiveSupport::TestCase
 
     assert result[:best_config].present?
   end
+
+  test "generates candidates that can activate weight-0 metrics" do
+    @strategy.update!(strategy_config: {
+      performance: [
+        { metric: "total_points", weight: 1.0, lookback: 6, recency: "none" },
+        { metric: "goals_scored", weight: 0, lookback: 6, recency: "linear" }
+      ]
+    })
+
+    optimizer = StrategyOptimizer.new(strategy: @strategy, candidates_per_generation: 50, generations: 1)
+    candidates = optimizer.send(:generate_candidates, @strategy.strategy_config)
+
+    activated = candidates.select do |c|
+      goals_metric = c[:performance].find { |p| p[:metric] == "goals_scored" }
+      goals_metric && goals_metric[:weight] > 0
+    end
+
+    assert activated.any?, "Expected at least one candidate to activate the weight-0 goals_scored metric"
+  end
+
+  test "skips lookback and recency variations for weight-0 metrics" do
+    @strategy.update!(strategy_config: {
+      performance: [
+        { metric: "total_points", weight: 0, lookback: 6, recency: "none" }
+      ]
+    })
+
+    optimizer = StrategyOptimizer.new(strategy: @strategy)
+    lookback_variants = optimizer.send(:vary_lookbacks, @strategy.strategy_config)
+    recency_variants = optimizer.send(:vary_recency, @strategy.strategy_config)
+    home_away_variants = optimizer.send(:vary_home_away, @strategy.strategy_config)
+
+    assert_empty lookback_variants
+    assert_empty recency_variants
+    assert_empty home_away_variants
+  end
 end
