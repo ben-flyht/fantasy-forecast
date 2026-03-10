@@ -3,7 +3,7 @@
 module StrategyScoring
   extend ActiveSupport::Concern
 
-  FIXTURE_METRICS = %w[expected_goals_for expected_goals_against].freeze
+  FIXTURE_METRICS = %w[expected_goals_for expected_goals_against opponent_odds].freeze
   RECENCY_TYPES = %w[none linear exponential].freeze
   DEFAULT_MIN_AVAILABILITY = 50 # Players with 50%+ chance of playing are considered "available"
 
@@ -46,13 +46,14 @@ module StrategyScoring
     lookback = perf_config[:lookback]
     recency = perf_config[:recency]
     min_availability = perf_config[:min_availability] || DEFAULT_MIN_AVAILABILITY
+    ha_weight = perf_config[:home_away_weight]
 
-    calculate_weighted_metric(player, metric, current_fpl_id, lookback, recency, min_availability)
+    calculate_weighted_metric(player, metric, current_fpl_id, lookback, recency, min_availability, ha_weight)
   end
 
-  def calculate_weighted_metric(player, metric, current_fpl_id, lookback, recency, min_availability)
+  def calculate_weighted_metric(player, metric, current_fpl_id, lookback, recency, min_availability, ha_weight)
     gameweeks_to_score = available_gameweeks_for_lookback(player, current_fpl_id, lookback, min_availability)
-    avg = compute_weighted_average(player, metric, gameweeks_to_score, recency)
+    avg = compute_weighted_average(player, metric, gameweeks_to_score, recency, ha_weight, player.team_id)
     avg * sample_confidence(gameweeks_to_score, player.team_id, lookback)
   end
 
@@ -82,19 +83,31 @@ module StrategyScoring
     selected
   end
 
-  def compute_weighted_average(player, metric, gameweeks_to_score, recency)
+  def compute_weighted_average(player, metric, gameweeks_to_score, recency, ha_weight = nil, team_id = nil)
     match_counts = matches_per_gameweek(player.team_id)
+    upcoming_venue = ha_weight ? venue_for_team(team_id, gameweek&.fpl_id) : nil
+
+    accumulate_weighted_values(gameweeks_to_score, match_counts, player, metric, recency, ha_weight, upcoming_venue, team_id)
+  end
+
+  def accumulate_weighted_values(gameweeks, match_counts, player, metric, recency, ha_weight, upcoming_venue, team_id)
     weighted_total = 0.0
     weight_sum = 0.0
 
-    gameweeks_to_score.each_with_index do |fpl_id, index|
-      per_match_value = per_match_metric(player, metric, fpl_id, match_counts)
-      recency_weight = calculate_recency_weight(index, recency)
-      weighted_total += per_match_value * recency_weight
-      weight_sum += recency_weight
+    gameweeks.each_with_index do |fpl_id, index|
+      value = per_match_metric(player, metric, fpl_id, match_counts)
+      w = gameweek_weight(index, recency, ha_weight, upcoming_venue, team_id, fpl_id)
+      weighted_total += value * w
+      weight_sum += w
     end
 
     weight_sum > 0 ? weighted_total / weight_sum : 0.0
+  end
+
+  def gameweek_weight(index, recency, ha_weight, upcoming_venue, team_id, fpl_id)
+    w = calculate_recency_weight(index, recency)
+    w *= ha_weight if upcoming_venue && venue_for_team(team_id, fpl_id) == upcoming_venue
+    w
   end
 
   def per_match_metric(player, metric, fpl_id, match_counts)
@@ -162,6 +175,8 @@ module StrategyScoring
   end
 
   def get_fixture_metric_value(player, metric, lookback = 6)
+    return get_opponent_odds(player) if metric == "opponent_odds"
+
     xg = team_expected_goals(lookback)[player.team_id]
     return 0.0 unless xg
 
@@ -170,6 +185,25 @@ module StrategyScoring
     when "expected_goals_against" then xg[:against] || 0.0
     else 0.0
     end
+  end
+
+  def get_opponent_odds(player)
+    match = current_gameweek_matches[player.team_id]
+    return 0.0 unless match
+
+    implied_team_win_probability(match, player.team_id)
+  end
+
+  def implied_team_win_probability(match, team_id)
+    if team_id == match.home_team_id
+      match.odds_home_win ? 1.0 / match.odds_home_win : 0.0
+    else
+      match.odds_away_win ? 1.0 / match.odds_away_win : 0.0
+    end
+  end
+
+  def current_gameweek_matches
+    @current_gameweek_matches ||= Match.where(gameweek: gameweek).index_by_team
   end
 
   def fixture_metric?(metric)
@@ -236,6 +270,25 @@ module StrategyScoring
 
     gw_values = gw_ids.filter_map { |gw_id| by_gw[gw_id]&.sum(&:value) }
     gw_values.empty? ? 0.0 : gw_values.sum / gw_values.size
+  end
+
+  def venue_for_team(team_id, fpl_id)
+    return nil unless fpl_id
+
+    venue_cache[team_id]&.[](fpl_id)
+  end
+
+  def venue_cache
+    @venue_cache ||= build_venue_cache
+  end
+
+  def build_venue_cache
+    cache = Hash.new { |h, k| h[k] = {} }
+    Match.joins(:gameweek).select(:home_team_id, :away_team_id, "gameweeks.fpl_id AS gw_fpl_id").each do |m|
+      cache[m.home_team_id][m.gw_fpl_id] = :home
+      cache[m.away_team_id][m.gw_fpl_id] = :away
+    end
+    cache
   end
 
   def gameweeks_by_fpl_id
