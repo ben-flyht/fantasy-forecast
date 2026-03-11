@@ -12,9 +12,9 @@ module StrategyScoring
   def calculate_player_score(player, config, current_fpl_id)
     return 0.0 if config.empty? || config[:performance].nil?
 
-    confidence = player_confidence(player, config, current_fpl_id)
     score = calculate_performance_score(player, config, current_fpl_id)
-    score += calculate_fixture_score(player, config) * confidence
+    score += calculate_fixture_score(player, config)
+    score *= player_confidence(player, config, current_fpl_id)
     apply_availability_to_score(score, player, config)
   end
 
@@ -23,7 +23,16 @@ module StrategyScoring
     return 0.0 if lookback.zero?
 
     gameweeks = available_gameweeks_for_lookback(player, current_fpl_id, lookback, DEFAULT_MIN_AVAILABILITY)
-    sample_confidence(gameweeks, player.team_id, lookback)
+    return 0.0 if gameweeks.empty?
+
+    volume = sample_confidence(gameweeks, player.team_id, lookback)
+    recency = recency_confidence(gameweeks, current_fpl_id, lookback)
+    volume * recency
+  end
+
+  def recency_confidence(gameweeks, current_fpl_id, lookback)
+    gap = current_fpl_id - gameweeks.last - 1
+    [ 1.0 - (gap.to_f / lookback), 0.0 ].max
   end
 
   def max_active_lookback(config)
