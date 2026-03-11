@@ -25,6 +25,7 @@ module Fpl
       sync_teams(data["teams"])
       sync_players(data["elements"], build_teams_hash(data["teams"]))
       sync_availability_statistics(data["elements"])
+      sync_snapshot_statistics(data["elements"])
       Rails.logger.info "FPL player sync completed. Total players: #{Player.count}"
     end
 
@@ -167,6 +168,48 @@ module Fpl
     def log_availability_sync(count, current_gw, next_gw)
       gameweeks = [ current_gw&.fpl_id, next_gw&.fpl_id ].compact.join(", ")
       Rails.logger.info "Synced #{count} availability statistics for gameweeks #{gameweeks}"
+    end
+
+    SNAPSHOT_STATS = {
+      "form" => "form",
+      "points_per_game" => "points_per_game",
+      "now_cost" => "now_cost",
+      "selected_by_percent" => "selected_by_percent",
+      "transfers_in_event" => "transfers_in",
+      "transfers_out_event" => "transfers_out"
+    }.freeze
+
+    def sync_snapshot_statistics(elements)
+      current_gw = Gameweek.current_gameweek
+      return unless current_gw
+
+      players_by_fpl_id = Player.where(fpl_id: elements.map { |e| e["id"] }).pluck(:fpl_id, :id).to_h
+      data = build_snapshot_data(elements, players_by_fpl_id, current_gw)
+      return if data.empty?
+
+      Statistic.upsert_all(data, unique_by: %i[player_id gameweek_id type])
+      Rails.logger.info "Synced #{data.size} snapshot statistics for gameweek #{current_gw.fpl_id}"
+    end
+
+    def build_snapshot_data(elements, players_by_fpl_id, gameweek)
+      now = Time.current
+
+      elements.flat_map do |element|
+        player_id = players_by_fpl_id[element["id"]]
+        next [] unless player_id
+
+        build_player_snapshots(element, player_id, gameweek, now)
+      end
+    end
+
+    def build_player_snapshots(element, player_id, gameweek, now)
+      SNAPSHOT_STATS.filter_map do |api_key, stat_type|
+        value = element[api_key]
+        next unless value.present?
+
+        { player_id: player_id, gameweek_id: gameweek.id, type: stat_type,
+          value: value.to_f, created_at: now, updated_at: now }
+      end
     end
   end
 end
