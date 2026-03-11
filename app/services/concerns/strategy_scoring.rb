@@ -3,7 +3,7 @@
 module StrategyScoring
   extend ActiveSupport::Concern
 
-  FIXTURE_METRICS = %w[expected_goals_for expected_goals_against opponent_odds].freeze
+  FIXTURE_METRICS = %w[expected_goals_for expected_goals_against team_win_odds opponent_win_odds draw_odds].freeze
   RECENCY_TYPES = %w[none linear exponential].freeze
   DEFAULT_MIN_AVAILABILITY = 50 # Players with 50%+ chance of playing are considered "available"
 
@@ -179,7 +179,7 @@ module StrategyScoring
   end
 
   def get_fixture_metric_value(player, metric, lookback = 6)
-    return get_opponent_odds(player) if metric == "opponent_odds"
+    return get_odds_metric(player, metric) if metric.end_with?("_odds")
 
     xg = team_expected_goals(lookback)[player.team_id]
     return 0.0 unless xg
@@ -191,19 +191,29 @@ module StrategyScoring
     end
   end
 
-  def get_opponent_odds(player)
+  def get_odds_metric(player, metric)
     match = current_gameweek_matches[player.team_id]
     return 0.0 unless match
 
-    implied_team_win_probability(match, player.team_id)
+    odds = odds_for_metric(match, metric, player.team_id)
+
+    odds ? 1.0 / odds : 0.0
   end
 
-  def implied_team_win_probability(match, team_id)
-    if team_id == match.home_team_id
-      match.odds_home_win ? 1.0 / match.odds_home_win : 0.0
-    else
-      match.odds_away_win ? 1.0 / match.odds_away_win : 0.0
+  def odds_for_metric(match, metric, team_id)
+    case metric
+    when "team_win_odds" then team_odds(match, team_id)
+    when "opponent_win_odds" then opponent_odds(match, team_id)
+    when "draw_odds" then match.odds_draw
     end
+  end
+
+  def team_odds(match, team_id)
+    team_id == match.home_team_id ? match.odds_home_win : match.odds_away_win
+  end
+
+  def opponent_odds(match, team_id)
+    team_id == match.home_team_id ? match.odds_away_win : match.odds_home_win
   end
 
   def current_gameweek_matches
