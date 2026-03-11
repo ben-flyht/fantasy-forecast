@@ -10,6 +10,7 @@ class StrategyOptimizer < ApplicationService
   MIN_IMPROVEMENT = 2.0
   SIGNIFICANCE_LEVEL = 0.05
   COOLDOWN_WEEKS = 4
+  TEST_SPLIT = 0.3
 
   def initialize(strategy:, candidates_per_generation: 8, generations: 2)
     @strategy = strategy
@@ -34,7 +35,8 @@ class StrategyOptimizer < ApplicationService
   end
 
   def run_optimization
-    baseline = evaluate(@strategy.strategy_config)
+    split_gameweeks!
+    baseline = evaluate(@strategy.strategy_config, @train_gameweeks)
     best = { config: @strategy.strategy_config, result: baseline }
 
     @generations.times do |gen|
@@ -43,7 +45,50 @@ class StrategyOptimizer < ApplicationService
       best = log_generation(gen, winner, best)
     end
 
+    best = validate_on_test_set(baseline, best)
     build_result(baseline, best)
+  end
+
+  def split_gameweeks!
+    all_gameweeks = available_gameweeks
+    split_idx = (all_gameweeks.size * (1.0 - TEST_SPLIT)).ceil
+    @train_gameweeks = all_gameweeks.first(split_idx)
+    @test_gameweeks = all_gameweeks.last(all_gameweeks.size - split_idx)
+
+    puts "  Split: #{@train_gameweeks.size} train / #{@test_gameweeks.size} test gameweeks"
+  end
+
+  def available_gameweeks
+    Gameweek.finished
+            .where(fpl_id: StrategyEvaluator::MIN_GAMEWEEKS..Float::INFINITY)
+            .joins("INNER JOIN performances ON performances.gameweek_id = gameweeks.id")
+            .distinct
+            .order(:fpl_id)
+            .to_a
+  end
+
+  def validate_on_test_set(baseline, best)
+    return best if best[:config] == @strategy.strategy_config
+    return best if @test_gameweeks.size < 3
+
+    test_baseline = evaluate(@strategy.strategy_config, @test_gameweeks)
+    test_candidate = evaluate(best[:config], @test_gameweeks)
+
+    log_validation(test_candidate, test_baseline)
+    test_candidate[:capture_rate] > test_baseline[:capture_rate] ? best : reset_to_baseline(baseline)
+  end
+
+  def log_validation(test_candidate, test_baseline)
+    diff = (test_candidate[:capture_rate] - test_baseline[:capture_rate]).round(1)
+    if diff > 0
+      puts "  Validated: +#{diff}% on test set"
+    else
+      puts "  Rejected: no improvement on test set (#{test_candidate[:capture_rate]}% vs #{test_baseline[:capture_rate]}%)"
+    end
+  end
+
+  def reset_to_baseline(baseline)
+    { config: @strategy.strategy_config, result: baseline }
   end
 
   def log_generation(gen, winner, best)
@@ -57,8 +102,8 @@ class StrategyOptimizer < ApplicationService
     end
   end
 
-  def evaluate(config)
-    StrategyEvaluator.call(strategy_config: config, position: @position)
+  def evaluate(config, gameweek_range = @train_gameweeks)
+    StrategyEvaluator.call(strategy_config: config, position: @position, gameweek_range: gameweek_range)
   end
 
   def find_best_candidate(candidates, baseline)
