@@ -1,7 +1,13 @@
 class PlayersController < ApplicationController
+  POSITION_SINGULARS = {
+    "goalkeepers" => "goalkeeper", "defenders" => "defender",
+    "midfielders" => "midfielder", "forwards" => "forward"
+  }.freeze
+
   before_action :set_filters, only: [ :index ]
 
   def index
+    return if redirect_to_clean_url
     return unless validate_gameweek
 
     load_consensus_rankings
@@ -77,10 +83,28 @@ class PlayersController < ApplicationController
     Player.includes(:team).find_by!(fpl_id: fpl_id)
   end
 
+  def redirect_to_clean_url
+    return false if turbo_frame_request?
+    return false unless request.path == "/" && params[:gameweek].present?
+
+    redirect_to build_clean_url, status: :moved_permanently
+    true
+  end
+
+  def build_clean_url
+    position = resolve_position(params[:position])
+    extra = params.permit(:team_id, :draft_team).to_h.compact_blank
+    gameweek_position_path(gameweek: params[:gameweek], position: "#{position}s", **extra)
+  end
+
   def set_filters
     @gameweek = params[:gameweek].present? ? params[:gameweek].to_i : current_gameweek
-    @position_filter = params[:position] || "forward"
+    @position_filter = resolve_position(params[:position])
     @team_filter = params[:team_id].present? ? params[:team_id].to_i : nil
+  end
+
+  def resolve_position(param)
+    POSITION_SINGULARS[param] || param || "forward"
   end
 
   def validate_gameweek
@@ -165,6 +189,7 @@ class PlayersController < ApplicationController
     @page_title = "Player Rankings - Gameweek #{@gameweek}"
     @page_title += " #{@position_filter.capitalize}s" if @position_filter.present?
     @page_title += " - #{Team.find_by(id: @team_filter)&.name}" if @team_filter
+    @canonical_path = gameweek_position_path(gameweek: @gameweek, position: "#{@position_filter}s")
   end
 
   def next_gameweek
