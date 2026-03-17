@@ -61,7 +61,11 @@ module Fpl
 
     def sync_match(fixture, counts)
       match_data = extract_match_data(fixture)
-      return counts[:skip] += 1 unless match_data
+
+      unless match_data
+        remove_stale_match(fixture)
+        return counts[:skip] += 1
+      end
 
       match = Match.find_or_initialize_by(fpl_id: fixture["id"])
       match.assign_attributes(match_data)
@@ -69,6 +73,16 @@ module Fpl
     rescue => e
       Rails.logger.error "Exception syncing fixture #{fixture['id']}: #{e.message}"
       counts[:error] += 1
+    end
+
+    def remove_stale_match(fixture)
+      return unless fixture["id"]
+
+      match = Match.find_by(fpl_id: fixture["id"])
+      if match
+        Rails.logger.info "Removing stale match #{fixture['id']} (fixture no longer assigned to a gameweek)"
+        match.destroy
+      end
     end
 
     def extract_match_data(fixture)
