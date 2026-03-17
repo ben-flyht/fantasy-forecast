@@ -50,56 +50,48 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should show forecasts data when available" do
-    # Create bot forecasts with ranks
     Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1)
     Forecast.create!(player: @player2, gameweek: @gameweek5, rank: 2)
 
-    get root_path, params: { gameweek: 5, position: @player.position }
+    get gameweek_position_path(gameweek: 5, position: "#{@player.position}s")
     assert_response :success
-
-    # Should show player short name from fixture
     assert_includes response.body, @player.short_name
   end
 
   test "should filter by gameweek parameter" do
-    # Create forecasts for different gameweeks
     Forecast.create!(player: @player, gameweek: @gameweek1, rank: 1)
     Forecast.create!(player: @player2, gameweek: @gameweek2, rank: 1)
 
-    # Test gameweek 1
-    get root_path, params: { gameweek: 1 }
+    get gameweek_position_path(gameweek: 1, position: "forwards")
     assert_response :success
 
-    # Test gameweek 2
-    get root_path, params: { gameweek: 2 }
+    get gameweek_position_path(gameweek: 2, position: "forwards")
     assert_response :success
   end
 
   test "should filter by position parameter" do
-    # Create midfielder player
     midfielder = Player.create!(
-      first_name: "Test",
-      last_name: "Midfielder",
-      team: @test_team,
-      position: "midfielder",
-      fpl_id: 999
+      first_name: "Test", last_name: "Midfielder",
+      team: @test_team, position: "midfielder", fpl_id: 999
     )
 
-    # Create forecasts for different positions
     Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1)
     Forecast.create!(player: midfielder, gameweek: @gameweek5, rank: 1)
 
-    # Test no position filter (defaults to forward)
-    get root_path, params: { gameweek: 5 }
+    get gameweek_position_path(gameweek: 5, position: "forwards")
     assert_response :success
 
-    # Test goalkeeper filter
-    get root_path, params: { gameweek: 5, position: "goalkeeper" }
+    get gameweek_position_path(gameweek: 5, position: "goalkeepers")
     assert_response :success
 
-    # Test midfielder filter
+    get gameweek_position_path(gameweek: 5, position: "midfielders")
+    assert_response :success
+  end
+
+  test "should redirect old query-param URLs to clean URLs" do
     get root_path, params: { gameweek: 5, position: "midfielder" }
-    assert_response :success
+    assert_response :moved_permanently
+    assert_redirected_to gameweek_position_path(gameweek: 5, position: "midfielders")
   end
 
   test "should default to next gameweek" do
@@ -111,8 +103,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should handle invalid gameweek gracefully" do
-    # No such gameweek - redirect to next gameweek
-    get root_path, params: { gameweek: 10 }
+    get gameweek_position_path(gameweek: 10, position: "forwards")
     assert_response :redirect
   end
 

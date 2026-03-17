@@ -22,10 +22,13 @@ class ScoringBreakdownTest < ActiveSupport::TestCase
   test "returns upcoming fixture info when match exists" do
     result = ScoringBreakdown.new(player: @player, strategy_config: @strategy_config, gameweek: @next_gw).call
 
-    assert_equal teams(:chelsea).short_name, result[:upcoming_fixture][:opponent]
-    assert_equal "home", result[:upcoming_fixture][:home_away]
-    assert_equal 1.4, result[:upcoming_fixture][:expected_goals_for]
-    assert_equal 0.9, result[:upcoming_fixture][:expected_goals_against]
+    fixture = result[:upcoming_fixture][:fixtures].first
+    assert_equal teams(:chelsea).short_name, fixture[:opponent]
+    assert_equal "home", fixture[:home_away]
+    assert_equal 1.4, fixture[:expected_goals_for]
+    assert_equal 0.9, fixture[:expected_goals_against]
+    assert_equal 1, result[:upcoming_fixture][:fixture_count]
+    assert_equal false, result[:upcoming_fixture][:double_gameweek]
   end
 
   test "returns nil for upcoming fixture when no match exists" do

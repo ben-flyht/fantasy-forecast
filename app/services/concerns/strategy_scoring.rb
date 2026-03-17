@@ -3,7 +3,6 @@
 module StrategyScoring
   extend ActiveSupport::Concern
 
-  FIXTURE_METRICS = %w[expected_goals_for expected_goals_against team_win_odds opponent_win_odds draw_odds].freeze
   RECENCY_TYPES = %w[none linear exponential].freeze
   DEFAULT_MIN_AVAILABILITY = 50 # Players with 50%+ chance of playing are considered "available"
 
@@ -12,10 +11,17 @@ module StrategyScoring
   def calculate_player_score(player, config, current_fpl_id)
     return 0.0 if config.empty? || config[:performance].nil?
 
-    score = calculate_performance_score(player, config, current_fpl_id)
-    score += calculate_fixture_score(player, config)
-    score *= player_confidence(player, config, current_fpl_id)
-    apply_availability_to_score(score, player, config)
+    matches = current_gameweek_matches[player.team_id] || []
+    return 0.0 if matches.empty?
+
+    total = sum_match_scores(player, config, current_fpl_id, matches)
+    total *= player_confidence(player, config, current_fpl_id)
+    apply_availability_to_score(total, player, config)
+  end
+
+  def sum_match_scores(player, config, current_fpl_id, matches)
+    performance = calculate_performance_score(player, config, current_fpl_id)
+    matches.sum { |match| performance + calculate_fixture_score_for_match(player, config, match) }
   end
 
   def player_confidence(player, config, current_fpl_id)
@@ -49,13 +55,14 @@ module StrategyScoring
     end
   end
 
-  def calculate_fixture_score(player, config)
+  def calculate_fixture_score_for_match(player, config, match)
     return 0.0 unless config[:fixture]
+
+    opponent_id = match.home_team_id == player.team_id ? match.away_team_id : match.home_team_id
 
     config[:fixture].sum do |fixture_config|
       next 0.0 if fixture_config[:weight]&.zero?
-
-      get_fixture_metric_value(player, fixture_config[:metric], fixture_config[:lookback] || 6) * fixture_config[:weight]
+      get_fixture_metric_for_match(player, fixture_config[:metric], match, opponent_id, fixture_config[:lookback] || 6) * fixture_config[:weight]
     end
   end
 
@@ -68,8 +75,6 @@ module StrategyScoring
 
   def calculate_metric_score(player, perf_config, current_fpl_id)
     metric = perf_config[:metric]
-    return get_fixture_metric_value(player, metric) if fixture_metric?(metric)
-
     lookback = perf_config[:lookback]
     recency = perf_config[:recency]
     min_availability = perf_config[:min_availability] || DEFAULT_MIN_AVAILABILITY
@@ -201,25 +206,19 @@ module StrategyScoring
     statistic&.value.to_f || 0.0
   end
 
-  def get_fixture_metric_value(player, metric, lookback = 6)
-    return get_odds_metric(player, metric) if metric.end_with?("_odds")
+  def get_fixture_metric_for_match(player, metric, match, opponent_id, lookback)
+    return odds_inverse(match, metric, player.team_id) if metric.end_with?("_odds")
 
-    xg = team_expected_goals(lookback)[player.team_id]
-    return 0.0 unless xg
-
+    xg = opponent_expected_goals(opponent_id, lookback)
     case metric
-    when "expected_goals_for" then xg[:for] || 0.0
-    when "expected_goals_against" then xg[:against] || 0.0
+    when "expected_goals_for" then xg[:for]
+    when "expected_goals_against" then xg[:against]
     else 0.0
     end
   end
 
-  def get_odds_metric(player, metric)
-    match = current_gameweek_matches[player.team_id]
-    return 0.0 unless match
-
-    odds = odds_for_metric(match, metric, player.team_id)
-
+  def odds_inverse(match, metric, team_id)
+    odds = odds_for_metric(match, metric, team_id)
     odds ? 1.0 / odds : 0.0
   end
 
@@ -240,51 +239,39 @@ module StrategyScoring
   end
 
   def current_gameweek_matches
-    @current_gameweek_matches ||= Match.where(gameweek: gameweek).index_by_team
+    @current_gameweek_matches ||= begin
+      matches = Hash.new { |h, k| h[k] = [] }
+      Match.includes(:home_team, :away_team).where(gameweek: gameweek).each do |match|
+        matches[match.home_team_id] << match
+        matches[match.away_team_id] << match
+      end
+      matches
+    end
   end
 
-  def fixture_metric?(metric)
-    FIXTURE_METRICS.include?(metric)
+  def opponent_expected_goals(opponent_id, lookback)
+    @opponent_xg ||= {}
+    key = [ opponent_id, lookback ]
+    @opponent_xg[key] ||= compute_opponent_xg(opponent_id, lookback)
   end
 
-  def team_expected_goals(lookback)
-    @team_expected_goals ||= {}
-    @team_expected_goals[lookback] ||= build_team_expected_goals(lookback)
+  def compute_opponent_xg(opponent_id, lookback)
+    gw_ids = finished_gameweek_ids_for_lookback(lookback)
+    return { for: 0.0, against: 0.0 } if gw_ids.empty?
+
+    stats = load_single_team_xg_stats(opponent_id, gw_ids)
+    { for: avg_xg_conceded(stats, gw_ids), against: avg_xg_scored(stats, gw_ids) }
   end
 
-  def build_team_expected_goals(lookback)
-    matches = Match.where(gameweek: gameweek)
-    finished_gw_ids = finished_gameweek_ids_for_lookback(lookback)
-    return {} if finished_gw_ids.empty?
-
-    team_stats = load_team_xg_stats(matches, finished_gw_ids)
-    map_match_xg(matches, team_stats, finished_gw_ids)
+  def load_single_team_xg_stats(team_id, gw_ids)
+    Statistic.joins(:player)
+             .where(players: { team_id: team_id })
+             .where(gameweek_id: gw_ids)
+             .where(type: %w[expected_goals expected_goals_conceded])
   end
 
   def finished_gameweek_ids_for_lookback(lookback)
     Gameweek.where(is_finished: true).order(fpl_id: :desc).limit(lookback).pluck(:id)
-  end
-
-  def load_team_xg_stats(matches, finished_gw_ids)
-    team_ids = matches.flat_map { |m| [ m.home_team_id, m.away_team_id ] }.uniq
-
-    Statistic.joins(:player)
-             .where(players: { team_id: team_ids })
-             .where(gameweek_id: finished_gw_ids)
-             .where(type: %w[expected_goals expected_goals_conceded])
-             .select(:type, :value, :gameweek_id, "players.team_id AS team_id")
-             .group_by(&:team_id)
-  end
-
-  def map_match_xg(matches, team_stats, finished_gw_ids)
-    matches.each_with_object({}) do |match, hash|
-      hash[match.home_team_id] = xg_pair(team_stats[match.away_team_id], finished_gw_ids)
-      hash[match.away_team_id] = xg_pair(team_stats[match.home_team_id], finished_gw_ids)
-    end
-  end
-
-  def xg_pair(opponent_stats, finished_gw_ids)
-    { for: avg_xg_conceded(opponent_stats, finished_gw_ids), against: avg_xg_scored(opponent_stats, finished_gw_ids) }
   end
 
   # Average of opponent's expected_goals_conceded per GW (max per team per GW for full-match value)
