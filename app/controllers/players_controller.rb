@@ -64,10 +64,9 @@ class PlayersController < ApplicationController
   def load_upcoming_fixture
     return unless @next_gameweek && @player.team
 
-    @upcoming_match = Match.includes(:home_team, :away_team)
-                           .where(gameweek: @next_gameweek)
-                           .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
-                           .first
+    @upcoming_matches = Match.includes(:home_team, :away_team)
+                             .where(gameweek: @next_gameweek)
+                             .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
   end
 
   def find_player_from_param

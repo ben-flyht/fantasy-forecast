@@ -94,14 +94,20 @@ class ExplanationBuilder
   end
 
   def fixture_sentence(forecast, breakdown)
-    fixture = breakdown[:upcoming_fixture]
-    return nil unless fixture
+    upcoming = breakdown[:upcoming_fixture]
+    return nil unless upcoming
 
     player_name = forecast.player.short_name
-    venue = fixture[:home_away] == "home" ? "at home" : "away"
     xg_part = fixture_xg_clause(breakdown[:fixture_difficulty])
 
-    "#{player_name} faces #{fixture[:opponent_name]} #{venue} this week#{xg_part}."
+    if upcoming[:double_gameweek]
+      opponents = upcoming[:fixtures].map { |f| "#{f[:opponent_name]} (#{f[:home_away] == 'home' ? 'H' : 'A'})" }
+      "#{player_name} has a double gameweek against #{join_with_and(opponents)}#{xg_part}."
+    else
+      f = upcoming[:fixtures].first
+      venue = f[:home_away] == "home" ? "at home" : "away"
+      "#{player_name} faces #{f[:opponent_name]} #{venue} this week#{xg_part}."
+    end
   end
 
   def fixture_xg_clause(difficulties)

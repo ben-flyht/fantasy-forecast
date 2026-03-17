@@ -36,11 +36,13 @@
 
 <!-- Top Section: Fixture & Form -->
 <div class="mt-8 flex flex-wrap items-start gap-8">
-  <% if @upcoming_match %>
+  <% if @upcoming_matches&.any? %>
     <div>
-      <h2 class="text-base/6 font-semibold text-zinc-950">Next Fixture</h2>
-      <div class="mt-4">
-        <%= render FixtureComponent.new(match: @upcoming_match, player: @player) %>
+      <h2 class="text-base/6 font-semibold text-zinc-950"><%= @upcoming_matches.size > 1 ? "Next Fixtures" : "Next Fixture" %></h2>
+      <div class="mt-4 flex flex-col gap-2">
+        <% @upcoming_matches.each do |match| %>
+          <%= render FixtureComponent.new(match: match, player: @player) %>
+        <% end %>
       </div>
     </div>
   <% end %>
