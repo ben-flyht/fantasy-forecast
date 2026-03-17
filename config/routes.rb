@@ -1,6 +1,10 @@
 Rails.application.routes.draw do
   root "players#index"
 
+  # SEO-friendly forecast URLs
+  get "gameweeks/:gameweek/:position", to: "players#index", as: :gameweek_position,
+      constraints: { gameweek: /\d+/, position: /goalkeepers|defenders|midfielders|forwards/ }
+
   # Redirect old /players path to root
   get "players", to: redirect("/", status: 301)
 

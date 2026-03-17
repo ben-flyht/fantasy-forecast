@@ -39,10 +39,14 @@ class ScoringBreakdown
   end
 
   def upcoming_fixture_info
-    match = find_upcoming_match
-    return nil unless match
+    matches = find_matches_for_gameweek(@gameweek)
+    return nil if matches.empty?
 
-    build_fixture_info(match)
+    {
+      fixtures: matches.map { |m| build_fixture_info(m) },
+      fixture_count: matches.size,
+      double_gameweek: matches.size > 1
+    }
   end
 
   def build_fixture_info(match)
@@ -107,7 +111,9 @@ class ScoringBreakdown
   def performance_breakdown
     return [] unless @strategy_config[:performance]
 
-    @strategy_config[:performance].map { |config| build_metric_breakdown(config) }
+    @strategy_config[:performance]
+      .reject { |config| config[:weight]&.zero? }
+      .map { |config| build_metric_breakdown(config) }
   end
 
   def build_metric_breakdown(config)
@@ -228,14 +234,17 @@ class ScoringBreakdown
   end
 
   def get_fixture_value(metric, lookback)
-    match = find_upcoming_match
-    return nil unless match
+    matches = find_matches_for_gameweek(@gameweek)
+    return nil if matches.empty?
 
-    opponent_team_id = match.home_team_id == @player.team_id ? match.away_team_id : match.home_team_id
-    case metric
-    when "expected_goals_for" then compute_xg_conceded(opponent_team_id, lookback)
-    when "expected_goals_against" then compute_xg_scored(opponent_team_id, lookback)
+    values = matches.filter_map do |match|
+      opponent_team_id = match.home_team_id == @player.team_id ? match.away_team_id : match.home_team_id
+      case metric
+      when "expected_goals_for" then compute_xg_conceded(opponent_team_id, lookback)
+      when "expected_goals_against" then compute_xg_scored(opponent_team_id, lookback)
+      end
     end
+    values.empty? ? nil : values.sum.round(2)
   end
 
   def availability_info
@@ -252,10 +261,6 @@ class ScoringBreakdown
     when 1..24 then "unlikely to play"
     else "ruled out"
     end
-  end
-
-  def find_upcoming_match
-    find_matches_for_gameweek(@gameweek).first
   end
 
   def human_metric_name(metric)

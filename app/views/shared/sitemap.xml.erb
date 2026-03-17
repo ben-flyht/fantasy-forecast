@@ -7,13 +7,15 @@
     <priority>1.0</priority>
   </url>
 
-  <!-- Position Rankings Pages -->
-  <% %w[forward midfielder defender goalkeeper].each do |position| %>
+  <!-- Gameweek + Position Rankings Pages -->
+  <% @gameweeks_with_forecasts.each do |gw| %>
+    <% %w[forwards midfielders defenders goalkeepers].each do |position| %>
   <url>
-    <loc><%= @base_url %><%= root_path(position: position) %></loc>
+    <loc><%= @base_url %><%= gameweek_position_path(gameweek: gw, position: position) %></loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
+    <% end %>
   <% end %>
 
   <!-- Player Pages (grouped by position) -->

@@ -66,6 +66,18 @@ class BotForecasterTest < ActiveSupport::TestCase
       )
     end
 
+    @opponent_team = Team.find_or_create_by!(fpl_id: 401) do |t|
+      t.name = "Bot Forecaster Opponent"
+      t.short_name = "BFO"
+    end
+
+    Match.create!(
+      fpl_id: 40100,
+      home_team: @team,
+      away_team: @opponent_team,
+      gameweek: @next_gw
+    )
+
     @strategy_config = {
       performance: [ { metric: "total_points", weight: 1.0, lookback: 3, recency: "none" } ]
     }

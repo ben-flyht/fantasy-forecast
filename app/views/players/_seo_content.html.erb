@@ -1,0 +1,119 @@
+<% if @consensus_rankings.any? %>
+  <% sunshine = @consensus_rankings.select { |r| r.tier == 1 && r.bot_rank.present? } %>
+  <% partly_cloudy = @consensus_rankings.select { |r| r.tier == 2 && r.bot_rank.present? } %>
+
+  <div class="mt-8 space-y-6 text-sm text-zinc-600">
+    <div>
+      <h2 class="text-lg font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> Rankings — Gameweek <%= @gameweek %></h2>
+      <p class="mt-2">
+        Our algorithm ranks every Premier League <%= @position_filter %> for Gameweek <%= @gameweek %> by analyzing recent form, upcoming fixtures, and expected goals data.
+        Players are grouped into weather tiers from <%= TierCalculator::TIERS[1][:symbol] %> Sunshine (must-start picks) to <%= TierCalculator::TIERS[5][:symbol] %> Snow (best avoided).
+      </p>
+    </div>
+
+    <% if sunshine.any? %>
+      <div>
+        <h3 class="font-semibold text-zinc-900"><%= TierCalculator::TIERS[1][:symbol] %> Top <%= @position_filter.capitalize %> Picks for GW<%= @gameweek %></h3>
+        <ul class="mt-2 space-y-2">
+          <% sunshine.first(5).each do |r| %>
+            <% player = @players_by_id[r.player_id] %>
+            <% next unless player %>
+            <% fixtures = (@matches_by_team[player.team_id] || []).map { |m|
+                 opponent = m.home_team_id == player.team_id ? m.away_team.name : m.home_team.name
+                 venue = m.home_team_id == player.team_id ? "home" : "away"
+                 "#{opponent} (#{venue})"
+               } %>
+            <li>
+              <%= link_to player.short_name, player_path(player), class: "font-semibold text-zinc-900 hover:underline" %>
+              (<%= player.team&.name %><%= " vs #{fixtures.join(', ')}" if fixtures.any? %>)
+            </li>
+          <% end %>
+        </ul>
+        <p class="mt-2">
+          These <%= @position_filter %>s have the strongest combination of form, fixtures, and underlying stats heading into Gameweek <%= @gameweek %>.
+        </p>
+      </div>
+    <% end %>
+
+    <% if partly_cloudy.any? %>
+      <div>
+        <h3 class="font-semibold text-zinc-900"><%= TierCalculator::TIERS[2][:symbol] %> Strong <%= @position_filter.capitalize %> Alternatives for GW<%= @gameweek %></h3>
+        <ul class="mt-2 space-y-2">
+          <% partly_cloudy.first(5).each do |r| %>
+            <% player = @players_by_id[r.player_id] %>
+            <% next unless player %>
+            <% fixtures = (@matches_by_team[player.team_id] || []).map { |m|
+                 opponent = m.home_team_id == player.team_id ? m.away_team.name : m.home_team.name
+                 venue = m.home_team_id == player.team_id ? "home" : "away"
+                 "#{opponent} (#{venue})"
+               } %>
+            <li>
+              <%= link_to player.short_name, player_path(player), class: "font-semibold text-zinc-900 hover:underline" %>
+              (<%= player.team&.name %><%= " vs #{fixtures.join(', ')}" if fixtures.any? %>)
+            </li>
+          <% end %>
+        </ul>
+        <p class="mt-2">
+          These <%= @position_filter %>s offer reliable upside as slightly cheaper or less-owned options for Gameweek <%= @gameweek %>.
+        </p>
+      </div>
+    <% end %>
+
+    <div>
+      <h3 class="font-semibold text-zinc-900">How Our FPL <%= @position_filter.capitalize %> Rankings Work</h3>
+      <p class="mt-1">
+        Fantasy Forecast uses a data-driven algorithm that weighs recent player performance, team expected goals, fixture difficulty, and betting odds to produce weekly rankings for every Premier League position.
+        Rankings update automatically each gameweek and are designed to help FPL managers make informed captain, transfer, and starting XI decisions.
+      </p>
+    </div>
+
+    <div>
+      <h3 class="font-semibold text-zinc-900">Weather Tier System</h3>
+      <ul class="mt-1 space-y-1">
+        <% TierCalculator::TIERS.each do |_tier, info| %>
+          <li><%= info[:symbol] %> <span class="font-semibold text-zinc-900"><%= info[:name] %></span> — <%= info[:description] %></li>
+        <% end %>
+      </ul>
+    </div>
+
+    <div>
+      <h3 class="font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> FAQ</h3>
+      <dl class="mt-2 space-y-3">
+        <div>
+          <dt class="font-medium text-zinc-900">Who are the best FPL <%= @position_filter %>s for Gameweek <%= @gameweek %>?</dt>
+          <dd class="mt-1">
+            <% if sunshine.any? %>
+              Our top-rated <%= @position_filter %>s for GW<%= @gameweek %> are
+              <%= sunshine.first(3).map { |r| "#{r.name} (#{@players_by_id[r.player_id]&.team&.short_name})" }.join(", ") %>.
+              These players have the best combination of recent form and favourable fixtures.
+            <% else %>
+              Check the rankings table above for the latest picks — rankings update automatically based on form and fixtures.
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium text-zinc-900">How often do FPL <%= @position_filter %> rankings update?</dt>
+          <dd class="mt-1">Rankings update automatically every hour, incorporating the latest player statistics, fixture data, and team news from the Premier League.</dd>
+        </div>
+        <div>
+          <dt class="font-medium text-zinc-900">What data is used to rank FPL <%= @position_filter %>s?</dt>
+          <dd class="mt-1">Our algorithm analyses recent performance metrics (points, goals, assists, clean sheets, expected goals), upcoming fixture difficulty based on opponent strength, and betting odds to produce a composite score for each player.</dd>
+        </div>
+      </dl>
+    </div>
+
+    <% other_positions = %w[goalkeeper defender midfielder forward].reject { |p| p == @position_filter } %>
+    <div>
+      <h3 class="font-semibold text-zinc-900">More FPL Rankings</h3>
+      <p class="mt-1">
+        Browse rankings for other positions:
+        <% other_positions.each_with_index do |pos, i| %>
+          <%= link_to "#{pos.capitalize}s",
+              gameweek_position_path(gameweek: @gameweek, position: "#{pos}s"),
+              class: "text-blue-600 hover:underline",
+              data: { turbo_frame: "_top" } %><%= i == other_positions.size - 1 ? "." : "," %>
+        <% end %>
+      </p>
+    </div>
+  </div>
+<% end %>

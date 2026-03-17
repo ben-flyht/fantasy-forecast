@@ -52,8 +52,21 @@ class BotForecaster < ApplicationService
   end
 
   def player_available?(player)
+    return false unless team_has_fixture?(player.team_id)
+
     chance = player.chance_of_playing(gameweek)
     chance.nil? || chance > 0
+  end
+
+  def team_has_fixture?(team_id)
+    teams_with_fixtures.include?(team_id)
+  end
+
+  def teams_with_fixtures
+    @teams_with_fixtures ||= Match.where(gameweek: gameweek)
+      .pluck(:home_team_id, :away_team_id)
+      .flatten
+      .to_set
   end
 
   def assign_ranks(scored_players)
