@@ -14,16 +14,14 @@ module StrategyScoring
     matches = current_gameweek_matches[player.team_id] || []
     return 0.0 if matches.empty?
 
-    performance = calculate_performance_score(player, config, current_fpl_id)
-    confidence = player_confidence(player, config, current_fpl_id)
-
-    total = matches.sum do |match|
-      fixture = calculate_fixture_score_for_match(player, config, match)
-      performance + fixture
-    end
-
-    total *= confidence
+    total = sum_match_scores(player, config, current_fpl_id, matches)
+    total *= player_confidence(player, config, current_fpl_id)
     apply_availability_to_score(total, player, config)
+  end
+
+  def sum_match_scores(player, config, current_fpl_id, matches)
+    performance = calculate_performance_score(player, config, current_fpl_id)
+    matches.sum { |match| performance + calculate_fixture_score_for_match(player, config, match) }
   end
 
   def player_confidence(player, config, current_fpl_id)
@@ -209,17 +207,19 @@ module StrategyScoring
   end
 
   def get_fixture_metric_for_match(player, metric, match, opponent_id, lookback)
-    if metric.end_with?("_odds")
-      odds = odds_for_metric(match, metric, player.team_id)
-      odds ? 1.0 / odds : 0.0
-    else
-      xg = opponent_expected_goals(opponent_id, lookback)
-      case metric
-      when "expected_goals_for" then xg[:for]
-      when "expected_goals_against" then xg[:against]
-      else 0.0
-      end
+    return odds_inverse(match, metric, player.team_id) if metric.end_with?("_odds")
+
+    xg = opponent_expected_goals(opponent_id, lookback)
+    case metric
+    when "expected_goals_for" then xg[:for]
+    when "expected_goals_against" then xg[:against]
+    else 0.0
     end
+  end
+
+  def odds_inverse(match, metric, team_id)
+    odds = odds_for_metric(match, metric, team_id)
+    odds ? 1.0 / odds : 0.0
   end
 
   def odds_for_metric(match, metric, team_id)
@@ -251,16 +251,16 @@ module StrategyScoring
 
   def opponent_expected_goals(opponent_id, lookback)
     @opponent_xg ||= {}
-    key = [opponent_id, lookback]
-    @opponent_xg[key] ||= begin
-      gw_ids = finished_gameweek_ids_for_lookback(lookback)
-      if gw_ids.empty?
-        { for: 0.0, against: 0.0 }
-      else
-        stats = load_single_team_xg_stats(opponent_id, gw_ids)
-        { for: avg_xg_conceded(stats, gw_ids), against: avg_xg_scored(stats, gw_ids) }
-      end
-    end
+    key = [ opponent_id, lookback ]
+    @opponent_xg[key] ||= compute_opponent_xg(opponent_id, lookback)
+  end
+
+  def compute_opponent_xg(opponent_id, lookback)
+    gw_ids = finished_gameweek_ids_for_lookback(lookback)
+    return { for: 0.0, against: 0.0 } if gw_ids.empty?
+
+    stats = load_single_team_xg_stats(opponent_id, gw_ids)
+    { for: avg_xg_conceded(stats, gw_ids), against: avg_xg_scored(stats, gw_ids) }
   end
 
   def load_single_team_xg_stats(team_id, gw_ids)

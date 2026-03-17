@@ -61,18 +61,23 @@ module Fpl
 
     def sync_match(fixture, counts)
       match_data = extract_match_data(fixture)
+      return skip_or_remove(fixture, counts) unless match_data
 
-      unless match_data
-        remove_stale_match(fixture)
-        return counts[:skip] += 1
-      end
-
-      match = Match.find_or_initialize_by(fpl_id: fixture["id"])
-      match.assign_attributes(match_data)
-      save_match(match, fixture, counts)
+      upsert_match(match_data, fixture, counts)
     rescue => e
       Rails.logger.error "Exception syncing fixture #{fixture['id']}: #{e.message}"
       counts[:error] += 1
+    end
+
+    def skip_or_remove(fixture, counts)
+      remove_stale_match(fixture)
+      counts[:skip] += 1
+    end
+
+    def upsert_match(match_data, fixture, counts)
+      match = Match.find_or_initialize_by(fpl_id: fixture["id"])
+      match.assign_attributes(match_data)
+      save_match(match, fixture, counts)
     end
 
     def remove_stale_match(fixture)

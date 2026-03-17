@@ -100,13 +100,17 @@ class ExplanationBuilder
     player_name = forecast.player.short_name
     xg_part = fixture_xg_clause(breakdown[:fixture_difficulty])
 
+    "#{player_name} #{fixture_opponent_clause(upcoming)}#{xg_part}."
+  end
+
+  def fixture_opponent_clause(upcoming)
     if upcoming[:double_gameweek]
       opponents = upcoming[:fixtures].map { |f| "#{f[:opponent_name]} (#{f[:home_away] == 'home' ? 'H' : 'A'})" }
-      "#{player_name} has a double gameweek against #{join_with_and(opponents)}#{xg_part}."
+      "has a double gameweek against #{join_with_and(opponents)}"
     else
       f = upcoming[:fixtures].first
       venue = f[:home_away] == "home" ? "at home" : "away"
-      "#{player_name} faces #{f[:opponent_name]} #{venue} this week#{xg_part}."
+      "faces #{f[:opponent_name]} #{venue} this week"
     end
   end
 
