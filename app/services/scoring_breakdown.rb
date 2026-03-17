@@ -111,7 +111,9 @@ class ScoringBreakdown
   def performance_breakdown
     return [] unless @strategy_config[:performance]
 
-    @strategy_config[:performance].map { |config| build_metric_breakdown(config) }
+    @strategy_config[:performance]
+      .reject { |config| config[:weight]&.zero? }
+      .map { |config| build_metric_breakdown(config) }
   end
 
   def build_metric_breakdown(config)
