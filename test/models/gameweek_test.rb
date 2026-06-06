@@ -209,6 +209,19 @@ class GameweekTest < ActiveSupport::TestCase
     assert_nil Gameweek.next_gameweek
   end
 
+  test "with_forecasts returns only gameweeks that have forecasts, without duplicates" do
+    forecasted = Gameweek.create!(fpl_id: 1, name: "Gameweek 1", start_time: Time.current)
+    unforecasted = Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: Time.current + 1.week)
+
+    Forecast.create!(player: players(:goalkeeper), gameweek: forecasted, rank: 1)
+    Forecast.create!(player: players(:midfielder), gameweek: forecasted, rank: 2)
+
+    result = Gameweek.with_forecasts
+    assert_includes result, forecasted
+    assert_not_includes result, unforecasted
+    assert_equal 1, result.count
+  end
+
   test "ordered scope returns gameweeks ordered by fpl_id" do
     gw3 = Gameweek.create!(fpl_id: 3, name: "Gameweek 3", start_time: Time.current + 2.weeks)
     gw1 = Gameweek.create!(fpl_id: 1, name: "Gameweek 1", start_time: Time.current)

@@ -196,14 +196,11 @@ class PlayersController < ApplicationController
   end
 
   def current_gameweek
-    next_gameweek&.fpl_id || Gameweek.current_gameweek&.fpl_id || 1
+    next_gameweek&.fpl_id || Gameweek.current_gameweek&.fpl_id || available_gameweeks_with_forecasts.first || 1
   end
 
   def available_gameweeks_with_forecasts
-    starting_gw = Gameweek::STARTING_GAMEWEEK
-    return [ starting_gw ] unless next_gameweek
-
-    (starting_gw..next_gameweek.fpl_id).to_a.reverse
+    @available_gameweeks_with_forecasts ||= Gameweek.with_forecasts.order(fpl_id: :desc).pluck(:fpl_id)
   end
 
   def build_match_counts_for(performances)
