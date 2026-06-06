@@ -120,6 +120,20 @@ class BotForecasterTest < ActiveSupport::TestCase
     end
   end
 
+  test "breaks score ties deterministically by player id" do
+    # Force every player to the same score so ordering is decided purely by the tiebreak.
+    Statistic.where(type: "total_points").update_all(value: 5)
+
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
+
+    FantasyForecast::POSITION_CONFIG.each_key do |position|
+      player_ids = forecasts.select { |f| f.player.position == position }
+                            .sort_by(&:rank)
+                            .map(&:player_id)
+      assert_equal player_ids.sort, player_ids, "#{position} ties should rank by ascending player id"
+    end
+  end
+
   test "all forecasts are for the specified gameweek" do
     forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
 
