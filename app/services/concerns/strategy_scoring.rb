@@ -9,6 +9,7 @@ module StrategyScoring
   private
 
   def calculate_player_score(player, config, current_fpl_id)
+    @scoring_config = config
     return 0.0 if config.empty? || config[:performance].nil?
 
     matches = current_gameweek_matches[player.team_id] || []
@@ -166,11 +167,32 @@ module StrategyScoring
   end
 
   def player_availability_map(player)
-    player.statistics.select { |s| s.type == "chance_of_playing" }.index_by(&:gameweek_id)
+    statistics_for(player).select { |s| s.type == "chance_of_playing" }.index_by(&:gameweek_id)
   end
 
   def player_minutes_map(player)
-    player.statistics.select { |s| s.type == "minutes" }.index_by(&:gameweek_id)
+    statistics_for(player).select { |s| s.type == "minutes" }.index_by(&:gameweek_id)
+  end
+
+  # Per-player statistics, scoped to only the stat types this strategy reads and
+  # loaded one player at a time. This keeps the full statistics table (hundreds
+  # of thousands of rows) out of memory: only the current player's rows are
+  # resident, so callers must stream players rather than holding them all.
+  def statistics_for(player)
+    return @loaded_statistics if @loaded_statistics_player_id == player.id
+
+    @loaded_statistics_player_id = player.id
+    @loaded_statistics = Statistic.where(player_id: player.id, type: needed_statistic_types).to_a
+  end
+
+  def needed_statistic_types
+    metrics = (@scoring_config&.dig(:performance) || []).reject { |p| p[:weight]&.zero? }.map { |p| p[:metric] }
+    (metrics + %w[minutes chance_of_playing]).compact.uniq
+  end
+
+  def chance_of_playing_for(player)
+    stat = statistics_for(player).find { |s| s.gameweek_id == gameweek&.id && s.type == "chance_of_playing" }
+    stat&.value&.to_i || 100
   end
 
   def filter_available_gameweeks(current_fpl_id, availability_by_gw_id, minutes_by_gw_id, min_availability)
@@ -202,7 +224,7 @@ module StrategyScoring
     gw = gameweeks_by_fpl_id[fpl_id]
     return 0.0 unless gw
 
-    statistic = player.statistics.find { |s| s.gameweek_id == gw.id && s.type == metric }
+    statistic = statistics_for(player).find { |s| s.gameweek_id == gw.id && s.type == metric }
     statistic&.value.to_f || 0.0
   end
 
@@ -329,7 +351,7 @@ module StrategyScoring
   end
 
   def apply_availability(score, player, weight)
-    chance = player.chance_of_playing(gameweek) || 100
+    chance = chance_of_playing_for(player)
     adjusted = score * availability_multiplier(chance, weight)
     chance == 0 ? adjusted - (1000.0 * weight) : adjusted
   end
