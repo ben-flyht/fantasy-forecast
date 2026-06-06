@@ -14,7 +14,7 @@ class PositionForecaster < ApplicationService
     validate_inputs!
     ranked_players = rank_all_players
     @top_score = ranked_players.first&.dig(:score) || 0
-    ranked_players.map { |data| create_or_update_forecast(data[:player], data[:rank], data[:score]) }
+    ranked_players.map { |data| create_or_update_forecast(data[:player_id], data[:rank], data[:score]) }
   end
 
   private
@@ -29,25 +29,27 @@ class PositionForecaster < ApplicationService
   end
 
   def rank_all_players
-    players = Player.where(position: position).includes(:statistics, :team)
-    score_and_rank_players(players)
-  end
-
-  def score_and_rank_players(players)
     current_fpl_id = gameweek.fpl_id
-    scored = players.map { |p| build_scored_player(p, current_fpl_id) }
+    scored = []
+    Player.where(position: position).find_each do |player|
+      scored << build_scored_player(player, current_fpl_id)
+    end
     assign_ranks(scored)
   end
 
   def build_scored_player(player, current_fpl_id)
-    { player: player, score: calculate_player_score(player, strategy_config, current_fpl_id), available: player_available?(player) }
+    {
+      player_id: player.id,
+      short_name: player.short_name,
+      score: calculate_player_score(player, strategy_config, current_fpl_id),
+      available: player_available?(player)
+    }
   end
 
   def player_available?(player)
     return false unless team_has_fixture?(player.team_id)
 
-    chance = player.chance_of_playing(gameweek)
-    chance.nil? || chance > 0
+    chance_of_playing_for(player).positive?
   end
 
   def team_has_fixture?(team_id)
@@ -63,21 +65,23 @@ class PositionForecaster < ApplicationService
 
   def assign_ranks(scored_players)
     available, unavailable = scored_players.partition { |p| p[:available] }
-    ranked_available = rank_by_score(available)
-    unranked_unavailable = sort_alphabetically(unavailable)
-    ranked_available + unranked_unavailable
+    rank_by_score(available) + sort_alphabetically(unavailable)
   end
 
   def rank_by_score(players)
-    players.sort_by { |p| -p[:score] }.each_with_index.map { |item, i| { player: item[:player], rank: i + 1, score: item[:score] } }
+    players.sort_by { |p| [ -p[:score], p[:player_id] ] }.each_with_index.map do |item, i|
+      { player_id: item[:player_id], rank: i + 1, score: item[:score] }
+    end
   end
 
   def sort_alphabetically(players)
-    players.sort_by { |p| p[:player].short_name.downcase }.map { |item| { player: item[:player], rank: nil, score: item[:score] } }
+    players.sort_by { |p| [ p[:short_name].to_s.downcase, p[:player_id] ] }.map do |item|
+      { player_id: item[:player_id], rank: nil, score: item[:score] }
+    end
   end
 
-  def create_or_update_forecast(player, rank, score)
-    forecast = Forecast.find_or_initialize_by(player: player, gameweek: gameweek)
+  def create_or_update_forecast(player_id, rank, score)
+    forecast = Forecast.find_or_initialize_by(player_id: player_id, gameweek: gameweek)
     forecast.strategy = strategy if strategy
     forecast.rank = rank
     forecast.score = score
