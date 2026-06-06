@@ -102,6 +102,25 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Gameweek 2"
   end
 
+  test "should default to latest forecasted gameweek when the season is over" do
+    # Season finished: every gameweek done, none current or next
+    [ @gameweek1, @gameweek2, @gameweek5 ].each do |gw|
+      gw.update!(is_current: false, is_next: false, is_finished: true)
+    end
+
+    Forecast.create!(player: @player, gameweek: @gameweek1, rank: 1)
+    Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1)
+
+    get root_path
+    assert_response :success
+
+    # Defaults to the latest gameweek that has forecasts (5), not a hardcoded start
+    assert_select "select[name=gameweek] option[selected]", text: "5"
+    # Dropdown lists only forecasted weeks: 1 is present, 2 (no forecasts) is absent
+    assert_select "select[name=gameweek] option", text: "1"
+    assert_select "select[name=gameweek] option", text: "2", count: 0
+  end
+
   test "should handle invalid gameweek gracefully" do
     get gameweek_position_path(gameweek: 10, position: "forwards")
     assert_response :redirect
