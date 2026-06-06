@@ -16,19 +16,19 @@ namespace :ff do
 
     puts "Generating forecasts for Gameweek #{gameweek.fpl_id}..."
 
-    total_forecasts = 0
-    strategies.each do |strategy|
-      position_info = strategy.position_specific? ? "[#{strategy.position}]" : "[all positions]"
-      forecasts = strategy.generate_forecasts(gameweek, generate_explanations: false)
-      puts "  #{position_info}: #{forecasts.count} forecasts"
-      total_forecasts += forecasts.count
+    run = ForecastRun.call(gameweek: gameweek, strategies: strategies)
+    run.outcomes.each do |outcome|
+      status = outcome[:error] ? "FAILED (#{outcome[:error].class}: #{outcome[:error].message})" : "#{outcome[:count]} forecasts"
+      puts "  [#{outcome[:position]}]: #{status}"
     end
 
-    puts "#{total_forecasts} forecasts from #{strategies.count} strategies"
+    puts "#{run.total_forecasts} forecasts from #{strategies.count} strategies"
     puts "\nGenerating explanations..."
 
     total_explained = 0
     strategies.each do |strategy|
+      position_label = strategy.position || "all positions"
+
       forecasts = Forecast.joins(:player)
                           .includes(player: [ :team, :statistics, :performances ])
                           .where(gameweek: gameweek, strategy: strategy)
@@ -47,12 +47,19 @@ namespace :ff do
         Forecast.where(id: forecast_id).update_all(explanation: explanation)
       end
 
-      position_label = strategy.position || "all positions"
       puts "  [#{position_label}]: #{results.count} explanations"
       total_explained += results.count
+    rescue StandardError => e
+      Rails.logger.error("Explanation generation failed for #{position_label}: #{e.class}: #{e.message}")
+      warn "  [#{position_label}]: explanations FAILED (#{e.class}: #{e.message})"
     end
 
     puts "#{total_explained} explanations generated"
+
+    if run.failures.any?
+      failed_positions = run.failures.map { |outcome| outcome[:position] }.join(", ")
+      abort "\nForecast generation failed for: #{failed_positions}. Other positions were still generated; re-run after investigating."
+    end
   end
 
   desc "Backfill forecasts for finished gameweeks (usage: rake ff:backfill or ff:backfill[5] or ff:backfill[1,8])"
