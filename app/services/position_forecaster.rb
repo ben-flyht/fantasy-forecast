@@ -3,7 +3,7 @@ class PositionForecaster < ApplicationService
 
   attr_reader :gameweek, :strategy_config, :position, :strategy
 
-  def initialize(strategy_config:, position:, gameweek:, strategy: nil, **)
+  def initialize(strategy_config:, position:, gameweek:, strategy: nil)
     @strategy_config = strategy_config
     @position = position
     @gameweek = gameweek

@@ -45,7 +45,6 @@ class PlayersController < ApplicationController
     @forecast = {
       rank: forecast.rank,
       score: forecast.score,
-      explanation: forecast.explanation,
       gameweek: @next_gameweek.fpl_id,
       tier: TierCalculator.calculate_player_tier(forecast, @player.position)
     }

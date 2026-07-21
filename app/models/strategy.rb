@@ -25,11 +25,11 @@ class Strategy < ApplicationRecord
     position.present?
   end
 
-  def generate_forecasts(gameweek = nil, generate_explanations: true)
+  def generate_forecasts(gameweek = nil)
     gameweek ||= Gameweek.next_gameweek
     return [] unless gameweek
 
-    position_specific? ? generate_position_forecasts(gameweek, generate_explanations) : generate_all_forecasts(gameweek, generate_explanations)
+    position_specific? ? generate_position_forecasts(gameweek) : generate_all_forecasts(gameweek)
   end
 
   def strategy_explanation
@@ -41,12 +41,12 @@ class Strategy < ApplicationRecord
 
   private
 
-  def generate_position_forecasts(gameweek, generate_explanations)
-    PositionForecaster.call(strategy_config:, position:, gameweek:, strategy: self, generate_explanations:)
+  def generate_position_forecasts(gameweek)
+    PositionForecaster.call(strategy_config:, position:, gameweek:, strategy: self)
   end
 
-  def generate_all_forecasts(gameweek, generate_explanations)
-    BotForecaster.call(strategy_config:, gameweek:, strategy: self, generate_explanations:)
+  def generate_all_forecasts(gameweek)
+    BotForecaster.call(strategy_config:, gameweek:, strategy: self)
   end
 
   def build_explanation(config)

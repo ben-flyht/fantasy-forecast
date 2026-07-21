@@ -105,4 +105,29 @@ class Odds::SyncFromCsvTest < ActiveSupport::TestCase
     assert_equal 0, result[:matched]
     assert_equal 0, result[:unmatched]
   end
+
+  test "needed? is true when a next-gameweek fixture has no odds" do
+    gw = Gameweek.create!(fpl_id: 800, name: "GW800", start_time: 1.day.from_now, is_next: true)
+    Match.create!(fpl_id: 8001, home_team: @arsenal, away_team: @liverpool, gameweek: gw)
+
+    assert Odds::SyncFromCsv.needed?
+  end
+
+  test "needed? is false when every next-gameweek fixture already has odds" do
+    gw = Gameweek.create!(fpl_id: 800, name: "GW800", start_time: 1.day.from_now, is_next: true)
+    Match.create!(fpl_id: 8001, home_team: @arsenal, away_team: @liverpool, gameweek: gw,
+                  odds_home_win: 1.5, odds_draw: 3.0, odds_away_win: 4.0)
+
+    assert_not Odds::SyncFromCsv.needed?
+  end
+
+  test "needed? is false when the next gameweek has no fixtures yet" do
+    Gameweek.create!(fpl_id: 800, name: "GW800", start_time: 1.day.from_now, is_next: true)
+
+    assert_not Odds::SyncFromCsv.needed?
+  end
+
+  test "needed? is false when there is no next gameweek" do
+    assert_not Odds::SyncFromCsv.needed?
+  end
 end
