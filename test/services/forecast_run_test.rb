@@ -16,7 +16,7 @@ class ForecastRunTest < ActiveSupport::TestCase
       true
     end
 
-    def generate_forecasts(_gameweek, generate_explanations:)
+    def generate_forecasts(_gameweek)
       raise @error if @error
 
       Array.new(@count)

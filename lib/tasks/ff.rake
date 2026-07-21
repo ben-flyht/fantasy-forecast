@@ -1,5 +1,11 @@
 namespace :ff do
-  desc "Generate forecasts and explanations for the next gameweek"
+  desc "Scheduled hourly pipeline: detect season change, sync FPL data + odds, regenerate forecasts (idempotent)"
+  task hourly: :environment do
+    Fpl::HourlyPipeline.call
+    puts "Hourly pipeline complete."
+  end
+
+  desc "Generate forecasts for the next gameweek"
   task generate: :environment do
     gameweek = Gameweek.next_gameweek
 
@@ -23,38 +29,6 @@ namespace :ff do
     end
 
     puts "#{run.total_forecasts} forecasts from #{strategies.count} strategies"
-    puts "\nGenerating explanations..."
-
-    total_explained = 0
-    strategies.each do |strategy|
-      position_label = strategy.position || "all positions"
-
-      forecasts = Forecast.joins(:player)
-                          .includes(player: [ :team, :statistics, :performances ])
-                          .where(gameweek: gameweek, strategy: strategy)
-                          .where.not(rank: nil)
-                          .order(:rank)
-
-      next if forecasts.empty?
-
-      results = ExplanationBuilder.new(
-        forecasts: forecasts.to_a,
-        gameweek: gameweek,
-        strategy_config: strategy.strategy_config
-      ).call
-
-      results.each do |forecast_id, explanation|
-        Forecast.where(id: forecast_id).update_all(explanation: explanation)
-      end
-
-      puts "  [#{position_label}]: #{results.count} explanations"
-      total_explained += results.count
-    rescue StandardError => e
-      Rails.logger.error("Explanation generation failed for #{position_label}: #{e.class}: #{e.message}")
-      warn "  [#{position_label}]: explanations FAILED (#{e.class}: #{e.message})"
-    end
-
-    puts "#{total_explained} explanations generated"
 
     if run.failures.any?
       failed_positions = run.failures.map { |outcome| outcome[:position] }.join(", ")
@@ -83,7 +57,7 @@ namespace :ff do
       next if Performance.where(gameweek: gameweek).none?
 
       strategies.each do |strategy|
-        forecasts = strategy.generate_forecasts(gameweek, generate_explanations: false)
+        forecasts = strategy.generate_forecasts(gameweek)
         total_forecasts += forecasts.count
       end
       puts "#{gameweek.name}: done"
@@ -133,24 +107,6 @@ namespace :ff do
         puts "  Updated!"
       else
         puts "  Skipped."
-      end
-    end
-  end
-
-  desc "Optimise strategies (for scheduled use — applies improvements automatically)"
-  task optimise: :environment do
-    Strategy.active.select(&:position_specific?).each do |strategy|
-      puts "Optimizing #{strategy.position}..."
-      result = StrategyOptimizer.call(strategy: strategy)
-
-      if result[:skipped]
-        next
-      elsif result[:improvement] > 0
-        apply_optimization!(strategy, result)
-        puts "  Applied: #{format('%+.1f', result[:improvement])}% " \
-             "(#{(result[:win_rate] * 100).round}% win rate, p=#{result[:p_value].round(3)})"
-      else
-        puts "  No improvement found"
       end
     end
   end

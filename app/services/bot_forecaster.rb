@@ -3,7 +3,7 @@ class BotForecaster < ApplicationService
 
   attr_reader :gameweek, :strategy_config, :strategy
 
-  def initialize(strategy_config:, gameweek:, strategy: nil, **)
+  def initialize(strategy_config:, gameweek:, strategy: nil)
     @strategy_config = strategy_config
     @gameweek = gameweek
     @strategy = strategy

@@ -25,7 +25,7 @@ class ForecastRun < ApplicationService
   private
 
   def run(strategy)
-    forecasts = strategy.generate_forecasts(@gameweek, generate_explanations: false)
+    forecasts = strategy.generate_forecasts(@gameweek)
     { position: label(strategy), count: forecasts.count, error: nil }
   rescue StandardError => e
     Rails.logger.error("ForecastRun failed for #{label(strategy)}: #{e.class}: #{e.message}")

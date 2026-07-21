@@ -30,6 +30,15 @@ module Odds
       "Wolves" => "Wolves"
     }.freeze
 
+    # Odds only need fetching when the next gameweek has a fixture without a
+    # price yet. Once every fixture is priced there's nothing to chase.
+    def self.needed?
+      gameweek = Gameweek.next_gameweek
+      return false unless gameweek
+
+      Match.where(gameweek: gameweek, odds_home_win: nil).exists?
+    end
+
     def initialize(season: nil)
       @season = season || current_season
     end
