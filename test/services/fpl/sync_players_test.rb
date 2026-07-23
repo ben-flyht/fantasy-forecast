@@ -154,6 +154,37 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     end
   end
 
+  test "persists per-90, minutes and set-piece snapshot statistics" do
+    gameweek = Gameweek.find_or_create_by!(fpl_id: 8801) do |g|
+      g.name = "Gameweek 8801"
+      g.start_time = 1.day.ago
+      g.is_current = true
+    end
+
+    element = {
+      "id" => 8801, "element_type" => 3, "team" => 90, "code" => 8801,
+      "first_name" => "Snap", "second_name" => "Shot", "web_name" => "Shot",
+      "expected_goal_involvements_per_90" => 0.85, "saves_per_90" => 0.0,
+      "defensive_contribution_per_90" => 12.4, "starts_per_90" => 0.9,
+      "penalties_order" => 1, "corners_and_indirect_freekicks_order" => 2
+    }
+    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL).to_return(
+      status: 200, headers: {},
+      body: { "teams" => [ { "id" => 90, "name" => "Snap FC", "short_name" => "SNP", "code" => 8890 } ],
+              "elements" => [ element ] }.to_json
+    )
+
+    Fpl::SyncPlayers.call
+
+    player = Player.find_by(fpl_id: 8801)
+    stats = Statistic.where(player: player, gameweek: gameweek).pluck(:type, :value).to_h
+    assert_in_delta 0.85, stats["expected_goal_involvements_per_90"], 0.001
+    assert_in_delta 12.4, stats["defensive_contribution_per_90"], 0.001
+    assert_in_delta 0.9, stats["starts_per_90"], 0.001
+    assert_equal 1.0, stats["penalties_order"]
+    assert_equal 2.0, stats["corners_freekicks_order"]
+  end
+
   private
 
   def stub_fpl_api_success

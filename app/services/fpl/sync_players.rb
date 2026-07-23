@@ -177,7 +177,20 @@ module Fpl
       "selected_by_percent" => "selected_by_percent",
       "transfers_in_event" => "transfers_in",
       "transfers_out_event" => "transfers_out",
-      "ep_next" => "ep_next" # FPL's own expected points for the next GW; cold-start seed
+      "ep_next" => "ep_next", # FPL's own expected points for the next GW; cold-start seed
+      # Per-90 rates for the underlying-quality concept (a rate, not a total).
+      "expected_goals_per_90" => "expected_goals_per_90",
+      "expected_goal_involvements_per_90" => "expected_goal_involvements_per_90",
+      "expected_goals_conceded_per_90" => "expected_goals_conceded_per_90",
+      "saves_per_90" => "saves_per_90",
+      "clean_sheets_per_90" => "clean_sheets_per_90",
+      "defensive_contribution_per_90" => "defensive_contribution_per_90",
+      # Minutes-security signal: how reliably the player starts.
+      "starts_per_90" => "starts_per_90",
+      # Set-piece duty feeds underlying quality (1 = first choice). Nil when not on duty.
+      "penalties_order" => "penalties_order",
+      "corners_and_indirect_freekicks_order" => "corners_freekicks_order",
+      "direct_freekicks_order" => "direct_freekicks_order"
     }.freeze
 
     def sync_snapshot_statistics(elements)
