@@ -4,6 +4,13 @@ class Match < ApplicationRecord
   belongs_to :gameweek
 
   validates :fpl_id, presence: true, uniqueness: true
+
+  # FPL's official fixture difficulty rating (1 easiest, 5 hardest) for the given
+  # team in this match. The API rates each side separately.
+  def difficulty_for(team_id)
+    team_id == home_team_id ? home_difficulty : away_difficulty
+  end
+
   def self.index_by_team
     all.each_with_object({}) do |match, hash|
       hash[match.home_team_id] = match

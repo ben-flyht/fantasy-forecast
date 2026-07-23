@@ -73,7 +73,11 @@ module Fpl
       away_team = Team.find_by(fpl_id: fixture_data["team_a"])
       return nil unless gameweek && home_team && away_team
 
-      { gameweek: gameweek, home_team: home_team, away_team: away_team }
+      {
+        gameweek: gameweek, home_team: home_team, away_team: away_team,
+        home_difficulty: fixture_data["team_h_difficulty"],
+        away_difficulty: fixture_data["team_a_difficulty"]
+      }
     end
 
     def save_match(fixture_data, match_data)
