@@ -31,7 +31,16 @@ module Fpl
     end
 
     def team_attributes(data)
-      { name: data["name"], short_name: data["short_name"], code: data["code"] }
+      {
+        name: data["name"], short_name: data["short_name"], code: data["code"],
+        strength: data["strength"],
+        strength_overall_home: data["strength_overall_home"],
+        strength_overall_away: data["strength_overall_away"],
+        strength_attack_home: data["strength_attack_home"],
+        strength_attack_away: data["strength_attack_away"],
+        strength_defence_home: data["strength_defence_home"],
+        strength_defence_away: data["strength_defence_away"]
+      }
     end
 
     def log_team_result(team, data)

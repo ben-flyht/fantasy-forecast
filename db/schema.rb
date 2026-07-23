@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_21_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_21_181009) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -122,6 +122,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_120000) do
     t.integer "fpl_id"
     t.string "name"
     t.string "short_name"
+    t.integer "strength"
+    t.integer "strength_attack_away"
+    t.integer "strength_attack_home"
+    t.integer "strength_defence_away"
+    t.integer "strength_defence_home"
+    t.integer "strength_overall_away"
+    t.integer "strength_overall_home"
     t.datetime "updated_at", null: false
     t.index ["fpl_id"], name: "index_teams_on_fpl_id", unique: true
   end
