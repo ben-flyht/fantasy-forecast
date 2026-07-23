@@ -75,9 +75,9 @@
           <%= button_to "Disconnect", draft_league_path, method: :delete, class: "rounded-lg bg-zinc-900 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-zinc-700", data: { turbo: false } %>
         <% else %>
           <%= form_with url: draft_league_path, method: :post, data: { turbo: false }, class: "flex flex-wrap items-center gap-2" do %>
-            <label for="entry_id" class="text-sm text-zinc-500 whitespace-nowrap">FPL Draft</label>
+            <label for="entry_id" class="text-sm text-zinc-500 whitespace-nowrap">Connect FPL Draft</label>
             <div class="flex items-center gap-2">
-              <input type="text" name="entry_id" id="entry_id" placeholder="Entry ID" title="Go to Points on FPL Draft. Your ID is the number in the URL: draft.premierleague.com/entry/YOUR_ID/event/1" class="rounded-lg border border-zinc-950/10 bg-white px-3 py-1.5 text-sm/6 w-28 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <input type="text" name="entry_id" id="entry_id" placeholder="Paste your Points page link" title="On FPL Draft, open your team's Points page and copy the page URL (it looks like draft.premierleague.com/entry/1234567/event/1). Paste it here, or just your entry ID." class="rounded-lg border border-zinc-950/10 bg-white px-3 py-1.5 text-sm/6 w-52 sm:w-64 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
               <button type="submit" class="rounded-lg bg-zinc-900 text-white px-3 py-1.5 text-sm/6 font-semibold hover:bg-zinc-700">Connect</button>
             </div>
           <% end %>

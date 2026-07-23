@@ -1,10 +1,10 @@
 class DraftLeaguesController < ApplicationController
   def create
-    entry_id = params[:entry_id].to_s.strip
-    return redirect_with_alert("Entry ID must be a number") unless entry_id.match?(/\A\d+\z/)
+    entry_id = extract_entry_id(params[:entry_id])
+    return redirect_with_alert("Paste the link to your FPL Draft team's Points page, or your entry ID") unless entry_id
 
     league_id = Fpl::DraftLeagueStatus.lookup_league_id(entry_id)
-    return redirect_with_alert("Draft team not found") unless league_id
+    return redirect_with_alert("We couldn't find that Draft team. Check you copied the whole Points-page link") unless league_id
 
     save_draft_cookies(entry_id, league_id)
     redirect_to root_path
@@ -17,6 +17,18 @@ class DraftLeaguesController < ApplicationController
   end
 
   private
+
+  # Accepts a full FPL Draft URL (the Points page looks like
+  # draft.premierleague.com/entry/334926/event/1) or a bare entry ID, and
+  # returns the entry ID. Nil if we can't find one.
+  def extract_entry_id(input)
+    input = input.to_s.strip
+    if (match = input.match(%r{entry/(\d+)}))
+      match[1]
+    elsif input.match?(/\A\d+\z/)
+      input
+    end
+  end
 
   def save_draft_cookies(entry_id, league_id)
     cookies[:draft_entry_id] = { value: entry_id, expires: 1.year.from_now }
