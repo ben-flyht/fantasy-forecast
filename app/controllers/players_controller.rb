@@ -179,11 +179,11 @@ class PlayersController < ApplicationController
   end
 
   # When a draft league is connected, narrow the rankings to a single ownership
-  # category (available free agents, or the user's own players). Tiers keep their
-  # global position-relative values; we only change which rows are shown.
+  # category (available free agents, your own players, or the selected opponent's).
+  # Tiers keep their global position-relative values; we only change which rows show.
   def apply_availability_filter
     return if @draft_player_categories.blank?
-    return unless %w[available mine].include?(params[:availability])
+    return unless %w[available mine opponent].include?(params[:availability])
 
     category = params[:availability].to_sym
     @consensus_rankings = @consensus_rankings.select do |ranking|

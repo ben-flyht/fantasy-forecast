@@ -53,7 +53,7 @@
             <%= render DropdownComponent.new(
               label: "Show",
               name: "availability",
-              options: [["All players", "all"], ["Available", "available"], ["My team", "mine"]],
+              options: [["All players", "all"], ["Available", "available"], ["My team", "mine"], ["Opponent", "opponent"]],
               selected: params[:availability].presence || "all",
               form: "filters-form"
             ) %>

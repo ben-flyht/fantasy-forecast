@@ -177,6 +177,17 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, theirs.short_name
   end
 
+  test "opponent filter shows only the selected opponent's players" do
+    available, mine, theirs = create_draft_scenario
+
+    get gameweek_position_path(gameweek: 5, position: "midfielders", availability: "opponent", draft_team: 999)
+
+    assert_response :success
+    assert_includes response.body, theirs.short_name
+    assert_not_includes response.body, available.short_name
+    assert_not_includes response.body, mine.short_name
+  end
+
   test "availability filter is ignored when no league is connected" do
     available, mine, theirs = create_draft_scenario(connect: false)
 
@@ -193,7 +204,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   # league via cookies unless connect: false.
   def create_draft_scenario(connect: true)
     available = Player.create!(first_name: "Free", last_name: "Agent", team: @test_team, position: "midfielder", fpl_id: 900, code: 900)
-    mine = Player.create!(first_name: "My", last_name: "Keeper", team: @test_team, position: "midfielder", fpl_id: 901, code: 901)
+    mine = Player.create!(first_name: "My", last_name: "Rostered", team: @test_team, position: "midfielder", fpl_id: 901, code: 901)
     theirs = Player.create!(first_name: "Their", last_name: "Rival", team: @test_team, position: "midfielder", fpl_id: 902, code: 902)
     [ available, mine, theirs ].each_with_index { |p, i| Forecast.create!(player: p, gameweek: @gameweek5, rank: i + 1) }
 
