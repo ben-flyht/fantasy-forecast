@@ -10,14 +10,7 @@ class PlayersController < ApplicationController
     return if redirect_to_clean_url
     return unless validate_gameweek
 
-    load_consensus_rankings
-    load_gameweek_data
-    load_players
-    load_recent_performances
-    set_available_filters
-    load_draft_availability
-    apply_availability_filter
-    build_page_title
+    load_rankings_page
   end
 
   def show
@@ -36,6 +29,18 @@ class PlayersController < ApplicationController
   end
 
   private
+
+  def load_rankings_page
+    load_consensus_rankings
+    load_gameweek_data
+    load_concept_tiers
+    load_players
+    load_recent_performances
+    set_available_filters
+    load_draft_availability
+    apply_availability_filter
+    build_page_title
+  end
 
   def load_player_forecast
     return unless @next_gameweek
@@ -152,6 +157,34 @@ class PlayersController < ApplicationController
       matches[match.away_team_id] << match
     end
     matches
+  end
+
+  # Per-concept diagnostic tiers (quality/form/minutes/schedule/differential),
+  # computed across the whole position so they stay position-relative like Overall.
+  def load_concept_tiers
+    return if @consensus_rankings.blank?
+
+    @concept_tiers = ConceptTiers.new(
+      @consensus_rankings,
+      stats: latest_snapshot_stats(@consensus_rankings.map(&:player_id)),
+      difficulty_by_team: upcoming_difficulty_by_team
+    ).call
+  end
+
+  def latest_snapshot_stats(player_ids)
+    stats = Hash.new { |hash, key| hash[key] = {} }
+    Statistic.where(player_id: player_ids, type: ConceptTiers::STAT_TYPES)
+             .order(:gameweek_id)
+             .pluck(:player_id, :type, :value)
+             .each { |player_id, type, value| stats[player_id][type] = value.to_f }
+    stats
+  end
+
+  def upcoming_difficulty_by_team
+    @matches_by_team.each_with_object({}) do |(team_id, matches), difficulty|
+      ratings = matches.filter_map { |match| match.difficulty_for(team_id) }
+      difficulty[team_id] = ratings.sum.to_f / ratings.size if ratings.any?
+    end
   end
 
   def load_players

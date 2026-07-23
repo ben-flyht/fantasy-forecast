@@ -13,6 +13,14 @@
 class ConceptTiers
   CONCEPTS = %i[quality form minutes schedule differential].freeze
 
+  # Snapshot statistic types the concepts read. The controller loads exactly these.
+  STAT_TYPES = %w[
+    expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90
+    saves_per_90 defensive_contribution_per_90 starts_per_90
+    penalties_order corners_freekicks_order direct_freekicks_order
+    form selected_by_percent
+  ].freeze
+
   # A player is flagged a gem when we rate them highly but the wider FPL crowd
   # has largely overlooked them. One-directional: popular players are never
   # penalised, they simply do not earn the tag.

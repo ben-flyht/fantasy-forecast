@@ -91,7 +91,14 @@
         <div class="flex items-center gap-4 px-3 sm:px-6 py-2 text-zinc-500 font-medium border-b border-zinc-200">
           <div class="shrink-0 w-12">Rank</div>
           <div class="flex-1">Player</div>
-          <div class="hidden lg:block">Form</div>
+          <div class="hidden lg:flex items-center gap-3 text-xs">
+            <div class="w-8 text-center" title="Underlying quality (per-90 output)">Qual</div>
+            <div class="w-8 text-center" title="Form">Form</div>
+            <div class="w-8 text-center" title="Minutes security">Mins</div>
+            <div class="w-8 text-center" title="Strength of schedule">Sched</div>
+            <div class="w-8 text-center" title="Differential (our rating vs the crowd)">Diff</div>
+          </div>
+          <div class="hidden lg:block">Recent</div>
         </div>
         <% @consensus_rankings.each do |ranking| %>
           <% player = @players_by_id[ranking.player_id] %>
@@ -115,6 +122,9 @@
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
                     <span class="font-medium text-lg <%= draft_style(draft_category, :text) %>"><%= player.short_name %></span>
+                    <% if @concept_tiers&.dig(ranking.player_id, :gem) %>
+                      <span title="Gem: we rate this player highly but few FPL managers own them">💎</span>
+                    <% end %>
                   </div>
                   <div class="<%= draft_style(draft_category, :text) %> flex flex-wrap items-center gap-1">
                     <%= render TeamBadgeComponent.new(team: player.team) %>
@@ -126,6 +136,15 @@
                 </div>
               </div>
             </div>
+            <% concepts = @concept_tiers&.dig(ranking.player_id) %>
+            <% if concepts %>
+              <div class="hidden lg:flex items-center gap-3">
+                <% ConceptTiers::CONCEPTS.each do |concept| %>
+                  <% concept_tier = tier_info(concepts[concept]) %>
+                  <div class="w-8 text-center text-lg" title="<%= concept.to_s.capitalize %>: <%= concept_tier[:name] %>"><%= concept_tier[:symbol] %></div>
+                <% end %>
+              </div>
+            <% end %>
             <div class="w-full lg:w-auto mt-2 lg:mt-0 pb-1 lg:pb-0 pl-[7.25rem] sm:pl-[8rem] lg:pl-0">
               <%= render FormComponent.new(scores: @performances_by_player[player.id], draft_category: draft_category) %>
             </div>
