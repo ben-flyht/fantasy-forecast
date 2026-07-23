@@ -46,6 +46,11 @@ module ApplicationHelper
       border: "bg-zinc-100",
       text: "text-zinc-500"
     },
+    available: {
+      background: "bg-green-50 hover:bg-green-100/50",
+      border: "border-green-200 bg-green-100",
+      text: "text-green-900"
+    },
     default: {
       background: "hover:bg-zinc-50",
       border: "bg-zinc-100",

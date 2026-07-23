@@ -50,6 +50,13 @@
       <div class="flex flex-wrap items-center gap-2 lg:ml-auto">
         <% if @draft_entry_id.present? %>
           <div class="flex flex-wrap items-center gap-2">
+            <%= render DropdownComponent.new(
+              label: "Show",
+              name: "availability",
+              options: [["All players", "all"], ["Available", "available"], ["My team", "mine"]],
+              selected: params[:availability].presence || "all",
+              form: "filters-form"
+            ) %>
             <% if @draft_team_name.present? %>
               <input type="text" value="<%= @draft_team_name %>" disabled class="rounded-lg border <%= draft_style(:mine, :border) %> px-3 py-1.5 text-sm/6 font-semibold <%= draft_style(:mine, :text) %> cursor-default">
             <% end %>

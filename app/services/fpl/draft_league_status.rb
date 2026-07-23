@@ -5,6 +5,9 @@ module Fpl
   class DraftLeagueStatus < ApplicationService
     DRAFT_API_HOST = "draft.premierleague.com"
     CACHE_TTL = 5.minutes
+    # Availability (who is a free agent) must reflect reality soon after waivers
+    # process, so it is cached only briefly, just enough to de-dupe rapid reloads.
+    AVAILABILITY_TTL = 1.minute
     TIMEOUT = 3
 
     def initialize(entry_id, league_id, selected_entry_id: nil)
@@ -14,7 +17,7 @@ module Fpl
     end
 
     def call
-      Rails.cache.fetch(cache_key, expires_in: CACHE_TTL) do
+      Rails.cache.fetch(cache_key, expires_in: AVAILABILITY_TTL) do
         build_player_categories
       end
     end

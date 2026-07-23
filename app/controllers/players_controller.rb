@@ -16,6 +16,7 @@ class PlayersController < ApplicationController
     load_recent_performances
     set_available_filters
     load_draft_availability
+    apply_availability_filter
     build_page_title
   end
 
@@ -91,7 +92,7 @@ class PlayersController < ApplicationController
 
   def build_clean_url
     position = resolve_position(params[:position])
-    extra = params.permit(:team_id, :draft_team).to_h.compact_blank
+    extra = params.permit(:team_id, :draft_team, :availability).to_h.compact_blank
     gameweek_position_path(gameweek: params[:gameweek], position: "#{position}s", **extra)
   end
 
@@ -175,6 +176,21 @@ class PlayersController < ApplicationController
     @draft_player_categories = Fpl::DraftLeagueStatus.call(
       @draft_entry_id, league_id, selected_entry_id: @selected_draft_team
     )
+  end
+
+  # When a draft league is connected, narrow the rankings to a single ownership
+  # category (available free agents, or the user's own players). Tiers keep their
+  # global position-relative values; we only change which rows are shown.
+  def apply_availability_filter
+    return if @draft_player_categories.blank?
+    return unless %w[available mine].include?(params[:availability])
+
+    category = params[:availability].to_sym
+    @consensus_rankings = @consensus_rankings.select do |ranking|
+      player = @players_by_id[ranking.player_id]
+      player && @draft_player_categories[player.code] == category
+    end
+    @tier_groups = @consensus_rankings.group_by(&:tier)
   end
 
   def set_available_filters
