@@ -412,6 +412,24 @@ class BotForecasterTest < ActiveSupport::TestCase
       "Player whose team hasn't played should be ranked higher based on historical performance (#{player_not_played_forecast.rank} vs #{player_played_forecast.rank})"
   end
 
+  test "cold-start: a player with no history is seeded by ep_next and ranks above a no-data player" do
+    # Fresh-slate scenario: both are new players on the fixtured team with no match
+    # history, so the normal lookback score is 0. One has FPL's ep_next projection.
+    newbie = Player.create!(fpl_id: 55_555, first_name: "New", last_name: "Signing", position: "midfielder", team: @team)
+    Statistic.create!(player: newbie, gameweek: @finished_gw, type: "ep_next", value: 6.5)
+
+    ghost = Player.create!(fpl_id: 55_556, first_name: "No", last_name: "Data", position: "midfielder", team: @team)
+
+    forecasts = BotForecaster.call(strategy_config: @strategy_config, gameweek: @next_gw)
+
+    newbie_forecast = forecasts.find { |f| f.player_id == newbie.id }
+    ghost_forecast = forecasts.find { |f| f.player_id == ghost.id }
+
+    assert newbie_forecast.score.positive?, "cold-start player should be seeded by ep_next"
+    assert_equal 0.0, ghost_forecast.score.to_f, "player with no data at all should score 0"
+    assert newbie_forecast.rank < ghost_forecast.rank, "ep_next-seeded player should rank above a no-data player"
+  end
+
   test "lookback includes gameweeks where player got zero minutes but match was played" do
     gw398 = Gameweek.create!(fpl_id: 398, name: "Gameweek 398", start_time: 4.weeks.ago, is_finished: true)
     gw399 = Gameweek.create!(fpl_id: 399, name: "Gameweek 399", start_time: 3.weeks.ago, is_finished: true)

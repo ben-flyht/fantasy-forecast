@@ -176,7 +176,8 @@ module Fpl
       "now_cost" => "now_cost",
       "selected_by_percent" => "selected_by_percent",
       "transfers_in_event" => "transfers_in",
-      "transfers_out_event" => "transfers_out"
+      "transfers_out_event" => "transfers_out",
+      "ep_next" => "ep_next" # FPL's own expected points for the next GW; cold-start seed
     }.freeze
 
     def sync_snapshot_statistics(elements)

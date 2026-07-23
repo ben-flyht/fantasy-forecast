@@ -17,7 +17,32 @@ module StrategyScoring
 
     total = sum_match_scores(player, config, current_fpl_id, matches)
     total *= player_confidence(player, config, current_fpl_id)
+    total = cold_start_score(player) if total.zero? && no_lookback_history?(player, config, current_fpl_id)
     apply_availability_to_score(total, player, config)
+  end
+
+  # True when the player has no usable match history in the lookback window, i.e.
+  # the start of a season (fresh slate) or a brand-new player. Their history-based
+  # score is 0, so we fall back to a market seed instead of ranking them last.
+  def no_lookback_history?(player, config, current_fpl_id)
+    lookback = max_active_lookback(config)
+    return false if lookback.zero?
+
+    available_gameweeks_for_lookback(player, current_fpl_id, lookback, DEFAULT_MIN_AVAILABILITY).empty?
+  end
+
+  # Cold-start seed. Prefer FPL's own expected points for the next GW (already a
+  # points-scale projection). If absent (e.g. a new signing), fall back to the
+  # market's valuation: price plus recent transfers-in as a momentum nudge.
+  def cold_start_score(player)
+    ep_next = latest_stat_value(player, "ep_next")
+    return ep_next if ep_next.positive?
+
+    (latest_stat_value(player, "now_cost") / 10.0) + (latest_stat_value(player, "transfers_in") / 100_000.0)
+  end
+
+  def latest_stat_value(player, type)
+    statistics_for(player).select { |s| s.type == type }.max_by(&:gameweek_id)&.value&.to_f || 0.0
   end
 
   def sum_match_scores(player, config, current_fpl_id, matches)
@@ -187,7 +212,7 @@ module StrategyScoring
 
   def needed_statistic_types
     metrics = (@scoring_config&.dig(:performance) || []).reject { |p| p[:weight]&.zero? }.map { |p| p[:metric] }
-    (metrics + %w[minutes chance_of_playing]).compact.uniq
+    (metrics + %w[minutes chance_of_playing ep_next now_cost transfers_in]).compact.uniq
   end
 
   def chance_of_playing_for(player)
