@@ -1,9 +1,6 @@
 class FormComponent < ViewComponent::Base
-  include ApplicationHelper
-
-  def initialize(scores:, draft_category: nil)
+  def initialize(scores:)
     @scores = scores || []
-    @draft_category = draft_category
   end
 
   private

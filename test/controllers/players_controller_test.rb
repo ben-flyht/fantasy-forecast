@@ -50,8 +50,8 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should show forecasts data when available" do
-    Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1)
-    Forecast.create!(player: @player2, gameweek: @gameweek5, rank: 2)
+    Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1, score: 4.2)
+    Forecast.create!(player: @player2, gameweek: @gameweek5, rank: 2, score: 3.1)
 
     get gameweek_position_path(gameweek: 5, position: "#{@player.position}s")
     assert_response :success
@@ -153,85 +153,5 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   test "should return 404 for non-existent player" do
     get "/players/non-existent-99999"
     assert_response :not_found
-  end
-
-  test "available filter shows only free agents when a draft league is connected" do
-    available, mine, theirs = create_draft_scenario
-
-    get gameweek_position_path(gameweek: 5, position: "midfielders", availability: "available")
-
-    assert_response :success
-    assert_includes response.body, available.short_name
-    assert_not_includes response.body, mine.short_name
-    assert_not_includes response.body, theirs.short_name
-  end
-
-  test "mine filter shows only the connected user's players" do
-    available, mine, theirs = create_draft_scenario
-
-    get gameweek_position_path(gameweek: 5, position: "midfielders", availability: "mine")
-
-    assert_response :success
-    assert_includes response.body, mine.short_name
-    assert_not_includes response.body, available.short_name
-    assert_not_includes response.body, theirs.short_name
-  end
-
-  test "opponent filter shows only the selected opponent's players" do
-    available, mine, theirs = create_draft_scenario
-
-    get gameweek_position_path(gameweek: 5, position: "midfielders", availability: "opponent", draft_team: 999)
-
-    assert_response :success
-    assert_includes response.body, theirs.short_name
-    assert_not_includes response.body, available.short_name
-    assert_not_includes response.body, mine.short_name
-  end
-
-  test "availability filter is ignored when no league is connected" do
-    available, mine, theirs = create_draft_scenario(connect: false)
-
-    get gameweek_position_path(gameweek: 5, position: "midfielders", availability: "available")
-
-    assert_response :success
-    [ available, mine, theirs ].each { |p| assert_includes response.body, p.short_name }
-  end
-
-  private
-
-  # Builds three forecasted midfielders (a free agent, one owned by the connected
-  # user, one owned by a rival), stubs the public Draft API, and connects the
-  # league via cookies unless connect: false.
-  def create_draft_scenario(connect: true)
-    available = Player.create!(first_name: "Free", last_name: "Agent", team: @test_team, position: "midfielder", fpl_id: 900, code: 900)
-    mine = Player.create!(first_name: "My", last_name: "Rostered", team: @test_team, position: "midfielder", fpl_id: 901, code: 901)
-    theirs = Player.create!(first_name: "Their", last_name: "Rival", team: @test_team, position: "midfielder", fpl_id: 902, code: 902)
-    [ available, mine, theirs ].each_with_index { |p, i| Forecast.create!(player: p, gameweek: @gameweek5, rank: i + 1) }
-
-    entry_id = 334926
-    league_id = 64899
-    stub_draft_request("league/#{league_id}/element-status", "element_status" => [
-      { "element" => 1, "owner" => nil, "status" => "a" },
-      { "element" => 2, "owner" => entry_id, "status" => "o" },
-      { "element" => 3, "owner" => 999, "status" => "o" }
-    ])
-    stub_draft_request("bootstrap-static", "elements" => [
-      { "id" => 1, "code" => 900 }, { "id" => 2, "code" => 901 }, { "id" => 3, "code" => 902 }
-    ])
-    stub_draft_request("league/#{league_id}/details",
-      "league_entries" => [ { "id" => 1, "entry_id" => entry_id, "entry_name" => "My Team" } ],
-      "matches" => [])
-
-    if connect
-      cookies[:draft_entry_id] = entry_id.to_s
-      cookies[:draft_league_id] = league_id.to_s
-    end
-
-    [ available, mine, theirs ]
-  end
-
-  def stub_draft_request(path, body)
-    stub_request(:get, "https://draft.premierleague.com/api/#{path}")
-      .to_return(status: 200, body: body.to_json, headers: { "Content-Type" => "application/json" })
   end
 end

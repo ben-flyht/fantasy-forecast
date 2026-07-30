@@ -32,3 +32,11 @@ injured_player:
   position: "midfielder"
   fpl_id: 202
   news: "Hamstring injury - Expected back 15 Jan"
+
+brazilian:
+  first_name: "Igor Jesus"
+  last_name: "Maciel da Cruz"
+  short_name: "Igor Jesus"
+  team: liverpool
+  position: "forward"
+  fpl_id: 203

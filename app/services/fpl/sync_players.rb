@@ -66,7 +66,23 @@ module Fpl
     end
 
     def team_attributes(data)
-      { name: data["name"], short_name: data["short_name"], code: data["code"] }
+      { name: data["name"], short_name: data["short_name"], code: data["code"],
+        played: data["played"], win: data["win"], draw: data["draw"], loss: data["loss"],
+        points: data["points"], league_position: data["position"], form: data["form"],
+        unavailable: data["unavailable"] || false }.merge(strength_attributes(data))
+    end
+
+    STRENGTH_FIELDS = %w[
+      strength strength_overall_home strength_overall_away
+      strength_attack_home strength_attack_away strength_defence_home strength_defence_away
+    ].freeze
+
+    # FPL fills these in as a season gets going and publishes noughts in the
+    # meantime, field by field: over this summer the overall ratings are already
+    # there while attack and defence are still zero. A nought means "not published
+    # yet", not a verdict on the club, so it must never overwrite what we hold.
+    def strength_attributes(data)
+      STRENGTH_FIELDS.filter_map { |field| [ field.to_sym, data[field] ] if data[field].to_i.positive? }.to_h
     end
 
     def log_team_result(team, data)
@@ -106,7 +122,19 @@ module Fpl
 
       { first_name: element["first_name"], last_name: element["second_name"],
         short_name: element["web_name"] || element["second_name"], code: element["code"],
-        team: team_record, position: position, news: element["news"].presence }
+        team: team_record, position: position }.merge(fpl_attributes(element))
+    end
+
+    # What FPL says about the player himself, as opposed to what he has done.
+    # Text, dates and categories, none of which fit a decimal statistic.
+    def fpl_attributes(element)
+      {
+        news: element["news"].presence, news_added: element["news_added"],
+        status: element["status"], birth_date: element["birth_date"],
+        region: element["region"], team_join_date: element["team_join_date"],
+        squad_number: element["squad_number"],
+        selectable: element.fetch("can_select", true), departed: element.fetch("removed", false)
+      }
     end
 
     def save_player(player, element, counts)
@@ -185,8 +213,17 @@ module Fpl
       "saves_per_90" => "saves_per_90",
       "clean_sheets_per_90" => "clean_sheets_per_90",
       "defensive_contribution_per_90" => "defensive_contribution_per_90",
-      # Minutes-security signal: how reliably the player starts.
+      # Minutes-security signals. season_minutes is the running total for the
+      # campaign, named apart from the per-gameweek "minutes" stat that
+      # SyncPerformances writes so the two cannot collide.
       "starts_per_90" => "starts_per_90",
+      "minutes" => "season_minutes",
+      # Running points total for the campaign, named apart from the per-gameweek
+      # "total_points" stat that SyncPerformances writes.
+      "total_points" => "season_points",
+      # Bonus points are a tenth of a good player's return and are not in any of the
+      # per-90 rates FPL publishes, so they have to be counted separately.
+      "bonus" => "season_bonus",
       # Set-piece duty feeds underlying quality (1 = first choice). Nil when not on duty.
       "penalties_order" => "penalties_order",
       "corners_and_indirect_freekicks_order" => "corners_freekicks_order",
@@ -194,15 +231,18 @@ module Fpl
     }.freeze
 
     def sync_snapshot_statistics(elements)
-      current_gw = Gameweek.current_gameweek
-      return unless current_gw
+      # Pre-season there is no current gameweek yet, but the market snapshot
+      # (form, ownership, per-90 rates) is already meaningful, so attach it to
+      # the upcoming gameweek. This is what the cold-start concept tiers read.
+      snapshot_gw = Gameweek.current_gameweek || Gameweek.next_gameweek
+      return unless snapshot_gw
 
       players_by_fpl_id = Player.where(fpl_id: elements.map { |e| e["id"] }).pluck(:fpl_id, :id).to_h
-      data = build_snapshot_data(elements, players_by_fpl_id, current_gw)
+      data = build_snapshot_data(elements, players_by_fpl_id, snapshot_gw)
       return if data.empty?
 
       Statistic.upsert_all(data, unique_by: %i[player_id gameweek_id type])
-      Rails.logger.info "Synced #{data.size} snapshot statistics for gameweek #{current_gw.fpl_id}"
+      Rails.logger.info "Synced #{data.size} snapshot statistics for gameweek #{snapshot_gw.fpl_id}"
     end
 
     def build_snapshot_data(elements, players_by_fpl_id, gameweek)

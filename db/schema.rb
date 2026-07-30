@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_23_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_30_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -23,6 +23,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_120000) do
     t.decimal "score", precision: 10, scale: 4
     t.bigint "strategy_id"
     t.datetime "updated_at", null: false
+    t.jsonb "working", default: {}, null: false
     t.index ["gameweek_id", "player_id"], name: "index_forecasts_on_gameweek_id_and_player_id"
     t.index ["gameweek_id"], name: "index_forecasts_on_gameweek_id"
     t.index ["player_id", "gameweek_id"], name: "index_forecasts_on_player_gameweek", unique: true
@@ -51,9 +52,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_120000) do
     t.bigint "gameweek_id", null: false
     t.integer "home_difficulty"
     t.bigint "home_team_id", null: false
-    t.decimal "odds_away_win", precision: 6, scale: 3
-    t.decimal "odds_draw", precision: 6, scale: 3
-    t.decimal "odds_home_win", precision: 6, scale: 3
     t.datetime "updated_at", null: false
     t.index ["away_team_id"], name: "index_matches_on_away_team_id"
     t.index ["fpl_id"], name: "index_matches_on_fpl_id", unique: true
@@ -61,6 +59,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_120000) do
     t.index ["gameweek_id", "home_team_id"], name: "index_matches_on_gameweek_id_and_home_team_id"
     t.index ["gameweek_id"], name: "index_matches_on_gameweek_id"
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
+  end
+
+  create_table "payloads", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "data", default: {}, null: false
+    t.integer "fpl_id", null: false
+    t.bigint "gameweek_id", null: false
+    t.string "kind", null: false
+    t.datetime "updated_at", null: false
+    t.index ["data"], name: "index_payloads_on_data", using: :gin
+    t.index ["gameweek_id"], name: "index_payloads_on_gameweek_id"
+    t.index ["kind", "fpl_id", "gameweek_id"], name: "index_payloads_on_kind_fpl_id_and_gameweek", unique: true
+    t.index ["kind", "gameweek_id"], name: "index_payloads_on_kind_and_gameweek_id"
   end
 
   create_table "performances", force: :cascade do |t|
@@ -78,18 +89,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_120000) do
   end
 
   create_table "players", force: :cascade do |t|
+    t.date "birth_date"
     t.integer "code"
     t.datetime "created_at", null: false
+    t.boolean "departed", default: false, null: false
     t.string "first_name", null: false
     t.integer "fpl_id", null: false
     t.string "last_name", null: false
     t.string "news"
+    t.datetime "news_added"
     t.string "position", null: false
+    t.integer "region"
+    t.boolean "selectable", default: true, null: false
     t.string "short_name"
+    t.integer "squad_number"
+    t.string "status"
     t.bigint "team_id"
+    t.date "team_join_date"
     t.datetime "updated_at", null: false
     t.index ["fpl_id"], name: "index_players_on_fpl_id", unique: true
     t.index ["position", "team_id"], name: "index_players_on_position_and_team_id"
+    t.index ["status"], name: "index_players_on_status"
     t.index ["team_id"], name: "index_players_on_team_id"
   end
 
@@ -121,8 +141,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_120000) do
   create_table "teams", force: :cascade do |t|
     t.integer "code"
     t.datetime "created_at", null: false
+    t.integer "draw"
+    t.string "form"
     t.integer "fpl_id"
+    t.integer "league_position"
+    t.integer "loss"
     t.string "name"
+    t.integer "played"
+    t.integer "points"
     t.string "short_name"
     t.integer "strength"
     t.integer "strength_attack_away"
@@ -131,7 +157,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_120000) do
     t.integer "strength_defence_home"
     t.integer "strength_overall_away"
     t.integer "strength_overall_home"
+    t.boolean "unavailable", default: false, null: false
     t.datetime "updated_at", null: false
+    t.integer "win"
     t.index ["fpl_id"], name: "index_teams_on_fpl_id", unique: true
   end
 
@@ -141,6 +169,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_120000) do
   add_foreign_key "matches", "gameweeks"
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"
+  add_foreign_key "payloads", "gameweeks"
   add_foreign_key "performances", "gameweeks"
   add_foreign_key "performances", "players"
   add_foreign_key "performances", "teams"

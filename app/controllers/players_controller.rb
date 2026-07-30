@@ -1,4 +1,14 @@
 class PlayersController < ApplicationController
+  # Facts about a player we report rather than rate. See #load_row_facts.
+  ROW_FACT_TYPES = %w[now_cost selected_by_percent].freeze
+
+  # How deep a list is worth reading in each position. Past this you are scrolling
+  # through players nobody is choosing between, and the tail is where a forecast is
+  # least reliable anyway: those are the players whose minutes we are guessing at.
+  RANKING_DEPTH = {
+    "goalkeeper" => 50, "defender" => 100, "midfielder" => 100, "forward" => 50
+  }.freeze
+
   POSITION_SINGULARS = {
     "goalkeepers" => "goalkeeper", "defenders" => "defender",
     "midfielders" => "midfielder", "forwards" => "forward"
@@ -32,13 +42,11 @@ class PlayersController < ApplicationController
 
   def load_rankings_page
     load_consensus_rankings
+    load_row_facts
+    build_shortlist
     load_gameweek_data
-    load_concept_tiers
     load_players
-    load_recent_performances
     set_available_filters
-    load_draft_availability
-    apply_availability_filter
     build_page_title
   end
 
@@ -97,7 +105,7 @@ class PlayersController < ApplicationController
 
   def build_clean_url
     position = resolve_position(params[:position])
-    extra = params.permit(:team_id, :draft_team, :availability).to_h.compact_blank
+    extra = params.permit(:team_id).to_h.compact_blank
     gameweek_position_path(gameweek: params[:gameweek], position: "#{position}s", **extra)
   end
 
@@ -121,33 +129,13 @@ class PlayersController < ApplicationController
 
   def load_consensus_rankings
     rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
-    top_score = position_top_score
-    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter, top_score: top_score).call
+    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter).call
     @tier_groups = @consensus_rankings.group_by(&:tier)
-  end
-
-  def position_top_score
-    all_rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, nil)
-    all_rankings.select { |r| r.score.present? && r.score.positive? }.map(&:score).max || 0
   end
 
   def load_gameweek_data
     @gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
     @matches_by_team = @gameweek_record ? build_matches_by_team : {}
-  end
-
-  def load_recent_performances
-    player_ids = @consensus_rankings.map(&:player_id)
-    performances = Performance.joins(:gameweek)
-                              .where(player_id: player_ids)
-                              .order("gameweeks.fpl_id DESC")
-                              .select(:player_id, :gameweek_score, :team_id, :gameweek_id)
-
-    match_counts = build_match_counts_for(performances)
-
-    @performances_by_player = performances.group_by(&:player_id).transform_values do |perfs|
-      expand_per_match_scores(perfs, match_counts).first(8)
-    end
   end
 
   def build_matches_by_team
@@ -159,32 +147,40 @@ class PlayersController < ApplicationController
     matches
   end
 
-  # Per-concept diagnostic tiers (quality/form/minutes/schedule/differential),
-  # computed across the whole position so they stay position-relative like Overall.
-  def load_concept_tiers
-    return if @consensus_rankings.blank?
-
-    @concept_tiers = ConceptTiers.new(
-      @consensus_rankings,
-      stats: latest_snapshot_stats(@consensus_rankings.map(&:player_id)),
-      difficulty_by_team: upcoming_difficulty_by_team
-    ).call
+  # Shown beside a player's name but never scored: what he costs, and how many
+  # managers already own him. An expensive or popular player should still top the
+  # table if he deserves to, with both facts there for you to judge.
+  def load_row_facts
+    @row_facts = latest_snapshot_stats(@consensus_rankings.map(&:player_id), ROW_FACT_TYPES)
   end
 
-  def latest_snapshot_stats(player_ids)
+  # Who is worth putting in front of somebody this week.
+  #
+  # A player who cannot score is not a choice: no game, ruled out injured or
+  # suspended, or nothing behind him we can read. The forecast already says so by
+  # coming out at nought, because availability and fixtures multiply through it,
+  # so one test covers all three.
+  #
+  # Then the list is cut to a readable depth. Nothing is filtered on popularity: a
+  # player with a real record and a real fixture is a legitimate pick at any
+  # ownership, and the crowd already pushes the unfancied ones down the order
+  # without needing them removed from it.
+  #
+  # Ranks are renumbered afterwards so the page reads 1, 2, 3.
+  def build_shortlist
+    @consensus_rankings = @consensus_rankings.select { |ranking| ranking.score.to_f.positive? }
+                                             .first(RANKING_DEPTH.fetch(@position_filter, 100))
+    @consensus_rankings.each_with_index { |ranking, index| ranking.bot_rank = index + 1 }
+    @tier_groups = @consensus_rankings.group_by(&:tier)
+  end
+
+  def latest_snapshot_stats(player_ids, types)
     stats = Hash.new { |hash, key| hash[key] = {} }
-    Statistic.where(player_id: player_ids, type: ConceptTiers::STAT_TYPES)
+    Statistic.where(player_id: player_ids, type: types)
              .order(:gameweek_id)
              .pluck(:player_id, :type, :value)
              .each { |player_id, type, value| stats[player_id][type] = value.to_f }
     stats
-  end
-
-  def upcoming_difficulty_by_team
-    @matches_by_team.each_with_object({}) do |(team_id, matches), difficulty|
-      ratings = matches.filter_map { |match| match.difficulty_for(team_id) }
-      difficulty[team_id] = ratings.sum.to_f / ratings.size if ratings.any?
-    end
   end
 
   def load_players
@@ -195,35 +191,6 @@ class PlayersController < ApplicationController
                      .group("players.id")
                      .order("total_score_cached DESC, first_name, last_name")
     @players_by_id = @players.index_by(&:id)
-  end
-
-  def load_draft_availability
-    @draft_entry_id = cookies[:draft_entry_id]
-    league_id = cookies[:draft_league_id]
-    return unless @draft_entry_id.present? && league_id.present?
-
-    league_info = Fpl::DraftLeagueStatus.league_info(league_id, @draft_entry_id)
-    @draft_team_name = league_info[:mine]
-    @draft_league_entries = league_info[:opponents]
-    @selected_draft_team = params[:draft_team].presence || league_info[:next_opponent_id]
-    @draft_player_categories = Fpl::DraftLeagueStatus.call(
-      @draft_entry_id, league_id, selected_entry_id: @selected_draft_team
-    )
-  end
-
-  # When a draft league is connected, narrow the rankings to a single ownership
-  # category (available free agents, your own players, or the selected opponent's).
-  # Tiers keep their global position-relative values; we only change which rows show.
-  def apply_availability_filter
-    return if @draft_player_categories.blank?
-    return unless %w[available mine opponent].include?(params[:availability])
-
-    category = params[:availability].to_sym
-    @consensus_rankings = @consensus_rankings.select do |ranking|
-      player = @players_by_id[ranking.player_id]
-      player && @draft_player_categories[player.code] == category
-    end
-    @tier_groups = @consensus_rankings.group_by(&:tier)
   end
 
   def set_available_filters

@@ -14,6 +14,51 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     WebMock.allow_net_connect!
   end
 
+  test "stores what FPL says about the player, not just what he has done" do
+    stub_fpl_api_success
+
+    Fpl::SyncPlayers.call
+    haaland = Player.find_by(fpl_id: 233)
+
+    assert_equal "d", haaland.status, "doubtful, which a numeric flag alone cannot say"
+    assert_equal "Knock - 75% chance of playing", haaland.news
+    assert_equal Date.new(2000, 7, 21), haaland.birth_date
+    assert_equal 178, haaland.region, "nationality, for international absences"
+    assert_equal Date.new(2022, 7, 1), haaland.team_join_date
+    assert_equal 9, haaland.squad_number
+    assert haaland.selectable
+    assert_not haaland.departed
+    assert_not_nil haaland.news_added
+  end
+
+  test "stores the league table and strength ratings for a club" do
+    stub_fpl_api_success
+
+    Fpl::SyncPlayers.call
+    city = Team.find_by(name: "Manchester City")
+
+    assert_equal 38, city.played
+    assert_equal 83, city.points
+    assert_equal 2, city.league_position
+    assert_equal 1360, city.strength_attack_home, "the fields Schedule needs, which nothing was populating"
+    assert_equal 1320, city.strength_defence_away
+  end
+
+  test "leaves last season's strength alone when FPL has zeroed it for the summer" do
+    stub_fpl_api_success
+    Fpl::SyncPlayers.call
+    Team.find_by(name: "Manchester City").update!(strength_attack_home: 1360)
+
+    zeroed = @fixture_data.deep_dup
+    zeroed["teams"].each { |t| t.merge!("strength_overall_home" => 0, "strength_attack_home" => 0) }
+    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
+      .to_return(status: 200, body: zeroed.to_json, headers: { "Content-Type" => "application/json" })
+    Fpl::SyncPlayers.call
+
+    assert_equal 1360, Team.find_by(name: "Manchester City").strength_attack_home,
+                 "a summer of noughts must not read as a verdict on the club"
+  end
+
   test "successfully syncs players from FPL API" do
     stub_fpl_api_success
 
@@ -183,6 +228,33 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     assert_in_delta 0.9, stats["starts_per_90"], 0.001
     assert_equal 1.0, stats["penalties_order"]
     assert_equal 2.0, stats["corners_freekicks_order"]
+  end
+
+  test "attaches snapshot statistics to the next gameweek pre-season" do
+    # Fresh slate: no current gameweek, a single upcoming gameweek is next.
+    Gameweek.update_all(is_current: false, is_next: false)
+    gameweek = Gameweek.find_or_create_by!(fpl_id: 8802) do |g|
+      g.name = "Gameweek 8802"
+      g.start_time = 1.day.from_now
+    end
+    gameweek.update!(is_current: false, is_next: true)
+
+    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL).to_return(
+      status: 200, headers: {},
+      body: { "teams" => [ { "id" => 91, "name" => "Pre FC", "short_name" => "PRE", "code" => 8891 } ],
+              "elements" => [ {
+                "id" => 8802, "element_type" => 3, "team" => 91, "code" => 8802,
+                "first_name" => "Pre", "second_name" => "Season", "web_name" => "Season",
+                "selected_by_percent" => "12.5", "form" => "3.2"
+              } ] }.to_json
+    )
+
+    Fpl::SyncPlayers.call
+
+    player = Player.find_by(fpl_id: 8802)
+    stats = Statistic.where(player: player, gameweek: gameweek).pluck(:type, :value).to_h
+    assert_in_delta 12.5, stats["selected_by_percent"], 0.001
+    assert_in_delta 3.2, stats["form"], 0.001
   end
 
   private

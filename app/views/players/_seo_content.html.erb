@@ -62,7 +62,7 @@
     <div>
       <h3 class="font-semibold text-zinc-900">How Our FPL <%= @position_filter.capitalize %> Rankings Work</h3>
       <p class="mt-1">
-        Fantasy Forecast uses a data-driven algorithm that weighs recent player performance, team expected goals, fixture difficulty, and betting odds to produce weekly rankings for every Premier League position.
+        Fantasy Forecast uses a data-driven algorithm that weighs recent player performance, expected goals and assists, minutes security, and fixture difficulty to produce weekly rankings for every Premier League position.
         Rankings update automatically each gameweek and are designed to help FPL managers make informed captain, transfer, and starting XI decisions.
       </p>
     </div>
@@ -97,7 +97,7 @@
         </div>
         <div>
           <dt class="font-medium text-zinc-900">What data is used to rank FPL <%= @position_filter %>s?</dt>
-          <dd class="mt-1">Our algorithm analyses recent performance metrics (points, goals, assists, clean sheets, expected goals), upcoming fixture difficulty based on opponent strength, and betting odds to produce a composite score for each player.</dd>
+          <dd class="mt-1">Our algorithm analyses recent performance metrics (points, goals, assists, clean sheets, expected goals), upcoming fixture difficulty, and how many managers are backing each player, to produce an expected points score.</dd>
         </div>
       </dl>
     </div>

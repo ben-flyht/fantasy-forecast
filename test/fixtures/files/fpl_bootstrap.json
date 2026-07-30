@@ -1,9 +1,40 @@
 {
   "teams": [
-    {"id": 1, "name": "Arsenal", "short_name": "ARS"},
-    {"id": 2, "name": "Liverpool", "short_name": "LIV"},
-    {"id": 3, "name": "Manchester City", "short_name": "MCI"},
-    {"id": 4, "name": "Chelsea", "short_name": "CHE"}
+    {
+      "id": 1,
+      "name": "Arsenal",
+      "short_name": "ARS"
+    },
+    {
+      "id": 2,
+      "name": "Liverpool",
+      "short_name": "LIV"
+    },
+    {
+      "id": 3,
+      "name": "Manchester City",
+      "short_name": "MCI",
+      "played": 38,
+      "win": 25,
+      "draw": 8,
+      "loss": 5,
+      "points": 83,
+      "position": 2,
+      "form": null,
+      "unavailable": false,
+      "strength": 5,
+      "strength_overall_home": 1350,
+      "strength_overall_away": 1340,
+      "strength_attack_home": 1360,
+      "strength_attack_away": 1350,
+      "strength_defence_home": 1330,
+      "strength_defence_away": 1320
+    },
+    {
+      "id": 4,
+      "name": "Chelsea",
+      "short_name": "CHE"
+    }
   ],
   "elements": [
     {
@@ -12,7 +43,16 @@
       "second_name": "Haaland",
       "web_name": "Haaland",
       "team": 3,
-      "element_type": 4
+      "element_type": 4,
+      "status": "d",
+      "news": "Knock - 75% chance of playing",
+      "news_added": "2026-07-23T10:30:05.123456Z",
+      "birth_date": "2000-07-21",
+      "region": 178,
+      "team_join_date": "2022-07-01",
+      "squad_number": 9,
+      "can_select": true,
+      "removed": false
     },
     {
       "id": 253,

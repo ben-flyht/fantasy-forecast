@@ -9,23 +9,21 @@ class TierCalculator
     5 => { symbol: "❄️", name: "Snow", description: "Avoid - Loss/injury risks" }
   }.freeze
 
-  # Percentage thresholds from top score (higher % = further from top)
-  # Tier 1: Within 20% of top score
-  # Tier 2: 20-40% below top score
-  # Tier 3: 40-60% below top score
-  # Tier 4: 60-80% below top score
-  # Tier 5: More than 80% below top score (or unavailable)
-  PERCENTAGE_THRESHOLDS = {
-    t1: 20,
-    t2: 40,
-    t3: 60,
-    t4: 80
-  }.freeze
+  # What each tier is worth, in expected points.
+  #
+  # Absolute rather than a share of whoever tops the position, because the number
+  # means something now: four points is four points whether he keeps goal or plays
+  # up front. Measuring against the position's best gave keepers ten sunshines and
+  # midfielders one, purely because keepers all score alike and one striker runs
+  # away with his position.
+  #
+  # Two points is turning up. The bands are what a player is expected to add on
+  # top: a return of some kind for sunshine, down to nothing at all for snow.
+  POINT_THRESHOLDS = { t1: 4.25, t2: 3.25, t3: 2.25, t4: 1.25 }.freeze
 
-  def initialize(rankings, position: nil, top_score: nil)
+  def initialize(rankings, position: nil)
     @rankings = rankings
     @position = position
-    @top_score = top_score || find_top_score
   end
 
   def call
@@ -38,16 +36,36 @@ class TierCalculator
     TIERS[tier_number]
   end
 
-  def self.calculate_player_tier(forecast, position)
-    top_score = Forecast.joins(:player)
-                        .where(gameweek: forecast.gameweek, players: { position: position })
-                        .maximum(:score) || 0
+  def self.tier_from_points(points)
+    return 5 if points.nil?
 
-    return tier_info(5) if top_score.zero? || forecast.score.nil?
+    case points.to_f
+    when POINT_THRESHOLDS[:t1].. then 1
+    when POINT_THRESHOLDS[:t2]..POINT_THRESHOLDS[:t1] then 2
+    when POINT_THRESHOLDS[:t3]..POINT_THRESHOLDS[:t2] then 3
+    when POINT_THRESHOLDS[:t4]..POINT_THRESHOLDS[:t3] then 4
+    else 5
+    end
+  end
 
-    percentage = percentage_from_top(forecast.score, top_score)
-    tier_number = tier_number_from_percentage(percentage)
-    tier_info(tier_number)
+  def self.calculate_player_tier(forecast, _position = nil)
+    tier_info(tier_from_points(forecast.score))
+  end
+
+  def self.tier_from_points(points)
+    return 5 if points.nil?
+
+    case points.to_f
+    when POINT_THRESHOLDS[:t1].. then 1
+    when POINT_THRESHOLDS[:t2]..POINT_THRESHOLDS[:t1] then 2
+    when POINT_THRESHOLDS[:t3]..POINT_THRESHOLDS[:t2] then 3
+    when POINT_THRESHOLDS[:t4]..POINT_THRESHOLDS[:t3] then 4
+    else 5
+    end
+  end
+
+  def self.calculate_player_tier(forecast, _position = nil)
+    tier_info(tier_from_points(forecast.score))
   end
 
   def self.percentage_from_top(score, top_score)
@@ -68,25 +86,12 @@ class TierCalculator
 
   private
 
-  def find_top_score
-    ranked = @rankings.select { |r| r.score.present? && r.score.positive? }
-    ranked.map(&:score).max || 0
-  end
-
   def assign_tier(ranking)
-    tier = calculate_tier(ranking.score)
-    tier_info = TIERS[tier]
-
-    ranking.tier = tier
-    ranking.tier_symbol = tier_info[:symbol]
-    ranking.tier_name = tier_info[:name]
+    ranking.tier = calculate_tier(ranking.score)
     ranking
   end
 
   def calculate_tier(score)
-    return 5 if score.nil? || @top_score.zero?
-
-    percentage = self.class.percentage_from_top(score, @top_score)
-    self.class.tier_number_from_percentage(percentage)
+    self.class.tier_from_points(score)
   end
 end

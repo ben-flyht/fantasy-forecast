@@ -30,36 +30,29 @@ module ApplicationHelper
     TierCalculator::TIERS[tier]
   end
 
-  DRAFT_STYLES = {
-    mine: {
-      background: "bg-amber-50 hover:bg-amber-100/50",
-      border: "border-amber-200 bg-amber-100",
-      text: "text-amber-900"
-    },
-    opponent: {
-      background: "bg-blue-50 hover:bg-blue-100/50",
-      border: "border-blue-200 bg-blue-100",
-      text: "text-blue-900"
-    },
-    owned: {
-      background: "bg-zinc-100",
-      border: "bg-zinc-100",
-      text: "text-zinc-500"
-    },
-    available: {
-      background: "bg-green-50 hover:bg-green-100/50",
-      border: "border-green-200 bg-green-100",
-      text: "text-green-900"
-    },
-    default: {
-      background: "hover:bg-zinc-50",
-      border: "bg-zinc-100",
-      text: "text-zinc-900"
-    }
-  }.freeze
+  # FPL holds prices in tenths of a million, so 155 reads as £15.5m.
+  TENTHS_PER_MILLION = 10.0
 
-  def draft_style(category, key)
-    DRAFT_STYLES.fetch(category || :default, DRAFT_STYLES[:default])[key]
+  # What we report about a player without rating him: what he costs, and how much
+  # of the field already owns him. Read them, judge them yourself.
+  def player_facts(stats)
+    [ player_price(stats&.dig("now_cost")), player_ownership(stats&.dig("selected_by_percent")) ].compact
+  end
+
+  def player_price(tenths)
+    return if tenths.blank?
+
+    format("£%.1fm", tenths.to_f / TENTHS_PER_MILLION)
+  end
+
+  def player_ownership(percent)
+    return if percent.blank?
+
+    format("%.1f%% owned", percent)
+  end
+
+  def tier_symbol(tier)
+    tier_info(tier)&.dig(:symbol)
   end
 
   private
