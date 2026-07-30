@@ -25,7 +25,7 @@ class WeeklyForecast < ApplicationService
 
     Forecast.upsert_all(rows, unique_by: %i[player_id gameweek_id])
     Rails.logger.info "Forecast #{rows.size} players for gameweek #{@gameweek.fpl_id}"
-    rows.size
+    @refused ? false : rows.size
   rescue => e
     Rails.logger.error "Weekly forecast failed: #{e.message}"
     false
@@ -42,9 +42,49 @@ class WeeklyForecast < ApplicationService
     return [] if players.empty?
 
     forecasts = expected_points_for(players)
+    return refuse(position, players, forecasts) unless anybody_scores?(forecasts)
+
+    rank_rows(players, forecasts)
+  end
+
+  def anybody_scores?(forecasts)
+    forecasts.any? { |_, forecast| forecast[:points].to_f.positive? }
+  end
+
+  def rank_rows(players, forecasts)
     ordered(players, forecasts).each_with_index.map do |player, index|
       row_for(player, forecasts[player.id], index + 1)
     end
+  end
+
+  # A whole position scoring nothing is not a forecast, it is a missing input:
+  # every player is multiplied by his minutes, his fixtures and his fitness, so
+  # one of those being absent takes the lot to nought.
+  #
+  # Writing that would replace last week's honest numbers with a wall of noughts
+  # and empty the page, which is how this last went wrong: three runs reported
+  # success while the site showed nothing. So refuse, keep whatever is already
+  # stored, and say which input is missing.
+  def refuse(position, players, forecasts)
+    Rails.logger.error(
+      "Refusing to write #{position} forecasts for gameweek #{@gameweek.fpl_id}: " \
+      "nobody could be scored. #{missing_inputs(players, forecasts)}"
+    )
+    @refused = true
+    []
+  end
+
+  # Which of the three things a forecast is multiplied from was missing.
+  INPUTS = {
+    "with minutes on record" => ->(w) { w[:minutes].to_i.positive? },
+    "with a fixture" => ->(w) { w[:games].to_f.positive? },
+    "we could measure" => ->(w) { w[:ours].present? }
+  }.freeze
+
+  def missing_inputs(players, forecasts)
+    working = forecasts.values.filter_map { |forecast| forecast[:working].presence }
+    tally = INPUTS.map { |label, test| "#{working.count(&test)} #{label}" }
+    "#{players.size} players, #{tally.join(', ')}"
   end
 
   # Most points first, with players we cannot forecast at the bottom: unknown is

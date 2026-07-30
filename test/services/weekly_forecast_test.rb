@@ -31,10 +31,8 @@ class WeeklyForecastTest < ActiveSupport::TestCase
     ExpectedPoints.define_singleton_method(:parameters, original)
   end
 
-  test "writes a forecast for every player, with its working" do
-    assert_difference "Forecast.count", Player.count do
-      WeeklyForecast.call(gameweek: @gameweek)
-    end
+  test "writes a forecast with its working for a position it can score" do
+    WeeklyForecast.call(gameweek: @gameweek)
 
     forecast = Forecast.find_by(player: @player, gameweek: @gameweek)
     assert forecast.score.to_f.positive?
@@ -60,6 +58,39 @@ class WeeklyForecastTest < ActiveSupport::TestCase
     assert_equal tuned, Forecast.first.strategy.strategy_config
     assert_equal ExpectedPoints.parameters, was.reload.strategy_config,
                  "what produced last week's forecast must not change under it"
+  end
+
+  test "refuses to write a position it cannot score anybody in" do
+    Match.destroy_all # nobody has a fixture, so everybody multiplies to nought
+
+    assert_not WeeklyForecast.call(gameweek: @gameweek)
+    assert_equal 0, Forecast.count, "a wall of noughts is worse than no answer at all"
+  end
+
+  test "refusing leaves the forecast that was already there" do
+    WeeklyForecast.call(gameweek: @gameweek)
+    was = Forecast.find_by(player: @player, gameweek: @gameweek).score
+
+    Match.destroy_all
+    WeeklyForecast.call(gameweek: @gameweek)
+
+    assert_equal was, Forecast.find_by(player: @player, gameweek: @gameweek).score,
+                 "last week's honest number beats this week's nought"
+  end
+
+  test "says which input was missing when it refuses" do
+    Match.destroy_all
+    log = StringIO.new
+    original = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(log)
+    begin
+      WeeklyForecast.call(gameweek: @gameweek)
+    ensure
+      Rails.logger = original
+    end
+
+    assert_match(/Refusing to write forward forecasts/, log.string)
+    assert_match(/with a fixture/, log.string, "it must name the input that was absent")
   end
 
   test "a gameweek that has already been played is never rewritten" do
