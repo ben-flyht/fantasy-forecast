@@ -23,8 +23,20 @@ module Fpl
 
     REQUEST_DELAY = 0.5 # seconds between requests, to stay a polite guest
 
-    def initialize(delay: REQUEST_DELAY)
+    # Written this often, so an interrupted run keeps what it had.
+    BATCH = 25
+
+    # How long a single run may take before it stops and leaves the rest to the
+    # next one. Comfortably inside an hourly slot, whatever the platform allows.
+    TIME_BUDGET = 3.minutes
+
+    # Recorded for a player FPL has no past seasons for, so he is not asked about
+    # again. Nothing reads it: it is a receipt, not a statistic.
+    CHECKED = "history_checked".freeze
+
+    def initialize(delay: REQUEST_DELAY, budget: TIME_BUDGET)
       @delay = delay
+      @budget = budget
     end
 
     def call
@@ -49,32 +61,53 @@ module Fpl
     end
 
     def players_missing_history(gameweek)
-      already_synced = Statistic.where(gameweek: gameweek, type: STAT_TYPES.keys.first).select(:player_id)
-      Player.where.not(id: already_synced).to_a
+      asked = Statistic.where(gameweek: gameweek, type: [ STAT_TYPES.keys.first, CHECKED ]).select(:player_id)
+      Player.where.not(id: asked).to_a
     end
 
     def sync_players(players, gameweek)
       Rails.logger.info "Syncing last-season history for #{players.size} players..."
-      records = collect_records(players, gameweek)
-      return log_nothing_to_do if records.empty?
-
-      Statistic.upsert_all(records, unique_by: %i[player_id gameweek_id type])
-      Rails.logger.info "Synced #{records.size} last-season statistics for gameweek #{gameweek.fpl_id}"
+      done = collect_in_batches(players, gameweek)
+      Rails.logger.info "Synced #{done} of #{players.size} players; #{players.size - done} left for the next run"
       true
     end
 
-    def collect_records(players, gameweek)
-      now = Time.current
-      players.flat_map.with_index do |player, index|
-        sleep(@delay) if index.positive? && @delay.positive?
-        player_records(player, gameweek, now)
+    # Saves as it goes and stops when its time is up, so whatever it managed is
+    # kept and the next run continues from there.
+    def collect_in_batches(players, gameweek)
+      deadline = Time.current + @budget
+      done = 0
+
+      players.each_slice(BATCH) do |batch|
+        store(batch.flat_map { |player| player_records(player, gameweek) })
+        done += batch.size
+        break if Time.current > deadline
       end
+      done
     end
 
-    def player_records(player, gameweek, now)
-      season = latest_past_season(player)
-      return [] if season.nil?
+    def store(records)
+      return if records.empty?
 
+      Statistic.upsert_all(records, unique_by: %i[player_id gameweek_id type])
+    end
+
+    def player_records(player, gameweek)
+      sleep(@delay) if @delay.positive?
+      now = Time.current
+      season = latest_past_season(player)
+      return [ checked_record(player, gameweek, now) ] if season.nil?
+
+      totals(player, gameweek, season, now) << checked_record(player, gameweek, now)
+    end
+
+    # A receipt that we asked, so a player with no past is not asked about again.
+    def checked_record(player, gameweek, now)
+      { player_id: player.id, gameweek_id: gameweek.id, type: CHECKED,
+        value: 1.0, created_at: now, updated_at: now }
+    end
+
+    def totals(player, gameweek, season, now)
       STAT_TYPES.filter_map do |type, key|
         value = season[key]
         next if value.nil?
