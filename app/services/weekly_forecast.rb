@@ -96,11 +96,11 @@ class WeeklyForecast < ApplicationService
     end
   end
 
+  # A fixture FPL has not rated is still a fixture. Dropping it would turn a gap in
+  # the data into a statement that the team is not playing, which multiplies every
+  # player at that club down to nothing.
   def add_fixture(fixtures, match, team_id, opponent, home:)
-    difficulty = match.difficulty_for(team_id)
-    return if difficulty.nil?
-
-    fixtures[team_id] << { difficulty: difficulty, opponent: opponent&.name, home: home }
+    fixtures[team_id] << { difficulty: match.difficulty_for(team_id), opponent: opponent&.name, home: home }
   end
 
   # Players who arrived over the summer, whose minutes record belongs to a

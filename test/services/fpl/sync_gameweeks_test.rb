@@ -41,6 +41,25 @@ module Fpl
       }
     end
 
+    test "a fixture brings its difficulty ratings with it" do
+      team_h = Team.create!(fpl_id: 701, name: "Home FC", short_name: "HOM", code: 701)
+      team_a = Team.create!(fpl_id: 702, name: "Away FC", short_name: "AWY", code: 702)
+      stub_request(:get, @api_url).to_return(status: 200, body: @mock_api_response.to_json,
+                                             headers: { "Content-Type" => "application/json" })
+      stub_request(:get, @fixtures_api_url).to_return(
+        status: 200,
+        body: [ { "id" => 7001, "event" => 1, "team_h" => team_h.fpl_id, "team_a" => team_a.fpl_id,
+                  "team_h_difficulty" => 2, "team_a_difficulty" => 4 } ].to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+      Fpl::SyncGameweeks.call
+      match = Match.find_by(fpl_id: 7001)
+
+      assert_equal 2, match.home_difficulty, "without this every fixture reads as unplayable"
+      assert_equal 4, match.away_difficulty
+    end
+
     test "call creates new gameweeks from API data" do
       stub_request(:get, @api_url)
         .to_return(status: 200, body: @mock_api_response.to_json, headers: { "Content-Type" => "application/json" })

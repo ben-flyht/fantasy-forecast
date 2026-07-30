@@ -90,6 +90,10 @@ module Fpl
       end
     end
 
+    # FPL rates each side of a fixture separately, one (easiest) to five (hardest).
+    # The rating belongs to the fixture and is synced with it: keeping it anywhere
+    # else means matches can exist without one, and a fixture with no difficulty
+    # reads as no fixture at all.
     def extract_match_data(fixture)
       return nil unless fixture_valid?(fixture)
 
@@ -98,7 +102,8 @@ module Fpl
       away_team = Team.find_by(fpl_id: fixture["team_a"])
       return nil unless gameweek && home_team && away_team
 
-      { home_team: home_team, away_team: away_team, gameweek: gameweek }
+      { home_team: home_team, away_team: away_team, gameweek: gameweek,
+        home_difficulty: fixture["team_h_difficulty"], away_difficulty: fixture["team_a_difficulty"] }
     end
 
     def fixture_valid?(fixture)

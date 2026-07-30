@@ -66,6 +66,18 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert_in_delta result[1][:points] * 2, result[2][:points], 0.05, "two games, two goes at it"
   end
 
+  test "a fixture FPL has not rated still counts as a game" do
+    rankings = [ ranking(1, team_id: 1), ranking(2, team_id: 2) ]
+    stats = { 1 => regular, 2 => regular }
+    fixtures = { 1 => [ { difficulty: nil, opponent: "Someone", home: true } ], 2 => [ fixture ] }
+
+    result = forecast(rankings, stats, fixtures: fixtures)
+
+    assert_equal result[2][:points], result[1][:points],
+                 "a gap in the data must not read as the team not playing"
+    assert result[1][:points].positive?
+  end
+
   test "a kind fixture is worth more than a hard one, but not wildly so" do
     rankings = [ ranking(1, team_id: 1), ranking(2, team_id: 2) ]
     stats = { 1 => regular, 2 => regular }

@@ -364,7 +364,13 @@ class ExpectedPoints
   # 1, a kind one a little more, and a team playing twice gets two goes at it. A
   # blank week is nought, which is the honest answer.
   def games_ahead(ranking)
-    fixtures_for(ranking).sum { |fixture| 1 + (AVERAGE_DIFFICULTY - fixture[:difficulty]) * FIXTURE_SWING }
+    fixtures_for(ranking).sum { |fixture| 1 + (AVERAGE_DIFFICULTY - difficulty_of(fixture)) * FIXTURE_SWING }
+  end
+
+  # An unrated fixture counts as an ordinary one. Treating it as unplayable would
+  # be a much bigger claim than the data supports.
+  def difficulty_of(fixture)
+    fixture[:difficulty] || AVERAGE_DIFFICULTY
   end
 
   def fixtures_for(ranking)
