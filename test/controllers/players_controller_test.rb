@@ -114,11 +114,36 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
 
-    # Defaults to the latest gameweek that has forecasts (5), not a hardcoded start
-    assert_select "select[name=gameweek] option[selected]", text: "5"
-    # Dropdown lists only forecasted weeks: 1 is present, 2 (no forecasts) is absent
-    assert_select "select[name=gameweek] option", text: "1"
-    assert_select "select[name=gameweek] option", text: "2", count: 0
+    # Still defaults to the latest gameweek that has forecasts (5) for display
+    assert_includes response.body, "Gameweek 5"
+    # The horizon selector no longer enumerates individual weeks
+    assert_select "select[name=gameweek] option", text: "Rest of Season"
+    assert_select "select[name=gameweek] option", text: "1", count: 0
+    assert_select "select[name=gameweek] option", text: "5", count: 0
+  end
+
+  test "rest of season route shows rest-of-season forecasts" do
+    Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 40.0, horizon: "rest_of_season")
+
+    get gameweek_position_path(gameweek: "ros", position: "#{@player.position}s")
+    assert_response :success
+    assert_includes response.body, @player.short_name
+    assert_includes response.body, "Rest of Season"
+    assert_select "select[name=gameweek] option[selected]", text: "Rest of Season"
+  end
+
+  test "the horizon selector offers next gameweek and rest of season" do
+    get root_path
+    assert_select "select[name=gameweek] option", text: "Next Gameweek"
+    assert_select "select[name=gameweek] option", text: "Rest of Season"
+  end
+
+  test "a weekly forecast is not shown under the rest-of-season horizon" do
+    Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 4.0, horizon: "gameweek")
+
+    get gameweek_position_path(gameweek: "ros", position: "#{@player.position}s")
+    assert_response :success
+    assert_not_includes response.body, @player.short_name
   end
 
   test "should handle invalid gameweek gracefully" do

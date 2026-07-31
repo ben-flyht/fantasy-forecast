@@ -16,6 +16,8 @@ class PlayersController < ApplicationController
 
   before_action :set_filters, only: [ :index ]
 
+  helper_method :rest_of_season?, :horizon_label, :horizon_short, :horizon_param
+
   def index
     return if redirect_to_clean_url
     return unless validate_gameweek
@@ -109,10 +111,28 @@ class PlayersController < ApplicationController
     gameweek_position_path(gameweek: params[:gameweek], position: "#{position}s", **extra)
   end
 
+  REST_OF_SEASON = "ros".freeze
+
   def set_filters
-    @gameweek = params[:gameweek].present? ? params[:gameweek].to_i : current_gameweek
+    set_horizon
     @position_filter = resolve_position(params[:position])
     @team_filter = params[:team_id].present? ? params[:team_id].to_i : nil
+  end
+
+  # Rest of season is anchored to the next gameweek: its rows are stored against
+  # that week, and validation and titling resolve a real gameweek from it.
+  def set_horizon
+    if params[:gameweek] == REST_OF_SEASON
+      @horizon = "rest_of_season"
+      @gameweek = next_gameweek&.fpl_id
+    else
+      @horizon = "gameweek"
+      @gameweek = params[:gameweek].present? ? params[:gameweek].to_i : current_gameweek
+    end
+  end
+
+  def rest_of_season?
+    @horizon == "rest_of_season"
   end
 
   def resolve_position(param)
@@ -128,9 +148,15 @@ class PlayersController < ApplicationController
   end
 
   def load_consensus_rankings
-    rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter)
-    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter).call
+    rankings = ConsensusRanking.for_week_and_position(@gameweek, @position_filter, @team_filter, horizon: @horizon)
+    @consensus_rankings = TierCalculator.new(rankings, position: @position_filter, points_divisor: tier_divisor).call
     @tier_groups = @consensus_rankings.group_by(&:tier)
+  end
+
+  # A season total is read as its per-gameweek average, so it meets the same tier
+  # bands a single week does.
+  def tier_divisor
+    rest_of_season? ? [ Gameweek.remaining.count, 1 ].max : 1
   end
 
   def load_gameweek_data
@@ -194,16 +220,37 @@ class PlayersController < ApplicationController
   end
 
   def set_available_filters
-    @available_gameweeks = available_gameweeks_with_forecasts
+    @horizon_options = horizon_options
     @available_positions = %w[goalkeeper defender midfielder forward]
     @available_teams = Team.order(:name).select(:id, :name, :short_name)
   end
 
+  # Two horizons, not a growing list of gameweeks: the coming week, or all that
+  # remain.
+  def horizon_options
+    options = []
+    options << [ "Next Gameweek", next_gameweek.fpl_id ] if next_gameweek
+    options << [ "Rest of Season", REST_OF_SEASON ]
+    options
+  end
+
+  def horizon_param
+    rest_of_season? ? REST_OF_SEASON : @gameweek
+  end
+
+  def horizon_label
+    rest_of_season? ? "Rest of Season" : "Gameweek #{@gameweek}"
+  end
+
+  def horizon_short
+    rest_of_season? ? "Rest of Season" : "GW#{@gameweek}"
+  end
+
   def build_page_title
-    @page_title = "Player Rankings - Gameweek #{@gameweek}"
+    @page_title = "Player Rankings - #{horizon_label}"
     @page_title += " #{@position_filter.capitalize}s" if @position_filter.present?
     @page_title += " - #{Team.find_by(id: @team_filter)&.name}" if @team_filter
-    @canonical_path = gameweek_position_path(gameweek: @gameweek, position: "#{@position_filter}s")
+    @canonical_path = gameweek_position_path(gameweek: horizon_param, position: "#{@position_filter}s")
   end
 
   def next_gameweek

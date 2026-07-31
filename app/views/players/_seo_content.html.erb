@@ -4,16 +4,16 @@
 
   <div class="mt-8 space-y-6 text-sm text-zinc-600">
     <div>
-      <h2 class="text-lg font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> Rankings — Gameweek <%= @gameweek %></h2>
+      <h2 class="text-lg font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> Rankings — <%= horizon_label %></h2>
       <p class="mt-2">
-        Our algorithm ranks every Premier League <%= @position_filter %> for Gameweek <%= @gameweek %> by analyzing recent form, upcoming fixtures, and expected goals data.
+        Our algorithm ranks every Premier League <%= @position_filter %> for <%= horizon_label %> by analyzing recent form, upcoming fixtures, and expected goals data.
         Players are grouped into weather tiers from <%= TierCalculator::TIERS[1][:symbol] %> Sunshine (must-start picks) to <%= TierCalculator::TIERS[5][:symbol] %> Snow (best avoided).
       </p>
     </div>
 
     <% if sunshine.any? %>
       <div>
-        <h3 class="font-semibold text-zinc-900"><%= TierCalculator::TIERS[1][:symbol] %> Top <%= @position_filter.capitalize %> Picks for GW<%= @gameweek %></h3>
+        <h3 class="font-semibold text-zinc-900"><%= TierCalculator::TIERS[1][:symbol] %> Top <%= @position_filter.capitalize %> Picks for <%= horizon_short %></h3>
         <ul class="mt-2 space-y-2">
           <% sunshine.first(5).each do |r| %>
             <% player = @players_by_id[r.player_id] %>
@@ -30,14 +30,14 @@
           <% end %>
         </ul>
         <p class="mt-2">
-          These <%= @position_filter %>s have the strongest combination of form, fixtures, and underlying stats heading into Gameweek <%= @gameweek %>.
+          These <%= @position_filter %>s have the strongest combination of form, fixtures, and underlying stats heading into <%= horizon_label %>.
         </p>
       </div>
     <% end %>
 
     <% if partly_cloudy.any? %>
       <div>
-        <h3 class="font-semibold text-zinc-900"><%= TierCalculator::TIERS[2][:symbol] %> Strong <%= @position_filter.capitalize %> Alternatives for GW<%= @gameweek %></h3>
+        <h3 class="font-semibold text-zinc-900"><%= TierCalculator::TIERS[2][:symbol] %> Strong <%= @position_filter.capitalize %> Alternatives for <%= horizon_short %></h3>
         <ul class="mt-2 space-y-2">
           <% partly_cloudy.first(5).each do |r| %>
             <% player = @players_by_id[r.player_id] %>
@@ -54,7 +54,7 @@
           <% end %>
         </ul>
         <p class="mt-2">
-          These <%= @position_filter %>s offer reliable upside as slightly cheaper or less-owned options for Gameweek <%= @gameweek %>.
+          These <%= @position_filter %>s offer reliable upside as slightly cheaper or less-owned options for <%= horizon_label %>.
         </p>
       </div>
     <% end %>
@@ -80,10 +80,10 @@
       <h3 class="font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> FAQ</h3>
       <dl class="mt-2 space-y-3">
         <div>
-          <dt class="font-medium text-zinc-900">Who are the best FPL <%= @position_filter %>s for Gameweek <%= @gameweek %>?</dt>
+          <dt class="font-medium text-zinc-900">Who are the best FPL <%= @position_filter %>s for <%= horizon_label %>?</dt>
           <dd class="mt-1">
             <% if sunshine.any? %>
-              Our top-rated <%= @position_filter %>s for GW<%= @gameweek %> are
+              Our top-rated <%= @position_filter %>s for <%= horizon_short %> are
               <%= sunshine.first(3).map { |r| "#{r.name} (#{@players_by_id[r.player_id]&.team&.short_name})" }.join(", ") %>.
               These players have the best combination of recent form and favourable fixtures.
             <% else %>
@@ -109,7 +109,7 @@
         Browse rankings for other positions:
         <% other_positions.each_with_index do |pos, i| %>
           <%= link_to "#{pos.capitalize}s",
-              gameweek_position_path(gameweek: @gameweek, position: "#{pos}s"),
+              gameweek_position_path(gameweek: horizon_param, position: "#{pos}s"),
               class: "text-blue-600 hover:underline",
               data: { turbo_frame: "_top" } %><%= i == other_positions.size - 1 ? "." : "," %>
         <% end %>

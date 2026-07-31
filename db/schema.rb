@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_30_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -18,6 +18,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_140000) do
   create_table "forecasts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "gameweek_id", null: false
+    t.string "horizon", default: "gameweek", null: false
     t.bigint "player_id", null: false
     t.integer "rank"
     t.decimal "score", precision: 10, scale: 4
@@ -26,7 +27,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_140000) do
     t.jsonb "working", default: {}, null: false
     t.index ["gameweek_id", "player_id"], name: "index_forecasts_on_gameweek_id_and_player_id"
     t.index ["gameweek_id"], name: "index_forecasts_on_gameweek_id"
-    t.index ["player_id", "gameweek_id"], name: "index_forecasts_on_player_gameweek", unique: true
+    t.index ["player_id", "gameweek_id", "horizon"], name: "index_forecasts_on_player_gameweek_horizon", unique: true
     t.index ["player_id"], name: "index_forecasts_on_player_id"
     t.index ["strategy_id"], name: "index_forecasts_on_strategy_id"
   end

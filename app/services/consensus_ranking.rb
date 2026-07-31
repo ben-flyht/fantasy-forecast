@@ -3,14 +3,15 @@
 class ConsensusRanking
   Ranking = Struct.new(:player_id, :name, :team_id, :position, :bot_rank, :score, :tier, keyword_init: true)
 
-  def self.for_week_and_position(gameweek, position = nil, team_id = nil)
-    new(gameweek, position, team_id).rankings
+  def self.for_week_and_position(gameweek, position = nil, team_id = nil, horizon: "gameweek")
+    new(gameweek, position, team_id, horizon: horizon).rankings
   end
 
-  def initialize(gameweek, position = nil, team_id = nil)
+  def initialize(gameweek, position = nil, team_id = nil, horizon: "gameweek")
     @gameweek = gameweek
     @position = position
     @team_id = team_id
+    @horizon = horizon
   end
 
   def rankings
@@ -39,7 +40,7 @@ class ConsensusRanking
   end
 
   def forecasts
-    scope = Forecast.includes(player: :team).where(gameweek: gameweek_record)
+    scope = Forecast.includes(player: :team).where(gameweek: gameweek_record, horizon: @horizon)
     scope = scope.joins(:player).where(players: { position: @position }) if @position.present?
     scope = scope.joins(:player).where(players: { team_id: @team_id }) if @team_id.present?
     scope

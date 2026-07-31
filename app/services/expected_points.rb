@@ -107,6 +107,14 @@ class ExpectedPoints
   CROWD_SHARE_MIN = 0.25
   CROWD_SHARE_MAX = 0.8
 
+  # How far the crowd is trusted overall, on top of the per-player share above. The
+  # crowd's order is an early-season reading: new-signing hype, pre-season
+  # ownership, who looked good in July. That is at its most informative for the
+  # coming week and least so for the rest of the season, by when results will have
+  # re-priced him. One is full trust and leaves the weekly forecast untouched; a
+  # rest-of-season horizon turns it down so its own record does more of the talking.
+  CROWD_WEIGHT = 1.0
+
   # The cheapest tenth of a position, where ownership stops being a verdict.
   # Everybody needs a bench and somebody has to fill it, so a quarter of the game
   # owning the cheapest keeper is a budget decision, not a prediction that he will
@@ -133,14 +141,15 @@ class ExpectedPoints
     {
       regular_share: REGULAR_SHARE, unproven_minutes: UNPROVEN_MINUTES,
       form_swing: FORM_SWING, fixture_swing: FIXTURE_SWING,
-      crowd_share_min: CROWD_SHARE_MIN, crowd_share_max: CROWD_SHARE_MAX, price_power: PRICE_POWER,
+      crowd_share_min: CROWD_SHARE_MIN, crowd_share_max: CROWD_SHARE_MAX,
+      crowd_weight: CROWD_WEIGHT, price_power: PRICE_POWER,
       new_club_minutes: NEW_CLUB_MINUTES, cheapest: CHEAPEST,
       exodus_floor: EXODUS_FLOOR, inflow_ceiling: INFLOW_CEILING
     }
   end
 
   def initialize(rankings, stats:, fixtures_by_team:, season_started: true, gameweeks_played: nil,
-                 managers: nil, movers: [])
+                 managers: nil, movers: [], crowd_weight: CROWD_WEIGHT)
     @rankings = rankings
     @stats = stats
     @fixtures_by_team = fixtures_by_team
@@ -148,6 +157,7 @@ class ExpectedPoints
     @gameweeks_played = weeks_of_football(gameweeks_played)
     @managers = managers.to_i
     @movers = movers.to_set
+    @crowd_weight = crowd_weight
   end
 
   # How much football there has been to measure against. Before the season starts
@@ -224,7 +234,8 @@ class ExpectedPoints
   # A costly vote is a considered one, so the dearer the player the more of the
   # answer his backing decides.
   def crowd_share(ranking)
-    CROWD_SHARE_MIN + (CROWD_SHARE_MAX - CROWD_SHARE_MIN) * dearness(ranking)
+    base = CROWD_SHARE_MIN + (CROWD_SHARE_MAX - CROWD_SHARE_MIN) * dearness(ranking)
+    (base * @crowd_weight).clamp(0.0, 1.0)
   end
 
   # How dear he is for his position, as the share of his peers he costs more than.

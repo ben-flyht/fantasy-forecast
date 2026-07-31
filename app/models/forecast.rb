@@ -6,8 +6,8 @@ class Forecast < ApplicationRecord
   # Callbacks
   before_validation :assign_next_gameweek!
 
-  # Uniqueness constraint: one forecast per player/gameweek
-  validates :player_id, uniqueness: { scope: :gameweek_id }
+  # Uniqueness constraint: one forecast per player/gameweek/horizon
+  validates :player_id, uniqueness: { scope: [ :gameweek_id, :horizon ] }
 
   # Scopes
   scope :by_gameweek, ->(gameweek_id) { where(gameweek_id: gameweek_id) }
