@@ -36,6 +36,13 @@ class Player < ApplicationRecord
     read_attribute(:short_name).presence || last_name
   end
 
+  def given_name
+    surname = short_name.to_s
+    return "" if surname.blank?
+
+    first_name.to_s.sub(/\s*#{Regexp.escape(surname)}\s*\z/i, "").strip
+  end
+
   def slug
     full_name.parameterize
   end
@@ -72,6 +79,11 @@ class Player < ApplicationRecord
   def photo_url(size: "40x40")
     return nil unless code.present?
     "https://resources.premierleague.com/premierleague25/photos/players/#{size}/#{code}.png"
+  end
+
+  def cutout_url
+    return nil unless code.present?
+    "https://resources.premierleague.com/premierleague25/photos/players/110x140/#{code}.png"
   end
 
   # Get chance_of_playing from statistics for the current/next gameweek

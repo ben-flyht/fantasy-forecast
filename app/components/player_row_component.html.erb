@@ -1,0 +1,57 @@
+<tr class="cursor-pointer group"
+    onclick="Turbo.visit('<%= helpers.player_path(player) %>')"
+    role="link" tabindex="0"
+    onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
+  <td class="w-[104px] pl-[10px] text-center align-middle bg-white border-y border-l border-zinc-200 rounded-l-xl group-hover:bg-zinc-50">
+    <span class="text-[46px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><%= rank %></span>
+  </td>
+
+  <td class="p-0 w-full align-middle bg-white border-y border-zinc-200 group-hover:bg-zinc-50">
+    <div class="relative h-[104px] w-full overflow-hidden">
+      <div class="relative z-[1] flex items-center h-full w-full pl-10 <%= text_class %>">
+        <div class="absolute inset-0 z-0 overflow-hidden [clip-path:polygon(26px_0,100%_0,calc(100%_-_44px)_100%,0_100%)]">
+          <div class="absolute inset-0" style="background-color: <%= color %>"></div>
+          <% if team&.badge_url %>
+            <span class="ff-crest absolute right-0 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.2]"
+                  style="-webkit-mask-image:url('<%= team.badge_url %>');mask-image:url('<%= team.badge_url %>');background-color:<%= team.on_light? ? '#0d0d0d' : '#ffffff' %>"></span>
+            <span class="absolute right-0 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.22]">
+              <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain" %>
+            </span>
+          <% end %>
+        </div>
+
+        <div class="relative z-[1] min-w-0 grid grid-rows-[0px_12px_2px_26px_2px_14px] justify-items-start">
+          <% if player.given_name.present? %>
+            <span class="row-start-2 self-end leading-none text-xs font-bold tracking-[-0.02em] uppercase opacity-80 whitespace-nowrap"><%= player.given_name %></span>
+          <% end %>
+          <span class="row-start-4 self-center leading-none text-2xl font-extrabold tracking-[-0.02em] uppercase whitespace-nowrap"><%= player.short_name %></span>
+          <span class="row-start-6 self-start leading-none text-[12.5px] font-bold whitespace-nowrap flex items-center gap-[7px]">
+            <span><%= team&.name %></span>
+            <% if cost %>
+              <span class="opacity-50 font-normal">/</span>
+              <span class="tabular-nums"><%= cost %></span>
+            <% end %>
+            <% if ownership %>
+              <span class="opacity-50 font-normal">/</span>
+              <span class="tabular-nums">
+                <%= ownership %><% if transfer_movement %><span class="text-[10.5px] opacity-80 ml-[3px] tabular-nums"><%= transfer_movement %></span><% end %>
+              </span>
+            <% end %>
+          </span>
+        </div>
+      </div>
+
+      <% if player.cutout_url %>
+        <span class="absolute right-8 bottom-0 h-[112px] z-[2] pointer-events-none">
+          <%= image_tag player.cutout_url, alt: "",
+                class: "block h-full w-auto object-contain object-bottom drop-shadow-[0_6px_11px_rgba(0,0,0,0.24)]",
+                onerror: "this.parentElement.remove()" %>
+        </span>
+      <% end %>
+    </div>
+  </td>
+
+  <td class="w-[104px] text-center align-middle bg-white border-y border-r border-zinc-200 rounded-r-xl group-hover:bg-zinc-50">
+    <span class="text-[46px] font-extrabold tracking-[-0.03em] leading-none text-zinc-900"><%= grade %></span>
+  </td>
+</tr>
