@@ -7,6 +7,10 @@
 # today's snapshot applied the whole way out, which is honest for the next
 # gameweek and progressively less so the further ahead you read.
 class RestOfSeasonForecast < Forecaster
+  # The crowd's order is an early-season reading, so over a whole season it is
+  # trusted less and each player's own record does more of the talking.
+  CROWD_WEIGHT = 0.75
+
   private
 
   def horizon
@@ -15,5 +19,9 @@ class RestOfSeasonForecast < Forecaster
 
   def matches
     Match.includes(:home_team, :away_team).where(gameweek: Gameweek.remaining)
+  end
+
+  def model_overrides
+    { crowd_weight: CROWD_WEIGHT }
   end
 end

@@ -147,6 +147,23 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert result[1][:points] < points.first, "but never past the best player we can actually measure"
   end
 
+  test "trusting the crowd less pulls a hyped player back toward his own record" do
+    rankings, stats = crowded_field(owned: [ 60.0, 3.0 ], cost: [ 90.0, 55.0 ])
+    stats[1] = regular(xg: 0.3, xgi: 0.45, owned: 60.0, cost: 90.0) # adored, ordinary record
+
+    full = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                              season_started: false, crowd_weight: 1.0).call
+    muted = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                               season_started: false, crowd_weight: 0.5).call
+
+    assert full[1][:working][:crowd] > full[1][:working][:ours],
+           "the crowd rates the hyped player above his own record"
+    assert muted[1][:points] < full[1][:points],
+           "trusting the crowd less brings him back down toward what he has actually done"
+    assert muted[1][:working][:crowd_share] < full[1][:working][:crowd_share],
+           "the crowd simply gets less of the say"
+  end
+
   test "a rush for the exit drops a player hard and at once" do
     rankings = [ ranking(1), ranking(2) ]
     owned = regular(owned: 10.0) # a tenth of 10m managers, so a million owners

@@ -120,8 +120,16 @@ class Forecaster < ApplicationService
       season_started: Gameweek.finished.exists?,
       gameweeks_played: Gameweek.finished.count,
       managers: total_managers,
-      movers: movers
+      movers: movers,
+      **model_overrides
     ).call
+  end
+
+  # How this horizon departs from the default model. The weekly forecast takes it
+  # as it comes; a subclass may turn a knob down. Kept in the strategy tag too, so
+  # a stored forecast still says which settings produced it.
+  def model_overrides
+    {}
   end
 
   def ranking_for(player)
@@ -177,7 +185,7 @@ class Forecaster < ApplicationService
   # back to whatever the code happens to say today, which is worse than useless
   # when the whole point is to find out which settings were better.
   def strategy
-    @strategy ||= Strategy.find_or_create_by!(strategy_config: ExpectedPoints.parameters)
+    @strategy ||= Strategy.find_or_create_by!(strategy_config: ExpectedPoints.parameters.merge(model_overrides))
   end
 
   def log_nothing_to_forecast

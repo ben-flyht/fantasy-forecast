@@ -61,6 +61,18 @@ class RestOfSeasonForecastTest < ActiveSupport::TestCase
     assert_equal [ 80, 81 ], Gameweek.remaining.pluck(:fpl_id)
   end
 
+  test "records that it trusted the crowd less than the weekly forecast" do
+    WeeklyForecast.call(gameweek: @next)
+    RestOfSeasonForecast.call(gameweek: @next)
+
+    weekly = Forecast.find_by(horizon: "gameweek").strategy.strategy_config[:crowd_weight]
+    season = Forecast.find_by(horizon: "rest_of_season").strategy.strategy_config[:crowd_weight]
+
+    assert_equal 1.0, weekly
+    assert_equal RestOfSeasonForecast::CROWD_WEIGHT, season
+    assert_operator season, :<, weekly, "a season out trusts the early-season crowd less"
+  end
+
   test "refuses to write a position it cannot score anybody in" do
     Match.destroy_all
 
