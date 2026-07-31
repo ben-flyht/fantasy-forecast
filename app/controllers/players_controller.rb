@@ -1,6 +1,6 @@
 class PlayersController < ApplicationController
   # Facts about a player we report rather than rate. See #load_row_facts.
-  ROW_FACT_TYPES = %w[now_cost selected_by_percent].freeze
+  ROW_FACT_TYPES = %w[now_cost selected_by_percent transfers_in transfers_out].freeze
 
   # How deep a list is worth reading in each position. Past this you are scrolling
   # through players nobody is choosing between, and the tail is where a forecast is

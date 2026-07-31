@@ -1,7 +1,7 @@
 # Returns bot rankings for a given gameweek and position.
 # Simplified from the original consensus system now that we only have bot forecasts.
 class ConsensusRanking
-  Ranking = Struct.new(:player_id, :name, :team_id, :position, :bot_rank, :score, :tier, keyword_init: true)
+  Ranking = Struct.new(:player_id, :name, :team_id, :position, :bot_rank, :score, :tier, :grade, keyword_init: true)
 
   def self.for_week_and_position(gameweek, position = nil, team_id = nil, horizon: "gameweek")
     new(gameweek, position, team_id, horizon: horizon).rankings

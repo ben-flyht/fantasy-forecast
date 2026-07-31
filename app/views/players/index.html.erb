@@ -50,47 +50,28 @@
 
     <!-- Rankings Table -->
     <% if @consensus_rankings.any? %>
-      <div class="rounded-lg border border-zinc-200 bg-white text-sm/6 text-zinc-950">
-        <div class="flex items-center gap-4 px-3 sm:px-6 py-2 text-zinc-500 font-medium border-b border-zinc-200">
-          <div class="shrink-0 w-10">Rank</div>
-          <div class="flex-1">Player</div>
-          <div class="flex items-center shrink-0 text-xs">
-            <div class="w-20 lg:w-28 text-center" title="How he looks for this gameweek">Outlook</div>
-          </div>
-        </div>
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full min-w-[720px] table-fixed border-separate border-spacing-y-2 text-zinc-950">
+          <thead>
+            <tr class="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
+              <th class="w-[104px] pb-2 text-center">Rank</th>
+              <th class="pb-2 pl-10 text-left">Player</th>
+              <th class="w-[104px] pb-2 text-center">Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @consensus_rankings.each do |ranking| %>
+              <% player = @players_by_id[ranking.player_id] %>
+              <%= render PlayerRowComponent.new(ranking: ranking, player: player, facts: @row_facts&.dig(player.id)) %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="md:hidden flex flex-col gap-2">
         <% @consensus_rankings.each do |ranking| %>
           <% player = @players_by_id[ranking.player_id] %>
-          <div class="flex items-center gap-4 px-3 sm:px-6 py-3 border-b border-zinc-100 cursor-pointer hover:bg-zinc-50"
-               onclick="Turbo.visit('<%= player_path(player) %>')"
-               role="link"
-               tabindex="0"
-               onkeydown="if(event.key === 'Enter') Turbo.visit('<%= player_path(player) %>')">
-            <div class="shrink-0 w-10 whitespace-nowrap">
-              <span class="text-base font-semibold text-zinc-900"><%= ranking.bot_rank || '-' %></span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-3 sm:gap-4">
-                <%= render PlayerAvatarComponent.new(player: player, size: :medium) %>
-                <div class="min-w-0 flex-1">
-                  <span class="font-medium text-lg text-zinc-900"><%= player.short_name %></span>
-                  <div class="text-zinc-900 flex flex-wrap items-center gap-1">
-                    <%= render TeamBadgeComponent.new(team: player.team) %>
-                    <span><%= player.team&.name %></span>
-                    <% player_facts(@row_facts&.dig(player.id)).each do |fact| %>
-                      <span class="opacity-40" aria-hidden="true">·</span>
-                      <span class="tabular-nums opacity-70"><%= fact %></span>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center justify-end shrink-0">
-              <div class="w-20 lg:w-28 text-center">
-                <span class="inline-flex items-center justify-center w-16 h-12 text-5xl select-none"
-                      title="<%= tier_info(ranking.tier)&.dig(:name) %>"><%= tier_symbol(ranking.tier) %></span>
-              </div>
-            </div>
-          </div>
+          <%= render PlayerCardComponent.new(ranking: ranking, player: player, facts: @row_facts&.dig(player.id)) %>
         <% end %>
       </div>
     <% else %>
