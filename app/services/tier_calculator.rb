@@ -58,9 +58,11 @@ class TierCalculator
   BAND_FLOORS = { 1 => 4.25, 2 => 3.25, 3 => 2.25, 4 => 1.25, 5 => 0.25 }.freeze
 
   def self.grade_from_points(points)
-    return "F" if points.nil?
+    return "-" if points.nil?
 
     tier = tier_from_points(points)
+    return "-" if tier == 5
+
     "#{GRADE_LETTERS[tier]}#{grade_suffix(points.to_f - BAND_FLOORS[tier])}"
   end
 
