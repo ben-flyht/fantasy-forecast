@@ -22,4 +22,14 @@ class Gameweek < ApplicationRecord
   def self.next_gameweek
     next_upcoming.first
   end
+
+  # The rest-of-season horizon: the next gameweek and every one after it. The
+  # single source of truth shared by the forecaster that spans it and the tiering
+  # that averages a season total back over it.
+  def self.remaining
+    anchor = next_gameweek
+    return none unless anchor
+
+    where("fpl_id >= ?", anchor.fpl_id).ordered
+  end
 end

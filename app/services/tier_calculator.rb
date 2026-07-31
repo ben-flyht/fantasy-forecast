@@ -21,9 +21,14 @@ class TierCalculator
   # top: a return of some kind for sunshine, down to nothing at all for snow.
   POINT_THRESHOLDS = { t1: 4.25, t2: 3.25, t3: 2.25, t4: 1.25 }.freeze
 
-  def initialize(rankings, position: nil)
+  # A whole-season score is dozens of points, not the two-to-four of one gameweek,
+  # so it is averaged back over the gameweeks it spans before it meets the bands
+  # above. A player who is Sunshine for a single week and a player who stays
+  # Sunshine all season then read alike, which is the honest comparison.
+  def initialize(rankings, position: nil, points_divisor: 1)
     @rankings = rankings
     @position = position
+    @points_divisor = points_divisor
   end
 
   def call
@@ -52,38 +57,6 @@ class TierCalculator
     tier_info(tier_from_points(forecast.score))
   end
 
-  def self.tier_from_points(points)
-    return 5 if points.nil?
-
-    case points.to_f
-    when POINT_THRESHOLDS[:t1].. then 1
-    when POINT_THRESHOLDS[:t2]..POINT_THRESHOLDS[:t1] then 2
-    when POINT_THRESHOLDS[:t3]..POINT_THRESHOLDS[:t2] then 3
-    when POINT_THRESHOLDS[:t4]..POINT_THRESHOLDS[:t3] then 4
-    else 5
-    end
-  end
-
-  def self.calculate_player_tier(forecast, _position = nil)
-    tier_info(tier_from_points(forecast.score))
-  end
-
-  def self.percentage_from_top(score, top_score)
-    return 100.0 if top_score.zero? || score.nil?
-
-    ((top_score - score) / top_score.to_f) * 100
-  end
-
-  def self.tier_number_from_percentage(percentage)
-    case percentage
-    when -Float::INFINITY..PERCENTAGE_THRESHOLDS[:t1] then 1
-    when PERCENTAGE_THRESHOLDS[:t1]..PERCENTAGE_THRESHOLDS[:t2] then 2
-    when PERCENTAGE_THRESHOLDS[:t2]..PERCENTAGE_THRESHOLDS[:t3] then 3
-    when PERCENTAGE_THRESHOLDS[:t3]..PERCENTAGE_THRESHOLDS[:t4] then 4
-    else 5
-    end
-  end
-
   private
 
   def assign_tier(ranking)
@@ -92,6 +65,12 @@ class TierCalculator
   end
 
   def calculate_tier(score)
-    self.class.tier_from_points(score)
+    self.class.tier_from_points(per_gameweek(score))
+  end
+
+  def per_gameweek(score)
+    return score if score.nil? || @points_divisor <= 1
+
+    score / @points_divisor
   end
 end

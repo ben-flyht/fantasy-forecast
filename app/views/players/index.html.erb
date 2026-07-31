@@ -1,5 +1,5 @@
-<% content_for :meta_title, "Best FPL #{@position_filter&.capitalize}s GW#{@gameweek} | Fantasy Forecast" %>
-<% content_for :meta_description, "FPL #{@position_filter} rankings for Gameweek #{@gameweek}. Weather-tiered player picks based on form, fixtures, and expected goals to help you win at Fantasy Premier League." %>
+<% content_for :meta_title, "Best FPL #{@position_filter&.capitalize}s #{horizon_short} | Fantasy Forecast" %>
+<% content_for :meta_description, "FPL #{@position_filter} rankings for #{horizon_label}. Weather-tiered player picks based on form, fixtures, and expected goals to help you win at Fantasy Premier League." %>
 <% content_for :meta_url, @canonical_path ? "#{ApplicationHelper::BASE_URL}#{@canonical_path}" : root_url %>
 
 <%= turbo_frame_tag "rankings_container" do %>
@@ -10,14 +10,14 @@
 
     <div class="flex flex-wrap items-center gap-4 mb-6">
       <%= form_with url: root_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance", controller: "filter-navigation", action: "submit->filter-navigation#submit" }, id: "filters-form", class: "contents" do |f| %>
-        <!-- Gameweek Selector -->
+        <!-- Horizon Selector -->
         <div class="flex items-center gap-2">
-          <span class="text-sm text-zinc-500">Gameweek</span>
+          <span class="text-sm text-zinc-500">Show</span>
           <%= render DropdownComponent.new(
-            label: "Gameweek",
+            label: "Horizon",
             name: "gameweek",
-            options: @available_gameweeks.map { |w| [w, w] },
-            selected: @gameweek
+            options: @horizon_options,
+            selected: horizon_param
           ) %>
         </div>
 
@@ -101,7 +101,7 @@
           </svg>
           <h3 class="mt-2 text-sm font-medium text-zinc-900">No rankings yet</h3>
           <p class="mt-1 text-sm text-zinc-500">
-            No ranking data available for gameweek <%= @gameweek %><%= " (#{@position_filter.capitalize}s)" if @position_filter.present? %>.
+            No ranking data available for <%= horizon_label.downcase %><%= " (#{@position_filter.capitalize}s)" if @position_filter.present? %>.
           </p>
         </div>
       </div>
