@@ -12,8 +12,9 @@
         <div class="absolute inset-0 z-0 overflow-hidden [clip-path:polygon(26px_0,100%_0,calc(100%_-_44px)_100%,0_100%)]">
           <div class="absolute inset-0" style="background-color: <%= color %>"></div>
           <% if team&.badge_url %>
-            <span class="ff-crest absolute right-0 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.2]"
-                  style="-webkit-mask-image:url('<%= team.badge_url %>');mask-image:url('<%= team.badge_url %>');background-color:<%= team.on_light? ? '#0d0d0d' : '#ffffff' %>"></span>
+            <span class="absolute right-0 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.2]">
+              <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain #{team.on_light? ? 'brightness-0' : 'brightness-0 invert'}" %>
+            </span>
             <span class="absolute right-0 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.22]">
               <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain" %>
             </span>
