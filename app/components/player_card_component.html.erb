@@ -17,7 +17,9 @@
     </div>
 
     <div class="relative z-[1] h-full flex flex-col justify-center pl-6 <%= text_class %>">
-      <div class="text-[10px] font-bold tracking-[-0.02em] uppercase opacity-80 leading-none mb-[3px] whitespace-nowrap"><%= player.first_name %></div>
+      <% if player.given_name.present? %>
+        <div class="text-[10px] font-bold tracking-[-0.02em] uppercase opacity-80 leading-none mb-[3px] whitespace-nowrap"><%= player.given_name %></div>
+      <% end %>
       <div class="text-[21px] font-extrabold tracking-[-0.02em] uppercase leading-none whitespace-nowrap"><%= player.short_name %></div>
       <div class="text-[10.5px] font-bold opacity-95 leading-none mt-[5px] whitespace-nowrap flex items-center gap-1.5">
         <span><%= team&.short_name %></span>

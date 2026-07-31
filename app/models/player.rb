@@ -36,6 +36,13 @@ class Player < ApplicationRecord
     read_attribute(:short_name).presence || last_name
   end
 
+  def given_name
+    surname = short_name.to_s
+    return "" if surname.blank?
+
+    first_name.to_s.sub(/\s*#{Regexp.escape(surname)}\s*\z/i, "").strip
+  end
+
   def slug
     full_name.parameterize
   end
