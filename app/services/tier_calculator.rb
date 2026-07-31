@@ -53,6 +53,24 @@ class TierCalculator
     end
   end
 
+  GRADE_LETTERS = { 1 => "A", 2 => "B", 3 => "C", 4 => "D", 5 => "F" }.freeze
+
+  BAND_FLOORS = { 1 => 4.25, 2 => 3.25, 3 => 2.25, 4 => 1.25, 5 => 0.25 }.freeze
+
+  def self.grade_from_points(points)
+    return "F" if points.nil?
+
+    tier = tier_from_points(points)
+    "#{GRADE_LETTERS[tier]}#{grade_suffix(points.to_f - BAND_FLOORS[tier])}"
+  end
+
+  def self.grade_suffix(fraction)
+    return "+" if fraction >= 0.6667
+    return "-" if fraction < 0.3333
+
+    ""
+  end
+
   def self.calculate_player_tier(forecast, _position = nil)
     tier_info(tier_from_points(forecast.score))
   end
@@ -60,12 +78,10 @@ class TierCalculator
   private
 
   def assign_tier(ranking)
-    ranking.tier = calculate_tier(ranking.score)
+    points = per_gameweek(ranking.score)
+    ranking.tier = self.class.tier_from_points(points)
+    ranking.grade = self.class.grade_from_points(points)
     ranking
-  end
-
-  def calculate_tier(score)
-    self.class.tier_from_points(per_gameweek(score))
   end
 
   def per_gameweek(score)
