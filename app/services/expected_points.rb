@@ -39,6 +39,10 @@ class ExpectedPoints
   # else's team sheet. Three thousand minutes at Newcastle says nothing about
   # whether he is first choice at Tottenham, so his record is allowed to argue for
   # half a match and no more until he has played some football for the new side.
+  #
+  # That caution is right for the coming week and too harsh for the rest of the
+  # season, by when an established signing will long since have settled in. A
+  # rest-of-season horizon lifts the cap so his record does more of the talking.
   NEW_CLUB_MINUTES = 0.5
 
   # FPL's scoring table, by position.
@@ -149,7 +153,7 @@ class ExpectedPoints
   end
 
   def initialize(rankings, stats:, fixtures_by_team:, season_started: true, gameweeks_played: nil,
-                 managers: nil, movers: [], crowd_weight: CROWD_WEIGHT)
+                 managers: nil, movers: [], crowd_weight: CROWD_WEIGHT, new_club_minutes: NEW_CLUB_MINUTES)
     @rankings = rankings
     @stats = stats
     @fixtures_by_team = fixtures_by_team
@@ -158,6 +162,7 @@ class ExpectedPoints
     @managers = managers.to_i
     @movers = movers.to_set
     @crowd_weight = crowd_weight
+    @new_club_minutes = new_club_minutes
   end
 
   # How much football there has been to measure against. Before the season starts
@@ -289,7 +294,7 @@ class ExpectedPoints
     return nil if played.nil?
 
     regular = [ played / regular_minutes, 1.0 ].min
-    @movers.include?(ranking.player_id) ? [ regular, NEW_CLUB_MINUTES ].min : regular
+    @movers.include?(ranking.player_id) ? [ regular, @new_club_minutes ].min : regular
   end
 
   def minutes_played(ranking)

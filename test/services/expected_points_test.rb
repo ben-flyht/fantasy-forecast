@@ -164,6 +164,22 @@ class ExpectedPointsTest < ActiveSupport::TestCase
            "the crowd simply gets less of the say"
   end
 
+  test "an established signing is held to half a match, and a longer horizon eases that" do
+    rankings = [ ranking(1) ]
+    stats = { 1 => regular(minutes: 3000.0) } # a full record, earned at his old club
+
+    capped = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                season_started: false, movers: [ 1 ]).call
+    eased = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                               season_started: false, movers: [ 1 ], new_club_minutes: 0.75).call
+    settled = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                 season_started: false, movers: []).call
+
+    assert_equal 45, capped[1][:working][:minutes], "a mover's record argues for half a match"
+    assert eased[1][:points] > capped[1][:points], "a longer horizon eases the cap"
+    assert eased[1][:points] < settled[1][:points], "but not all the way to a settled regular"
+  end
+
   test "a rush for the exit drops a player hard and at once" do
     rankings = [ ranking(1), ranking(2) ]
     owned = regular(owned: 10.0) # a tenth of 10m managers, so a million owners

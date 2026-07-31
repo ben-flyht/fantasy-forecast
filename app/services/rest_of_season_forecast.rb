@@ -9,7 +9,11 @@
 class RestOfSeasonForecast < Forecaster
   # The crowd's order is an early-season reading, so over a whole season it is
   # trusted less and each player's own record does more of the talking.
-  CROWD_WEIGHT = 0.75
+  CROWD_WEIGHT = 0.85
+
+  # A player who changed clubs will have settled in long before the season is out,
+  # so the half-a-match caution on his old minutes is eased for this horizon.
+  NEW_CLUB_MINUTES = 0.75
 
   private
 
@@ -22,6 +26,6 @@ class RestOfSeasonForecast < Forecaster
   end
 
   def model_overrides
-    { crowd_weight: CROWD_WEIGHT }
+    { crowd_weight: CROWD_WEIGHT, new_club_minutes: NEW_CLUB_MINUTES }
   end
 end
