@@ -73,6 +73,17 @@ class RestOfSeasonForecastTest < ActiveSupport::TestCase
     assert_operator season, :<, weekly, "a season out trusts the early-season crowd less"
   end
 
+  test "records that it eased the new-club cap for the season horizon" do
+    WeeklyForecast.call(gameweek: @next)
+    RestOfSeasonForecast.call(gameweek: @next)
+
+    weekly = Forecast.find_by(horizon: "gameweek").strategy.strategy_config[:new_club_minutes]
+    season = Forecast.find_by(horizon: "rest_of_season").strategy.strategy_config[:new_club_minutes]
+
+    assert_equal RestOfSeasonForecast::NEW_CLUB_MINUTES, season
+    assert_operator season, :>, weekly, "a settled signing is trusted more over a whole season"
+  end
+
   test "refuses to write a position it cannot score anybody in" do
     Match.destroy_all
 
