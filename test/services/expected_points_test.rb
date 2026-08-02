@@ -242,6 +242,45 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert eased[1][:points] < settled[1][:points], "but not all the way to a settled regular"
   end
 
+  # Two signings with the same thin record at their old clubs. The only thing
+  # separating them is how much of the game has already picked them.
+  def two_signings(owned:)
+    rankings = [ ranking(1), ranking(2) ]
+    stats = { 1 => regular(minutes: 800.0, owned: owned.first),
+              2 => regular(minutes: 800.0, owned: owned.last) }
+    [ rankings, stats ]
+  end
+
+  test "a signing the game has picked is taken to have walked into the side" do
+    rankings, stats = two_signings(owned: [ 20.0, 0.4 ])
+
+    result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                 season_started: false, movers: [ 1, 2 ])
+
+    assert_equal 63, result[1][:working][:minutes], "a fifth of the game owning him settles it"
+    assert_equal 30, result[2][:working][:minutes], "and nobody owning him leaves the caution in place"
+  end
+
+  test "backing can establish that a signing plays, never that he is any good" do
+    rankings = [ ranking(1) ]
+    stats = { 1 => regular(minutes: 3000.0, owned: 90.0) } # adored, and a full record elsewhere
+
+    result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                 season_started: false, movers: [ 1 ])
+
+    assert_equal 63, result[1][:working][:minutes], "it stops at a regular's share, not a full match"
+  end
+
+  test "a settled player's minutes are his own business, however many own him" do
+    rankings, stats = two_signings(owned: [ 40.0, 0.4 ])
+
+    result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                 season_started: false, movers: [])
+
+    assert_equal result[2][:working][:minutes], result[1][:working][:minutes],
+                 "ownership only answers the question the new-club cap asks"
+  end
+
   test "a rush for the exit drops a player hard and at once" do
     rankings = [ ranking(1), ranking(2) ]
     owned = regular(owned: 10.0) # a tenth of 10m managers, so a million owners
