@@ -113,16 +113,26 @@ class Forecaster < ApplicationService
   end
 
   def expected_points_for(players)
-    ExpectedPoints.new(
-      players.map { |player| ranking_for(player) },
+    ExpectedPoints.call(players.map { |player| ranking_for(player) }, **inputs_for(players))
+  end
+
+  def inputs_for(players)
+    {
       stats: stats_for(players),
       fixtures_by_team: fixtures_by_team,
       season_started: Gameweek.finished.exists?,
       gameweeks_played: Gameweek.finished.count,
       managers: total_managers,
       movers: movers,
-      **model_overrides
-    ).call
+      fitness: fitness(players)
+    }.merge(model_overrides)
+  end
+
+  # How fit a player is over this horizon. For one week FPL's own flag answers it,
+  # so nothing is passed and the model reads the flag. A horizon long enough for
+  # an injury to heal has to ask a different question, and its subclass says so.
+  def fitness(_players)
+    {}
   end
 
   # How this horizon departs from the default model. The weekly forecast takes it

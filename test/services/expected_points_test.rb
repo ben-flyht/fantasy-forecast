@@ -12,15 +12,16 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   # A regular starter with a decent record behind him.
   def regular(minutes: 3000.0, xg: 0.30, xgi: 0.50, clean_sheets: 0.30, owned: 5.0, cost: 60.0)
     {
-      "last_season_minutes" => minutes, "expected_goals_per_90" => xg,
-      "expected_goal_involvements_per_90" => xgi, "clean_sheets_per_90" => clean_sheets,
+      "last_season_minutes" => minutes, "last_season_expected_goals_per_90" => xg,
+      "last_season_expected_goal_involvements_per_90" => xgi,
+      "last_season_clean_sheets_per_90" => clean_sheets,
       "selected_by_percent" => owned, "now_cost" => cost
     }
   end
 
   def forecast(rankings, stats, fixtures: { 1 => [ fixture ] }, managers: nil, movers: [])
-    ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: fixtures,
-                       season_started: false, managers: managers, movers: movers).call
+    ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: fixtures,
+                       season_started: false, managers: managers, movers: movers)
   end
 
   test "expected points is minutes, times what he is worth per 90, times the games ahead" do
@@ -36,8 +37,8 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     stats = { 1 => regular(minutes: 3000.0), 2 => regular(minutes: 900.0) }
 
     # what the pipeline passes pre-season: no gameweeks finished yet
-    result = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
-                                season_started: false, gameweeks_played: 0).call
+    result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                season_started: false, gameweeks_played: 0)
 
     assert_equal 90, result[1][:working][:minutes], "a season of football makes a regular"
     assert result[2][:working][:minutes] < 60,
@@ -108,11 +109,12 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert result[2][:points] > result[1][:points], "a season of evidence beats half an hour of luck"
   end
 
-  # A field with a spread of records, so the crowd's ordering has a shape to be
-  # read off. Players 1 and 2 are given identical records in the middle of it.
+  # A field with a spread of records and of prices, so the crowd's ordering has a
+  # shape to be read off and the cheapest tenth is a corner of it rather than most
+  # of it. Players 1 and 2 are given identical records in the middle.
   def crowded_field(owned:, cost:)
     rankings = (1..12).map { |id| ranking(id, position: "forward") }
-    stats = (3..12).to_h { |id| [ id, regular(xg: 0.05 * id, xgi: 0.08 * id, owned: 3.0, cost: 55.0) ] }
+    stats = (3..12).to_h { |id| [ id, regular(xg: 0.05 * id, xgi: 0.08 * id, owned: 3.0, cost: 38.0 + 4 * id) ] }
     stats[1] = regular(xg: 0.3, xgi: 0.45, owned: owned.first, cost: cost.first)
     stats[2] = regular(xg: 0.3, xgi: 0.45, owned: owned.last, cost: cost.last)
     [ rankings, stats ]
@@ -147,14 +149,40 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert result[1][:points] < points.first, "but never past the best player we can actually measure"
   end
 
+  # Eight defenders on the four million pound floor with a spread of records, and
+  # four dearer ones above them. Players 1 and 2 have the same thin record; the
+  # game has piled into one of them and ignored the other.
+  def cheap_field
+    rankings = (1..12).map { |id| ranking(id, position: "defender") }
+    stats = (3..8).to_h { |id| [ id, regular(xg: 0.02 * id, xgi: 0.04 * id, owned: 2.0, cost: 40.0) ] }
+    stats.merge!((9..12).to_h { |id| [ id, regular(xg: 0.05 * id, xgi: 0.08 * id, owned: 5.0, cost: 40.0 + 4 * id) ] })
+    stats[1] = regular(xg: 0.01, xgi: 0.02, owned: 25.0, cost: 40.0)
+    stats[2] = regular(xg: 0.01, xgi: 0.02, owned: 0.3, cost: 40.0)
+    [ rankings, stats ]
+  end
+
+  test "among the cheapest, the crowd still says which of them plays" do
+    result = forecast(*cheap_field)
+
+    assert result[1][:points] > result[2][:points],
+           "the same record at the same price, but a quarter of the game owns one of them"
+  end
+
+  test "but backing a cheap player never carries him past what the dear ones are worth" do
+    result = forecast(*cheap_field)
+
+    assert result[1][:points] < result[12][:points],
+           "the best the crowd can say of an enabler is that he is the best of the cheap"
+  end
+
   test "trusting the crowd less pulls a hyped player back toward his own record" do
     rankings, stats = crowded_field(owned: [ 60.0, 3.0 ], cost: [ 90.0, 55.0 ])
     stats[1] = regular(xg: 0.3, xgi: 0.45, owned: 60.0, cost: 90.0) # adored, ordinary record
 
-    full = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
-                              season_started: false, crowd_weight: 1.0).call
-    muted = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
-                               season_started: false, crowd_weight: 0.5).call
+    full = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                              season_started: false, crowd_weight: 1.0)
+    muted = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                               season_started: false, crowd_weight: 0.5)
 
     assert full[1][:working][:crowd] > full[1][:working][:ours],
            "the crowd rates the hyped player above his own record"
@@ -168,12 +196,12 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     rankings = [ ranking(1) ]
     stats = { 1 => regular(minutes: 3000.0) } # a full record, earned at his old club
 
-    capped = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
-                                season_started: false, movers: [ 1 ]).call
-    eased = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
-                               season_started: false, movers: [ 1 ], new_club_minutes: 0.75).call
-    settled = ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
-                                 season_started: false, movers: []).call
+    capped = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                season_started: false, movers: [ 1 ])
+    eased = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                               season_started: false, movers: [ 1 ], new_club_minutes: 0.75)
+    settled = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                 season_started: false, movers: [])
 
     assert_equal 45, capped[1][:working][:minutes], "a mover's record argues for half a match"
     assert eased[1][:points] > capped[1][:points], "a longer horizon eases the cap"

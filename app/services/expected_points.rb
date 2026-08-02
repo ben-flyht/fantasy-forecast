@@ -14,12 +14,32 @@
 #   rankings         - ConsensusRanking::Ranking (player_id, position, team_id)
 #   stats            - { player_id => { stat_type => Float } }
 #   fixtures_by_team - { team_id => [{ difficulty:, opponent:, home: }] } this week's games
-class ExpectedPoints
+class ExpectedPoints < ApplicationService
   STAT_TYPES = %w[
     season_minutes last_season_minutes chance_of_playing
     expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90 saves_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
+    last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
+    last_season_clean_sheets_per_90 last_season_saves_per_90 last_season_bonus
   ].freeze
+
+  # Where each measurement is read from before a ball is kicked.
+  #
+  # All of these describe the same football, so they have to come from the same
+  # season. Take a player's minutes from last season and his scoring rate from a
+  # season he spent outside the league and he is credited with a full campaign of
+  # turning up and doing nothing, which is how a promoted club's defender came to
+  # outrank the man half the game had picked ahead of him. FPL also zeroes the
+  # current-season fields over the summer, so reading them then hands every player
+  # in the game the same bare appearance points.
+  LAST_SEASON = {
+    "season_minutes" => "last_season_minutes",
+    "season_bonus" => "last_season_bonus",
+    "expected_goals_per_90" => "last_season_expected_goals_per_90",
+    "expected_goal_involvements_per_90" => "last_season_expected_goal_involvements_per_90",
+    "clean_sheets_per_90" => "last_season_clean_sheets_per_90",
+    "saves_per_90" => "last_season_saves_per_90"
+  }.freeze
 
   FULL_MATCH = 90.0
   FULLY_AVAILABLE = 100.0
@@ -119,11 +139,11 @@ class ExpectedPoints
   # rest-of-season horizon turns it down so its own record does more of the talking.
   CROWD_WEIGHT = 1.0
 
-  # The cheapest tenth of a position, where ownership stops being a verdict.
-  # Everybody needs a bench and somebody has to fill it, so a quarter of the game
-  # owning the cheapest keeper is a budget decision, not a prediction that he will
-  # play. Down here the crowd is allowed to mark a player down, which still means
-  # something, but never to carry one up.
+  # The cheapest tenth of a position, where ownership stops being a verdict on
+  # quality. Everybody needs a bench and somebody has to fill it, so a quarter of
+  # the game owning the cheapest keeper is a budget decision rather than a claim
+  # that he is any good. It is still a claim that he plays, which is why these
+  # players are judged against each other rather than ignored. See #bracket_of.
   CHEAPEST = 0.1
 
   # What this week's transfers say, measured against the people who actually own
@@ -153,11 +173,13 @@ class ExpectedPoints
   end
 
   def initialize(rankings, stats:, fixtures_by_team:, season_started: true, gameweeks_played: nil,
-                 managers: nil, movers: [], crowd_weight: CROWD_WEIGHT, new_club_minutes: NEW_CLUB_MINUTES)
+                 managers: nil, movers: [], fitness: {},
+                 crowd_weight: CROWD_WEIGHT, new_club_minutes: NEW_CLUB_MINUTES)
     @rankings = rankings
     @stats = stats
     @fixtures_by_team = fixtures_by_team
     @season_started = season_started
+    @fitness = fitness
     @gameweeks_played = weeks_of_football(gameweeks_played)
     @managers = managers.to_i
     @movers = movers.to_set
@@ -203,13 +225,14 @@ class ExpectedPoints
   end
 
   # What a player standing where he stands with the crowd is typically worth, read
-  # off our own figures for the position. Where we agree with them this changes
-  # nothing; where we disagree, each pulls the other.
+  # off our own figures for the players he is judged against. Where we agree with
+  # them this changes nothing; where we disagree, each pulls the other.
   def crowd_estimate(ranking)
     return nil if conviction(ranking).zero?
 
-    curve = crowd_curve(ranking.position)
-    place = crowd_order(ranking.position).index(ranking.player_id)
+    peers = bracket_of(ranking)
+    curve = crowd_curve(peers)
+    place = crowd_order(peers).index(ranking.player_id)
     return nil if curve.empty? || place.nil?
 
     curve[[ place, curve.size - 1 ].min]
@@ -222,14 +245,35 @@ class ExpectedPoints
     return ours if theirs.nil?
 
     share = crowd_share(ranking)
-    (1 - share) * ours + share * capped(ranking, ours, theirs)
+    (1 - share) * ours + share * theirs
   end
 
-  # Among the cheapest in a position, backing can only count against a player. It
-  # is the one place where being popular tells us nothing: the money had to go
-  # somewhere.
-  def capped(ranking, ours, theirs)
-    bargain?(ranking) ? [ theirs, ours ].min : theirs
+  # Who a player's backing is measured against.
+  #
+  # Ownership means two different things depending on price. At the top of a
+  # position it says a manager thinks this player is worth funding from the rest
+  # of his side. At the bottom it mostly says he plays: somebody has to fill the
+  # slot, so the game piles into whichever cheap defender is nailed on, and that
+  # is a statement about the team sheet rather than about quality.
+  #
+  # Read against the whole position, an enabler is promoted into the company of
+  # players managers actually paid for. Read against the other cheap players, the
+  # same backing answers the only question worth asking of them, which is which
+  # of them starts. So the cheap are ranked among themselves, and the best the
+  # crowd can say of one is that he is the best of the cheap.
+  #
+  # This used to be a cap: among the cheapest, backing could only ever count
+  # against a player, never for him. That kept enablers down and also made the
+  # crowd mute exactly where it knows most, so two four million pound defenders
+  # at the same club could not be told apart by the forty-fold difference in how
+  # many managers had picked them.
+  def bracket_of(ranking)
+    [ ranking.position, bargain?(ranking) ]
+  end
+
+  def in_bracket(bracket)
+    position, cheap = bracket
+    in_position(position).select { |other| bargain?(other) == cheap }
   end
 
   def bargain?(ranking)
@@ -261,20 +305,20 @@ class ExpectedPoints
     @position_prices[position] ||= in_position(position).map { |other| price(other) }.reject(&:zero?)
   end
 
-  # The position's own figures, best first: the shape of what is on offer.
-  def crowd_curve(position)
+  # The bracket's own figures, best first: the shape of what is on offer in it.
+  def crowd_curve(bracket)
     @crowd_curve ||= {}
-    @crowd_curve[position] ||= in_position(position).filter_map { |ranking| our_estimate(ranking) }.sort.reverse
+    @crowd_curve[bracket] ||= in_bracket(bracket).filter_map { |ranking| our_estimate(ranking) }.sort.reverse
   end
 
-  # Everyone in the position, in the order the crowd has put its money. Players the
+  # Everyone in the bracket, in the order the crowd has put its money. Players the
   # crowd has treated identically are separated by our own reading of them, so a
   # tie cannot hand somebody another player's standing by accident.
-  def crowd_order(position)
+  def crowd_order(bracket)
     @crowd_order ||= {}
-    @crowd_order[position] ||= in_position(position)
-                               .sort_by { |ranking| [ -conviction(ranking), -our_estimate(ranking).to_f ] }
-                               .map(&:player_id)
+    @crowd_order[bracket] ||= in_bracket(bracket)
+                              .sort_by { |ranking| [ -conviction(ranking), -our_estimate(ranking).to_f ] }
+                              .map(&:player_id)
   end
 
   def in_position(position)
@@ -298,16 +342,31 @@ class ExpectedPoints
   end
 
   def minutes_played(ranking)
-    optional_stat(ranking, @season_started ? "season_minutes" : "last_season_minutes")
+    optional_stat(ranking, season_or_last("season_minutes"))
+  end
+
+  # What he did, read from whichever season we are measuring. See LAST_SEASON.
+  def record(ranking, type)
+    stat(ranking, season_or_last(type))
+  end
+
+  def season_or_last(type)
+    @season_started ? type : LAST_SEASON.fetch(type)
   end
 
   def regular_minutes
     @gameweeks_played * FULL_MATCH * REGULAR_SHARE
   end
 
-  # Absent means fit. Reading this as a plain zero would mark every healthy player
-  # unavailable.
+  # Whether he can play at all, which multiplies the finished answer.
+  #
+  # For the coming week that is FPL's fitness flag, and absent means fit: reading
+  # a missing figure as a plain zero would mark every healthy player unavailable.
+  # Over a longer horizon the question changes from "is he fit on Saturday" to
+  # "how much of this is he fit for", and the caller answers it. See Availability.
   def availability(ranking)
+    return @fitness[ranking.player_id] if @fitness.key?(ranking.player_id)
+
     (optional_stat(ranking, "chance_of_playing") || FULLY_AVAILABLE) / FULLY_AVAILABLE
   end
 
@@ -333,7 +392,7 @@ class ExpectedPoints
     played = minutes_played(ranking).to_f
     return 0.0 if played.zero?
 
-    stat(ranking, "season_bonus") / (played / FULL_MATCH)
+    record(ranking, "season_bonus") / (played / FULL_MATCH)
   end
 
   # Nought before a ball is kicked, and nought for a player with no record, both of
@@ -352,21 +411,21 @@ class ExpectedPoints
 
   # Involvements less the goals themselves, never negative however FPL rounds.
   def assist_points(ranking)
-    created = [ stat(ranking, "expected_goal_involvements_per_90") - goals(ranking), 0.0 ].max
+    created = [ record(ranking, "expected_goal_involvements_per_90") - goals(ranking), 0.0 ].max
     ASSIST * created
   end
 
   def clean_sheet_points(ranking)
-    CLEAN_SHEET.fetch(ranking.position, 0) * stat(ranking, "clean_sheets_per_90")
+    CLEAN_SHEET.fetch(ranking.position, 0) * record(ranking, "clean_sheets_per_90")
   end
 
   # Only ever anything for a keeper, so this needs no position of its own.
   def save_points(ranking)
-    stat(ranking, "saves_per_90") / SAVES_PER_POINT
+    record(ranking, "saves_per_90") / SAVES_PER_POINT
   end
 
   def goals(ranking)
-    stat(ranking, "expected_goals_per_90")
+    record(ranking, "expected_goals_per_90")
   end
 
   # A rate over a handful of minutes is mostly luck, so it is pulled towards

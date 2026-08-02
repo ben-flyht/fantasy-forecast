@@ -21,7 +21,9 @@ class RestOfSeasonForecastTest < ActiveSupport::TestCase
     player = Player.create!(first_name: "Test", last_name: "Player#{fpl_id}", short_name: "T#{fpl_id}",
                             fpl_id: fpl_id, code: fpl_id, team: @team, position: "forward")
     {
-      "last_season_minutes" => 3000.0, "season_minutes" => 3000.0, "expected_goals_per_90" => 0.5,
+      "last_season_minutes" => 3000.0, "season_minutes" => 3000.0,
+      "last_season_expected_goals_per_90" => 0.5, "expected_goals_per_90" => 0.5,
+      "last_season_expected_goal_involvements_per_90" => 0.7,
       "expected_goal_involvements_per_90" => 0.7, "selected_by_percent" => 10.0, "now_cost" => 80.0
     }.each { |type, value| Statistic.create!(player: player, gameweek: @next, type: type, value: value) }
     player

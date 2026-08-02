@@ -28,4 +28,11 @@ class RestOfSeasonForecast < Forecaster
   def model_overrides
     { crowd_weight: CROWD_WEIGHT, new_club_minutes: NEW_CLUB_MINUTES }
   end
+
+  # An injury is a spell out, not the end of a career, so over a season a player
+  # is worth the share of it he is expected to be fit for rather than nothing at
+  # all. See Availability.
+  def fitness(players)
+    Availability.call(players, gameweeks: Gameweek.remaining)
+  end
 end
