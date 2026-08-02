@@ -49,6 +49,15 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "says when the forecast on the page was worked out" do
+    forecast = Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1, score: 4.2)
+    forecast.update_column(:updated_at, 3.hours.ago)
+
+    get gameweek_position_path(gameweek: 5, position: "#{@player.position}s")
+
+    assert_select "time", text: "about 3 hours ago"
+  end
+
   test "should show forecasts data when available" do
     Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1, score: 4.2)
     Forecast.create!(player: @player2, gameweek: @gameweek5, rank: 2, score: 3.1)
