@@ -37,10 +37,11 @@ class Player < ApplicationRecord
   end
 
   def given_name
-    surname = short_name.to_s
-    return "" if surname.blank?
+    player_name.given
+  end
 
-    first_name.to_s.sub(/\s*#{Regexp.escape(surname)}\s*\z/i, "").strip
+  def display_name
+    player_name.display
   end
 
   def slug
@@ -97,6 +98,10 @@ class Player < ApplicationRecord
   end
 
   private
+
+  def player_name
+    @player_name ||= PlayerName.new(first_name: first_name, last_name: last_name, short_name: short_name)
+  end
 
   def resolve_gameweek_id(gameweek)
     gameweek ||= Gameweek.current_gameweek || Gameweek.next_gameweek
