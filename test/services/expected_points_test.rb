@@ -90,6 +90,17 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert result[2][:points] > result[1][:points]
   end
 
+  test "a player who cannot play is judged on his record, not on managers selling him" do
+    rankings = [ ranking(1), ranking(2) ]
+    stats = { 1 => regular.merge("chance_of_playing" => 0.0), 2 => regular }
+
+    result = forecast(rankings, stats)
+
+    assert_equal 0.0, result[1][:working][:crowd_share],
+                 "his ownership is a reaction to news we have already counted"
+    assert result[2][:working][:crowd_share].positive?, "everybody else's backing still decides its share"
+  end
+
   test "a blank gameweek is nought points, and a double is worth about twice one game" do
     rankings = [ ranking(1, team_id: 1), ranking(2, team_id: 2), ranking(3, team_id: 3) ]
     stats = { 1 => regular, 2 => regular, 3 => regular }

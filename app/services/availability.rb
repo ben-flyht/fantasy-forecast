@@ -31,7 +31,13 @@ class Availability < ApplicationService
   # It stops being a guess once we have watched these flags clear. We already
   # store every player's fitness week by week, so by Christmas this can be the
   # measured figure rather than an assumed one.
-  UNKNOWN_LAYOFF = 3.months
+  #
+  # It is also, now, the only thing standing between an injured player and his
+  # own record. It used to share the job with the crowd, whose ownership had
+  # collapsed on the same news, and the two together came to about five months
+  # without anyone choosing five months. One number somebody picked on purpose
+  # beats two nobody did. See ExpectedPoints#ruled_out?.
+  UNKNOWN_LAYOFF = 4.months
 
   # A doubt is about one weekend, not a season. Over a long horizon it costs him
   # that week and nothing more.
