@@ -6,46 +6,25 @@ class StrategyTest < ActiveSupport::TestCase
   end
 
   test "valid strategy with config" do
-    strategy = Strategy.new(
-      strategy_config: @valid_config,
-      active: true
-    )
+    strategy = Strategy.new(strategy_config: @valid_config)
 
     assert strategy.valid?
   end
 
   test "requires strategy_config to be present" do
-    strategy = Strategy.new(
-      strategy_config: nil,
-      active: true
-    )
+    strategy = Strategy.new(strategy_config: nil)
 
     assert_not strategy.valid?
     assert_includes strategy.errors[:strategy_config], "can't be nil"
   end
 
+  # Two forecasts made with the same settings are looked up, not rejected, so
+  # nothing here may stop the same set of parameters being written twice.
   test "allows duplicate strategy_config" do
-    Strategy.create!(
-      strategy_config: @valid_config,
-      active: true
-    )
+    Strategy.create!(strategy_config: @valid_config)
 
-    duplicate_strategy = Strategy.create!(
-      strategy_config: @valid_config,
-      active: true
-    )
+    duplicate_strategy = Strategy.create!(strategy_config: @valid_config)
 
     assert duplicate_strategy.persisted?
-  end
-
-  test "allows updating strategy" do
-    strategy = Strategy.create!(
-      strategy_config: @valid_config,
-      active: true
-    )
-
-    strategy.active = false
-    assert strategy.valid?
-    assert strategy.save
   end
 end

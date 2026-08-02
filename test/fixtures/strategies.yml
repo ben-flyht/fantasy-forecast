@@ -2,8 +2,6 @@
 
 one:
   strategy_config: {}
-  active: true
 
 two:
   strategy_config: {}
-  active: true

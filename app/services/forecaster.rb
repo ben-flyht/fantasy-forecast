@@ -153,9 +153,19 @@ class Forecaster < ApplicationService
       created_at: now, updated_at: now }
   end
 
+  # A player's record as it stood by this gameweek, latest reading first claim.
+  #
+  # Live this changes nothing, because a forecast for the coming week is made
+  # before any later week has a reading to give. It matters when the week is
+  # re-run: marking one set of settings against another means making the same
+  # forecast twice from the same evidence, and evidence gathered after the
+  # football is not evidence, it is hindsight. Left unscoped, a settings change
+  # tried in November would be handed November's form to forecast August with,
+  # and would beat the settings that had to guess. Every time.
   def stats_for(players)
     stats = Hash.new { |hash, key| hash[key] = {} }
     Statistic.where(player_id: players.map(&:id), type: ExpectedPoints::STAT_TYPES)
+             .where(gameweek_id: ..@gameweek.id)
              .order(:gameweek_id)
              .pluck(:player_id, :type, :value)
              .each { |player_id, type, value| stats[player_id][type] = value.to_f }

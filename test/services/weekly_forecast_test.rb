@@ -62,6 +62,18 @@ class WeeklyForecastTest < ActiveSupport::TestCase
                  "what produced last week's forecast must not change under it"
   end
 
+  test "reads only the record that stood by this gameweek" do
+    WeeklyForecast.call(gameweek: @gameweek)
+    was = Forecast.find_by(player: @player, gameweek: @gameweek).score
+
+    later = Gameweek.create!(fpl_id: 81, name: "Gameweek 81", start_time: 9.days.from_now)
+    Statistic.create!(player: @player, gameweek: later, type: "expected_goals_per_90", value: 5.0)
+    WeeklyForecast.call(gameweek: @gameweek)
+
+    assert_equal was, Forecast.find_by(player: @player, gameweek: @gameweek).score,
+                 "a week cannot be re-forecast with form it could not have known"
+  end
+
   test "refuses to write a position it cannot score anybody in" do
     Match.destroy_all # nobody has a fixture, so everybody multiplies to nought
 
