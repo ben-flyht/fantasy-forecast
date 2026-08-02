@@ -25,7 +25,7 @@
           <% if player.given_name.present? %>
             <span class="row-start-2 self-end leading-none text-xs font-bold tracking-[-0.02em] uppercase opacity-80 whitespace-nowrap"><%= player.given_name %></span>
           <% end %>
-          <span class="row-start-4 self-center leading-none text-2xl font-extrabold tracking-[-0.02em] uppercase whitespace-nowrap"><%= player.short_name %></span>
+          <span class="row-start-4 self-center leading-none text-2xl font-extrabold tracking-[-0.02em] uppercase whitespace-nowrap"><%= player.display_name %></span>
           <span class="row-start-6 self-start leading-none text-[12.5px] font-bold whitespace-nowrap flex items-center gap-[7px]">
             <span><%= team&.name %></span>
             <% if cost %>
