@@ -9,6 +9,10 @@ class PlayersController < ApplicationController
     "goalkeeper" => 50, "defender" => 100, "midfielder" => 100, "forward" => 50
   }.freeze
 
+  # The horizon that spans every gameweek that remains, as the routes and the
+  # stored forecasts both spell it.
+  SEASON = "season".freeze
+
   POSITION_SINGULARS = {
     "goalkeepers" => "goalkeeper", "defenders" => "defender",
     "midfielders" => "midfielder", "forwards" => "forward"
@@ -16,7 +20,7 @@ class PlayersController < ApplicationController
 
   before_action :set_filters, only: [ :index ]
 
-  helper_method :rest_of_season?, :horizon_label, :horizon_short, :horizon_param
+  helper_method :season?, :horizon_label, :horizon_short, :horizon_param, :rankings_path
 
   def index
     return if redirect_to_clean_url
@@ -107,12 +111,19 @@ class PlayersController < ApplicationController
   end
 
   def build_clean_url
-    position = resolve_position(params[:position])
-    extra = params.permit(:team_id).to_h.compact_blank
-    gameweek_position_path(gameweek: params[:gameweek], position: "#{position}s", **extra)
+    rankings_path(params[:gameweek], resolve_position(params[:position]),
+                  **params.permit(:team_id).to_h.compact_blank.symbolize_keys)
   end
 
-  REST_OF_SEASON = "ros".freeze
+  # Where a horizon lives. The season has a page of its own; a week is named by
+  # its number.
+  def rankings_path(horizon, position, **extra)
+    if horizon == SEASON
+      season_position_path(position: "#{position}s", **extra)
+    else
+      gameweek_position_path(gameweek: horizon, position: "#{position}s", **extra)
+    end
+  end
 
   def set_filters
     set_horizon
@@ -120,11 +131,11 @@ class PlayersController < ApplicationController
     @team_filter = params[:team_id].present? ? params[:team_id].to_i : nil
   end
 
-  # Rest of season is anchored to the next gameweek: its rows are stored against
-  # that week, and validation and titling resolve a real gameweek from it.
+  # The season horizon is anchored to the next gameweek: its rows are stored
+  # against that week, and validation and titling resolve a real gameweek from it.
   def set_horizon
-    if params[:gameweek] == REST_OF_SEASON
-      @horizon = "rest_of_season"
+    if season_requested?
+      @horizon = SEASON
       @gameweek = next_gameweek&.fpl_id
     else
       @horizon = "gameweek"
@@ -132,8 +143,14 @@ class PlayersController < ApplicationController
     end
   end
 
-  def rest_of_season?
-    @horizon == "rest_of_season"
+  # The season page says so in its route; the horizon dropdown says so in the
+  # parameter it submits, on its way to that page.
+  def season_requested?
+    params[:horizon] == SEASON || params[:gameweek] == SEASON
+  end
+
+  def season?
+    @horizon == SEASON
   end
 
   def resolve_position(param)
@@ -157,7 +174,7 @@ class PlayersController < ApplicationController
   # A season total is read as its per-gameweek average, so it meets the same tier
   # bands a single week does.
   def tier_divisor
-    rest_of_season? ? [ Gameweek.remaining.count, 1 ].max : 1
+    season? ? [ Gameweek.remaining.count, 1 ].max : 1
   end
 
   # When the numbers on the page were worked out. They are rewritten on the hour
@@ -238,27 +255,27 @@ class PlayersController < ApplicationController
   def horizon_options
     options = []
     options << [ "Next Gameweek", next_gameweek.fpl_id ] if next_gameweek
-    options << [ "Rest of Season", REST_OF_SEASON ]
+    options << [ "Rest of Season", SEASON ]
     options
   end
 
   def horizon_param
-    rest_of_season? ? REST_OF_SEASON : @gameweek
+    season? ? SEASON : @gameweek
   end
 
   def horizon_label
-    rest_of_season? ? "Rest of Season" : "Gameweek #{@gameweek}"
+    season? ? "Rest of Season" : "Gameweek #{@gameweek}"
   end
 
   def horizon_short
-    rest_of_season? ? "Rest of Season" : "GW#{@gameweek}"
+    season? ? "Rest of Season" : "GW#{@gameweek}"
   end
 
   def build_page_title
     @page_title = "Player Rankings - #{horizon_label}"
     @page_title += " #{@position_filter.capitalize}s" if @position_filter.present?
     @page_title += " - #{Team.find_by(id: @team_filter)&.name}" if @team_filter
-    @canonical_path = gameweek_position_path(gameweek: horizon_param, position: "#{@position_filter}s")
+    @canonical_path = rankings_path(horizon_param, @position_filter)
   end
 
   def next_gameweek

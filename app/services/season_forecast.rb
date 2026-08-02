@@ -6,7 +6,7 @@
 # This is a naive season total. The transfer, form and availability signals are
 # today's snapshot applied the whole way out, which is honest for the next
 # gameweek and progressively less so the further ahead you read.
-class RestOfSeasonForecast < Forecaster
+class SeasonForecast < Forecaster
   # The crowd's order is an early-season reading, so over a whole season it is
   # trusted less and each player's own record does more of the talking.
   CROWD_WEIGHT = 0.85
@@ -18,7 +18,7 @@ class RestOfSeasonForecast < Forecaster
   private
 
   def horizon
-    "rest_of_season"
+    "season"
   end
 
   def matches

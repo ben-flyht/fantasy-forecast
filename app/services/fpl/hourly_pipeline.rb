@@ -35,7 +35,7 @@ module Fpl
       return Rails.logger.info("No next gameweek, skipping forecast generation.") unless gameweek
 
       WeeklyForecast.call(gameweek: gameweek)
-      RestOfSeasonForecast.call(gameweek: gameweek)
+      SeasonForecast.call(gameweek: gameweek)
     end
   end
 end

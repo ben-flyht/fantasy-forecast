@@ -109,7 +109,7 @@
         Browse rankings for other positions:
         <% other_positions.each_with_index do |pos, i| %>
           <%= link_to "#{pos.capitalize}s",
-              gameweek_position_path(gameweek: horizon_param, position: "#{pos}s"),
+              rankings_path(horizon_param, pos),
               class: "text-blue-600 hover:underline",
               data: { turbo_frame: "_top" } %><%= i == other_positions.size - 1 ? "." : "," %>
         <% end %>

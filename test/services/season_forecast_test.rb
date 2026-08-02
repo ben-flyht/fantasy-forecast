@@ -1,6 +1,6 @@
 require "test_helper"
 
-class RestOfSeasonForecastTest < ActiveSupport::TestCase
+class SeasonForecastTest < ActiveSupport::TestCase
   setup do
     Forecast.destroy_all
     Strategy.destroy_all
@@ -30,9 +30,9 @@ class RestOfSeasonForecastTest < ActiveSupport::TestCase
   end
 
   test "writes a rest-of-season forecast anchored to the next gameweek" do
-    RestOfSeasonForecast.call(gameweek: @next)
+    SeasonForecast.call(gameweek: @next)
 
-    forecast = Forecast.find_by(player: @player, horizon: "rest_of_season")
+    forecast = Forecast.find_by(player: @player, horizon: "season")
     assert_equal @next.id, forecast.gameweek_id, "the season total is anchored to the next gameweek"
     assert forecast.score.to_f.positive?
     assert_equal 1, forecast.rank
@@ -40,20 +40,20 @@ class RestOfSeasonForecastTest < ActiveSupport::TestCase
 
   test "spans every remaining gameweek, so it outscores the single coming week" do
     WeeklyForecast.call(gameweek: @next)
-    RestOfSeasonForecast.call(gameweek: @next)
+    SeasonForecast.call(gameweek: @next)
 
     weekly = Forecast.find_by(player: @player, horizon: "gameweek").score
-    season = Forecast.find_by(player: @player, horizon: "rest_of_season").score
+    season = Forecast.find_by(player: @player, horizon: "season").score
 
     assert_operator season, :>, weekly, "two games ahead is worth more than one"
   end
 
   test "the two horizons sit side by side against the same gameweek" do
     WeeklyForecast.call(gameweek: @next)
-    RestOfSeasonForecast.call(gameweek: @next)
+    SeasonForecast.call(gameweek: @next)
 
     horizons = Forecast.where(player: @player, gameweek: @next).pluck(:horizon).sort
-    assert_equal %w[gameweek rest_of_season], horizons
+    assert_equal %w[gameweek season], horizons
   end
 
   test "excludes gameweeks already finished from the horizon" do
@@ -65,31 +65,31 @@ class RestOfSeasonForecastTest < ActiveSupport::TestCase
 
   test "records that it trusted the crowd less than the weekly forecast" do
     WeeklyForecast.call(gameweek: @next)
-    RestOfSeasonForecast.call(gameweek: @next)
+    SeasonForecast.call(gameweek: @next)
 
     weekly = Forecast.find_by(horizon: "gameweek").strategy.strategy_config[:crowd_weight]
-    season = Forecast.find_by(horizon: "rest_of_season").strategy.strategy_config[:crowd_weight]
+    season = Forecast.find_by(horizon: "season").strategy.strategy_config[:crowd_weight]
 
     assert_equal 1.0, weekly
-    assert_equal RestOfSeasonForecast::CROWD_WEIGHT, season
+    assert_equal SeasonForecast::CROWD_WEIGHT, season
     assert_operator season, :<, weekly, "a season out trusts the early-season crowd less"
   end
 
   test "records that it eased the new-club cap for the season horizon" do
     WeeklyForecast.call(gameweek: @next)
-    RestOfSeasonForecast.call(gameweek: @next)
+    SeasonForecast.call(gameweek: @next)
 
     weekly = Forecast.find_by(horizon: "gameweek").strategy.strategy_config[:new_club_minutes]
-    season = Forecast.find_by(horizon: "rest_of_season").strategy.strategy_config[:new_club_minutes]
+    season = Forecast.find_by(horizon: "season").strategy.strategy_config[:new_club_minutes]
 
-    assert_equal RestOfSeasonForecast::NEW_CLUB_MINUTES, season
+    assert_equal SeasonForecast::NEW_CLUB_MINUTES, season
     assert_operator season, :>, weekly, "a settled signing is trusted more over a whole season"
   end
 
   test "refuses to write a position it cannot score anybody in" do
     Match.destroy_all
 
-    assert_not RestOfSeasonForecast.call(gameweek: @next)
-    assert_equal 0, Forecast.where(horizon: "rest_of_season").count
+    assert_not SeasonForecast.call(gameweek: @next)
+    assert_equal 0, Forecast.where(horizon: "season").count
   end
 end
