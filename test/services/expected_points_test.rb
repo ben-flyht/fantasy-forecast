@@ -45,6 +45,17 @@ class ExpectedPointsTest < ActiveSupport::TestCase
            "a bit-part player is not a regular just because no gameweek has finished yet"
   end
 
+  test "a hair between two players is not rounded into a tie" do
+    rankings = [ ranking(1), ranking(2) ]
+    stats = { 1 => regular(xgi: 0.500), 2 => regular(xgi: 0.503) }
+
+    result = forecast(rankings, stats)
+
+    assert_in_delta result[1][:points], result[2][:points], 0.05, "the two are all but level"
+    assert result[2][:points] > result[1][:points],
+           "and the better of them still ranks first: the order is settled by the forecast, not by rounding"
+  end
+
   test "a player who does not play scores nothing, however good he is" do
     elite = regular(xg: 1.0, xgi: 1.4)
     rankings = [ ranking(1), ranking(2) ]

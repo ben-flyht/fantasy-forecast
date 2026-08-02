@@ -212,7 +212,7 @@ class ExpectedPoints < ApplicationService
     return { points: nil, working: {} } if ours.nil? && theirs.nil?
 
     points = blended(ranking, ours, theirs) * availability(ranking) * games_ahead(ranking) * transfer_factor(ranking)
-    { points: points.round(1), working: working_for(ranking, ours, theirs) }
+    { points: points, working: working_for(ranking, ours, theirs) }
   end
 
   # What a player is worth in a single game, before the fixture and before this
