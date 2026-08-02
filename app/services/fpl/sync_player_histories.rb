@@ -18,8 +18,27 @@ module Fpl
     # Statistic type => the key to read from FPL's past-season entry.
     STAT_TYPES = {
       "last_season_points" => "total_points",
-      "last_season_minutes" => "minutes"
+      "last_season_minutes" => "minutes",
+      "last_season_bonus" => "bonus"
     }.freeze
+
+    # The same per-90 rates bootstrap publishes for the current season, worked out
+    # from the season's totals so a forecast can read either interchangeably.
+    # Without these, a player's minutes come from last season while his scoring
+    # rate comes from a season he may not have played in.
+    RATE_TYPES = {
+      "last_season_expected_goals_per_90" => "expected_goals",
+      "last_season_expected_goal_involvements_per_90" => "expected_goal_involvements",
+      "last_season_clean_sheets_per_90" => "clean_sheets",
+      "last_season_saves_per_90" => "saves"
+    }.freeze
+
+    MINUTES_IN_A_MATCH = 90.0
+
+    # What we currently record from a past season. Bump it when that set changes
+    # and every player is asked again on the next run, rather than being left with
+    # a partial history that nothing notices.
+    RECORD_VERSION = 2.0
 
     REQUEST_DELAY = 0.5 # seconds between requests, to stay a polite guest
 
@@ -61,7 +80,7 @@ module Fpl
     end
 
     def players_missing_history(gameweek)
-      asked = Statistic.where(gameweek: gameweek, type: [ STAT_TYPES.keys.first, CHECKED ]).select(:player_id)
+      asked = Statistic.where(gameweek: gameweek, type: CHECKED, value: RECORD_VERSION).select(:player_id)
       Player.where.not(id: asked).to_a
     end
 
@@ -98,13 +117,14 @@ module Fpl
       season = latest_past_season(player)
       return [ checked_record(player, gameweek, now) ] if season.nil?
 
-      totals(player, gameweek, season, now) << checked_record(player, gameweek, now)
+      totals(player, gameweek, season, now) +
+        rates(player, gameweek, season, now) +
+        [ checked_record(player, gameweek, now) ]
     end
 
     # A receipt that we asked, so a player with no past is not asked about again.
     def checked_record(player, gameweek, now)
-      { player_id: player.id, gameweek_id: gameweek.id, type: CHECKED,
-        value: 1.0, created_at: now, updated_at: now }
+      record(player, gameweek, CHECKED, RECORD_VERSION, now)
     end
 
     def totals(player, gameweek, season, now)
@@ -112,9 +132,27 @@ module Fpl
         value = season[key]
         next if value.nil?
 
-        { player_id: player.id, gameweek_id: gameweek.id, type: type,
-          value: value.to_f, created_at: now, updated_at: now }
+        record(player, gameweek, type, value.to_f, now)
       end
+    end
+
+    # A rate needs football to have happened. Nought minutes leaves them unwritten
+    # rather than stored as zeroes, so a player with no past reads as unknown.
+    def rates(player, gameweek, season, now)
+      nineties = season["minutes"].to_f / MINUTES_IN_A_MATCH
+      return [] unless nineties.positive?
+
+      RATE_TYPES.filter_map do |type, key|
+        value = season[key]
+        next if value.nil?
+
+        record(player, gameweek, type, value.to_f / nineties, now)
+      end
+    end
+
+    def record(player, gameweek, type, value, now)
+      { player_id: player.id, gameweek_id: gameweek.id, type: type,
+        value: value, created_at: now, updated_at: now }
     end
 
     # history_past runs oldest first, so the most recent season is last.
