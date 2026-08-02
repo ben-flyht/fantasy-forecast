@@ -212,7 +212,7 @@ class ExpectedPoints < ApplicationService
     return { points: nil, working: {} } if ours.nil? && theirs.nil?
 
     points = blended(ranking, ours, theirs) * availability(ranking) * games_ahead(ranking) * transfer_factor(ranking)
-    { points: points.round(1), working: working_for(ranking, ours, theirs) }
+    { points: points, working: working_for(ranking, ours, theirs) }
   end
 
   # What a player is worth in a single game, before the fixture and before this
@@ -388,11 +388,18 @@ class ExpectedPoints < ApplicationService
 
   # Bonus is awarded per match to the three best performers, so it is not in any
   # per-90 rate FPL publishes and has to be worked out from his own totals.
+  #
+  # Dividing by the minutes he actually played would undo the doubt the rest of
+  # the model carries: a rate that grows as the minutes shrink, multiplied by a
+  # credibility that shrinks with them, cancels to a fixed share of his bonus
+  # however little football it came from. So a short record is read against the
+  # five matches of doubt instead, and one bonus point off the bench stays worth
+  # about what it was.
   def bonus_points(ranking)
     played = minutes_played(ranking).to_f
     return 0.0 if played.zero?
 
-    record(ranking, "season_bonus") / (played / FULL_MATCH)
+    record(ranking, "season_bonus") / ([ played, UNPROVEN_MINUTES ].max / FULL_MATCH)
   end
 
   # Nought before a ball is kicked, and nought for a player with no record, both of

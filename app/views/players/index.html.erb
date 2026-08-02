@@ -6,6 +6,12 @@
     <div class="mb-6">
       <h1 class="text-xl sm:text-2xl font-semibold text-zinc-900"><%= @page_title %></h1>
       <p class="mt-1 text-sm text-zinc-500">Form, fixtures, and expected goals analyzed into weather tiers.</p>
+      <% if @forecast_at %>
+        <p class="mt-1 text-xs text-zinc-400">
+          Updated
+          <time datetime="<%= @forecast_at.iso8601 %>" title="<%= l @forecast_at, format: :long %>"><%= time_ago_in_words(@forecast_at) %> ago</time>
+        </p>
+      <% end %>
     </div>
 
     <div class="flex flex-wrap items-center gap-4 mb-6">

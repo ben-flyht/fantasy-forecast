@@ -47,6 +47,7 @@ class PlayersController < ApplicationController
     load_row_facts
     build_shortlist
     load_gameweek_data
+    load_forecast_time
     load_players
     set_available_filters
     build_page_title
@@ -157,6 +158,13 @@ class PlayersController < ApplicationController
   # bands a single week does.
   def tier_divisor
     rest_of_season? ? [ Gameweek.remaining.count, 1 ].max : 1
+  end
+
+  # When the numbers on the page were worked out. They are rewritten on the hour
+  # as FPL's own data moves, and a transfer can shift a player a dozen places
+  # between one reading and the next, so the page says which reading this is.
+  def load_forecast_time
+    @forecast_at = Forecast.where(gameweek: @gameweek_record, horizon: @horizon).maximum(:updated_at)
   end
 
   def load_gameweek_data
