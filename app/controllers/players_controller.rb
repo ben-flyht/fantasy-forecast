@@ -16,7 +16,7 @@ class PlayersController < ApplicationController
 
   before_action :set_filters, only: [ :index ]
 
-  helper_method :rest_of_season?, :horizon_label, :horizon_short, :horizon_param
+  helper_method :season?, :horizon_label, :horizon_short, :horizon_param
 
   def index
     return if redirect_to_clean_url
@@ -120,11 +120,11 @@ class PlayersController < ApplicationController
     @team_filter = params[:team_id].present? ? params[:team_id].to_i : nil
   end
 
-  # Rest of season is anchored to the next gameweek: its rows are stored against
-  # that week, and validation and titling resolve a real gameweek from it.
+  # The season horizon is anchored to the next gameweek: its rows are stored
+  # against that week, and validation and titling resolve a real gameweek from it.
   def set_horizon
     if params[:gameweek] == REST_OF_SEASON
-      @horizon = "rest_of_season"
+      @horizon = "season"
       @gameweek = next_gameweek&.fpl_id
     else
       @horizon = "gameweek"
@@ -132,8 +132,8 @@ class PlayersController < ApplicationController
     end
   end
 
-  def rest_of_season?
-    @horizon == "rest_of_season"
+  def season?
+    @horizon == "season"
   end
 
   def resolve_position(param)
@@ -157,7 +157,7 @@ class PlayersController < ApplicationController
   # A season total is read as its per-gameweek average, so it meets the same tier
   # bands a single week does.
   def tier_divisor
-    rest_of_season? ? [ Gameweek.remaining.count, 1 ].max : 1
+    season? ? [ Gameweek.remaining.count, 1 ].max : 1
   end
 
   # When the numbers on the page were worked out. They are rewritten on the hour
@@ -243,15 +243,15 @@ class PlayersController < ApplicationController
   end
 
   def horizon_param
-    rest_of_season? ? REST_OF_SEASON : @gameweek
+    season? ? REST_OF_SEASON : @gameweek
   end
 
   def horizon_label
-    rest_of_season? ? "Rest of Season" : "Gameweek #{@gameweek}"
+    season? ? "Rest of Season" : "Gameweek #{@gameweek}"
   end
 
   def horizon_short
-    rest_of_season? ? "Rest of Season" : "GW#{@gameweek}"
+    season? ? "Rest of Season" : "GW#{@gameweek}"
   end
 
   def build_page_title

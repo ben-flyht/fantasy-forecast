@@ -132,7 +132,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rest of season route shows rest-of-season forecasts" do
-    Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 40.0, horizon: "rest_of_season")
+    Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 40.0, horizon: "season")
 
     get gameweek_position_path(gameweek: "ros", position: "#{@player.position}s")
     assert_response :success

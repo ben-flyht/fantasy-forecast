@@ -35,7 +35,7 @@ class ForecastAccuracyTest < ActiveSupport::TestCase
     # and deliberately the opposite order.
     players.each_with_index do |player, index|
       Forecast.create!(player: player, gameweek: @gameweek, rank: index + 1,
-                       score: (index + 1) * 10.0, horizon: "rest_of_season")
+                       score: (index + 1) * 10.0, horizon: "season")
     end
 
     result = ForecastAccuracy.call(gameweek: @gameweek)
