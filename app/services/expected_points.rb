@@ -107,10 +107,40 @@ class ExpectedPoints < ApplicationService
   # enough to make one haul outrank a season of evidence.
   FORM_SWING = 0.2
 
-  # A kind fixture is worth about a tenth either way. More than that claims FPL's
-  # one-to-five difficulty knows more than it does.
-  FIXTURE_SWING = 0.05
+  # How much the opponent matters, which depends entirely on what a player is
+  # paid for.
+  #
+  # This used to be one number applied to the whole score, and that was wrong
+  # three ways at once. Two points for turning up are the same against Arsenal as
+  # against a promoted side, and no opponent can touch them. A clean sheet is the
+  # opposite: who you are playing decides almost all of it, and the rate varies
+  # about threefold between the kindest fixture in the game and the cruellest. A
+  # goalkeeper's saves run the other way entirely, because a hard afternoon is a
+  # busy one, and marking his saves down for a tough fixture had us paying him
+  # least exactly when he had most to do.
+  #
+  # So the fixture is applied where the opponent has a say, in proportion to how
+  # much say he has, and nowhere else. Difficulty runs one to five about a middle
+  # of three, so the half-range below turns that into a number from minus one for
+  # the worst fixture to plus one for the best.
+  # Each step of difficulty multiplies rather than adds, because that is how the
+  # real rates behave: a clean sheet is not a fixed number of percentage points
+  # harder against each better side, it is a fraction as likely.
   AVERAGE_DIFFICULTY = 3
+
+  # Clean sheets swing hardest. A step of a third per grade of difficulty tracks
+  # the real spread closely: about two afternoons in five against the weakest
+  # sides, under one in seven against the strongest, and a bit over one in four in
+  # between.
+  CLEAN_SHEET_STEP = 1.3
+
+  # Goals and assists move too, but far less. A good forward scores against good
+  # sides, which is most of what makes him a good forward.
+  ATTACK_STEP = 1.1
+
+  # Saves run the other way, so this one sits below one: the afternoon that denies
+  # a goalkeeper his clean sheet is the afternoon that keeps him busy.
+  SAVE_STEP = 0.87
 
   # What the crowd is willing to pay for him, and how far we let that speak.
   #
@@ -184,7 +214,8 @@ class ExpectedPoints < ApplicationService
   def self.parameters
     {
       regular_share: REGULAR_SHARE, unproven_minutes: UNPROVEN_MINUTES,
-      form_swing: FORM_SWING, fixture_swing: FIXTURE_SWING,
+      form_swing: FORM_SWING, clean_sheet_step: CLEAN_SHEET_STEP,
+      attack_step: ATTACK_STEP, save_step: SAVE_STEP,
       crowd_share_min: CROWD_SHARE_MIN, crowd_share_max: CROWD_SHARE_MAX,
       crowd_weight: CROWD_WEIGHT, price_power: PRICE_POWER,
       new_club_minutes: NEW_CLUB_MINUTES, nailed_on: NAILED_ON, cheapest: CHEAPEST,
@@ -427,17 +458,41 @@ class ExpectedPoints < ApplicationService
   # THE SECOND TERM: what he is worth per 90 minutes, from what he actually does
   # rather than what he happened to score, priced with FPL's own scoring table.
   # Appearance points are left out: everyone in a position gets the same two.
-  def points_per_90(ranking)
-    APPEARANCE + scoring_per_90(ranking)
+  # Against nobody in particular unless a fixture is named, which is how the
+  # crowd's curve and a player's own standing are read: both are about what he is
+  # worth on an ordinary afternoon.
+  def points_per_90(ranking, fixture = nil)
+    APPEARANCE + scoring_per_90(ranking, fixture)
   end
 
   # What he adds beyond turning up. Shrunk for a thin record and moved by his
   # recent run, neither of which should touch the appearance points: those are
   # certain the moment he is on the pitch.
-  def scoring_per_90(ranking)
-    earned = goal_points(ranking) + assist_points(ranking) +
-             clean_sheet_points(ranking) + save_points(ranking) + bonus_points(ranking)
-    earned * credibility(ranking) * form_factor(ranking)
+  def scoring_per_90(ranking, fixture = nil)
+    earned_against(ranking, fixture) * credibility(ranking) * form_factor(ranking)
+  end
+
+  # Each part of what he earns, moved by however much the opponent has to say
+  # about that part. Bonus is left where it is: it is awarded for being among the
+  # best three on the day, which is a comparison with the other twenty-one men on
+  # the pitch rather than with the badge on their shirts.
+  def earned_against(ranking, fixture)
+    attacking_points(ranking) * swing(ATTACK_STEP, fixture) +
+      clean_sheet_points(ranking) * swing(CLEAN_SHEET_STEP, fixture) +
+      save_points(ranking) * swing(SAVE_STEP, fixture) +
+      bonus_points(ranking)
+  end
+
+  def attacking_points(ranking)
+    goal_points(ranking) + assist_points(ranking)
+  end
+
+  # How far one part of a score is moved by who he is playing. No fixture named
+  # means no opinion, which leaves the figure as it stands.
+  def swing(step, fixture)
+    return 1.0 if fixture.nil?
+
+    step**(AVERAGE_DIFFICULTY - difficulty_of(fixture))
   end
 
   # Bonus is awarded per match to the three best performers, so it is not in any
@@ -496,11 +551,24 @@ class ExpectedPoints < ApplicationService
     played / (played + UNPROVEN_MINUTES)
   end
 
-  # THE THIRD TERM: the games in front of him. One ordinary fixture is worth about
-  # 1, a kind one a little more, and a team playing twice gets two goes at it. A
-  # blank week is nought, which is the honest answer.
+  # THE THIRD TERM: the games in front of him, each counted for what it is worth
+  # to this player. A team playing twice gets two goes at it and a blank week is
+  # nought, which is the honest answer.
+  #
+  # An ordinary fixture is worth 1. A kind one is worth more to a defender than
+  # to a forward, and a cruel one costs a goalkeeper less than it costs anybody,
+  # because the same afternoon that denies him a clean sheet brings him saves.
+  # See CLEAN_SHEET_SWING and the constants around it.
   def games_ahead(ranking)
-    fixtures_for(ranking).sum { |fixture| 1 + (AVERAGE_DIFFICULTY - difficulty_of(fixture)) * FIXTURE_SWING }
+    fixtures_for(ranking).sum { |fixture| worth_of(ranking, fixture) }
+  end
+
+  # What this fixture is worth against an ordinary one, for this player.
+  def worth_of(ranking, fixture)
+    ordinary = points_per_90(ranking)
+    return 1.0 unless ordinary.positive?
+
+    points_per_90(ranking, fixture) / ordinary
   end
 
   # An unrated fixture counts as an ordinary one. Treating it as unplayable would
