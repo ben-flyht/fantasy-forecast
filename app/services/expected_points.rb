@@ -301,8 +301,35 @@ class ExpectedPoints < ApplicationService
   end
 
   # A costly vote is a considered one, so the dearer the player the more of the
-  # answer his backing decides.
+  # answer his backing decides. Unless he cannot play, in which case it decides
+  # nothing: see #ruled_out?.
   def crowd_share(ranking)
+    return 0.0 if ruled_out?(ranking)
+
+    considered_share(ranking)
+  end
+
+  # Whether FPL has said he cannot play the coming week.
+  #
+  # His ownership has collapsed because of that same news, so letting the crowd
+  # speak charges him for the injury twice: once in his availability, and again
+  # in an ordering that is only low because he is hurt. Saliba is our own third
+  # or fourth best defender on the record, and a rest-of-season page had him
+  # sixty-eighth, most of which was managers selling a man we had already marked
+  # unfit.
+  #
+  # So on a player who cannot play, their money tells us nothing we have not
+  # already counted, and his own record does the talking. What being out costs
+  # him is then one honest number rather than two vague ones multiplied: see
+  # Availability.
+  #
+  # It changes nothing in the weekly forecast, where being ruled out takes him to
+  # nought whatever anybody thinks of him.
+  def ruled_out?(ranking)
+    optional_stat(ranking, "chance_of_playing")&.zero?
+  end
+
+  def considered_share(ranking)
     base = CROWD_SHARE_MIN + (CROWD_SHARE_MAX - CROWD_SHARE_MIN) * dearness(ranking)
     (base * @crowd_weight).clamp(0.0, 1.0)
   end
