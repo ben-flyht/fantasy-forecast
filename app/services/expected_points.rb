@@ -65,6 +65,26 @@ class ExpectedPoints < ApplicationService
   # rest-of-season horizon lifts the cap so his record does more of the talking.
   NEW_CLUB_MINUTES = 0.5
 
+  # How much of the game has to own a new signing before we take it that he has
+  # walked into the side.
+  #
+  # The cap above is an admission that we do not know whether he starts, and that
+  # is the one question the crowd answers better than any record can: managers do
+  # not spend a squad place on a man who sits out. So where we have said "his
+  # minutes belong to another club's team sheet", their money is allowed to say
+  # "and he is first choice at this one".
+  #
+  # It is deliberately the narrowest use we could make of ownership. It applies
+  # only where we have already confessed to guessing, it can only lift a player
+  # and never mark him down, and it stops at a regular's share: backing may
+  # establish that a man plays, never that he is any good, which is what his
+  # record is for.
+  #
+  # A tenth of the game is a lot of managers when the average player is owned by
+  # two per cent of it. A starting figure, to be settled by what actually happens
+  # to these players' minutes.
+  NAILED_ON = 10.0
+
   # FPL's scoring table, by position.
   GOAL = { "goalkeeper" => 10, "defender" => 6, "midfielder" => 5, "forward" => 4 }.freeze
   CLEAN_SHEET = { "goalkeeper" => 4, "defender" => 4, "midfielder" => 1, "forward" => 0 }.freeze
@@ -167,7 +187,7 @@ class ExpectedPoints < ApplicationService
       form_swing: FORM_SWING, fixture_swing: FIXTURE_SWING,
       crowd_share_min: CROWD_SHARE_MIN, crowd_share_max: CROWD_SHARE_MAX,
       crowd_weight: CROWD_WEIGHT, price_power: PRICE_POWER,
-      new_club_minutes: NEW_CLUB_MINUTES, cheapest: CHEAPEST,
+      new_club_minutes: NEW_CLUB_MINUTES, nailed_on: NAILED_ON, cheapest: CHEAPEST,
       exodus_floor: EXODUS_FLOOR, inflow_ceiling: INFLOW_CEILING
     }
   end
@@ -338,7 +358,14 @@ class ExpectedPoints < ApplicationService
     return nil if played.nil?
 
     regular = [ played / regular_minutes, 1.0 ].min
-    @movers.include?(ranking.player_id) ? [ regular, @new_club_minutes ].min : regular
+    return regular unless @movers.include?(ranking.player_id)
+
+    [ [ regular, @new_club_minutes ].min, settled_in(ranking) ].max
+  end
+
+  # What a signing's backing says about the team sheet. See NAILED_ON.
+  def settled_in(ranking)
+    REGULAR_SHARE * (ownership(ranking) / NAILED_ON).clamp(0.0, 1.0)
   end
 
   def minutes_played(ranking)
