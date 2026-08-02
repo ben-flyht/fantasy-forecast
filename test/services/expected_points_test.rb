@@ -56,6 +56,29 @@ class ExpectedPointsTest < ActiveSupport::TestCase
            "and the better of them still ranks first: the order is settled by the forecast, not by rounding"
   end
 
+  # What a player's bonus is worth to him, measured against the same player
+  # without it. Two gameweeks in, so a full match is a real share of the football
+  # played so far.
+  def bonus_gain(minutes, bonus)
+    played = { "expected_goals_per_90" => 0.30, "expected_goal_involvements_per_90" => 0.50,
+               "clean_sheets_per_90" => 0.30, "selected_by_percent" => 5.0,
+               "now_cost" => 60.0, "season_minutes" => minutes }
+    stats = { 1 => played.merge("season_bonus" => bonus), 2 => played.merge("season_bonus" => 0.0) }
+
+    result = ExpectedPoints.call([ ranking(1), ranking(2) ], stats: stats,
+                                fixtures_by_team: { 1 => [ fixture ] },
+                                season_started: true, gameweeks_played: 2)
+    result[1][:points] - result[2][:points]
+  end
+
+  test "bonus counts for less when there is less football behind it" do
+    cameo = bonus_gain(45.0, 6.0)
+    regular = bonus_gain(200.0, 3.0)
+
+    assert cameo < regular / 2,
+           "twice the bonus from a fifth of the football cannot be worth as much as the record"
+  end
+
   test "a player who does not play scores nothing, however good he is" do
     elite = regular(xg: 1.0, xgi: 1.4)
     rankings = [ ranking(1), ranking(2) ]
