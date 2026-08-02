@@ -29,6 +29,21 @@ class ForecastAccuracyTest < ActiveSupport::TestCase
     assert_equal 1.0, result["forward"][:correlation]
   end
 
+  test "the week is marked against the week's forecast, not the season's" do
+    players = field((1..20).to_a.reverse) # our weekly order is exactly the scoring order
+    # The same week also carries a rest-of-season forecast: season-sized numbers,
+    # and deliberately the opposite order.
+    players.each_with_index do |player, index|
+      Forecast.create!(player: player, gameweek: @gameweek, rank: index + 1,
+                       score: (index + 1) * 10.0, horizon: "rest_of_season")
+    end
+
+    result = ForecastAccuracy.call(gameweek: @gameweek)
+
+    assert_equal 100.0, result["forward"][:capture_rate], "the week's own forecast is what gets marked"
+    assert_in_delta 10.5, result["forward"][:predicted], 0.1, "in the week's own numbers, not a season total"
+  end
+
   test "a backwards forecast captures the least it could" do
     field((1..20).to_a) # our best pick scored least
 

@@ -16,6 +16,11 @@ class Forecast < ApplicationRecord
   scope :by_rank, -> { order(rank: :asc) }
   scope :by_week, ->(week) { joins(:gameweek).where(gameweeks: { fpl_id: week }) }
 
+  # What a player was expected to score in that week alone. A rest-of-season
+  # forecast is stored against the same gameweek, so anything asking "what did we
+  # say about this week" has to say which of the two it means.
+  scope :weekly, -> { where(horizon: "gameweek") }
+
   private
 
   def assign_next_gameweek!
