@@ -12,15 +12,8 @@ class Strategy < ApplicationRecord
   end
 
   validate :strategy_config_present
-  validate :position_valid, if: -> { position.present? }
-
 
   def strategy_config_present
     errors.add(:strategy_config, "can't be nil") if strategy_config.nil?
-  end
-
-  def position_valid
-    valid_positions = FantasyForecast::POSITION_CONFIG.keys
-    errors.add(:position, "must be one of: #{valid_positions.join(', ')}") unless valid_positions.include?(position)
   end
 end
