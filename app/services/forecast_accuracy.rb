@@ -134,8 +134,21 @@ class ForecastAccuracy < ApplicationService
     forecasts.select { |id, _| positions[id] == position }.keys
   end
 
+  # The week's own forecast, and only that one.
+  #
+  # A gameweek carries two forecasts per player: what he was expected to score
+  # that week, and what he was expected to score across the rest of the season,
+  # which is anchored to the same week. Reading both and building a hash from
+  # them keeps whichever came back last, so a player we had put at 4.8 points was
+  # marked as though we had said 172.5. It would not have failed. It would have
+  # quietly returned a plausible number for the wrong forecast, which is the only
+  # kind of bug an accuracy measure cannot survive.
+  #
+  # Marking a season total against one week's points is a fair question but a
+  # different one, and it needs its own measure: a capture rate wants both sides
+  # talking about the same football.
   def forecasts
-    @forecasts ||= Forecast.where(gameweek: @gameweek).pluck(:player_id, :score).to_h
+    @forecasts ||= Forecast.weekly.where(gameweek: @gameweek).pluck(:player_id, :score).to_h
   end
 
   def positions
