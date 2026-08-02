@@ -101,6 +101,39 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert result[2][:working][:crowd_share].positive?, "everybody else's backing still decides its share"
   end
 
+  test "turning up is worth the same whoever the opponent is" do
+    rankings = [ ranking(1) ]
+    stats = { 1 => regular(xg: 0.0, xgi: 0.0, clean_sheets: 0.0) } # paid for nothing but being there
+
+    kind = forecast(rankings, stats, fixtures: { 1 => [ fixture(1) ] })
+    cruel = forecast(rankings, stats, fixtures: { 1 => [ fixture(5) ] })
+
+    assert_equal kind[1][:points], cruel[1][:points],
+                 "no opponent can change what a man gets for being on the pitch"
+  end
+
+  test "a hard afternoon costs a defender his clean sheet and brings a goalkeeper saves" do
+    rankings = [ ranking(1, position: "defender"), ranking(2, position: "goalkeeper") ]
+    stats = { 1 => regular(clean_sheets: 0.35),
+              2 => regular(clean_sheets: 0.35).merge("last_season_saves_per_90" => 3.0) }
+
+    cruel = forecast(rankings, stats, fixtures: { 1 => [ fixture(5) ] })
+
+    assert cruel[1][:working][:games] < 1.0, "the defender is unlikely to keep one"
+    assert cruel[2][:working][:games] > cruel[1][:working][:games],
+           "and his goalkeeper minds less, because the shots come to him"
+  end
+
+  test "a kind fixture is worth most to the defender with the best record of clean sheets" do
+    rankings = [ ranking(1, position: "defender"), ranking(2, position: "defender") ]
+    stats = { 1 => regular(clean_sheets: 0.50), 2 => regular(clean_sheets: 0.10) }
+
+    kind = forecast(rankings, stats, fixtures: { 1 => [ fixture(1) ] })
+
+    assert kind[1][:working][:games] > kind[2][:working][:games],
+           "a fixture can only be worth what the player would do with it"
+  end
+
   test "a blank gameweek is nought points, and a double is worth about twice one game" do
     rankings = [ ranking(1, team_id: 1), ranking(2, team_id: 2), ranking(3, team_id: 3) ]
     stats = { 1 => regular, 2 => regular, 3 => regular }
