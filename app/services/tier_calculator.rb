@@ -1,6 +1,6 @@
 # Assigns weather-themed tiers to player rankings based on their score
 # relative to the top-ranked player (percentage from top score).
-class TierCalculator
+class TierCalculator < ApplicationService
   TIERS = {
     1 => { symbol: "☀️", name: "Sunshine", description: "Must-start premium picks" },
     2 => { symbol: "🌤️", name: "Partly Cloudy", description: "Strong reliable options" },
