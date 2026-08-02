@@ -37,8 +37,14 @@ class PlayerNameTest < ActiveSupport::TestCase
     assert_equal [ "Igor", "Thiago" ], name_for("Igor Thiago", "Nascimento Rodrigues", "Thiago")
   end
 
-  test "ignores accents when comparing names" do
-    assert_equal [ "", "Yeremy" ], name_for("Yéremy", "Pino Santos", "Yeremy")
+  test "restores the accents FPL strips from the short name" do
+    assert_equal [ "Altay", "Bayındır" ], name_for("Altay", "Bayındır", "Bayindir")
+    assert_equal [ "Nico", "González" ], name_for("Nico", "González Iglesias", "N.Gonzalez")
+    assert_equal [ "", "Yéremy" ], name_for("Yéremy", "Pino Santos", "Yeremy")
+  end
+
+  test "keeps a short name spelled better than the full name" do
+    assert_equal [ "Benjamin", "Šeško" ], name_for("Benjamin", "Sesko", "Šeško")
   end
 
   test "leaves an abbreviation it cannot spell out alone" do

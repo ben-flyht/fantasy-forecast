@@ -14,7 +14,7 @@ class PlayerName
   end
 
   def display
-    @display ||= without_given_name(spell_out(short_name))
+    @display ||= restore_accents(without_given_name(spell_out(short_name)))
   end
 
   # Whatever comes before the name they are known by: "Francisco Evanilson"
@@ -62,6 +62,26 @@ class PlayerName
     return name unless same?(parts.first(first_name_parts.size).join(" "), first_name)
 
     parts.drop(first_name_parts.size).join(" ")
+  end
+
+  # FPL strips the accents from some short names ("Bayindir"), but the full
+  # name spells them properly ("Bayındır")
+  def restore_accents(name)
+    name.split.map { |part| accented(part) }.join(" ")
+  end
+
+  def accented(part)
+    return part if accented?(part)
+
+    name_parts.find { |candidate| same?(candidate, part) && accented?(candidate) } || part
+  end
+
+  def accented?(part)
+    fold(part) != part.downcase
+  end
+
+  def name_parts
+    @name_parts ||= first_name_parts + last_name.split
   end
 
   def shown?(part)
