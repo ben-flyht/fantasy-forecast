@@ -1,9 +1,19 @@
 Rails.application.routes.draw do
   root "players#index"
 
-  # SEO-friendly forecast URLs
+  POSITIONS = /goalkeepers|defenders|midfielders|forwards/
+
+  # SEO-friendly forecast URLs. Two horizons: all the football that remains, or
+  # one week of it.
+  get "season/:position", to: "players#index", as: :season_position,
+      defaults: { horizon: "season" }, constraints: { position: POSITIONS }
+
   get "gameweeks/:gameweek/:position", to: "players#index", as: :gameweek_position,
-      constraints: { gameweek: /\d+|ros/, position: /goalkeepers|defenders|midfielders|forwards/ }
+      constraints: { gameweek: /\d+/, position: POSITIONS }
+
+  # The season used to be spelled as though it were a gameweek.
+  get "gameweeks/ros/:position", to: redirect("/season/%{position}", status: 301),
+      constraints: { position: POSITIONS }
 
   # Redirect old /players path to root
   get "players", to: redirect("/", status: 301)

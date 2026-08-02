@@ -131,14 +131,33 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name=gameweek] option", text: "5", count: 0
   end
 
-  test "rest of season route shows rest-of-season forecasts" do
+  test "the season route shows season forecasts" do
     Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 40.0, horizon: "season")
 
-    get gameweek_position_path(gameweek: "ros", position: "#{@player.position}s")
+    get season_position_path(position: "#{@player.position}s")
     assert_response :success
     assert_includes response.body, @player.short_name
     assert_includes response.body, "Rest of Season"
     assert_select "select[name=gameweek] option[selected]", text: "Rest of Season"
+  end
+
+  test "the season page the horizon dropdown asks for is the season page" do
+    get root_path(gameweek: "season", position: "#{@player.position}s")
+
+    assert_redirected_to season_position_path(position: "#{@player.position}s")
+  end
+
+  test "the season used to be spelled as a gameweek, and that link still works" do
+    get "/gameweeks/ros/#{@player.position}s"
+
+    assert_response :moved_permanently
+    assert_redirected_to season_position_path(position: "#{@player.position}s")
+  end
+
+  test "a team filter survives the trip to the season page" do
+    get root_path(gameweek: "season", position: "#{@player.position}s", team_id: @test_team.id)
+
+    assert_redirected_to season_position_path(position: "#{@player.position}s", team_id: @test_team.id)
   end
 
   test "the horizon selector offers next gameweek and rest of season" do
@@ -147,10 +166,10 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name=gameweek] option", text: "Rest of Season"
   end
 
-  test "a weekly forecast is not shown under the rest-of-season horizon" do
+  test "a weekly forecast is not shown under the season horizon" do
     Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 4.0, horizon: "gameweek")
 
-    get gameweek_position_path(gameweek: "ros", position: "#{@player.position}s")
+    get season_position_path(position: "#{@player.position}s")
     assert_response :success
     assert_not_includes response.body, @player.short_name
   end
