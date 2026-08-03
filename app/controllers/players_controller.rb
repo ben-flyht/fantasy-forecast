@@ -9,6 +9,10 @@ class PlayersController < ApplicationController
     "goalkeeper" => 50, "defender" => 100, "midfielder" => 100, "forward" => 50
   }.freeze
 
+  TENTHS_PER_MILLION = 10
+
+  PRICE_STEP = 5
+
   # The horizon that spans every gameweek that remains, as the routes and the
   # stored forecasts both spell it.
   SEASON = "season".freeze
@@ -112,7 +116,7 @@ class PlayersController < ApplicationController
 
   def build_clean_url
     rankings_path(params[:gameweek], resolve_position(params[:position]),
-                  **params.permit(:team_id).to_h.compact_blank.symbolize_keys)
+                  **params.permit(:team_id, :min_price, :max_price).to_h.compact_blank.symbolize_keys)
   end
 
   # Where a horizon lives. The season has a page of its own; a week is named by
@@ -129,6 +133,14 @@ class PlayersController < ApplicationController
     set_horizon
     @position_filter = resolve_position(params[:position])
     @team_filter = params[:team_id].present? ? params[:team_id].to_i : nil
+    @min_price = price_param(params[:min_price])
+    @max_price = price_param(params[:max_price])
+  end
+
+  def price_param(value)
+    return if value.blank?
+
+    (value.to_f * TENTHS_PER_MILLION).round
   end
 
   # The season horizon is anchored to the next gameweek: its rows are stored
@@ -160,7 +172,8 @@ class PlayersController < ApplicationController
   def validate_gameweek
     return true if Gameweek.exists?(fpl_id: @gameweek)
 
-    redirect_to root_path(gameweek: next_gameweek&.fpl_id || 1, position: @position_filter, team_id: @team_filter),
+    redirect_to root_path(gameweek: next_gameweek&.fpl_id || 1, position: @position_filter, team_id: @team_filter,
+                          min_price: params[:min_price], max_price: params[:max_price]),
                 alert: "Gameweek #{@gameweek} not found"
     false
   end
@@ -203,6 +216,36 @@ class PlayersController < ApplicationController
   # table if he deserves to, with both facts there for you to judge.
   def load_row_facts
     @row_facts = latest_snapshot_stats(@consensus_rankings.map(&:player_id), ROW_FACT_TYPES)
+    set_price_bounds
+  end
+
+  def set_price_bounds
+    costs = @row_facts.values.filter_map { |facts| facts["now_cost"] }
+    return if costs.empty?
+
+    floor = (costs.min / PRICE_STEP).floor * PRICE_STEP
+    ceil = (costs.max / PRICE_STEP).ceil * PRICE_STEP
+    clamp_price_band(floor, ceil)
+    @price_filter = price_filter_view(floor, ceil)
+  end
+
+  def clamp_price_band(floor, ceil)
+    @min_price = @min_price&.clamp(floor, ceil)
+    @max_price = @max_price&.clamp(floor, ceil)
+  end
+
+  def price_filter_view(floor, ceil)
+    {
+      floor: to_millions(floor),
+      ceil: to_millions(ceil),
+      min: to_millions(@min_price || floor),
+      max: to_millions(@max_price || ceil),
+      step: to_millions(PRICE_STEP)
+    }
+  end
+
+  def to_millions(tenths)
+    tenths / TENTHS_PER_MILLION.to_f
   end
 
   # Who is worth putting in front of somebody this week.
@@ -220,9 +263,21 @@ class PlayersController < ApplicationController
   # Ranks are renumbered afterwards so the page reads 1, 2, 3.
   def build_shortlist
     @consensus_rankings = @consensus_rankings.select { |ranking| ranking.score.to_f.positive? }
+                                             .select { |ranking| priced_within_band?(ranking.player_id) }
                                              .first(RANKING_DEPTH.fetch(@position_filter, 100))
     @consensus_rankings.each_with_index { |ranking, index| ranking.bot_rank = index + 1 }
     @tier_groups = @consensus_rankings.group_by(&:tier)
+  end
+
+  def priced_within_band?(player_id)
+    return true if @min_price.nil? && @max_price.nil?
+
+    cost = @row_facts.dig(player_id, "now_cost")
+    return false if cost.nil?
+    return false if @min_price && cost < @min_price
+    return false if @max_price && cost > @max_price
+
+    true
   end
 
   def latest_snapshot_stats(player_ids, types)

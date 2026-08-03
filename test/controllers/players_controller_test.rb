@@ -207,4 +207,29 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     get "/players/non-existent-99999"
     assert_response :not_found
   end
+
+  test "a price band keeps only players who cost within it" do
+    budget = Player.create!(first_name: "Budget", last_name: "Cheapman", short_name: "B.Cheapman",
+                            team: @test_team, position: "forward", fpl_id: 501)
+    premium = Player.create!(first_name: "Premium", last_name: "Dearman", short_name: "P.Dearman",
+                             team: @test_team, position: "forward", fpl_id: 502)
+
+    Forecast.create!(player: budget, gameweek: @gameweek5, rank: 1, score: 5.0)
+    Forecast.create!(player: premium, gameweek: @gameweek5, rank: 2, score: 4.0)
+    Statistic.create!(player: budget, gameweek: @gameweek5, type: "now_cost", value: 50)
+    Statistic.create!(player: premium, gameweek: @gameweek5, type: "now_cost", value: 90)
+
+    get gameweek_position_path(gameweek: 5, position: "forwards", min_price: "6.0", max_price: "10.0")
+
+    assert_response :success
+    assert_includes response.body, premium.short_name
+    assert_not_includes response.body, budget.short_name
+  end
+
+  test "a price band survives the trip to the clean URL" do
+    get root_path(gameweek: 5, position: "forward", min_price: "6.0", max_price: "10.0")
+
+    assert_redirected_to gameweek_position_path(gameweek: 5, position: "forwards",
+                                                min_price: "6.0", max_price: "10.0")
+  end
 end
