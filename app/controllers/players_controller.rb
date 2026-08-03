@@ -39,9 +39,10 @@ class PlayersController < ApplicationController
     end
 
     @next_gameweek = Gameweek.next_gameweek
+    @horizon = params[:horizon] == SEASON ? SEASON : "gameweek"
     load_player_forecast
     load_player_performances
-    load_upcoming_fixture
+    load_upcoming_fixtures
   end
 
   private
@@ -60,33 +61,95 @@ class PlayersController < ApplicationController
   def load_player_forecast
     return unless @next_gameweek
 
-    forecast = @player.forecasts.includes(:gameweek).find_by(gameweek: @next_gameweek)
+    forecast = @player.forecasts.where(horizon: @horizon).includes(:gameweek).find_by(gameweek: @next_gameweek)
     return unless forecast
 
-    @forecast = {
+    @forecast = forecast_summary(forecast)
+    @player_ranking = player_ranking(forecast)
+    @player_facts = latest_snapshot_stats([ @player.id ], ROW_FACT_TYPES)[@player.id]
+  end
+
+  def forecast_summary(forecast)
+    {
       rank: forecast.rank,
       score: forecast.score,
-      gameweek: @next_gameweek.fpl_id,
-      tier: TierCalculator.calculate_player_tier(forecast, @player.position)
+      grade: TierCalculator.grade_from_points(graded_score(forecast)),
+      tier: TierCalculator.tier_from_points(graded_score(forecast)),
+      horizon: @horizon,
+      gameweek: @next_gameweek.fpl_id
     }
   end
 
-  def load_player_performances
-    @performances = @player.performances
-                           .includes(:gameweek)
-                           .joins(:gameweek)
-                           .order("gameweeks.fpl_id DESC")
-                           .limit(8)
-    @total_score = @player.total_score
-    @form_scores = expand_per_match_scores(@performances, build_match_counts_for(@performances)).first(8)
+  def player_ranking(forecast)
+    ConsensusRanking::Ranking.new(
+      player_id: @player.id, name: @player.short_name, team_id: @player.team_id,
+      position: @player.position, bot_rank: forecast.rank, score: forecast.score,
+      tier: TierCalculator.tier_from_points(graded_score(forecast)),
+      grade: TierCalculator.grade_from_points(graded_score(forecast))
+    )
   end
 
-  def load_upcoming_fixture
-    return unless @next_gameweek && @player.team
+  # A whole-season score spans many gameweeks; it is averaged back to a single
+  # week before it meets the grade bands, so a season grade reads on the same
+  # scale as a weekly one.
+  def graded_score(forecast)
+    return unless forecast.score
 
-    @upcoming_matches = Match.includes(:home_team, :away_team)
-                             .where(gameweek: @next_gameweek)
-                             .where("home_team_id = ? OR away_team_id = ?", @player.team_id, @player.team_id)
+    forecast.score / season_divisor
+  end
+
+  def season_divisor
+    @horizon == SEASON ? [ Gameweek.remaining.count, 1 ].max : 1
+  end
+
+  def load_player_performances
+    performances = @player.performances.includes(:gameweek).joins(:gameweek)
+                          .order("gameweeks.fpl_id DESC").limit(5)
+    @recent_rows = recent_rows(performances)
+  end
+
+  def recent_rows(performances)
+    return [] if performances.empty? || @player.team.nil?
+
+    matches = Match.includes(:home_team, :away_team)
+                   .where(gameweek_id: performances.map(&:gameweek_id))
+                   .where("home_team_id = :t OR away_team_id = :t", t: @player.team_id)
+                   .index_by(&:gameweek_id)
+    performances.map { |perf| fixture_row(perf.gameweek, matches[perf.gameweek_id], perf.gameweek_score, false) }
+  end
+
+  def load_upcoming_fixtures
+    return unless @player.team
+
+    @upcoming_rows = project_fixtures(upcoming_matches)
+  end
+
+  def upcoming_matches
+    Match.includes(:home_team, :away_team, :gameweek).joins(:gameweek)
+         .where("home_team_id = :team OR away_team_id = :team", team: @player.team_id)
+         .where("gameweeks.fpl_id >= ?", @next_gameweek&.fpl_id || 0)
+         .order("gameweeks.fpl_id ASC").limit(5).to_a
+  end
+
+  def project_fixtures(matches)
+    weekly = @next_gameweek && @player.forecasts.weekly.find_by(gameweek: @next_gameweek)
+    FixtureProjection.call(
+      player: @player, matches: matches,
+      anchor_score: weekly&.score, anchor_worth: weekly&.working&.dig("games"),
+      next_gameweek_id: @next_gameweek&.id
+    ).map { |row| fixture_row(row.match.gameweek, row.match, row.points, row.projected) }
+  end
+
+  def fixture_row(gameweek, match, points, projected)
+    home = match && match.home_team_id == @player.team_id
+    {
+      gameweek: gameweek,
+      opponent: match && (home ? match.away_team : match.home_team),
+      home: home,
+      difficulty: match&.difficulty_for(@player.team_id),
+      points: points,
+      projected: projected
+    }
   end
 
   def find_player_from_param
@@ -288,32 +351,5 @@ class PlayersController < ApplicationController
 
   def available_gameweeks_with_forecasts
     @available_gameweeks_with_forecasts ||= Gameweek.with_forecasts.order(fpl_id: :desc).pluck(:fpl_id)
-  end
-
-  def build_match_counts_for(performances)
-    team_ids = performances.map(&:team_id).uniq
-    gameweek_ids = performances.map(&:gameweek_id).uniq
-
-    count_matches(team_ids, gameweek_ids)
-  end
-
-  def count_matches(team_ids, gameweek_ids)
-    counts = Hash.new(0)
-    Match.where(gameweek_id: gameweek_ids)
-         .where("home_team_id IN (?) OR away_team_id IN (?)", team_ids, team_ids)
-         .pluck(:home_team_id, :away_team_id, :gameweek_id)
-         .each do |home_id, away_id, gw_id|
-      counts[[ home_id, gw_id ]] += 1
-      counts[[ away_id, gw_id ]] += 1
-    end
-    counts
-  end
-
-  def expand_per_match_scores(performances, match_counts)
-    performances.flat_map do |perf|
-      count = [ match_counts[[ perf.team_id, perf.gameweek_id ]], 1 ].max
-      per_match = (perf.gameweek_score.to_f / count).round
-      Array.new(count, per_match)
-    end
   end
 end

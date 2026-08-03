@@ -1,0 +1,35 @@
+<div>
+  <h2 class="text-base/6 font-semibold text-zinc-950"><%= title %></h2>
+  <% if rows.any? %>
+    <table class="mt-3 w-full text-sm">
+      <thead>
+        <tr class="text-xs uppercase tracking-wide text-zinc-400 text-left">
+          <th class="py-1 font-semibold">GW</th>
+          <th class="py-1 font-semibold">Opponent</th>
+          <th class="py-1 font-semibold">Fixture</th>
+          <th class="py-1 font-semibold text-right"><%= points_label %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.each do |row| %>
+          <tr class="border-t border-zinc-100">
+            <td class="py-2 whitespace-nowrap text-zinc-500 tabular-nums">
+              GW<%= row[:gameweek].fpl_id %>
+              <% if row[:gameweek].start_time %><span class="block text-xs text-zinc-400"><%= row[:gameweek].start_time.strftime("%-d %b") %></span><% end %>
+            </td>
+            <td class="py-2 whitespace-nowrap text-zinc-800">
+              <% if row[:opponent] %><%= row[:opponent].short_name || row[:opponent].name %> <span class="text-zinc-400">(<%= row[:home] ? "H" : "A" %>)</span><% else %><span class="text-zinc-400">—</span><% end %>
+            </td>
+            <td class="py-2 whitespace-nowrap text-zinc-500"><%= fixture_ease(row[:difficulty]) %></td>
+            <td class="py-2 text-right tabular-nums font-semibold text-zinc-900">
+              <% if row[:points] %><%= row[:points].is_a?(Integer) ? row[:points] : format("%.1f", row[:points]) %><% else %><span class="text-zinc-400">—</span><% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <% if note %><p class="mt-2 text-xs text-zinc-400"><%= note %></p><% end %>
+  <% else %>
+    <p class="mt-3 text-sm text-zinc-500"><%= empty_message %></p>
+  <% end %>
+</div>

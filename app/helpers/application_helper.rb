@@ -6,7 +6,7 @@ module ApplicationHelper
   end
 
   def meta_description
-    content_for?(:meta_description) ? content_for(:meta_description) : "Weather-tiered FPL player rankings. Our algorithm analyzes form, fixtures, and expected goals to help you make better Fantasy Premier League decisions."
+    content_for?(:meta_description) ? content_for(:meta_description) : "FPL player rankings graded A to F. Our algorithm lets the market — price and ownership — lead, weighed against form, fixtures, and expected goals, to help you make better Fantasy Premier League decisions."
   end
 
   def meta_image
@@ -51,8 +51,12 @@ module ApplicationHelper
     format("%.1f%% owned", percent)
   end
 
-  def tier_symbol(tier)
-    tier_info(tier)&.dig(:symbol)
+  # FPL rates each fixture 1 (easiest) to 5 (hardest). The number means nothing
+  # to a reader, so it is shown as a word.
+  FIXTURE_EASE = { 1 => "Very easy", 2 => "Easy", 3 => "Average", 4 => "Hard", 5 => "Very hard" }.freeze
+
+  def fixture_ease(difficulty)
+    FIXTURE_EASE.fetch(difficulty.to_i, "Unrated")
   end
 
   private
@@ -64,7 +68,7 @@ module ApplicationHelper
   def website_schema
     { "@type": "WebSite", "@id": "#{BASE_URL}/#website", "url": "#{BASE_URL}/",
       "name": "Fantasy Forecast",
-      "description": "Weather-tiered FPL player rankings to help you make better Fantasy Premier League decisions" }
+      "description": "FPL player rankings graded A to F to help you make better Fantasy Premier League decisions" }
   end
 
   def organization_schema

@@ -157,15 +157,15 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert result[1][:points].positive?
   end
 
-  test "a kind fixture is worth more than a hard one, but not wildly so" do
+  test "a kind fixture is worth much more than a hard one, but the appearance points still anchor it" do
     rankings = [ ranking(1, team_id: 1), ranking(2, team_id: 2) ]
     stats = { 1 => regular, 2 => regular }
     fixtures = { 1 => [ fixture(2) ], 2 => [ fixture(5) ] }
 
     result = forecast(rankings, stats, fixtures: fixtures)
 
-    assert result[1][:points] > result[2][:points]
-    assert result[1][:points] < result[2][:points] * 1.3, "difficulty one to five does not know more than that"
+    assert_operator result[1][:points], :>, result[2][:points] * 1.4, "the fixture is given a decisive say"
+    assert_operator result[1][:points], :<, result[2][:points] * 2.0, "but two points for turning up cannot swing"
   end
 
   test "a player with no record at all cannot be forecast" do

@@ -2,11 +2,11 @@
 # relative to the top-ranked player (percentage from top score).
 class TierCalculator < ApplicationService
   TIERS = {
-    1 => { symbol: "☀️", name: "Sunshine", description: "Must-start premium picks" },
-    2 => { symbol: "🌤️", name: "Partly Cloudy", description: "Strong reliable options" },
-    3 => { symbol: "☁️", name: "Cloudy", description: "Solid but higher variance" },
-    4 => { symbol: "🌧️", name: "Rainy", description: "Risky, proceed with caution" },
-    5 => { symbol: "❄️", name: "Snow", description: "Avoid - Loss/injury risks" }
+    1 => { symbol: "☀️", name: "Sunshine", description: "Must-start, top expected points" },
+    2 => { symbol: "🌤️", name: "Partly Cloudy", description: "Strong, dependable returns" },
+    3 => { symbol: "☁️", name: "Cloudy", description: "Steady, a modest return expected" },
+    4 => { symbol: "🌧️", name: "Rainy", description: "Marginal, little on top of appearance" },
+    5 => { symbol: "❄️", name: "Snow", description: "Avoid — rotation, bench or ruled out" }
   }.freeze
 
   # What each tier is worth, in expected points.

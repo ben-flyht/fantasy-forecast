@@ -1,21 +1,21 @@
 <% if @consensus_rankings.any? %>
-  <% sunshine = @consensus_rankings.select { |r| r.tier == 1 && r.bot_rank.present? } %>
-  <% partly_cloudy = @consensus_rankings.select { |r| r.tier == 2 && r.bot_rank.present? } %>
+  <% grade_a = @consensus_rankings.select { |r| r.tier == 1 && r.bot_rank.present? } %>
+  <% grade_b = @consensus_rankings.select { |r| r.tier == 2 && r.bot_rank.present? } %>
 
   <div class="mt-8 space-y-6 text-sm text-zinc-600">
     <div>
       <h2 class="text-lg font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> Rankings — <%= horizon_label %></h2>
       <p class="mt-2">
-        Our algorithm ranks every Premier League <%= @position_filter %> for <%= horizon_label %> by analyzing recent form, upcoming fixtures, and expected goals data.
-        Players are grouped into weather tiers from <%= TierCalculator::TIERS[1][:symbol] %> Sunshine (must-start picks) to <%= TierCalculator::TIERS[5][:symbol] %> Snow (best avoided).
+        Our algorithm ranks every Premier League <%= @position_filter %> for <%= horizon_label %> by starting from the market — each player's price and ownership — and weighing it against recent form, upcoming fixtures, and expected goals.
+        Players are graded from A (must-start picks) down to F (best avoided).
       </p>
     </div>
 
-    <% if sunshine.any? %>
+    <% if grade_a.any? %>
       <div>
-        <h3 class="font-semibold text-zinc-900"><%= TierCalculator::TIERS[1][:symbol] %> Top <%= @position_filter.capitalize %> Picks for <%= horizon_short %></h3>
+        <h3 class="font-semibold text-zinc-900">Grade A — Top <%= @position_filter.capitalize %> Picks for <%= horizon_short %></h3>
         <ul class="mt-2 space-y-2">
-          <% sunshine.first(5).each do |r| %>
+          <% grade_a.first(5).each do |r| %>
             <% player = @players_by_id[r.player_id] %>
             <% next unless player %>
             <% fixtures = (@matches_by_team[player.team_id] || []).map { |m|
@@ -30,16 +30,16 @@
           <% end %>
         </ul>
         <p class="mt-2">
-          These <%= @position_filter %>s have the strongest combination of form, fixtures, and underlying stats heading into <%= horizon_label %>.
+          These <%= @position_filter %>s have the strongest combination of market backing, form, fixtures, and underlying stats heading into <%= horizon_label %>.
         </p>
       </div>
     <% end %>
 
-    <% if partly_cloudy.any? %>
+    <% if grade_b.any? %>
       <div>
-        <h3 class="font-semibold text-zinc-900"><%= TierCalculator::TIERS[2][:symbol] %> Strong <%= @position_filter.capitalize %> Alternatives for <%= horizon_short %></h3>
+        <h3 class="font-semibold text-zinc-900">Grade B — Strong <%= @position_filter.capitalize %> Alternatives for <%= horizon_short %></h3>
         <ul class="mt-2 space-y-2">
-          <% partly_cloudy.first(5).each do |r| %>
+          <% grade_b.first(5).each do |r| %>
             <% player = @players_by_id[r.player_id] %>
             <% next unless player %>
             <% fixtures = (@matches_by_team[player.team_id] || []).map { |m|
@@ -54,7 +54,7 @@
           <% end %>
         </ul>
         <p class="mt-2">
-          These <%= @position_filter %>s offer reliable upside as slightly cheaper or less-owned options for <%= horizon_label %>.
+          These <%= @position_filter %>s offer reliable upside just behind the must-start picks for <%= horizon_label %>.
         </p>
       </div>
     <% end %>
@@ -62,16 +62,16 @@
     <div>
       <h3 class="font-semibold text-zinc-900">How Our FPL <%= @position_filter.capitalize %> Rankings Work</h3>
       <p class="mt-1">
-        Fantasy Forecast uses a data-driven algorithm that weighs recent player performance, expected goals and assists, minutes security, and fixture difficulty to produce weekly rankings for every Premier League position.
+        Fantasy Forecast uses a data-driven algorithm that lets the market lead — a player's price and how many managers own him — and weighs it against recent performance, expected goals and assists, minutes security, and fixture difficulty to produce weekly rankings for every Premier League position.
         Rankings update automatically each gameweek and are designed to help FPL managers make informed captain, transfer, and starting XI decisions.
       </p>
     </div>
 
     <div>
-      <h3 class="font-semibold text-zinc-900">Weather Tier System</h3>
+      <h3 class="font-semibold text-zinc-900">Grade System</h3>
       <ul class="mt-1 space-y-1">
-        <% TierCalculator::TIERS.each do |_tier, info| %>
-          <li><%= info[:symbol] %> <span class="font-semibold text-zinc-900"><%= info[:name] %></span> — <%= info[:description] %></li>
+        <% TierCalculator::TIERS.each do |tier, info| %>
+          <li><span class="font-semibold text-zinc-900"><%= TierCalculator::GRADE_LETTERS[tier] %></span> — <%= info[:description] %></li>
         <% end %>
       </ul>
     </div>
@@ -82,12 +82,12 @@
         <div>
           <dt class="font-medium text-zinc-900">Who are the best FPL <%= @position_filter %>s for <%= horizon_label %>?</dt>
           <dd class="mt-1">
-            <% if sunshine.any? %>
+            <% if grade_a.any? %>
               Our top-rated <%= @position_filter %>s for <%= horizon_short %> are
-              <%= sunshine.first(3).map { |r| "#{r.name} (#{@players_by_id[r.player_id]&.team&.short_name})" }.join(", ") %>.
-              These players have the best combination of recent form and favourable fixtures.
+              <%= grade_a.first(3).map { |r| "#{r.name} (#{@players_by_id[r.player_id]&.team&.short_name})" }.join(", ") %>.
+              These players have the strongest market backing alongside recent form and favourable fixtures.
             <% else %>
-              Check the rankings table above for the latest picks — rankings update automatically based on form and fixtures.
+              Check the rankings table above for the latest picks — rankings update automatically based on the market, form, and fixtures.
             <% end %>
           </dd>
         </div>

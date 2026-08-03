@@ -12,66 +12,77 @@
   Back to Rankings
 <% end %>
 
-<!-- Player Header -->
-<div class="mt-6 flex items-start gap-6">
-  <%= render PlayerAvatarComponent.new(player: @player, size: :large) %>
+<!-- Player Banner -->
+<div class="mt-6">
+  <h1 class="sr-only"><%= @player.full_name %></h1>
 
-  <div class="flex-1">
-    <h1 class="text-2xl font-semibold text-zinc-950"><%= @player.full_name %></h1>
-    <div class="text-sm text-zinc-500 mt-1">
-      <p class="flex items-center gap-1.5">
-        <%= render TeamBadgeComponent.new(team: @player.team, size: 16) %>
-        <%= @player.team&.name %>
-      </p>
-      <p class="mt-1"><%= @player.position.capitalize %></p>
-    </div>
-
-    <% if @player.news.present? %>
-      <div class="mt-3 rounded-lg bg-red-400/10 px-3 py-2">
-        <p class="text-sm text-red-700"><%= @player.news %></p>
-      </div>
-    <% end %>
-  </div>
-</div>
-
-<!-- Top Section: Fixture & Form -->
-<div class="mt-8 flex flex-wrap items-start gap-8">
-  <% if @upcoming_matches&.any? %>
-    <div>
-      <h2 class="text-base/6 font-semibold text-zinc-950"><%= @upcoming_matches.size > 1 ? "Next Fixtures" : "Next Fixture" %></h2>
-      <div class="mt-4 flex flex-col gap-2">
-        <% @upcoming_matches.each do |match| %>
-          <%= render FixtureComponent.new(match: match, player: @player) %>
-        <% end %>
-      </div>
-    </div>
-  <% end %>
-
-  <div>
-    <h2 class="text-base/6 font-semibold text-zinc-950">Recent Form</h2>
-    <% if @performances.any? %>
-      <div class="mt-4">
-        <%= render FormComponent.new(scores: @form_scores) %>
-      </div>
-    <% else %>
-      <p class="mt-4 text-sm text-zinc-500">No performance data available yet.</p>
-    <% end %>
-  </div>
-</div>
-
-<!-- Forecast -->
-<div class="mt-8">
-  <h2 class="text-base/6 font-semibold text-zinc-950">Forecast</h2>
   <% if @forecast %>
-    <div class="mt-4 rounded-lg bg-zinc-100 p-4">
-      <p class="font-medium text-zinc-950 flex items-center gap-2">
-        <span class="text-xl"><%= @forecast[:tier][:symbol] %></span>
-        <% if @forecast[:rank] %>
-          #<%= @forecast[:rank] %> <%= @player.position.capitalize %>
+    <%= form_with url: player_path(@player), method: :get, class: "mb-3" do %>
+      <div class="inline-flex items-center gap-1 rounded-lg bg-zinc-100 p-1" role="radiogroup">
+        <% [ [ "gameweek", "Next Gameweek" ], [ "season", "Rest of Season" ] ].each do |value, label| %>
+          <% active = @horizon == value %>
+          <label class="px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer transition-colors <%= active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900" %>">
+            <%= radio_button_tag :horizon, value, active, class: "sr-only", onchange: "this.form.requestSubmit()" %><%= label %>
+          </label>
         <% end %>
-      </p>
-    </div>
-  <% else %>
-    <p class="mt-4 text-sm text-zinc-500">No forecast available.</p>
+      </div>
+    <% end %>
   <% end %>
+
+  <% if @player_ranking %>
+    <%= render PlayerCardComponent.new(ranking: @player_ranking, player: @player, facts: @player_facts, show_position: true, hero: true) %>
+  <% else %>
+    <div class="flex items-start gap-6">
+      <%= render PlayerAvatarComponent.new(player: @player, size: :large) %>
+      <div class="flex-1">
+        <p class="text-2xl font-semibold text-zinc-950"><%= @player.full_name %></p>
+        <div class="text-sm text-zinc-500 mt-1">
+          <p class="flex items-center gap-1.5">
+            <%= render TeamBadgeComponent.new(team: @player.team, size: 16) %>
+            <%= @player.team&.name %>
+          </p>
+          <p class="mt-1"><%= @player.position.capitalize %></p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @player.news.present? %>
+    <div class="mt-3 rounded-lg bg-red-400/10 px-3 py-2">
+      <p class="text-sm text-red-700"><%= @player.news %></p>
+    </div>
+  <% end %>
+</div>
+
+<!-- Why this grade -->
+<% if @forecast %>
+  <% season = @forecast[:horizon] == "season" %>
+  <div class="mt-8 rounded-lg bg-zinc-100 p-4">
+    <% if @forecast[:score] %>
+      <p class="text-3xl font-bold text-zinc-950 leading-none">
+        <%= format("%.1f", @forecast[:score]) %>
+        <span class="text-sm font-medium text-zinc-500">expected points <%= season ? "rest of season" : "this gameweek" %></span>
+      </p>
+    <% end %>
+    <% if @forecast[:tier] %>
+      <p class="mt-2 text-sm text-zinc-600"><%= TierCalculator::TIERS.dig(@forecast[:tier], :description) %></p>
+    <% end %>
+  </div>
+<% end %>
+
+<!-- Fixtures & Form -->
+<div class="mt-8 grid gap-8 md:grid-cols-2">
+  <%= render "fixture_table",
+        title: "Next #{(@upcoming_rows&.size).to_i} #{'Fixture'.pluralize((@upcoming_rows&.size).to_i)}",
+        rows: @upcoming_rows || [],
+        points_label: "xP",
+        note: nil,
+        empty_message: "No upcoming fixtures scheduled." %>
+
+  <%= render "fixture_table",
+        title: "Recent Form",
+        rows: @recent_rows || [],
+        points_label: "Pts",
+        note: nil,
+        empty_message: "No matches played yet this season." %>
 </div>
