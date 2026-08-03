@@ -16,6 +16,19 @@
 <div class="mt-6">
   <h1 class="sr-only"><%= @player.full_name %></h1>
 
+  <% if @forecast %>
+    <%= form_with url: player_path(@player), method: :get, class: "mb-3" do %>
+      <div class="inline-flex items-center gap-1 rounded-lg bg-zinc-100 p-1" role="radiogroup">
+        <% [ [ "gameweek", "Next Gameweek" ], [ "season", "Rest of Season" ] ].each do |value, label| %>
+          <% active = @horizon == value %>
+          <label class="px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer transition-colors <%= active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900" %>">
+            <%= radio_button_tag :horizon, value, active, class: "sr-only", onchange: "this.form.requestSubmit()" %><%= label %>
+          </label>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+
   <% if @player_ranking %>
     <%= render PlayerCardComponent.new(ranking: @player_ranking, player: @player, facts: @player_facts, show_position: true, hero: true) %>
   <% else %>
@@ -41,78 +54,35 @@
   <% end %>
 </div>
 
-<!-- Top Section: Fixture & Form -->
-<div class="mt-8 flex flex-wrap items-start gap-8">
-  <% if @upcoming_matches&.any? %>
-    <div>
-      <h2 class="text-base/6 font-semibold text-zinc-950"><%= @upcoming_matches.size > 1 ? "Next Fixtures" : "Next Fixture" %></h2>
-      <div class="mt-4 flex flex-col gap-2">
-        <% @upcoming_matches.each do |match| %>
-          <%= render FixtureComponent.new(match: match, player: @player) %>
-        <% end %>
-      </div>
-    </div>
-  <% end %>
-
-  <div>
-    <h2 class="text-base/6 font-semibold text-zinc-950">Recent Form</h2>
-    <% if @performances.any? %>
-      <div class="mt-4">
-        <%= render FormComponent.new(scores: @form_scores) %>
-      </div>
-    <% else %>
-      <p class="mt-4 text-sm text-zinc-500">No performance data available yet.</p>
+<!-- Why this grade -->
+<% if @forecast %>
+  <% season = @forecast[:horizon] == "season" %>
+  <div class="mt-8 rounded-lg bg-zinc-100 p-4">
+    <% if @forecast[:score] %>
+      <p class="text-3xl font-bold text-zinc-950 leading-none">
+        <%= format("%.1f", @forecast[:score]) %>
+        <span class="text-sm font-medium text-zinc-500">expected points <%= season ? "rest of season" : "this gameweek" %></span>
+      </p>
+    <% end %>
+    <% if @forecast[:tier] %>
+      <p class="mt-2 text-sm text-zinc-600"><%= TierCalculator::TIERS.dig(@forecast[:tier], :description) %></p>
     <% end %>
   </div>
-</div>
+<% end %>
 
-<!-- Forecast -->
-<div class="mt-8">
-  <h2 class="text-base/6 font-semibold text-zinc-950">Forecast</h2>
-  <% if @forecast %>
-    <div class="mt-4 rounded-lg bg-zinc-100 p-4">
-      <div class="flex items-center gap-3">
-        <span class="text-4xl font-extrabold tracking-[-0.03em] leading-none text-zinc-900"><%= @forecast[:grade] %></span>
-        <div class="text-sm text-zinc-600">
-          <% if @forecast[:rank] %>
-            <p class="font-medium text-zinc-950">#<%= @forecast[:rank] %> <%= @player.position.capitalize %></p>
-          <% end %>
-          <% if @forecast[:score] %>
-            <p><%= format("%.2f", @forecast[:score]) %> expected points</p>
-          <% end %>
-        </div>
-      </div>
+<!-- Fixtures & Form -->
+<div class="mt-8 grid gap-8 md:grid-cols-2">
+  <%= render "fixture_table",
+        title: "Next #{(@upcoming_rows&.size).to_i} #{'Fixture'.pluralize((@upcoming_rows&.size).to_i)}",
+        rows: @upcoming_rows || [],
+        points_label: "xP",
+        note: nil,
+        empty_message: "No upcoming fixtures scheduled." %>
 
-      <% drivers = forecast_drivers(@forecast[:working]) %>
-      <% opponents = @forecast.dig(:working, "opponents") %>
-      <% if drivers.any? || opponents.present? %>
-        <dl class="mt-4 space-y-3 border-t border-zinc-200 pt-4 text-sm">
-          <% drivers.each do |d| %>
-            <div class="flex items-baseline justify-between gap-4">
-              <dt class="text-zinc-950 font-medium">
-                <%= d[:label] %>
-                <span class="block text-xs font-normal text-zinc-500"><%= d[:note] %></span>
-              </dt>
-              <dd class="tabular-nums text-zinc-700 whitespace-nowrap"><%= d[:value] %></dd>
-            </div>
-          <% end %>
-          <% if opponents.present? %>
-            <div class="flex items-baseline justify-between gap-4">
-              <dt class="text-zinc-950 font-medium">
-                Fixtures
-                <span class="block text-xs font-normal text-zinc-500">each game weighed by difficulty</span>
-              </dt>
-              <dd class="text-zinc-700 text-right">
-                <% opponents.each do |o| %>
-                  <span class="block whitespace-nowrap"><%= o["name"] %> (<%= o["home"] ? "H" : "A" %><%= ", FDR #{o['difficulty']}" if o["difficulty"].to_i.positive? %>)</span>
-                <% end %>
-              </dd>
-            </div>
-          <% end %>
-        </dl>
-      <% end %>
-    </div>
-  <% else %>
-    <p class="mt-4 text-sm text-zinc-500">No forecast available.</p>
-  <% end %>
+  <%= render "fixture_table",
+        title: "Recent Form",
+        rows: @recent_rows || [],
+        points_label: "Pts",
+        note: nil,
+        empty_message: "No matches played yet this season." %>
 </div>

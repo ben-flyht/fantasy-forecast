@@ -22,19 +22,31 @@
         <div class="<%= given_text %> font-bold tracking-[-0.02em] uppercase opacity-80 leading-none mb-[3px] whitespace-nowrap"><%= player.given_name %></div>
       <% end %>
       <div class="<%= name_text %> font-extrabold tracking-[-0.02em] uppercase leading-none whitespace-nowrap"><%= player.display_name %></div>
-      <div class="<%= meta_text %> font-bold opacity-95 leading-none mt-[5px] whitespace-nowrap flex items-center gap-1.5">
-        <% if position_label %>
-          <span><%= position_label %></span>
-          <span class="opacity-50 font-normal">/</span>
-        <% end %>
-        <span><%= team&.short_name %></span>
-        <% if cost %>
-          <span class="opacity-50 font-normal">/</span><span class="tabular-nums"><%= cost %></span>
-        <% end %>
-        <% if ownership %>
-          <span class="opacity-50 font-normal">/</span><span class="tabular-nums"><%= ownership %></span>
-        <% end %>
-      </div>
+      <% if hero? %>
+        <dl class="<%= meta_text %> mt-3 space-y-2 leading-none">
+          <% [ [ "Position", position_label ], [ "Club", team&.name ], [ "Cost", cost ], [ "Ownership", ownership ] ].each do |label, value| %>
+            <% next if value.blank? %>
+            <div>
+              <dt class="text-xs font-bold uppercase tracking-[-0.02em] leading-none opacity-60"><%= label %></dt>
+              <dd class="mt-0.5 font-bold tabular-nums"><%= value %></dd>
+            </div>
+          <% end %>
+        </dl>
+      <% else %>
+        <div class="<%= meta_text %> font-bold opacity-95 leading-none mt-[5px] whitespace-nowrap flex items-center gap-1.5">
+          <% if position_label %>
+            <span><%= position_label %></span>
+            <span class="opacity-50 font-normal">/</span>
+          <% end %>
+          <span><%= team&.short_name %></span>
+          <% if cost %>
+            <span class="opacity-50 font-normal">/</span><span class="tabular-nums"><%= cost %></span>
+          <% end %>
+          <% if ownership %>
+            <span class="opacity-50 font-normal">/</span><span class="tabular-nums"><%= ownership %></span>
+          <% end %>
+        </div>
+      <% end %>
     </div>
 
     <% if player.cutout_url %>

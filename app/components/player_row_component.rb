@@ -17,14 +17,14 @@ class PlayerRowComponent < ViewComponent::Base
     @hero
   end
 
-  def card_height = hero? ? "h-48" : "h-24"
-  def side_width = hero? ? "w-[92px]" : "w-[54px]"
-  def corner_text = hero? ? "text-[56px]" : "text-[32px]"
-  def name_text = hero? ? "text-[34px]" : "text-[21px]"
-  def given_text = hero? ? "text-[13px]" : "text-[10px]"
-  def meta_text = hero? ? "text-[13.5px]" : "text-[10.5px]"
-  def badge_size = hero? ? "h-[200px] w-[200px]" : "h-[120px] w-[120px]"
-  def cutout_height = hero? ? "h-[184px]" : "h-[100px]"
+  def card_height = hero? ? "h-64" : "h-24"
+  def side_width = hero? ? "w-24" : "w-[54px]"
+  def corner_text = hero? ? "text-5xl" : "text-[32px]"
+  def name_text = hero? ? "text-3xl" : "text-[21px]"
+  def given_text = hero? ? "text-xs" : "text-[10px]"
+  def meta_text = hero? ? "text-base" : "text-[10.5px]"
+  def badge_size = hero? ? "h-[220px] w-[220px]" : "h-[120px] w-[120px]"
+  def cutout_height = hero? ? "h-[248px]" : "h-[100px]"
   def banner_pad = hero? ? "pl-9" : "pl-6"
 
   def position_label
