@@ -1,15 +1,37 @@
 # frozen_string_literal: true
 
 class PlayerRowComponent < ViewComponent::Base
-  def initialize(ranking:, player:, facts:)
+  def initialize(ranking:, player:, facts:, show_position: false, hero: false)
     @ranking = ranking
     @player = player
     @facts = facts || {}
+    @show_position = show_position
+    @hero = hero
   end
 
   private
 
   attr_reader :ranking, :player, :facts
+
+  def hero?
+    @hero
+  end
+
+  def card_height = hero? ? "h-48" : "h-24"
+  def side_width = hero? ? "w-[92px]" : "w-[54px]"
+  def corner_text = hero? ? "text-[56px]" : "text-[32px]"
+  def name_text = hero? ? "text-[34px]" : "text-[21px]"
+  def given_text = hero? ? "text-[13px]" : "text-[10px]"
+  def meta_text = hero? ? "text-[13.5px]" : "text-[10.5px]"
+  def badge_size = hero? ? "h-[200px] w-[200px]" : "h-[120px] w-[120px]"
+  def cutout_height = hero? ? "h-[184px]" : "h-[100px]"
+  def banner_pad = hero? ? "pl-9" : "pl-6"
+
+  def position_label
+    return unless @show_position
+
+    player.position&.capitalize
+  end
 
   def rank
     ranking.bot_rank || "-"

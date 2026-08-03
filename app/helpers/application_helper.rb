@@ -6,7 +6,7 @@ module ApplicationHelper
   end
 
   def meta_description
-    content_for?(:meta_description) ? content_for(:meta_description) : "Weather-tiered FPL player rankings. Our algorithm analyzes form, fixtures, and expected goals to help you make better Fantasy Premier League decisions."
+    content_for?(:meta_description) ? content_for(:meta_description) : "FPL player rankings graded A to F. Our algorithm lets the market — price and ownership — lead, weighed against form, fixtures, and expected goals, to help you make better Fantasy Premier League decisions."
   end
 
   def meta_image
@@ -51,11 +51,58 @@ module ApplicationHelper
     format("%.1f%% owned", percent)
   end
 
-  def tier_symbol(tier)
-    tier_info(tier)&.dig(:symbol)
+  FORECAST_DRIVERS = [
+    [ "Market baseline", :points, "crowd", "where his price and ownership place him" ],
+    [ "His record", :per_90, "per_90", "goals, assists, clean sheets, saves and minutes" ],
+    [ "Record vs market", :nudge_percent, "perf_factor", "how far his record could move the market" ],
+    [ "Recent form", :swing_percent, "form", "recent scoring against his usual" ],
+    [ "Transfers", :swing_percent, "transfers", "this week's buys and sells" ]
+  ].freeze
+
+  # How the grade was arrived at, read back from the figures the forecast was
+  # multiplied from. The market sets the baseline; the record, form and this
+  # week's transfers move it from there.
+  def forecast_drivers(working)
+    return [] if working.blank?
+
+    FORECAST_DRIVERS.filter_map do |label, formatter, key, note|
+      value = send(formatter, working[key])
+      { label: label, value: value, note: note } if value
+    end
   end
 
   private
+
+  def points(value)
+    return if value.blank?
+
+    "#{format('%.2f', value)} pts"
+  end
+
+  def per_90(value)
+    return if value.blank?
+
+    "#{format('%.2f', value)} pts/90"
+  end
+
+  def nudge_percent(multiplier)
+    return if multiplier.blank?
+
+    signed_percent(multiplier)
+  end
+
+  def swing_percent(multiplier)
+    return if multiplier.blank? || multiplier.to_f == 1.0
+
+    signed_percent(multiplier)
+  end
+
+  def signed_percent(multiplier)
+    delta = ((multiplier.to_f - 1) * 100).round
+    return "in line" if delta.zero?
+
+    "#{delta.positive? ? '+' : '−'}#{delta.abs}%"
+  end
 
   def structured_data_schema
     { "@context": "https://schema.org", "@graph": [ website_schema, organization_schema ] }
@@ -64,7 +111,7 @@ module ApplicationHelper
   def website_schema
     { "@type": "WebSite", "@id": "#{BASE_URL}/#website", "url": "#{BASE_URL}/",
       "name": "Fantasy Forecast",
-      "description": "Weather-tiered FPL player rankings to help you make better Fantasy Premier League decisions" }
+      "description": "FPL player rankings graded A to F to help you make better Fantasy Premier League decisions" }
   end
 
   def organization_schema
