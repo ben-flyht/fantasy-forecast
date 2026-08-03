@@ -51,57 +51,61 @@ module ApplicationHelper
     format("%.1f%% owned", percent)
   end
 
-  FORECAST_DRIVERS = [
-    [ "Market baseline", :points, "crowd", "where his price and ownership place him" ],
-    [ "His record", :per_90, "per_90", "goals, assists, clean sheets, saves and minutes" ],
-    [ "Record vs market", :nudge_percent, "perf_factor", "how far his record could move the market" ],
-    [ "Recent form", :swing_percent, "form", "recent scoring against his usual" ],
-    [ "Transfers", :swing_percent, "transfers", "this week's buys and sells" ]
-  ].freeze
+  # FPL rates each fixture 1 (easiest) to 5 (hardest). The number means nothing
+  # to a reader, so it is shown as a word.
+  FIXTURE_EASE = { 1 => "Very easy", 2 => "Easy", 3 => "Average", 4 => "Hard", 5 => "Very hard" }.freeze
 
-  # How the grade was arrived at, read back from the figures the forecast was
-  # multiplied from. The market sets the baseline; the record, form and this
-  # week's transfers move it from there.
-  def forecast_drivers(working)
+  def fixture_ease(difficulty)
+    FIXTURE_EASE.fetch(difficulty.to_i, "Unrated")
+  end
+
+  REASON_TONES = {
+    good: "bg-emerald-100 text-emerald-800",
+    warn: "bg-amber-100 text-amber-800",
+    bad: "bg-red-100 text-red-800"
+  }.freeze
+
+  # The plain-English case for a grade: does he start, is the fixture kind, is he
+  # in form, is the crowd moving. Only the notable ones show; a player who is
+  # simply nailed on with an ordinary fixture says so and no more.
+  def forecast_reasons(working)
     return [] if working.blank?
 
-    FORECAST_DRIVERS.filter_map do |label, formatter, key, note|
-      value = send(formatter, working[key])
-      { label: label, value: value, note: note } if value
-    end
+    [
+      minutes_reason(working["minutes"]),
+      fixture_reason(working["games"]),
+      form_reason(working["form"]),
+      transfer_reason(working["transfers"])
+    ].compact
   end
 
   private
 
-  def points(value)
-    return if value.blank?
-
-    "#{format('%.2f', value)} pts"
+  def minutes_reason(minutes)
+    case minutes.to_i
+    when 60.. then reason("Nailed on", :good)
+    when 30...60 then reason("Rotation risk", :warn)
+    when 1...30 then reason("Bench risk", :bad)
+    end
   end
 
-  def per_90(value)
-    return if value.blank?
-
-    "#{format('%.2f', value)} pts/90"
+  def fixture_reason(games)
+    return reason("Kind fixture", :good) if games.to_f >= 1.05
+    reason("Tough fixture", :bad) if games.to_f.positive? && games.to_f <= 0.95
   end
 
-  def nudge_percent(multiplier)
-    return if multiplier.blank?
-
-    signed_percent(multiplier)
+  def form_reason(form)
+    return reason("In form", :good) if form.to_f >= 1.05
+    reason("Out of form", :bad) if form.to_f.positive? && form.to_f <= 0.95
   end
 
-  def swing_percent(multiplier)
-    return if multiplier.blank? || multiplier.to_f == 1.0
-
-    signed_percent(multiplier)
+  def transfer_reason(transfers)
+    return reason("Being sold", :bad) if transfers.to_f.positive? && transfers.to_f <= 0.9
+    reason("Popular buy", :good) if transfers.to_f >= 1.05
   end
 
-  def signed_percent(multiplier)
-    delta = ((multiplier.to_f - 1) * 100).round
-    return "in line" if delta.zero?
-
-    "#{delta.positive? ? '+' : '−'}#{delta.abs}%"
+  def reason(label, tone)
+    { label: label, classes: REASON_TONES.fetch(tone) }
   end
 
   def structured_data_schema

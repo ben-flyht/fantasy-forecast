@@ -135,19 +135,22 @@ class ExpectedPoints < ApplicationService
   # harder against each better side, it is a fraction as likely.
   AVERAGE_DIFFICULTY = 3
 
-  # Clean sheets swing hardest. A step of a third per grade of difficulty tracks
-  # the real spread closely: about two afternoons in five against the weakest
-  # sides, under one in seven against the strongest, and a bit over one in four in
-  # between.
-  CLEAN_SHEET_STEP = 1.3
+  # Clean sheets swing hardest, and the fixture is given a decisive say in them.
+  # A step of three-quarters per grade opens a wide gap between the kindest
+  # afternoon and the cruellest, wider than the raw historical rates on their own,
+  # so an easy game and a very hard one are told firmly apart rather than nudged.
+  CLEAN_SHEET_STEP = 1.75
 
-  # Goals and assists move too, but far less. A good forward scores against good
-  # sides, which is most of what makes him a good forward.
-  ATTACK_STEP = 1.1
+  # Goals and assists move less than clean sheets, but are no longer treated as
+  # near fixture-proof. A good forward still scores against good sides, yet a kind
+  # fixture is now allowed to lift him and a cruel one to weigh on him by a margin
+  # a reader can feel.
+  ATTACK_STEP = 1.4
 
-  # Saves run the other way, so this one sits below one: the afternoon that denies
-  # a goalkeeper his clean sheet is the afternoon that keeps him busy.
-  SAVE_STEP = 0.87
+  # Saves run the other way, well below one: the afternoon that denies a
+  # goalkeeper his clean sheet is the afternoon that keeps him busy, and pushed
+  # this far it gives a keeper a real reason to prefer the harder game.
+  SAVE_STEP = 0.62
 
   # What the crowd is willing to pay for him, and how far we let that speak.
   #
@@ -302,6 +305,13 @@ class ExpectedPoints < ApplicationService
     @rankings.each_with_object({}) do |ranking, result|
       result[ranking.player_id] = forecast(ranking)
     end
+  end
+
+  # What one fixture is worth to a player against an ordinary one, exposed so a
+  # projection can weigh a run of upcoming games by the same fixture maths the
+  # forecast itself uses. One means an average opponent; above one is kinder.
+  def fixture_worth(ranking, fixture)
+    worth_of(ranking, fixture)
   end
 
   private
