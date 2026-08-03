@@ -27,6 +27,10 @@
           <% end %>
           <span class="row-start-4 self-center leading-none text-2xl font-extrabold tracking-[-0.02em] uppercase whitespace-nowrap"><%= player.display_name %></span>
           <span class="row-start-6 self-start leading-none text-[12.5px] font-bold whitespace-nowrap flex items-center gap-[7px]">
+            <% if position_label %>
+              <span><%= position_label %></span>
+              <span class="opacity-50 font-normal">/</span>
+            <% end %>
             <span><%= team&.name %></span>
             <% if cost %>
               <span class="opacity-50 font-normal">/</span>

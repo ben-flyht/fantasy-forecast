@@ -60,15 +60,32 @@ class PlayersController < ApplicationController
   def load_player_forecast
     return unless @next_gameweek
 
-    forecast = @player.forecasts.includes(:gameweek).find_by(gameweek: @next_gameweek)
+    forecast = @player.forecasts.weekly.includes(:gameweek).find_by(gameweek: @next_gameweek)
     return unless forecast
 
-    @forecast = {
+    @forecast = forecast_summary(forecast)
+    @player_ranking = player_ranking(forecast)
+    @player_facts = latest_snapshot_stats([ @player.id ], ROW_FACT_TYPES)[@player.id]
+  end
+
+  def forecast_summary(forecast)
+    {
       rank: forecast.rank,
       score: forecast.score,
+      grade: TierCalculator.grade_from_points(forecast.score),
       gameweek: @next_gameweek.fpl_id,
-      tier: TierCalculator.calculate_player_tier(forecast, @player.position)
+      tier: TierCalculator.calculate_player_tier(forecast, @player.position),
+      working: forecast.working
     }
+  end
+
+  def player_ranking(forecast)
+    ConsensusRanking::Ranking.new(
+      player_id: @player.id, name: @player.short_name, team_id: @player.team_id,
+      position: @player.position, bot_rank: forecast.rank, score: forecast.score,
+      tier: TierCalculator.tier_from_points(forecast.score),
+      grade: TierCalculator.grade_from_points(forecast.score)
+    )
   end
 
   def load_player_performances
