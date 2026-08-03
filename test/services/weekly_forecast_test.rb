@@ -53,7 +53,7 @@ class WeeklyForecastTest < ActiveSupport::TestCase
     WeeklyForecast.call(gameweek: @gameweek)
     was = Forecast.first.strategy
 
-    tuned = ExpectedPoints.parameters.merge(crowd_share_max: 0.5)
+    tuned = ExpectedPoints.parameters.merge(clamp_width: 0.5)
     with_parameters(tuned) { WeeklyForecast.call(gameweek: @gameweek) }
 
     assert_equal 2, Strategy.count, "the old settings are kept, not overwritten"

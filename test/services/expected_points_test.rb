@@ -96,9 +96,9 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
     result = forecast(rankings, stats)
 
-    assert_equal 0.0, result[1][:working][:crowd_share],
-                 "his ownership is a reaction to news we have already counted"
-    assert result[2][:working][:crowd_share].positive?, "everybody else's backing still decides its share"
+    assert_nil result[1][:working][:perf_factor],
+               "ruled out, his backing is set aside and his record does the talking"
+    assert result[2][:working][:perf_factor], "everybody else's standing is still the market's to lead"
   end
 
   test "turning up is worth the same whoever the opponent is" do
@@ -253,21 +253,57 @@ class ExpectedPointsTest < ActiveSupport::TestCase
            "the best the crowd can say of an enabler is that he is the best of the cheap"
   end
 
-  test "trusting the crowd less pulls a hyped player back toward his own record" do
+  test "the market leads, and a record may only nudge a player off it" do
     rankings, stats = crowded_field(owned: [ 60.0, 3.0 ], cost: [ 90.0, 55.0 ])
     stats[1] = regular(xg: 0.3, xgi: 0.45, owned: 60.0, cost: 90.0) # adored, ordinary record
 
-    full = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
-                              season_started: false, crowd_weight: 1.0)
-    muted = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
-                               season_started: false, crowd_weight: 0.5)
+    result = forecast(rankings, stats)
 
-    assert full[1][:working][:crowd] > full[1][:working][:ours],
+    assert result[1][:working][:crowd] > result[1][:working][:ours],
            "the crowd rates the hyped player above his own record"
-    assert muted[1][:points] < full[1][:points],
-           "trusting the crowd less brings him back down toward what he has actually done"
-    assert muted[1][:working][:crowd_share] < full[1][:working][:crowd_share],
-           "the crowd simply gets less of the say"
+    assert_operator result[1][:working][:perf_factor], :>=, 1 - ExpectedPoints::CLAMP_WIDTH,
+                    "his ordinary record can pull him down, but only within the band"
+    assert_in_delta result[1][:working][:crowd] * result[1][:working][:perf_factor],
+                    result[1][:working][:ours], result[1][:working][:crowd], "the score sits on the market, nudged"
+  end
+
+  test "a wider band lets an ordinary record argue a hyped player further down" do
+    rankings, stats = crowded_field(owned: [ 60.0, 3.0 ], cost: [ 90.0, 55.0 ])
+    stats[1] = regular(xg: 0.3, xgi: 0.45, owned: 60.0, cost: 90.0) # adored, ordinary record
+
+    led = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                              season_started: false, clamp_width: 0.05)
+    freed = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                season_started: false, clamp_width: 0.4)
+
+    assert freed[1][:points] < led[1][:points],
+           "a wider band lets his ordinary record pull him back down toward it"
+  end
+
+  test "a dear, well-backed player the record has barely seen outranks a cheap one it knows well" do
+    rankings, stats = crowded_field(owned: [ 12.0, 22.0 ], cost: [ 90.0, 55.0 ])
+    stats[1] = regular(minutes: 700.0, xg: 0.30, xgi: 0.45, owned: 12.0, cost: 90.0) # injured last year, still dear
+    stats[2] = regular(minutes: 3000.0, xg: 0.35, xgi: 0.55, owned: 22.0, cost: 55.0) # cheap, healthy, well-owned
+
+    result = forecast(rankings, stats)
+
+    assert result[1][:points] > result[2][:points],
+           "what he costs remembers the season his thin record has forgotten"
+  end
+
+  test "a recent run counts for more as the season runs" do
+    hot = { "season_minutes" => 3000.0, "expected_goals_per_90" => 0.30,
+            "expected_goal_involvements_per_90" => 0.50, "clean_sheets_per_90" => 0.30,
+            "selected_by_percent" => 5.0, "now_cost" => 60.0,
+            "form" => 8.0, "points_per_game" => 4.0 } # in the middle of a hot streak
+
+    early = ExpectedPoints.call([ ranking(1) ], stats: { 1 => hot }, fixtures_by_team: { 1 => [ fixture ] },
+                                season_started: true, gameweeks_played: 2)
+    late = ExpectedPoints.call([ ranking(1) ], stats: { 1 => hot }, fixtures_by_team: { 1 => [ fixture ] },
+                               season_started: true, gameweeks_played: 30)
+
+    assert late[1][:points] > early[1][:points],
+           "his hot streak is let say more once there is a season of it to trust"
   end
 
   test "an established signing is held to half a match, and a longer horizon eases that" do
