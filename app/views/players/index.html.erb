@@ -39,16 +39,19 @@
         </div>
 
         <!-- Position Filter -->
-        <div class="flex items-center gap-1" role="radiogroup">
-          <% @available_positions.each do |position| %>
-            <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
-            <% is_active = @position_filter == position %>
-            <label class="px-3 py-1.5 text-sm font-medium rounded-lg cursor-pointer transition-colors <%= is_active ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900' %>">
-              <%= radio_button_tag :position, position, is_active,
-                  class: "sr-only",
-                  data: { action: "change->filter-navigation#positionChanged" } %><%= position_config[:display_name] %>
-            </label>
-          <% end %>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-zinc-500">Position</span>
+          <div class="flex items-center gap-1" role="radiogroup">
+            <% @available_positions.each do |position| %>
+              <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
+              <% is_active = @position_filter == position %>
+              <label class="px-3 py-1.5 text-sm font-medium rounded-lg cursor-pointer transition-colors <%= is_active ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900' %>">
+                <%= radio_button_tag :position, position, is_active,
+                    class: "sr-only",
+                    data: { action: "change->filter-navigation#positionChanged" } %><%= position_config[:display_name] %>
+              </label>
+            <% end %>
+          </div>
         </div>
 
         <%= render "players/price_filter" %>

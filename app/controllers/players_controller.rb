@@ -179,7 +179,7 @@ class PlayersController < ApplicationController
   end
 
   def load_consensus_rankings
-    rankings = ConsensusRanking.call(@gameweek, @position_filter, @team_filter, horizon: @horizon)
+    rankings = ConsensusRanking.call(@gameweek, @position_filter, nil, horizon: @horizon)
     @consensus_rankings = TierCalculator.call(rankings, position: @position_filter, points_divisor: tier_divisor)
     @tier_groups = @consensus_rankings.group_by(&:tier)
   end
@@ -262,11 +262,19 @@ class PlayersController < ApplicationController
   #
   # Ranks are renumbered afterwards so the page reads 1, 2, 3.
   def build_shortlist
-    @consensus_rankings = @consensus_rankings.select { |ranking| ranking.score.to_f.positive? }
-                                             .select { |ranking| priced_within_band?(ranking.player_id) }
-                                             .first(RANKING_DEPTH.fetch(@position_filter, 100))
-    @consensus_rankings.each_with_index { |ranking, index| ranking.bot_rank = index + 1 }
+    field = @consensus_rankings.select { |ranking| ranking.score.to_f.positive? }
+                               .first(RANKING_DEPTH.fetch(@position_filter, 100))
+    field.each_with_index { |ranking, index| ranking.bot_rank = index + 1 }
+    @consensus_rankings = field.select { |ranking| within_filters?(ranking) }
     @tier_groups = @consensus_rankings.group_by(&:tier)
+  end
+
+  def within_filters?(ranking)
+    matches_team?(ranking) && priced_within_band?(ranking.player_id)
+  end
+
+  def matches_team?(ranking)
+    @team_filter.nil? || ranking.team_id == @team_filter
   end
 
   def priced_within_band?(player_id)
