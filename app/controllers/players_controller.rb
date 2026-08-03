@@ -76,8 +76,7 @@ class PlayersController < ApplicationController
       grade: TierCalculator.grade_from_points(graded_score(forecast)),
       tier: TierCalculator.tier_from_points(graded_score(forecast)),
       horizon: @horizon,
-      gameweek: @next_gameweek.fpl_id,
-      working: forecast.working
+      gameweek: @next_gameweek.fpl_id
     }
   end
 

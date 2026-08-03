@@ -67,14 +67,6 @@
     <% if @forecast[:tier] %>
       <p class="mt-2 text-sm text-zinc-600"><%= TierCalculator::TIERS.dig(@forecast[:tier], :description) %></p>
     <% end %>
-    <% reasons = forecast_reasons(@forecast[:working]) %>
-    <% if reasons.any? %>
-      <div class="mt-3 flex flex-wrap gap-2">
-        <% reasons.each do |r| %>
-          <span class="rounded px-2 py-0.5 text-xs font-semibold <%= r[:classes] %>"><%= r[:label] %></span>
-        <% end %>
-      </div>
-    <% end %>
   </div>
 <% end %>
 

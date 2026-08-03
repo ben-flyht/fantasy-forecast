@@ -59,54 +59,7 @@ module ApplicationHelper
     FIXTURE_EASE.fetch(difficulty.to_i, "Unrated")
   end
 
-  REASON_TONES = {
-    good: "bg-emerald-100 text-emerald-800",
-    warn: "bg-amber-100 text-amber-800",
-    bad: "bg-red-100 text-red-800"
-  }.freeze
-
-  # The plain-English case for a grade: does he start, is the fixture kind, is he
-  # in form, is the crowd moving. Only the notable ones show; a player who is
-  # simply nailed on with an ordinary fixture says so and no more.
-  def forecast_reasons(working)
-    return [] if working.blank?
-
-    [
-      minutes_reason(working["minutes"]),
-      fixture_reason(working["games"]),
-      form_reason(working["form"]),
-      transfer_reason(working["transfers"])
-    ].compact
-  end
-
   private
-
-  def minutes_reason(minutes)
-    case minutes.to_i
-    when 60.. then reason("Nailed on", :good)
-    when 30...60 then reason("Rotation risk", :warn)
-    when 1...30 then reason("Bench risk", :bad)
-    end
-  end
-
-  def fixture_reason(games)
-    return reason("Kind fixture", :good) if games.to_f >= 1.05
-    reason("Tough fixture", :bad) if games.to_f.positive? && games.to_f <= 0.95
-  end
-
-  def form_reason(form)
-    return reason("In form", :good) if form.to_f >= 1.05
-    reason("Out of form", :bad) if form.to_f.positive? && form.to_f <= 0.95
-  end
-
-  def transfer_reason(transfers)
-    return reason("Being sold", :bad) if transfers.to_f.positive? && transfers.to_f <= 0.9
-    reason("Popular buy", :good) if transfers.to_f >= 1.05
-  end
-
-  def reason(label, tone)
-    { label: label, classes: REASON_TONES.fetch(tone) }
-  end
 
   def structured_data_schema
     { "@context": "https://schema.org", "@graph": [ website_schema, organization_schema ] }
