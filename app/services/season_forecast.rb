@@ -7,9 +7,12 @@
 # today's snapshot applied the whole way out, which is honest for the next
 # gameweek and progressively less so the further ahead you read.
 class SeasonForecast < Forecaster
-  # The crowd's order is an early-season reading, so over a whole season it is
-  # trusted less and each player's own record does more of the talking.
-  CROWD_WEIGHT = 0.85
+  # A returning star earns his price back over a season, not over one weekend, so
+  # the record is let argue less against the market here than in the weekly view,
+  # not more: the band a record may pull a player off his price is drawn tighter.
+  # An injured man's pre-injury standing, carried in what he still costs, is most
+  # deserved exactly over the horizon he will be fit for most of. See CLAMP_WIDTH.
+  CLAMP_WIDTH = 0.03
 
   # A player who changed clubs will have settled in long before the season is out,
   # so the half-a-match caution on his old minutes is eased for this horizon.
@@ -26,7 +29,7 @@ class SeasonForecast < Forecaster
   end
 
   def model_overrides
-    { crowd_weight: CROWD_WEIGHT, new_club_minutes: NEW_CLUB_MINUTES }
+    { clamp_width: CLAMP_WIDTH, new_club_minutes: NEW_CLUB_MINUTES }
   end
 
   # An injury is a spell out, not the end of a career, so over a season a player

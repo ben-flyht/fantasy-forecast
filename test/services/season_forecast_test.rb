@@ -63,16 +63,16 @@ class SeasonForecastTest < ActiveSupport::TestCase
     assert_equal [ 80, 81 ], Gameweek.remaining.pluck(:fpl_id)
   end
 
-  test "records that it trusted the crowd less than the weekly forecast" do
+  test "records that it let the record argue less against the market than the weekly forecast" do
     WeeklyForecast.call(gameweek: @next)
     SeasonForecast.call(gameweek: @next)
 
-    weekly = Forecast.find_by(horizon: "gameweek").strategy.strategy_config[:crowd_weight]
-    season = Forecast.find_by(horizon: "season").strategy.strategy_config[:crowd_weight]
+    weekly = Forecast.find_by(horizon: "gameweek").strategy.strategy_config[:clamp_width]
+    season = Forecast.find_by(horizon: "season").strategy.strategy_config[:clamp_width]
 
-    assert_equal 1.0, weekly
-    assert_equal SeasonForecast::CROWD_WEIGHT, season
-    assert_operator season, :<, weekly, "a season out trusts the early-season crowd less"
+    assert_equal ExpectedPoints::CLAMP_WIDTH, weekly
+    assert_equal SeasonForecast::CLAMP_WIDTH, season
+    assert_operator season, :<, weekly, "a returning star's price is most deserved over the season he is fit for"
   end
 
   test "records that it eased the new-club cap for the season horizon" do

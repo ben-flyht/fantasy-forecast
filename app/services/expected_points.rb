@@ -105,7 +105,14 @@ class ExpectedPoints < ApplicationService
   # A fifth because form over four games is a loud, unreliable signal: enough to
   # separate a player in the middle of a run from one who has gone quiet, not
   # enough to make one haul outrank a season of evidence.
+  #
+  # A fifth at the start, and more as the season goes on. In August the only
+  # evidence is last year's, and a summer's form cannot be allowed to talk over a
+  # whole campaign of it. By the spring the running is the evidence, last season
+  # is the memory, and the swing has widened to let what is happening now say more
+  # than what happened before. See #form_swing.
   FORM_SWING = 0.2
+  FORM_SWING_GROWTH = 0.3
 
   # How much the opponent matters, which depends entirely on what a player is
   # paid for.
@@ -167,27 +174,42 @@ class ExpectedPoints < ApplicationService
   # the necessity at the cheap end is discounted rather than argued with.
   #
   # Choosing to spend good money on one player rather than another is a great deal
-  # of ranking power, and at the dear end it decides most of the answer. It never
-  # decides all of it: something has to be able to disagree, or the rankings become
-  # purely self-fulfilling and can never spot anybody before the crowd does. These
-  # are starting figures to be settled by results.
+  # of ranking power, and before a ball is kicked it is the best forecast there
+  # is. A price is FPL's own valuation, set by people who watch these players for
+  # a living and updated every day the game is open; it remembers the season an
+  # injured man had before he was hurt, which his own thin record has forgotten.
+  # So the order the money makes leads, and a record is only allowed to nudge it.
+  #
   # Costliness grows faster than price does. A hundred million buys one fifteen
   # million pound striker or three five million pound ones, so paying up is not
-  # twice the decision at twice the price, it is more. Squaring it a little lifts
-  # the player the crowd has dug deep for and pushes down the cheap pick half of
-  # them own because somebody had to fill the slot.
-  PRICE_POWER = 1.5
+  # twice the decision at twice the price, it is more. Raising it to two and a half
+  # lifts the player the crowd has dug deep for well clear of the cheap pick half
+  # of them own because somebody had to fill the slot: it takes the dear-and-owned
+  # over the cheap-and-owned, and leaves the dear-and-unowned where his lack of
+  # backing puts him, which is how a man nobody starts stays down.
+  #
+  # It fades as the season runs. A price is a forecast, and a forecast is at its
+  # best when it is all there is; once results are in they re-price the game
+  # slower than the pitch does, so what a player is now doing is trusted over what
+  # he cost. See #price_power.
+  PRICE_POWER = 2.5
+  PRICE_POWER_FLOOR = 1.5
 
-  CROWD_SHARE_MIN = 0.25
-  CROWD_SHARE_MAX = 0.8
-
-  # How far the crowd is trusted overall, on top of the per-player share above. The
-  # crowd's order is an early-season reading: new-signing hype, pre-season
-  # ownership, who looked good in July. That is at its most informative for the
-  # coming week and least so for the rest of the season, by when results will have
-  # re-priced him. One is full trust and leaves the weekly forecast untouched; a
-  # rest-of-season horizon turns it down so its own record does more of the talking.
-  CROWD_WEIGHT = 1.0
+  # How far a record may pull a player off the order his price and backing make.
+  #
+  # The market leads and the record nudges: a twentieth either way at the start,
+  # so a thin or a flattering season can shade a player up or down without
+  # overturning what he cost. Anyone the game has funded and picked keeps his
+  # standing; his own numbers adjust it, they do not decide it. This is what stops
+  # a healthy, cheap enabler's record vaulting an expensive man the crowd is
+  # certain of but the record has barely seen.
+  #
+  # The band widens through the season, because a record earns the right to argue
+  # as it grows. In August it is last year's and holds no surprises the price has
+  # not already priced; by the spring it is the surest thing we have, and it is
+  # let further off the market accordingly. See #nudge_width.
+  CLAMP_WIDTH = 0.05
+  PERF_GROWTH = 0.15
 
   # The cheapest tenth of a position, where ownership stops being a verdict on
   # quality. Everybody needs a bench and somebody has to fill it, so a quarter of
@@ -214,10 +236,10 @@ class ExpectedPoints < ApplicationService
   def self.parameters
     {
       regular_share: REGULAR_SHARE, unproven_minutes: UNPROVEN_MINUTES,
-      form_swing: FORM_SWING, clean_sheet_step: CLEAN_SHEET_STEP,
-      attack_step: ATTACK_STEP, save_step: SAVE_STEP,
-      crowd_share_min: CROWD_SHARE_MIN, crowd_share_max: CROWD_SHARE_MAX,
-      crowd_weight: CROWD_WEIGHT, price_power: PRICE_POWER,
+      form_swing: FORM_SWING, form_swing_growth: FORM_SWING_GROWTH,
+      clean_sheet_step: CLEAN_SHEET_STEP, attack_step: ATTACK_STEP, save_step: SAVE_STEP,
+      clamp_width: CLAMP_WIDTH, perf_growth: PERF_GROWTH,
+      price_power: PRICE_POWER, price_power_floor: PRICE_POWER_FLOOR,
       new_club_minutes: NEW_CLUB_MINUTES, nailed_on: NAILED_ON, cheapest: CHEAPEST,
       exodus_floor: EXODUS_FLOOR, inflow_ceiling: INFLOW_CEILING
     }
@@ -225,27 +247,54 @@ class ExpectedPoints < ApplicationService
 
   def initialize(rankings, stats:, fixtures_by_team:, season_started: true, gameweeks_played: nil,
                  managers: nil, movers: [], fitness: {},
-                 crowd_weight: CROWD_WEIGHT, new_club_minutes: NEW_CLUB_MINUTES)
+                 clamp_width: CLAMP_WIDTH, new_club_minutes: NEW_CLUB_MINUTES)
     @rankings = rankings
     @stats = stats
     @fixtures_by_team = fixtures_by_team
     @season_started = season_started
     @fitness = fitness
-    @gameweeks_played = weeks_of_football(gameweeks_played)
+    @gameweeks_played = gameweeks_played.to_i
     @managers = managers.to_i
     @movers = movers.to_set
-    @crowd_weight = crowd_weight
+    @clamp_width = clamp_width
     @new_club_minutes = new_club_minutes
+  end
+
+  # How far into the season we are, nought before it starts and one at its end.
+  # The dial the record earns its say on: how wide a record may argue, how much a
+  # recent run counts, and how far a price still leads. See #nudge_width,
+  # #form_swing and #price_power.
+  def season_progress
+    return 0.0 unless @season_started
+
+    (@gameweeks_played / GAMEWEEKS_IN_SEASON.to_f).clamp(0.0, 1.0)
+  end
+
+  # A twentieth at the start, widening as a record grows into something worth
+  # hearing over the price that leads it.
+  def nudge_width
+    @clamp_width + PERF_GROWTH * season_progress
+  end
+
+  # Two and a half at the start, easing back towards a plain squaring as results
+  # come in and re-price the game themselves.
+  def price_power
+    PRICE_POWER - (PRICE_POWER - PRICE_POWER_FLOOR) * season_progress
+  end
+
+  # A fifth at the start, widening as the running becomes the evidence.
+  def form_swing
+    FORM_SWING + FORM_SWING_GROWTH * season_progress
   end
 
   # How much football there has been to measure against. Before the season starts
   # that is last season's full campaign, which is what the minutes are read from;
   # counting the nought gameweeks played so far would make a regular out of anybody
   # who managed an hour last year.
-  def weeks_of_football(played)
+  def weeks_of_football
     return GAMEWEEKS_IN_SEASON unless @season_started
 
-    [ played.to_i, 1 ].max
+    [ @gameweeks_played, 1 ].max
   end
 
   # => { player_id => { points: Float or nil, working: [{ label:, detail: }] } }
@@ -289,14 +338,29 @@ class ExpectedPoints < ApplicationService
     curve[[ place, curve.size - 1 ].min]
   end
 
+  # The market leads and the record nudges. What a player cost and how the game
+  # has backed him set where he stands; his own numbers may then shade that up or
+  # down, but only within a band, so a record cannot overturn the money. See
+  # #nudge_width for the band and PRICE_POWER for why the money is trusted to lead.
+  #
   # A player nobody can measure is left to the crowd; a player nobody owns is left
-  # to us.
+  # to us; and a player who cannot play is judged on his record alone, his backing
+  # having collapsed on the same news that ruled him out. See #ruled_out?.
   def blended(ranking, ours, theirs)
     return theirs if ours.nil?
     return ours if theirs.nil?
+    return ours if ruled_out?(ranking)
 
-    share = crowd_share(ranking)
-    (1 - share) * ours + share * theirs
+    theirs * nudge(ours, theirs)
+  end
+
+  # How far the record moves the market: the record over the market, held inside
+  # the band. One means they agree; the band's edges are the most a record is let
+  # say against what a player cost and how he is owned.
+  def nudge(ours, theirs)
+    return 1.0 if theirs.zero?
+
+    (ours / theirs).clamp(1 - nudge_width, 1 + nudge_width)
   end
 
   # Who a player's backing is measured against.
@@ -331,15 +395,6 @@ class ExpectedPoints < ApplicationService
     dearness(ranking) < CHEAPEST
   end
 
-  # A costly vote is a considered one, so the dearer the player the more of the
-  # answer his backing decides. Unless he cannot play, in which case it decides
-  # nothing: see #ruled_out?.
-  def crowd_share(ranking)
-    return 0.0 if ruled_out?(ranking)
-
-    considered_share(ranking)
-  end
-
   # Whether FPL has said he cannot play the coming week.
   #
   # His ownership has collapsed because of that same news, so letting the crowd
@@ -358,11 +413,6 @@ class ExpectedPoints < ApplicationService
   # nought whatever anybody thinks of him.
   def ruled_out?(ranking)
     optional_stat(ranking, "chance_of_playing")&.zero?
-  end
-
-  def considered_share(ranking)
-    base = CROWD_SHARE_MIN + (CROWD_SHARE_MAX - CROWD_SHARE_MIN) * dearness(ranking)
-    (base * @crowd_weight).clamp(0.0, 1.0)
   end
 
   # How dear he is for his position, as the share of his peers he costs more than.
@@ -440,7 +490,7 @@ class ExpectedPoints < ApplicationService
   end
 
   def regular_minutes
-    @gameweeks_played * FULL_MATCH * REGULAR_SHARE
+    weeks_of_football * FULL_MATCH * REGULAR_SHARE
   end
 
   # Whether he can play at all, which multiplies the finished answer.
@@ -518,7 +568,7 @@ class ExpectedPoints < ApplicationService
     usual = stat(ranking, "points_per_game")
     return 1.0 if recent.zero? || usual.zero?
 
-    (recent / usual).clamp(1 - FORM_SWING, 1 + FORM_SWING)
+    (recent / usual).clamp(1 - form_swing, 1 + form_swing)
   end
 
   def goal_points(ranking)
@@ -583,7 +633,7 @@ class ExpectedPoints < ApplicationService
 
   # What managers have committed to him: how many hold him, times what he cost them.
   def conviction(ranking)
-    ownership(ranking) * price(ranking)**PRICE_POWER
+    ownership(ranking) * price(ranking)**price_power
   end
 
   # This week's traffic as a share of the people who hold him. Neutral until FPL
@@ -631,8 +681,17 @@ class ExpectedPoints < ApplicationService
       per_90: points_per_90(ranking).round(2),
       ours: ours&.round(2),
       crowd: theirs&.round(2),
-      crowd_share: crowd_share(ranking).round(3)
+      perf_factor: perf_factor(ranking, ours, theirs)
     }
+  end
+
+  # How far the record moved the market for this player, as it shows in the score.
+  # Nil where the market did not lead: a player the crowd cannot see, one nobody
+  # owns, or one ruled out and left to his own record.
+  def perf_factor(ranking, ours, theirs)
+    return nil if ours.nil? || theirs.nil? || ruled_out?(ranking)
+
+    nudge(ours, theirs).round(3)
   end
 
   def adjustments(ranking)
