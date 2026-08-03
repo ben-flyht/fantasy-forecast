@@ -207,4 +207,70 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     get "/players/non-existent-99999"
     assert_response :not_found
   end
+
+  test "a price band keeps only players who cost within it" do
+    budget = Player.create!(first_name: "Budget", last_name: "Cheapman", short_name: "B.Cheapman",
+                            team: @test_team, position: "forward", fpl_id: 501)
+    premium = Player.create!(first_name: "Premium", last_name: "Dearman", short_name: "P.Dearman",
+                             team: @test_team, position: "forward", fpl_id: 502)
+
+    Forecast.create!(player: budget, gameweek: @gameweek5, rank: 1, score: 5.0)
+    Forecast.create!(player: premium, gameweek: @gameweek5, rank: 2, score: 4.0)
+    Statistic.create!(player: budget, gameweek: @gameweek5, type: "now_cost", value: 50)
+    Statistic.create!(player: premium, gameweek: @gameweek5, type: "now_cost", value: 90)
+
+    get gameweek_position_path(gameweek: 5, position: "forwards", min_price: "6.0", max_price: "10.0")
+
+    assert_response :success
+    assert_includes response.body, premium.short_name
+    assert_not_includes response.body, budget.short_name
+  end
+
+  test "a price band survives the trip to the clean URL" do
+    get root_path(gameweek: 5, position: "forward", min_price: "6.0", max_price: "10.0")
+
+    assert_redirected_to gameweek_position_path(gameweek: 5, position: "forwards",
+                                                min_price: "6.0", max_price: "10.0")
+  end
+
+  test "rank reflects the whole field, not the price-filtered subset" do
+    cheap = Player.create!(first_name: "Cheap", last_name: "One", short_name: "C.One",
+                           team: @test_team, position: "forward", fpl_id: 511)
+    mid = Player.create!(first_name: "Mid", last_name: "Two", short_name: "M.Two",
+                         team: @test_team, position: "forward", fpl_id: 512)
+    dear = Player.create!(first_name: "Dear", last_name: "Three", short_name: "D.Three",
+                          team: @test_team, position: "forward", fpl_id: 513)
+
+    Forecast.create!(player: cheap, gameweek: @gameweek5, rank: 1, score: 6.0)
+    Forecast.create!(player: mid, gameweek: @gameweek5, rank: 2, score: 5.0)
+    Forecast.create!(player: dear, gameweek: @gameweek5, rank: 3, score: 4.0)
+    Statistic.create!(player: cheap, gameweek: @gameweek5, type: "now_cost", value: 45)
+    Statistic.create!(player: mid, gameweek: @gameweek5, type: "now_cost", value: 70)
+    Statistic.create!(player: dear, gameweek: @gameweek5, type: "now_cost", value: 95)
+
+    get gameweek_position_path(gameweek: 5, position: "forwards", min_price: "9.0", max_price: "10.0")
+
+    assert_response :success
+    assert_includes response.body, dear.short_name
+    assert_not_includes response.body, cheap.short_name
+    assert_equal "3", response.body[/tabular-nums text-zinc-900">(\d+)</, 1]
+  end
+
+  test "rank reflects the whole field when filtering by team" do
+    other_team = Team.create!(name: "Other", short_name: "OTH", fpl_id: 97)
+    top = Player.create!(first_name: "Top", last_name: "Scorer", short_name: "T.Scorer",
+                         team: other_team, position: "forward", fpl_id: 521)
+    second = Player.create!(first_name: "Second", last_name: "Best", short_name: "S.Best",
+                            team: @test_team, position: "forward", fpl_id: 522)
+
+    Forecast.create!(player: top, gameweek: @gameweek5, rank: 1, score: 6.0)
+    Forecast.create!(player: second, gameweek: @gameweek5, rank: 2, score: 5.0)
+
+    get gameweek_position_path(gameweek: 5, position: "forwards", team_id: @test_team.id)
+
+    assert_response :success
+    assert_includes response.body, second.short_name
+    assert_not_includes response.body, top.short_name
+    assert_equal "2", response.body[/tabular-nums text-zinc-900">(\d+)</, 1]
+  end
 end

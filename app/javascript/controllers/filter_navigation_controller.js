@@ -21,8 +21,22 @@ export default class extends Controller {
 
     const params = new URLSearchParams()
     if (teamId) params.set("team_id", teamId)
+    if (!this.resetPrice) this.appendPrice(params, form)
+    this.resetPrice = false
     if (params.toString()) path += `?${params}`
 
     Turbo.visit(path, { frame: "rankings_container", action: "advance" })
+  }
+
+  positionChanged() {
+    this.resetPrice = true
+    this.element.requestSubmit()
+  }
+
+  appendPrice(params, form) {
+    const min = form.querySelector("input[name='min_price']")
+    const max = form.querySelector("input[name='max_price']")
+    if (min && parseFloat(min.value) > parseFloat(min.min)) params.set("min_price", min.value)
+    if (max && parseFloat(max.value) < parseFloat(max.max)) params.set("max_price", max.value)
   }
 }
