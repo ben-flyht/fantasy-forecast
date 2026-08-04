@@ -135,13 +135,21 @@ class PlayersController < ApplicationController
          .order("gameweeks.fpl_id ASC").limit(5).to_a
   end
 
+  # The week's own forecast anchors the run of fixtures, and the season's stands
+  # behind it for a player whose team is not playing this week. See
+  # FixtureProjection#base.
   def project_fixtures(matches)
-    weekly = @next_gameweek && @player.forecasts.weekly.find_by(gameweek: @next_gameweek)
     FixtureProjection.call(
-      player: @player, matches: matches,
-      anchor_score: weekly&.score, anchor_worth: weekly&.working&.dig("games"),
+      player: @player, matches: matches, anchors: anchors,
       next_gameweek_id: @next_gameweek&.id
     ).map { |row| fixture_row(row.match.gameweek, row.match, row.points, row.projected) }
+  end
+
+  def anchors
+    return [] unless @next_gameweek
+
+    forecasts = @player.forecasts.where(gameweek: @next_gameweek).index_by(&:horizon)
+    [ forecasts["gameweek"], forecasts[SEASON] ]
   end
 
   def fixture_row(gameweek, match, points, projected)

@@ -30,7 +30,8 @@ module Fpl
       "last_season_expected_goals_per_90" => "expected_goals",
       "last_season_expected_goal_involvements_per_90" => "expected_goal_involvements",
       "last_season_clean_sheets_per_90" => "clean_sheets",
-      "last_season_saves_per_90" => "saves"
+      "last_season_saves_per_90" => "saves",
+      "last_season_expected_goals_conceded_per_90" => "expected_goals_conceded"
     }.freeze
 
     MINUTES_IN_A_MATCH = 90.0
@@ -38,7 +39,7 @@ module Fpl
     # What we currently record from a past season. Bump it when that set changes
     # and every player is asked again on the next run, rather than being left with
     # a partial history that nothing notices.
-    RECORD_VERSION = 2.0
+    RECORD_VERSION = 3.0
 
     REQUEST_DELAY = 0.5 # seconds between requests, to stay a polite guest
 
