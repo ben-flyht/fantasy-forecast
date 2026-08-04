@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_02_230200) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_04_210100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -69,7 +69,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_02_230200) do
     t.bigint "gameweek_id", null: false
     t.string "kind", null: false
     t.datetime "updated_at", null: false
-    t.index ["data"], name: "index_payloads_on_data", using: :gin
     t.index ["gameweek_id"], name: "index_payloads_on_gameweek_id"
     t.index ["kind", "fpl_id", "gameweek_id"], name: "index_payloads_on_kind_fpl_id_and_gameweek", unique: true
     t.index ["kind", "gameweek_id"], name: "index_payloads_on_kind_and_gameweek_id"
@@ -122,10 +121,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_02_230200) do
     t.datetime "updated_at", null: false
     t.decimal "value", precision: 10, scale: 2
     t.index ["gameweek_id", "type"], name: "index_statistics_on_gameweek_type"
-    t.index ["gameweek_id"], name: "index_statistics_on_gameweek_id"
     t.index ["player_id", "gameweek_id", "type"], name: "index_statistics_on_player_gameweek_type", unique: true
-    t.index ["player_id", "type"], name: "index_statistics_on_player_type"
-    t.index ["player_id"], name: "index_statistics_on_player_id"
+    t.index ["player_id", "type", "gameweek_id"], name: "index_statistics_on_player_type_gameweek", order: { gameweek_id: :desc }
   end
 
   create_table "strategies", force: :cascade do |t|
