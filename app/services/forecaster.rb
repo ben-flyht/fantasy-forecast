@@ -14,6 +14,17 @@
 class Forecaster < ApplicationService
   POSITIONS = %w[goalkeeper defender midfielder forward].freeze
 
+  # FPL's word on whether a player is fit for the coming gameweek. See #fitness_of.
+  FITNESS = "chance_of_playing".freeze
+
+  # Not every change that moves the numbers is a tuned number. This one is the
+  # reading rule: bump it whenever the same settings would now produce a different
+  # forecast, so the new answers are filed apart from the old and a week's results
+  # still trace back to what actually produced them.
+  #
+  # 2: a fitness flag is read from the gameweek being forecast and no earlier one.
+  MODEL = 2
+
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek
   end
@@ -120,8 +131,8 @@ class Forecaster < ApplicationService
     {
       stats: stats_for(players),
       fixtures_by_team: fixtures_by_team,
-      season_started: Gameweek.finished.exists?,
-      gameweeks_played: Gameweek.finished.count,
+      season_started: gameweeks_played.positive?,
+      gameweeks_played: gameweeks_played,
       managers: total_managers,
       movers: movers,
       fitness: fitness(players)
@@ -140,6 +151,12 @@ class Forecaster < ApplicationService
   # a stored forecast still says which settings produced it.
   def model_overrides
     {}
+  end
+
+  # Asked once for the run rather than once per position: the same four positions
+  # were putting the same question to the database four times over.
+  def gameweeks_played
+    @gameweeks_played ||= Gameweek.finished.count
   end
 
   def ranking_for(player)
@@ -163,13 +180,25 @@ class Forecaster < ApplicationService
   # tried in November would be handed November's form to forecast August with,
   # and would beat the settings that had to guess. Every time.
   def stats_for(players)
-    stats = Hash.new { |hash, key| hash[key] = {} }
-    Statistic.where(player_id: players.map(&:id), type: ExpectedPoints::STAT_TYPES)
-             .where(gameweek_id: ..@gameweek.id)
-             .order(:gameweek_id)
-             .pluck(:player_id, :type, :value)
-             .each { |player_id, type, value| stats[player_id][type] = value.to_f }
+    stats = record_of(players)
+    fitness_of(players).each { |player_id, reading| stats[player_id].merge!(reading) }
     stats
+  end
+
+  def record_of(players)
+    Statistic.where(player_id: players.map(&:id), type: ExpectedPoints::STAT_TYPES - [ FITNESS ])
+             .where(gameweek_id: ..@gameweek.id)
+             .latest_by_player
+  end
+
+  # A fitness flag is the one reading that must not be carried forward. It says
+  # whether a player can play one particular Saturday, and FPL clears it by
+  # publishing nothing at all once he is well again. Read as his latest word on
+  # the matter, a doubt raised in September is still taking a quarter off him in
+  # April, and a nought still has him ruled out of a game he started months ago.
+  def fitness_of(players)
+    Statistic.where(player_id: players.map(&:id), type: FITNESS, gameweek_id: @gameweek.id)
+             .latest_by_player
   end
 
   def fixtures_by_team
@@ -205,7 +234,11 @@ class Forecaster < ApplicationService
   # back to whatever the code happens to say today, which is worse than useless
   # when the whole point is to find out which settings were better.
   def strategy
-    @strategy ||= Strategy.find_or_create_by!(strategy_config: ExpectedPoints.parameters.merge(model_overrides))
+    @strategy ||= Strategy.find_or_create_by!(strategy_config: settings)
+  end
+
+  def settings
+    ExpectedPoints.parameters.merge(model_overrides).merge(model: MODEL)
   end
 
   def log_nothing_to_forecast

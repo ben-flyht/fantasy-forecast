@@ -71,9 +71,6 @@ class FixtureProjection < ApplicationService
   end
 
   def stats
-    @stats ||= Statistic.where(player_id: @player.id, type: ExpectedPoints::STAT_TYPES)
-                        .order(:gameweek_id)
-                        .pluck(:type, :value)
-                        .each_with_object(@player.id => {}) { |(type, value), out| out[@player.id][type] = value.to_f }
+    @stats ||= Statistic.where(player_id: @player.id, type: ExpectedPoints::STAT_TYPES).latest_by_player
   end
 end
