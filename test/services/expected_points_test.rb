@@ -161,32 +161,106 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   end
 
   test "a defender with no record of his own concedes at the rate of the club he has joined" do
-    rankings = [ ranking(1, position: "defender", team_id: 1), ranking(2, position: "defender", team_id: 1),
-                 ranking(3, position: "defender", team_id: 2), ranking(4, position: "defender", team_id: 2) ]
-    stats = { 1 => regular.merge("last_season_expected_goals_conceded_per_90" => 0.70), 2 => regular,
-              3 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.60), 4 => regular }
+    tight = (1..3).map { |id| ranking(id, position: "defender", team_id: 1) }
+    leaky = (5..7).map { |id| ranking(id, position: "defender", team_id: 2) }
+    newcomers = [ ranking(4, position: "defender", team_id: 1), ranking(8, position: "defender", team_id: 2) ]
+    stats = (1..3).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 0.70) }
+                  .merge((5..7).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 1.60) })
+                  .merge(4 => regular, 8 => regular)
+    fixtures = { 1 => [ fixture ], 2 => [ fixture ] }
+
+    result = forecast(tight + leaky + newcomers, stats, fixtures: fixtures)
+
+    assert_in_delta result[1][:points], result[4][:points], 0.01, "he is judged by the defence he plays in"
+    assert_operator result[4][:points], :>, result[8][:points],
+                    "and a tight defence is still worth more than a leaky one"
+  end
+
+  # Ten actions in a match is a bar, not a rate, and the difference is the whole
+  # point: the same three extra actions a game are worth almost nothing to a
+  # player who will not reach it, a great deal to one it carries over the line,
+  # and little again to one already clearing it most weeks.
+  test "defensive contribution is how often he clears the bar, not what he averages" do
+    actions = [ 3.0, 6.0, 9.0, 12.0, 15.0 ]
+    rankings = actions.each_index.map { |i| ranking(i + 1, position: "defender") }
+    stats = actions.each_with_index.to_h { |rate, i| [ i + 1, regular.merge("last_season_defensive_contribution_per_90" => rate) ] }
+
+    result = forecast(rankings, stats)
+    steps = (1..4).map { |i| result[i + 1][:points] - result[i][:points] }
+
+    assert_operator steps[0], :<, steps[1], "out of reach is out of reach, however close he gets"
+    assert_operator steps[3], :<, steps[2], "and there is little left to win once he clears it most weeks"
+    assert_operator steps[1], :>, 0.3, "while over the line itself is worth real points"
+  end
+
+  test "a bar is cleared over the minutes he plays, not scaled down after the fact" do
+    rankings = [ ranking(1, position: "defender"), ranking(2, position: "defender") ]
+    full = regular(minutes: 3000.0).merge("last_season_defensive_contribution_per_90" => 9.0)
+    half = regular(minutes: 1200.0).merge("last_season_defensive_contribution_per_90" => 9.0)
+
+    result = forecast(rankings, { 1 => full, 2 => half })
+    ratio = result[2][:points] / result[1][:points]
+
+    assert_operator ratio, :<, result[2][:working][:minutes] / result[1][:working][:minutes].to_f,
+                    "half a match is far less than half a chance of ten actions"
+  end
+
+  test "a goalkeeper is not paid for defending, however much of it he does" do
+    rankings = [ ranking(1, position: "goalkeeper"), ranking(2, position: "goalkeeper") ]
+    stats = { 1 => regular.merge("last_season_defensive_contribution_per_90" => 12.0), 2 => regular }
+
+    result = forecast(rankings, stats)
+
+    assert_in_delta result[1][:points], result[2][:points], 0.01, "FPL pays a keeper nothing for it"
+  end
+
+  # Promoted sides concede more than anybody, so an unknown defence is charged the
+  # worst in the league. They do not defend any more than anybody, so the same
+  # reasoning must not be carried across to this.
+  test "a club nobody has a record for defends like an ordinary side, not like the busiest" do
+    clubs = { 1 => 11.0, 2 => 8.0, 3 => 5.0 }
+    rankings = clubs.keys.flat_map { |team| (1..3).map { |n| ranking(team * 10 + n, position: "defender", team_id: team) } }
+    promoted = ranking(99, position: "defender", team_id: 4)
+    stats = rankings.to_h do |member|
+      [ member.player_id, regular.merge("last_season_defensive_contribution_per_90" => clubs[member.team_id]) ]
+    end.merge(99 => regular)
+    fixtures = (1..4).index_with { [ fixture ] }
+
+    result = forecast(rankings + [ promoted ], stats, fixtures: fixtures)
+
+    assert_operator result[99][:points], :<, result[11][:points],
+                    "a club we have never seen must not inherit the best defensive record in the league"
+    assert_operator result[99][:points], :>, result[31][:points], "nor the worst"
+    assert_in_delta result[21][:points], result[99][:points], 0.01, "it defends like the middle of the league"
+  end
+
+  test "one man's record does not become his club's" do
+    rankings = (1..4).map { |id| ranking(id, position: "defender", team_id: 1) } +
+               [ ranking(5, position: "defender", team_id: 2), ranking(6, position: "defender", team_id: 2) ]
+    stats = (1..4).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 1.60) }
+                  .merge(5 => regular.merge("last_season_expected_goals_conceded_per_90" => 0.70), 6 => regular)
     fixtures = { 1 => [ fixture ], 2 => [ fixture ] }
 
     result = forecast(rankings, stats, fixtures: fixtures)
 
-    assert_in_delta result[1][:points], result[2][:points], 0.01, "he is judged by the defence he plays in"
-    assert_operator result[2][:points], :>, result[4][:points],
-                    "and a tight defence is still worth more than a leaky one"
+    assert_operator result[6][:points], :<, result[5][:points],
+                    "one team-mate with a record is not a club's record, so his club is judged as unknown"
   end
 
   test "a promoted club with no record at all is judged as the worst defence in the league" do
-    rankings = [ ranking(1, position: "goalkeeper", team_id: 1), ranking(2, position: "goalkeeper", team_id: 2),
-                 ranking(3, position: "goalkeeper", team_id: 3) ]
-    stats = { 1 => regular.merge("last_season_expected_goals_conceded_per_90" => 0.70),
-              2 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.60),
-              3 => regular } # promoted: nobody at the club has a Premier League record
+    tight = (1..3).map { |id| ranking(id, position: "goalkeeper", team_id: 1) }
+    leaky = (4..6).map { |id| ranking(id, position: "goalkeeper", team_id: 2) }
+    promoted = ranking(7, position: "goalkeeper", team_id: 3)
+    stats = (1..3).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 0.70) }
+                  .merge((4..6).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 1.60) })
+                  .merge(7 => regular) # promoted: nobody at the club has a Premier League record
     fixtures = { 1 => [ fixture ], 2 => [ fixture ], 3 => [ fixture ] }
 
-    result = forecast(rankings, stats, fixtures: fixtures)
+    result = forecast(tight + leaky + [ promoted ], stats, fixtures: fixtures)
 
-    assert_in_delta result[2][:points], result[3][:points], 0.01,
+    assert_in_delta result[4][:points], result[7][:points], 0.01,
                     "an unknown defence is charged as the worst we know of, not as a perfect one"
-    assert_operator result[1][:points], :>, result[3][:points],
+    assert_operator result[1][:points], :>, result[7][:points],
                     "so promotion is no longer worth more than keeping goal behind the best defence in the game"
   end
 
