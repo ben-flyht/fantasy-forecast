@@ -51,14 +51,6 @@ module ApplicationHelper
     format("%.1f%% owned", percent)
   end
 
-  # FPL rates each fixture 1 (easiest) to 5 (hardest). The number means nothing
-  # to a reader, so it is shown as a word.
-  FIXTURE_EASE = { 1 => "Very easy", 2 => "Easy", 3 => "Average", 4 => "Hard", 5 => "Very hard" }.freeze
-
-  def fixture_ease(difficulty)
-    FIXTURE_EASE.fetch(difficulty.to_i, "Unrated")
-  end
-
   private
 
   def structured_data_schema

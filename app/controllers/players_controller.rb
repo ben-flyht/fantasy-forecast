@@ -150,7 +150,6 @@ class PlayersController < ApplicationController
       gameweek: gameweek,
       opponent: match && (home ? match.away_team : match.home_team),
       home: home,
-      difficulty: match&.difficulty_for(@player.team_id),
       points: points,
       projected: projected
     }

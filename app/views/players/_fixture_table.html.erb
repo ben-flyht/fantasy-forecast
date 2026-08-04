@@ -1,28 +1,33 @@
 <div>
   <h2 class="text-base/6 font-semibold text-zinc-950"><%= title %></h2>
   <% if rows.any? %>
-    <table class="mt-3 w-full text-sm">
+    <table class="mt-3 w-full table-fixed text-sm">
       <thead>
         <tr class="text-xs uppercase tracking-wide text-zinc-400 text-left">
-          <th class="py-1 font-semibold">GW</th>
-          <th class="py-1 font-semibold">Opponent</th>
-          <th class="py-1 font-semibold">Fixture</th>
-          <th class="py-1 font-semibold text-right"><%= points_label %></th>
+          <%# Three even columns, then just enough room for the number to sit
+              hard right without opening a gap beside the opponent. %>
+          <th class="w-[28%] py-1 font-semibold">GW</th>
+          <th class="w-[28%] py-1 font-semibold">Date</th>
+          <th class="w-[30%] py-1 font-semibold">Opponent</th>
+          <th class="w-[14%] py-1 font-semibold text-right"><%= points_label %></th>
         </tr>
       </thead>
       <tbody>
         <% rows.each do |row| %>
-          <tr class="border-t border-zinc-100">
-            <td class="py-2 whitespace-nowrap text-zinc-500 tabular-nums">
-              GW<%= row[:gameweek].fpl_id %>
-              <% if row[:gameweek].start_time %><span class="block text-xs text-zinc-400"><%= row[:gameweek].start_time.strftime("%-d %b") %></span><% end %>
+          <tr class="border-t border-zinc-100 text-zinc-800">
+            <td class="py-2 whitespace-nowrap tabular-nums">GW<%= row[:gameweek].fpl_id %></td>
+            <td class="py-2 whitespace-nowrap tabular-nums">
+              <% if row[:gameweek].start_time %><%= row[:gameweek].start_time.strftime("%-d %b") %><% else %>—<% end %>
             </td>
-            <td class="py-2 whitespace-nowrap text-zinc-800">
-              <% if row[:opponent] %><%= row[:opponent].short_name || row[:opponent].name %> <span class="text-zinc-400">(<%= row[:home] ? "H" : "A" %>)</span><% else %><span class="text-zinc-400">—</span><% end %>
+            <td class="py-2 whitespace-nowrap">
+              <% if row[:opponent] %>
+                <span class="lg:hidden"><%= row[:opponent].short_name || row[:opponent].name %></span>
+                <span class="hidden lg:inline"><%= row[:opponent].name %></span>
+                <span class="text-zinc-400">(<%= row[:home] ? "H" : "A" %>)</span>
+              <% else %>—<% end %>
             </td>
-            <td class="py-2 whitespace-nowrap text-zinc-500"><%= fixture_ease(row[:difficulty]) %></td>
-            <td class="py-2 text-right tabular-nums font-semibold text-zinc-900">
-              <% if row[:points] %><%= row[:points].is_a?(Integer) ? row[:points] : format("%.1f", row[:points]) %><% else %><span class="text-zinc-400">—</span><% end %>
+            <td class="py-2 text-right tabular-nums font-semibold">
+              <% if row[:points] %><%= row[:points].is_a?(Integer) ? row[:points] : format("%.1f", row[:points]) %><% else %>—<% end %>
             </td>
           </tr>
         <% end %>

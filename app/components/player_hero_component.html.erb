@@ -1,0 +1,37 @@
+<div class="relative h-[260px] sm:h-[280px] lg:h-[300px] overflow-hidden rounded-xl border border-zinc-200 shadow-sm <%= text_class %>"
+     style="background-color: <%= color %>">
+  <% if team&.badge_url %>
+    <span class="pointer-events-none absolute top-1/2 -right-11 z-0 h-[280px] w-[280px] -translate-y-1/2 sm:h-[320px] sm:w-[320px] lg:h-[340px] lg:w-[340px]">
+      <%= image_tag team.badge_url, alt: "", class: "h-full w-full object-contain opacity-20 #{badge_silhouette}" %>
+    </span>
+    <span class="pointer-events-none absolute top-1/2 -right-11 z-0 h-[280px] w-[280px] -translate-y-1/2 sm:h-[320px] sm:w-[320px] lg:h-[340px] lg:w-[340px]">
+      <%= image_tag team.badge_url, alt: "", class: "h-full w-full object-contain opacity-[.22]" %>
+    </span>
+  <% end %>
+
+  <% if player.cutout_url %>
+    <span class="pointer-events-none absolute bottom-0 right-5 z-[1] h-[208px] sm:right-7 sm:h-[248px] lg:h-[276px]">
+      <%= image_tag player.cutout_url, alt: "",
+            class: "block h-full w-auto object-bottom drop-shadow-[0_6px_14px_rgba(0,0,0,0.28)]",
+            onerror: "this.parentElement.remove()" %>
+    </span>
+  <% end %>
+
+  <div class="relative z-[2] flex h-full flex-col justify-center p-5 sm:p-7">
+    <div class="w-[58%] lg:w-auto lg:max-w-[60%]">
+      <% if player.given_name.present? %>
+        <p class="text-xs sm:text-sm font-bold uppercase leading-none tracking-[-0.02em] opacity-80"><%= player.given_name %></p>
+      <% end %>
+      <p class="mt-1 text-3xl sm:text-4xl lg:text-5xl font-extrabold uppercase leading-[0.95] tracking-[-0.02em]"><%= player.display_name %></p>
+
+      <dl class="mt-4 grid grid-cols-[max-content_max-content] gap-x-6 gap-y-3 lg:flex lg:gap-10">
+        <% details.each do |label, value| %>
+          <div>
+            <dt class="text-[10px] font-bold uppercase leading-none tracking-wider opacity-60"><%= label %></dt>
+            <dd class="mt-1 text-sm sm:text-base font-bold leading-none tabular-nums"><%= value %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+  </div>
+</div>
