@@ -52,31 +52,6 @@ class Player < ApplicationRecord
     "#{slug}-#{fpl_id}"
   end
 
-  def total_score(up_to_gameweek = nil)
-    scope = performances
-
-    if up_to_gameweek
-      # Include performances for gameweeks up to and including the specified gameweek
-      gameweek_record = up_to_gameweek.is_a?(Gameweek) ? up_to_gameweek : Gameweek.find_by(fpl_id: up_to_gameweek)
-      return 0 unless gameweek_record
-
-      scope = scope.joins(:gameweek).where("gameweeks.fpl_id <= ?", gameweek_record.fpl_id)
-    end
-
-    scope.sum(:gameweek_score)
-  end
-
-  # Access the cached total score from SQL query or fall back to dynamic calculation
-  def total_score_cached
-    # If we have a cached value from the SQL query, use it
-    if attributes.key?("total_score_cached")
-      attributes["total_score_cached"].to_i
-    else
-      # Fall back to the dynamic calculation
-      total_score
-    end
-  end
-
   def photo_url(size: "40x40")
     return nil unless code.present?
     "https://resources.premierleague.com/premierleague25/photos/players/#{size}/#{code}.png"

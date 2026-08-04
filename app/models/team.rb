@@ -37,15 +37,4 @@ class Team < ApplicationRecord
   def on_light?
     LIGHT_SHIRTS.include?(short_name)
   end
-
-  # FPL strength ratings (higher = stronger), split by venue. Used to rate how
-  # hard a fixture is for a given player position (attacker faces the opponent's
-  # defence; defender/keeper faces the opponent's attack).
-  def attack_strength(venue)
-    venue == :home ? strength_attack_home : strength_attack_away
-  end
-
-  def defence_strength(venue)
-    venue == :home ? strength_defence_home : strength_defence_away
-  end
 end
