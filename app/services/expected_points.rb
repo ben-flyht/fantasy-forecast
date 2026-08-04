@@ -18,11 +18,11 @@ class ExpectedPoints < ApplicationService
   STAT_TYPES = %w[
     season_minutes last_season_minutes chance_of_playing
     expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90 saves_per_90
-    expected_goals_conceded_per_90
+    expected_goals_conceded_per_90 defensive_contribution_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
     last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
     last_season_clean_sheets_per_90 last_season_saves_per_90 last_season_bonus
-    last_season_expected_goals_conceded_per_90
+    last_season_expected_goals_conceded_per_90 last_season_defensive_contribution_per_90
   ].freeze
 
   # Where each measurement is read from before a ball is kicked.
@@ -41,7 +41,8 @@ class ExpectedPoints < ApplicationService
     "expected_goal_involvements_per_90" => "last_season_expected_goal_involvements_per_90",
     "clean_sheets_per_90" => "last_season_clean_sheets_per_90",
     "saves_per_90" => "last_season_saves_per_90",
-    "expected_goals_conceded_per_90" => "last_season_expected_goals_conceded_per_90"
+    "expected_goals_conceded_per_90" => "last_season_expected_goals_conceded_per_90",
+    "defensive_contribution_per_90" => "last_season_defensive_contribution_per_90"
   }.freeze
 
   FULL_MATCH = 90.0
@@ -97,6 +98,18 @@ class ExpectedPoints < ApplicationService
   # side concedes, whether or not the sheet was ever going to be clean. Nobody
   # further up the pitch pays for them.
   CONCEDED = { "goalkeeper" => 1, "defender" => 1, "midfielder" => 0, "forward" => 0 }.freeze
+
+  # The other half of the scoring table, and the only part of it that is not paid
+  # by the goal: two points for clearing a bar of defensive actions in a single
+  # match, ten of them at the back and twelve further up, where a player has to
+  # win the ball back rather than merely be near it. Goalkeepers are not paid for
+  # it at all.
+  DEFENSIVE_POINTS = 2.0
+  DEFENSIVE_ACTIONS = { "defender" => 10, "midfielder" => 12, "forward" => 12 }.freeze
+
+  # How many players a club needs before its own figure is worth more than what
+  # we would otherwise assume of it. See #club_rates.
+  CLUB_EVIDENCE = 3
 
   ASSIST = 3
   SAVES_PER_POINT = 3.0
@@ -181,6 +194,13 @@ class ExpectedPoints < ApplicationService
   # than the clean sheet step: whether a sheet stays clean at all turns on the
   # opponent far more than how many goals eventually go past.
   CONCEDE_STEP = 0.8
+
+  # Defending runs with the opponent, like a goalkeeper's saves: the better the
+  # side in front of you, the more there is to do. Gently, though, because how
+  # much a team defends is mostly a matter of how it plays rather than who it is
+  # playing, and the tables bear that out: the busiest defensive sides in the
+  # league are mid-table, not the worst in it.
+  DEFENSIVE_STEP = 0.9
 
   # What the crowd is willing to pay for him, and how far we let that speak.
   #
@@ -271,7 +291,7 @@ class ExpectedPoints < ApplicationService
       regular_share: REGULAR_SHARE, unproven_minutes: UNPROVEN_MINUTES,
       form_swing: FORM_SWING, form_swing_growth: FORM_SWING_GROWTH,
       clean_sheet_step: CLEAN_SHEET_STEP, attack_step: ATTACK_STEP, save_step: SAVE_STEP,
-      concede_step: CONCEDE_STEP,
+      concede_step: CONCEDE_STEP, defensive_step: DEFENSIVE_STEP, club_evidence: CLUB_EVIDENCE,
       clamp_width: CLAMP_WIDTH, perf_growth: PERF_GROWTH,
       price_power: PRICE_POWER, price_power_floor: PRICE_POWER_FLOOR,
       new_club_minutes: NEW_CLUB_MINUTES, nailed_on: NAILED_ON, cheapest: CHEAPEST,
@@ -572,6 +592,7 @@ class ExpectedPoints < ApplicationService
       clean_sheet_points(ranking) * swing(CLEAN_SHEET_STEP, fixture) +
       save_points(ranking) * swing(SAVE_STEP, fixture) +
       conceded_points(ranking, fixture) +
+      defensive_points(ranking, fixture) +
       bonus_points(ranking)
   end
 
@@ -642,44 +663,93 @@ class ExpectedPoints < ApplicationService
   end
 
   def goals_past_him(ranking, fixture)
-    conceded_rate(ranking) * swing(CONCEDE_STEP, fixture)
+    conceded = club_figure(ranking, "expected_goals_conceded_per_90", if_promoted: :the_worst_in_the_league)
+    conceded * swing(CONCEDE_STEP, fixture)
   end
 
-  # How many goals his side lets in, per 90.
+  # What a club's players do, where the man himself has no record of doing it.
   #
-  # His own figure first, and his club's where he has none: conceding is something
-  # a team does, so a man signed from abroad concedes at the rate of the defence he
-  # has joined rather than at no rate at all.
+  # His own figure first, and his club's where he has none: conceding and
+  # defending are things a side does together, so a man signed from abroad takes
+  # the rate of the defence he has joined rather than no rate at all.
   #
-  # A promoted club has no Premier League record for anybody, and a missing rate
-  # must not read as a defence nobody scores against. Left as nought it handed the
-  # three sides most likely to ship goals the only clean bill in the league, and
-  # floated their defenders up the table for it. So they are judged by the worst
-  # record among the clubs we do have one for, which is roughly where a promoted
-  # side ends up. It is a guess, but it is a guess in the direction the evidence
-  # points, which nought is not.
-  def conceded_rate(ranking)
-    own = record(ranking, "expected_goals_conceded_per_90")
+  # A promoted club has no record for anybody, and what to assume of them depends
+  # entirely on the measurement. They concede more than anyone, so an unknown
+  # defence is charged the worst we know of; left at nought it handed the sides
+  # most likely to ship goals the only clean bill in the league. They do not,
+  # however, defend any more than the rest. Sunderland and Leeds came up a year
+  # ago and make 8.4 defensive actions a game against a league middle of 8.2,
+  # while the top of that table is Everton and Newcastle, both long established.
+  # So an unknown club is ordinary there, and reaching for the highest figure
+  # because it worked for goals would hand players nobody has seen the best rate
+  # in the league.
+  def club_figure(ranking, type, if_promoted:)
+    own = record(ranking, type)
     return own if own.positive?
 
-    club_rates[ranking.team_id] || worst_club_rate
+    club_rates(type)[ranking.team_id] || unknown_club(type, if_promoted)
   end
 
-  # What each club lets in, taken as the middle of its players' figures so that one
-  # man who played only the afternoons it went wrong cannot speak for the defence.
-  def club_rates
-    @club_rates ||= @rankings.group_by(&:team_id).each_with_object({}) do |(team_id, members), rates|
-      recorded = members.map { |member| record(member, "expected_goals_conceded_per_90") }.select(&:positive?)
-      rates[team_id] = middle_of(recorded) if recorded.any?
+  # What each club does, taken as the middle of its players' figures so that one
+  # man who played only the afternoons it went wrong cannot speak for the side.
+  #
+  # A club needs a few of them before its own figure beats the assumption. Ipswich
+  # had exactly one defender with a conceded rate and the whole squad was
+  # inheriting his, which is one man's record wearing a club's name.
+  def club_rates(type)
+    @club_rates ||= {}
+    @club_rates[type] ||= @rankings.group_by(&:team_id).each_with_object({}) do |(team_id, members), rates|
+      recorded = members.map { |member| record(member, type) }.select(&:positive?)
+      rates[team_id] = middle_of(recorded) if recorded.size >= CLUB_EVIDENCE
     end
   end
 
-  def worst_club_rate
-    @worst_club_rate ||= club_rates.values.max.to_f
+  def unknown_club(type, assumption)
+    figures = club_rates(type).values
+    return 0.0 if figures.empty?
+
+    assumption == :the_worst_in_the_league ? figures.max : middle_of(figures)
   end
 
   def middle_of(values)
     values.sort[values.size / 2]
+  end
+
+  # THE DEFENDING, which is not a rate however FPL publishes it.
+  #
+  # Two points for clearing a bar in a single match, so what matters is how often
+  # he clears it rather than what he averages, and the two are nothing alike. A
+  # defender averaging six actions clears ten in about one match in twelve; at
+  # nine it is two in five; at eleven it is two in three. Multiplying the average
+  # by anything at all prices those three the same way, which is why this is the
+  # one part of the scoring table that cannot be read straight off a per-90 rate.
+  #
+  # Nor can a threshold be scaled by minutes afterwards, because half a match is
+  # far less than half a chance of ten actions. So it is worked out over the
+  # minutes he actually plays and then divided back out by them: everything here
+  # is multiplied by his minutes later, and this way what survives that is the
+  # figure calculated here.
+  def defensive_points(ranking, fixture)
+    bar = DEFENSIVE_ACTIONS[ranking.position]
+    share = minutes_share(ranking).to_f
+    return 0.0 if bar.nil? || !share.positive?
+
+    actions = club_figure(ranking, "defensive_contribution_per_90", if_promoted: :an_ordinary_side)
+    DEFENSIVE_POINTS * chance_of_clearing(actions * share * swing(DEFENSIVE_STEP, fixture), bar) / share
+  end
+
+  # How often a count averaging this much comes out at the bar or above, for
+  # actions arriving independently through a match.
+  def chance_of_clearing(expected, bar)
+    return 0.0 unless expected.positive?
+
+    term = Math.exp(-expected)
+    below = term
+    (1...bar).each do |count|
+      term *= expected / count
+      below += term
+    end
+    [ 1 - below, 0.0 ].max
   end
 
   # How many whole pairs of goals to expect, since only the second of each pair

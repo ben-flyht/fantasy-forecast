@@ -31,15 +31,31 @@ module Fpl
       "last_season_expected_goal_involvements_per_90" => "expected_goal_involvements",
       "last_season_clean_sheets_per_90" => "clean_sheets",
       "last_season_saves_per_90" => "saves",
-      "last_season_expected_goals_conceded_per_90" => "expected_goals_conceded"
+      "last_season_expected_goals_conceded_per_90" => "expected_goals_conceded",
+      "last_season_defensive_contribution_per_90" => "defensive_contribution"
     }.freeze
+
+    # Which season counts as last season, and nothing else does.
+    #
+    # FPL only lists the seasons a player spent in this division, so the most
+    # recent entry is not necessarily the most recent season: a man promoted with
+    # Hull last played here in 2020/21, and one at Coventry in 2015/16. Read as
+    # last season's, an old campaign makes a nailed-on starter of a player nobody
+    # has seen in this league for six years, and a clean sheet rate of one out of
+    # a single match played eleven years ago.
+    #
+    # A season runs August to May, so a date in the second half of the year
+    # belongs to the campaign starting that year and anything earlier to the one
+    # before it. Taken from the gameweek being synced rather than from today, so
+    # the answer is the same whenever it is asked.
+    SEASON_STARTS = 7
 
     MINUTES_IN_A_MATCH = 90.0
 
     # What we currently record from a past season. Bump it when that set changes
     # and every player is asked again on the next run, rather than being left with
     # a partial history that nothing notices.
-    RECORD_VERSION = 3.0
+    RECORD_VERSION = 4.0
 
     REQUEST_DELAY = 0.5 # seconds between requests, to stay a polite guest
 
@@ -114,13 +130,24 @@ module Fpl
 
     def player_records(player, gameweek)
       sleep(@delay) if @delay.positive?
-      now = Time.current
-      season = latest_past_season(player)
-      return [ checked_record(player, gameweek, now) ] if season.nil?
+      summary = fetch_summary(player.fpl_id)
+      # Nobody answered, which is not the same as an answer of none. Left
+      # unreceipted so the next run asks again rather than recording a silence.
+      return [] if summary.nil?
 
+      season = last_season_in(summary, gameweek)
+      return nothing_worth_keeping(player, gameweek) if season.nil?
+
+      now = Time.current
       totals(player, gameweek, season, now) +
-        rates(player, gameweek, season, now) +
-        [ checked_record(player, gameweek, now) ]
+        rates(player, gameweek, season, now) + [ checked_record(player, gameweek, now) ]
+    end
+
+    # No season of his that we would read, so whatever we hold from an older one
+    # goes, and a receipt is left so he is not asked again every hour.
+    def nothing_worth_keeping(player, gameweek)
+      forget_old_seasons(player, gameweek)
+      [ checked_record(player, gameweek, Time.current) ]
     end
 
     # A receipt that we asked, so a player with no past is not asked about again.
@@ -156,10 +183,29 @@ module Fpl
         value: value, created_at: now, updated_at: now }
     end
 
-    # history_past runs oldest first, so the most recent season is last.
-    def latest_past_season(player)
-      summary = fetch_summary(player.fpl_id)
-      summary && summary["history_past"]&.last
+    # history_past runs oldest first, so the most recent season is last. It is
+    # only last season's if it says so. See SEASON_STARTS.
+    def last_season_in(summary, gameweek)
+      season = summary["history_past"]&.last
+      return nil unless season && season["season_name"] == last_season_name(gameweek)
+
+      season
+    end
+
+    def last_season_name(gameweek)
+      played = gameweek.start_time
+      current = played.month < SEASON_STARTS ? played.year - 1 : played.year
+      "#{current - 1}/#{format('%02d', current % 100)}"
+    end
+
+    # A record we have decided not to trust has to go, or the campaign this run
+    # rejected stays in circulation and the forecast keeps reading it.
+    def forget_old_seasons(player, gameweek)
+      Statistic.where(player_id: player.id, gameweek_id: gameweek.id, type: season_types).delete_all
+    end
+
+    def season_types
+      @season_types ||= STAT_TYPES.keys + RATE_TYPES.keys
     end
 
     def fetch_summary(fpl_id)
