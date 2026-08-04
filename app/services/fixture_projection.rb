@@ -9,11 +9,10 @@
 class FixtureProjection < ApplicationService
   Row = Struct.new(:match, :points, :projected, keyword_init: true)
 
-  def initialize(player:, matches:, anchor_score:, anchor_worth:, next_gameweek_id:)
+  def initialize(player:, matches:, anchors:, next_gameweek_id:)
     @player = player
     @matches = matches
-    @anchor_score = anchor_score
-    @anchor_worth = anchor_worth
+    @anchors = Array(anchors).compact
     @next_gameweek_id = next_gameweek_id
   end
 
@@ -31,10 +30,27 @@ class FixtureProjection < ApplicationService
     (base * engine.fixture_worth(ranking, fixture_for(match))).round(1)
   end
 
+  # What the player is worth on an ordinary fixture, taken from the first anchor
+  # that has a fixture in it: his forecast for the week, divided back out by what
+  # that week's opponents were worth to him.
+  #
+  # A week he does not play is worth nought over nought games, which is a true
+  # statement about that week and no answer at all about the ones after it. Asked
+  # for the only anchor it had, this used to hand back nothing and empty the whole
+  # column, so a blank gameweek hid the run of fixtures exactly when a manager was
+  # looking past it. The rest-of-season forecast spans the football he does play,
+  # so it answers when the week cannot.
   def base
     return @base if defined?(@base)
 
-    @base = @anchor_score && @anchor_worth.to_f.positive? ? @anchor_score / @anchor_worth : nil
+    @base = @anchors.filter_map { |anchor| ordinary_worth(anchor) }.first
+  end
+
+  def ordinary_worth(anchor)
+    games = anchor.working&.dig("games").to_f
+    return nil unless anchor.score && games.positive?
+
+    anchor.score / games
   end
 
   def fixture_for(match)
