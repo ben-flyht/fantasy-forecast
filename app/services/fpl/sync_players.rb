@@ -1,15 +1,15 @@
-require "net/http"
-require "json"
-
 module Fpl
   class SyncPlayers < ApplicationService
-    FPL_API_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
     POSITION_MAP = { 1 => "goalkeeper", 2 => "defender", 3 => "midfielder", 4 => "forward" }.freeze
+
+    def initialize(api: Api.new)
+      @api = api
+    end
 
     def call
       Rails.logger.info "Starting FPL player sync..."
 
-      data = fetch_fpl_data
+      data = @api.bootstrap
       return false unless data
 
       process_sync(data)
@@ -32,25 +32,6 @@ module Fpl
     def log_error(error)
       Rails.logger.error "FPL sync failed: #{error.message}"
       Rails.logger.error "Backtrace: #{error.backtrace.join("\n")}"
-    end
-
-    def fetch_fpl_data
-      uri = URI(FPL_API_URL)
-      response = make_http_request(uri)
-      response.code == "200" ? JSON.parse(response.body) : log_api_error(response)
-    end
-
-    def make_http_request(uri)
-      Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-        request = Net::HTTP::Get.new(uri)
-        request["User-Agent"] = "Fantasy Forecast App"
-        http.request(request)
-      end
-    end
-
-    def log_api_error(response)
-      Rails.logger.error "FPL API returned #{response.code}: #{response.message}"
-      nil
     end
 
     def sync_teams(teams_data)
@@ -163,8 +144,7 @@ module Fpl
       availability_data = build_availability_data(elements, current_gw, next_gw)
       return if availability_data.empty?
 
-      Statistic.upsert_all(availability_data, unique_by: %i[player_id gameweek_id type])
-      log_availability_sync(availability_data.size, current_gw, next_gw)
+      log_availability_sync(Statistic.store(availability_data), current_gw, next_gw)
     end
 
     def build_availability_data(elements, current_gw, next_gw)
@@ -195,7 +175,7 @@ module Fpl
 
     def log_availability_sync(count, current_gw, next_gw)
       gameweeks = [ current_gw&.fpl_id, next_gw&.fpl_id ].compact.join(", ")
-      Rails.logger.info "Synced #{count} availability statistics for gameweeks #{gameweeks}"
+      Rails.logger.info "#{count} availability statistics changed for gameweeks #{gameweeks}"
     end
 
     SNAPSHOT_STATS = {
@@ -241,8 +221,8 @@ module Fpl
       data = build_snapshot_data(elements, players_by_fpl_id, snapshot_gw)
       return if data.empty?
 
-      Statistic.upsert_all(data, unique_by: %i[player_id gameweek_id type])
-      Rails.logger.info "Synced #{data.size} snapshot statistics for gameweek #{snapshot_gw.fpl_id}"
+      Rails.logger.info "#{Statistic.store(data)} of #{data.size} snapshot statistics changed " \
+                        "for gameweek #{snapshot_gw.fpl_id}"
     end
 
     def build_snapshot_data(elements, players_by_fpl_id, gameweek)

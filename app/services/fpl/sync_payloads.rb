@@ -1,6 +1,3 @@
-require "net/http"
-require "json"
-
 module Fpl
   # Stores everything FPL publishes, exactly as they publish it, once per
   # gameweek: every player, team, gameweek and fixture.
@@ -14,9 +11,6 @@ module Fpl
   # player who leaves the league mid-season, is removed from the current gameweek
   # so the record keeps matching the source. Finished gameweeks are never touched.
   class SyncPayloads < ApplicationService
-    BOOTSTRAP_URL = "https://fantasy.premierleague.com/api/bootstrap-static/".freeze
-    FIXTURES_URL = "https://fantasy.premierleague.com/api/fixtures/".freeze
-
     # The bootstrap collection each kind is drawn from.
     BOOTSTRAP_KINDS = {
       Payload::ELEMENT => "elements",
@@ -24,11 +18,15 @@ module Fpl
       Payload::EVENT => "events"
     }.freeze
 
+    def initialize(api: Api.new)
+      @api = api
+    end
+
     def call
       gameweek = snapshot_gameweek
       return log_no_gameweek unless gameweek
 
-      bootstrap = fetch(BOOTSTRAP_URL)
+      bootstrap = @api.bootstrap
       return false unless bootstrap
 
       counts = store_all(bootstrap, gameweek)
@@ -51,7 +49,7 @@ module Fpl
       counts = BOOTSTRAP_KINDS.to_h do |kind, collection|
         [ kind, store(kind, bootstrap[collection], gameweek) ]
       end
-      counts.merge(Payload::FIXTURE => store(Payload::FIXTURE, fetch(FIXTURES_URL), gameweek))
+      counts.merge(Payload::FIXTURE => store(Payload::FIXTURE, @api.fixtures, gameweek))
     end
 
     # Upsert what FPL sent, then drop anything it no longer sends, so what we hold
@@ -83,30 +81,12 @@ module Fpl
       count
     end
 
+    # Nothing to attach payloads to is a state, not a fault: before the first
+    # gameweek is published there is nowhere to file them. Reported as a failure
+    # it would cry wolf all summer.
     def log_no_gameweek
       Rails.logger.info "No gameweek to attach payloads to, skipping."
-      false
-    end
-
-    def fetch(url)
-      uri = URI(url)
-      response = get(uri)
-      return log_api_error(url, response) unless response.is_a?(Net::HTTPSuccess)
-
-      JSON.parse(response.body)
-    end
-
-    def get(uri)
-      Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-        request = Net::HTTP::Get.new(uri)
-        request["User-Agent"] = "Fantasy Forecast App"
-        http.request(request)
-      end
-    end
-
-    def log_api_error(url, response)
-      Rails.logger.error "FPL returned #{response.code} for #{url}"
-      nil
+      true
     end
   end
 end

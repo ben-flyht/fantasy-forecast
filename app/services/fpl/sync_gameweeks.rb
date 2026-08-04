@@ -1,14 +1,12 @@
-require "net/http"
-require "json"
-
 module Fpl
   class SyncGameweeks < ApplicationService
-    FPL_API_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
-    FIXTURES_API_URL = "https://fantasy.premierleague.com/api/fixtures/"
+    def initialize(api: Api.new)
+      @api = api
+    end
 
     def call
       Rails.logger.info "Starting FPL gameweek sync..."
-      data = fetch_api_data(FPL_API_URL)
+      data = @api.bootstrap
       return false unless data
 
       sync_gameweeks(data["events"])
@@ -23,33 +21,12 @@ module Fpl
     private
 
     def sync_fixtures
-      fixtures_data = fetch_api_data(FIXTURES_API_URL)
+      fixtures_data = @api.fixtures
       fixtures_data ? sync_matches(fixtures_data) : Rails.logger.warn("Could not fetch fixtures data")
     end
 
     def log_completion
       Rails.logger.info "FPL gameweek sync completed. Total gameweeks: #{Gameweek.count}, Total matches: #{Match.count}"
-    end
-
-    def fetch_api_data(url)
-      uri = URI(url)
-      response = make_http_request(uri)
-      parse_response(response, url)
-    end
-
-    def make_http_request(uri)
-      Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-        request = Net::HTTP::Get.new(uri)
-        request["User-Agent"] = "Fantasy Forecast App"
-        http.request(request)
-      end
-    end
-
-    def parse_response(response, url)
-      return JSON.parse(response.body) if response.code == "200"
-
-      Rails.logger.error "FPL API returned #{response.code} for #{url}"
-      nil
     end
 
     def sync_matches(fixtures_data)
