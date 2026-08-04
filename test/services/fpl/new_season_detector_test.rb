@@ -47,7 +47,7 @@ module Fpl
     end
 
     test "false when the FPL API is unreachable" do
-      stub_request(:get, Fpl::NewSeasonDetector::FPL_API_URL)
+      stub_request(:get, Fpl::Api::BOOTSTRAP_URL)
         .to_return(status: 500, body: "error")
 
       assert_not Fpl::NewSeasonDetector.call
@@ -57,7 +57,7 @@ module Fpl
 
     def stub_teams(codes)
       body = { "teams" => codes.map { |code| { "code" => code } } }
-      stub_request(:get, Fpl::NewSeasonDetector::FPL_API_URL)
+      stub_request(:get, Fpl::Api::BOOTSTRAP_URL)
         .to_return(status: 200, body: body.to_json, headers: {})
     end
   end

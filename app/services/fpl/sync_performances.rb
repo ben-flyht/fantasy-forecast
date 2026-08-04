@@ -1,10 +1,5 @@
-require "net/http"
-require "json"
-
 module Fpl
   class SyncPerformances < ApplicationService
-    FPL_LIVE_URL = "https://fantasy.premierleague.com/api/event/"
-
     STAT_TYPES = %w[
       total_points minutes goals_scored assists clean_sheets goals_conceded own_goals
       penalties_saved penalties_missed yellow_cards red_cards saves bonus bps
@@ -13,14 +8,15 @@ module Fpl
       recoveries tackles defensive_contribution
     ].freeze
 
-    def initialize(gameweek_id = nil)
+    def initialize(gameweek_id = nil, api: Api.new)
       @gameweek_id = gameweek_id
+      @api = api
     end
 
     def call
       Rails.logger.info "Starting FPL performance sync..."
       gameweek = find_gameweek
-      return false unless gameweek
+      return nothing_to_sync unless gameweek
 
       sync_gameweek_data(gameweek)
     rescue => e
@@ -32,7 +28,7 @@ module Fpl
 
     def find_gameweek
       gameweek = @gameweek_id ? Gameweek.find_by(fpl_id: @gameweek_id) : default_gameweek
-      return log_no_gameweek unless gameweek
+      return nil unless gameweek
 
       log_gameweek_info(gameweek)
       gameweek
@@ -42,9 +38,11 @@ module Fpl
       Gameweek.current_gameweek || Gameweek.finished.ordered.last
     end
 
-    def log_no_gameweek
-      Rails.logger.error "No current or finished gameweek found for sync"
-      nil
+    # No gameweek has been played yet, so there are no scores to fetch. A quiet
+    # summer rather than a fault. See Fpl::HourlyPipeline.
+    def nothing_to_sync
+      Rails.logger.info "No current or finished gameweek to sync performances for, skipping."
+      true
     end
 
     def log_gameweek_info(gameweek)
@@ -53,7 +51,7 @@ module Fpl
     end
 
     def sync_gameweek_data(gameweek)
-      gameweek_data = fetch_gameweek_live_data(gameweek.fpl_id)
+      gameweek_data = @api.live(gameweek.fpl_id)
       return false unless gameweek_data
 
       elements = gameweek_data["elements"] || []
@@ -76,15 +74,14 @@ module Fpl
 
     def log_completion(gameweek, stats_count, perf_count)
       Rails.logger.info "FPL performance sync completed for gameweek #{gameweek.name}. " \
-                        "Statistics: #{stats_count}, Performances: #{perf_count}"
+                        "Statistics changed: #{stats_count}, Performances: #{perf_count}"
     end
 
     def sync_all_statistics(gameweek, elements, players_by_fpl_id)
       statistics_data = build_statistics_data(gameweek, elements, players_by_fpl_id)
       return 0 if statistics_data.empty?
 
-      Statistic.upsert_all(statistics_data, unique_by: %i[player_id gameweek_id type])
-      statistics_data.size
+      Statistic.store(statistics_data)
     end
 
     def build_statistics_data(gameweek, elements, players_by_fpl_id)
@@ -126,30 +123,6 @@ module Fpl
 
       { player_id: player.id, gameweek_id: gameweek.id, team_id: player.team_id,
         gameweek_score: element.dig("stats", "total_points") || 0, created_at: now, updated_at: now }
-    end
-
-    def fetch_gameweek_live_data(gameweek_id)
-      uri = URI("#{FPL_LIVE_URL}#{gameweek_id}/live/")
-      response = make_http_request(uri)
-      parse_response(response, gameweek_id)
-    rescue => e
-      Rails.logger.error "Failed to fetch live data for gameweek #{gameweek_id}: #{e.message}"
-      nil
-    end
-
-    def make_http_request(uri)
-      Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-        request = Net::HTTP::Get.new(uri)
-        request["User-Agent"] = "Fantasy Forecast App"
-        http.request(request)
-      end
-    end
-
-    def parse_response(response, gameweek_id)
-      return JSON.parse(response.body) if response.code == "200"
-
-      Rails.logger.error "FPL Live API returned #{response.code} for gameweek #{gameweek_id}: #{response.message}"
-      nil
     end
   end
 end

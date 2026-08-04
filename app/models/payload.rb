@@ -11,6 +11,10 @@
 # a field nobody thought to map, its history is already here rather than starting
 # from the day we noticed. Projecting it into statistics after the fact costs a
 # query; going back to FPL for a season of it is not possible at all.
+#
+# A season of it, and only a season: every payload hangs off a gameweek, so the
+# summer wipe takes the archive with it. Keeping one across a rollover means
+# giving payloads a season of their own to belong to. See Fpl::ResetSeason.
 class Payload < ApplicationRecord
   ELEMENT = "element".freeze # a player
   TEAM = "team".freeze
@@ -37,15 +41,5 @@ class Payload < ApplicationRecord
   #   Payload.elements.for_gameweek(gameweek).values_of("status")
   def self.values_of(field)
     pluck(:fpl_id, Arel.sql("data ->> #{connection.quote(field)}")).to_h
-  end
-
-  # The player, team or fixture this describes, if we hold one.
-  def subject
-    case kind
-    when ELEMENT then Player.find_by(fpl_id: fpl_id)
-    when TEAM then Team.find_by(fpl_id: fpl_id)
-    when FIXTURE then Match.find_by(fpl_id: fpl_id)
-    when EVENT then Gameweek.find_by(fpl_id: fpl_id)
-    end
   end
 end

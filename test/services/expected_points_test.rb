@@ -561,6 +561,22 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert_equal result[2][:points], result[1][:points]
   end
 
+  test "two fixtures of the same difficulty are worth exactly twice one of them" do
+    one = forecast([ ranking(1) ], { 1 => regular }, fixtures: { 1 => [ fixture(3) ] })
+    two = forecast([ ranking(1) ], { 1 => regular }, fixtures: { 1 => [ fixture(3), fixture(3) ] })
+
+    assert_in_delta 2.0, two[1][:working][:games], 0.001
+    assert_in_delta one[1][:points] * 2, two[1][:points], 0.001
+  end
+
+  test "a kinder fixture is still worth more than a cruel one alongside it" do
+    result = forecast([ ranking(1) ], { 1 => regular }, fixtures: { 1 => [ fixture(2), fixture(5) ] })
+    kind = forecast([ ranking(1) ], { 1 => regular }, fixtures: { 1 => [ fixture(2), fixture(2) ] })
+
+    assert result[1][:points] < kind[1][:points],
+           "difficulty must still be read per fixture, not taken from the first one"
+  end
+
   test "the working stores the figures it multiplied, not sentences about them" do
     result = forecast([ ranking(1, team_id: 1) ], { 1 => regular })
     working = result[1][:working]

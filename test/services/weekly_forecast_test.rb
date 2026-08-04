@@ -45,8 +45,10 @@ class WeeklyForecastTest < ActiveSupport::TestCase
 
   test "records the settings the forecast was actually made with" do
     WeeklyForecast.call(gameweek: @gameweek)
+    config = Forecast.first.strategy.strategy_config
 
-    assert_equal ExpectedPoints.parameters, Forecast.first.strategy.strategy_config
+    assert_equal ExpectedPoints.parameters, config.except(:model)
+    assert_equal Forecaster::MODEL, config[:model], "how the evidence was read is a setting too"
   end
 
   test "a changed setting is recorded as a new set, leaving earlier forecasts pointing at the old one" do
@@ -57,8 +59,8 @@ class WeeklyForecastTest < ActiveSupport::TestCase
     with_parameters(tuned) { WeeklyForecast.call(gameweek: @gameweek) }
 
     assert_equal 2, Strategy.count, "the old settings are kept, not overwritten"
-    assert_equal tuned, Forecast.first.strategy.strategy_config
-    assert_equal ExpectedPoints.parameters, was.reload.strategy_config,
+    assert_equal tuned, Forecast.first.strategy.strategy_config.except(:model)
+    assert_equal ExpectedPoints.parameters, was.reload.strategy_config.except(:model),
                  "what produced last week's forecast must not change under it"
   end
 
@@ -72,6 +74,27 @@ class WeeklyForecastTest < ActiveSupport::TestCase
 
     assert_equal was, Forecast.find_by(player: @player, gameweek: @gameweek).score,
                  "a week cannot be re-forecast with form it could not have known"
+  end
+
+  test "a fitness doubt from a week gone by does not follow a player into this one" do
+    WeeklyForecast.call(gameweek: @gameweek)
+    fit = Forecast.find_by(player: @player, gameweek: @gameweek).score
+
+    Statistic.create!(player: @player, gameweek: gameweeks(:finished), type: "chance_of_playing", value: 25)
+    WeeklyForecast.call(gameweek: @gameweek)
+
+    assert_equal fit, Forecast.find_by(player: @player, gameweek: @gameweek).score,
+                 "he recovered: FPL says nothing about him this week, and nor should we"
+  end
+
+  test "a fitness doubt about this week counts against him" do
+    WeeklyForecast.call(gameweek: @gameweek)
+    fit = Forecast.find_by(player: @player, gameweek: @gameweek).score
+
+    Statistic.create!(player: @player, gameweek: @gameweek, type: "chance_of_playing", value: 25)
+    WeeklyForecast.call(gameweek: @gameweek)
+
+    assert_operator Forecast.find_by(player: @player, gameweek: @gameweek).score, :<, fit
   end
 
   test "refuses to write a position it cannot score anybody in" do

@@ -25,7 +25,13 @@ class SeasonForecast < Forecaster
   end
 
   def matches
-    Match.includes(:home_team, :away_team).where(gameweek: Gameweek.remaining)
+    Match.includes(:home_team, :away_team).where(gameweek: remaining)
+  end
+
+  # The horizon itself, asked for once: both the fixtures it spans and the fitness
+  # it is read over are the same run of gameweeks.
+  def remaining
+    @remaining ||= Gameweek.remaining.to_a
   end
 
   def model_overrides
@@ -36,6 +42,6 @@ class SeasonForecast < Forecaster
   # is worth the share of it he is expected to be fit for rather than nothing at
   # all. See Availability.
   def fitness(players)
-    Availability.call(players, gameweeks: Gameweek.remaining)
+    Availability.call(players, gameweeks: remaining)
   end
 end

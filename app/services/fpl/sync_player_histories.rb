@@ -1,6 +1,3 @@
-require "net/http"
-require "json"
-
 module Fpl
   # Last season's totals for every player, from FPL's per-player summary endpoint.
   #
@@ -13,8 +10,6 @@ module Fpl
   # incremental: players whose totals are already stored are skipped. A re-run
   # costs almost nothing and an interrupted run picks up where it stopped.
   class SyncPlayerHistories < ApplicationService
-    ELEMENT_SUMMARY_URL = "https://fantasy.premierleague.com/api/element-summary/".freeze
-
     # Statistic type => the key to read from FPL's past-season entry.
     STAT_TYPES = {
       "last_season_points" => "total_points",
@@ -70,14 +65,15 @@ module Fpl
     # again. Nothing reads it: it is a receipt, not a statistic.
     CHECKED = "history_checked".freeze
 
-    def initialize(delay: REQUEST_DELAY, budget: TIME_BUDGET)
+    def initialize(delay: REQUEST_DELAY, budget: TIME_BUDGET, api: Api.new)
       @delay = delay
       @budget = budget
+      @api = api
     end
 
     def call
       gameweek = snapshot_gameweek
-      return false unless gameweek
+      return log_no_gameweek unless gameweek
 
       players = players_missing_history(gameweek)
       return log_nothing_to_do if players.empty?
@@ -115,22 +111,30 @@ module Fpl
       done = 0
 
       players.each_slice(BATCH) do |batch|
-        store(batch.flat_map { |player| player_records(player, gameweek) })
-        done += batch.size
+        done += collect(batch, gameweek, deadline)
         break if Time.current > deadline
       end
       done
     end
 
-    def store(records)
-      return if records.empty?
+    # Stops the moment its time is up, mid-batch if it must, and keeps what it
+    # has: one slow answer should not cost the batch, nor the batch the hour.
+    def collect(batch, gameweek, deadline)
+      records = []
+      done = 0
 
-      Statistic.upsert_all(records, unique_by: %i[player_id gameweek_id type])
+      batch.each do |player|
+        records.concat(player_records(player, gameweek))
+        done += 1
+        break if Time.current > deadline
+      end
+      Statistic.store(records)
+      done
     end
 
     def player_records(player, gameweek)
       sleep(@delay) if @delay.positive?
-      summary = fetch_summary(player.fpl_id)
+      summary = @api.summary(player.fpl_id)
       # Nobody answered, which is not the same as an answer of none. Left
       # unreceipted so the next run asks again rather than recording a silence.
       return [] if summary.nil?
@@ -208,26 +212,14 @@ module Fpl
       @season_types ||= STAT_TYPES.keys + RATE_TYPES.keys
     end
 
-    def fetch_summary(fpl_id)
-      response = get(URI("#{ELEMENT_SUMMARY_URL}#{fpl_id}/"))
-      return nil unless response.is_a?(Net::HTTPSuccess)
-
-      JSON.parse(response.body)
-    rescue => e
-      Rails.logger.warn "Could not fetch history for FPL player #{fpl_id}: #{e.message}"
-      nil
-    end
-
-    def get(uri)
-      Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-        request = Net::HTTP::Get.new(uri)
-        request["User-Agent"] = "Mozilla/5.0"
-        http.request(request)
-      end
-    end
-
     def log_nothing_to_do
       Rails.logger.info "No players need a last-season history sync."
+      true
+    end
+
+    # Nowhere yet to file last season's totals. A state, not a fault.
+    def log_no_gameweek
+      Rails.logger.info "No gameweek to attach last-season history to, skipping."
       true
     end
   end

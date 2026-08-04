@@ -1,7 +1,7 @@
 namespace :ff do
   desc "Scheduled hourly pipeline: detect season change, sync FPL data + odds, regenerate forecasts (idempotent)"
   task hourly: :environment do
-    Fpl::HourlyPipeline.call
+    abort "Hourly pipeline finished with failures. Check the logs." unless Fpl::HourlyPipeline.call
     puts "Hourly pipeline complete."
   end
 

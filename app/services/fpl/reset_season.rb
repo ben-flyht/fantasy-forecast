@@ -6,7 +6,7 @@ module Fpl
   # Order matters. Each model is deleted before the models it references via a
   # foreign key, so we never trip a constraint mid-wipe.
   class ResetSeason < ApplicationService
-    DELETE_ORDER = [ Forecast, Statistic, Performance, Match, Player, Gameweek, Team ].freeze
+    DELETE_ORDER = [ Forecast, Statistic, Performance, Match, Payload, Player, Gameweek, Team ].freeze
 
     def call
       ActiveRecord::Base.transaction do

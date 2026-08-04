@@ -359,12 +359,7 @@ class PlayersController < ApplicationController
   end
 
   def latest_snapshot_stats(player_ids, types)
-    stats = Hash.new { |hash, key| hash[key] = {} }
-    Statistic.where(player_id: player_ids, type: types)
-             .order(:gameweek_id)
-             .pluck(:player_id, :type, :value)
-             .each { |player_id, type, value| stats[player_id][type] = value.to_f }
-    stats
+    Statistic.where(player_id: player_ids, type: types).latest_by_player
   end
 
   def load_players

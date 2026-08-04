@@ -51,7 +51,7 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
 
     zeroed = @fixture_data.deep_dup
     zeroed["teams"].each { |t| t.merge!("strength_overall_home" => 0, "strength_attack_home" => 0) }
-    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::Api::BOOTSTRAP_URL)
       .to_return(status: 200, body: zeroed.to_json, headers: { "Content-Type" => "application/json" })
     Fpl::SyncPlayers.call
 
@@ -136,7 +136,7 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
   end
 
   test "handles invalid JSON response" do
-    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::Api::BOOTSTRAP_URL)
       .to_return(status: 200, body: "invalid json", headers: {})
 
     assert_no_difference "Player.count" do
@@ -191,7 +191,7 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
       ]
     }
 
-    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::Api::BOOTSTRAP_URL)
       .to_return(status: 200, body: malformed_data.to_json, headers: {})
 
     assert_no_difference "Player.count" do
@@ -213,7 +213,7 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
       "defensive_contribution_per_90" => 12.4, "starts_per_90" => 0.9,
       "penalties_order" => 1, "corners_and_indirect_freekicks_order" => 2
     }
-    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL).to_return(
+    stub_request(:get, Fpl::Api::BOOTSTRAP_URL).to_return(
       status: 200, headers: {},
       body: { "teams" => [ { "id" => 90, "name" => "Snap FC", "short_name" => "SNP", "code" => 8890 } ],
               "elements" => [ element ] }.to_json
@@ -239,7 +239,7 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     end
     gameweek.update!(is_current: false, is_next: true)
 
-    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL).to_return(
+    stub_request(:get, Fpl::Api::BOOTSTRAP_URL).to_return(
       status: 200, headers: {},
       body: { "teams" => [ { "id" => 91, "name" => "Pre FC", "short_name" => "PRE", "code" => 8891 } ],
               "elements" => [ {
@@ -260,12 +260,12 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
   private
 
   def stub_fpl_api_success
-    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::Api::BOOTSTRAP_URL)
       .to_return(status: 200, body: @fixture_data.to_json, headers: {})
   end
 
   def stub_fpl_api_failure
-    stub_request(:get, Fpl::SyncPlayers::FPL_API_URL)
+    stub_request(:get, Fpl::Api::BOOTSTRAP_URL)
       .to_return(status: 500, body: "Internal Server Error", headers: {})
   end
 end

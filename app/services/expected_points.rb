@@ -393,7 +393,7 @@ class ExpectedPoints < ApplicationService
 
     peers = bracket_of(ranking)
     curve = crowd_curve(peers)
-    place = crowd_order(peers).index(ranking.player_id)
+    place = crowd_place(peers, ranking.player_id)
     return nil if curve.empty? || place.nil?
 
     curve[[ place, curve.size - 1 ].min]
@@ -483,10 +483,16 @@ class ExpectedPoints < ApplicationService
   # range, because one fifteen million pound striker would otherwise make every
   # other expensive forward look cheap.
   def dearness(ranking)
+    @dearness ||= {}
+    @dearness[ranking.player_id] ||= dearness_of(ranking)
+  end
+
+  def dearness_of(ranking)
     prices = position_prices(ranking.position)
     return 0.0 if prices.empty?
 
-    prices.count { |other| other < price(ranking) } / prices.size.to_f
+    cost = price(ranking)
+    prices.count { |other| other < cost } / prices.size.to_f
   end
 
   def position_prices(position)
@@ -508,6 +514,14 @@ class ExpectedPoints < ApplicationService
     @crowd_order[bracket] ||= in_bracket(bracket)
                               .sort_by { |ranking| [ -conviction(ranking), -our_estimate(ranking).to_f ] }
                               .map(&:player_id)
+  end
+
+  # Where in that order a player stands. Asked of every player in the bracket, so
+  # kept as a lookup rather than a scan of the order for each of them.
+  def crowd_place(bracket, player_id)
+    @crowd_places ||= {}
+    @crowd_places[bracket] ||= crowd_order(bracket).each_with_index.to_h
+    @crowd_places[bracket][player_id]
   end
 
   def in_position(position)
@@ -572,8 +586,14 @@ class ExpectedPoints < ApplicationService
   # Against nobody in particular unless a fixture is named, which is how the
   # crowd's curve and a player's own standing are read: both are about what he is
   # worth on an ordinary afternoon.
+  # A fixture is only ever read for how hard it is, so a player is worth the same
+  # in any two matches of the same difficulty and is worked out once for each. Over
+  # a season that is six answers a player rather than one per fixture, and it is
+  # the whole of the saving in every rate underneath it.
   def points_per_90(ranking, fixture = nil)
-    APPEARANCE + scoring_per_90(ranking, fixture)
+    @points_per_90 ||= {}
+    @points_per_90[[ ranking.player_id, fixture && difficulty_of(fixture) ]] ||=
+      APPEARANCE + scoring_per_90(ranking, fixture)
   end
 
   # What he adds beyond turning up. Shrunk for a thin record and moved by his
@@ -793,7 +813,8 @@ class ExpectedPoints < ApplicationService
   # because the same afternoon that denies him a clean sheet brings him saves.
   # See CLEAN_SHEET_SWING and the constants around it.
   def games_ahead(ranking)
-    fixtures_for(ranking).sum { |fixture| worth_of(ranking, fixture) }
+    @games_ahead ||= {}
+    @games_ahead[ranking.player_id] ||= fixtures_for(ranking).sum { |fixture| worth_of(ranking, fixture) }
   end
 
   # What this fixture is worth against an ordinary one, for this player.
