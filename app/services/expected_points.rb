@@ -264,12 +264,71 @@ class ExpectedPoints < ApplicationService
   CLAMP_WIDTH = 0.05
   PERF_GROWTH = 0.15
 
-  # The cheapest tenth of a position, where ownership stops being a verdict on
-  # quality. Everybody needs a bench and somebody has to fill it, so a quarter of
-  # the game owning the cheapest keeper is a budget decision rather than a claim
-  # that he is any good. It is still a claim that he plays, which is why these
-  # players are judged against each other rather than ignored. See #bracket_of.
-  CHEAPEST = 0.1
+  # A club picks one goalkeeper. He plays the ninety minutes or he plays none, so
+  # what his record says about his minutes is not a fraction of a match at all: it
+  # is a chance of holding the one place his club has to give. Read that way, two
+  # keepers at a club cannot both be first choice, and a deputy cannot be added to
+  # the league as though his club had a second goal to defend.
+  #
+  # It matters because a keeper who might not start had no way of saying so. The
+  # market leads the order and a record may nudge it by a few percent, so a Spurs
+  # keeper with a third of a season behind him stood fourth in the game on the
+  # strength of what a fifth of it had paid for him, and his own reading of two
+  # thirds of a point a game was allowed to take three percent off that.
+  #
+  # Two signals say who holds the place, and they disagree in exactly the cases
+  # worth getting right. The record says who has been playing, which is history
+  # and can be a year out of date. The backing says who is about to, which is
+  # live and knows about a summer signing or a manager's word on Friday. So the
+  # crowd is heard in proportion to how much of it has spoken: a club whose
+  # keepers a tenth of the game has bought between them is one the crowd has an
+  # opinion about, and a club nobody owns is left to its record. The same
+  # pseudo-count shape as #credibility, and the same tenth of the game as
+  # NAILED_ON.
+  KEEPER_BACKING = 10.0
+
+  # How sharply a record separates a first choice from a deputy.
+  #
+  # Read flat, a keeper who played two and a half times another's minutes is two
+  # and a half times as likely to start, which is not how a team sheet works: at
+  # that gap one of them is the goalkeeper and the other is the substitute. So the
+  # claim is raised before it is weighed, the same trick and the same reason as
+  # PRICE_POWER.
+  #
+  # Four because the answer stops moving there. Alisson holds 0.86 of Liverpool's
+  # place at two, 0.91 at three, 0.93 at four and 0.94 at six, while the keepers
+  # this is meant to mark down do not shift at any setting. Past four a summer
+  # signing's record at his old club starts to read as certainty about his new one.
+  RECORD_POWER = 4.0
+
+  GOALKEEPER = "goalkeeper".freeze
+
+  # How far above the floor of a position a player stops being a bargain.
+  #
+  # At the cheap end ownership stops being a verdict on quality. Everybody needs a
+  # bench and somebody has to fill it, so a quarter of the game owning the cheapest
+  # keeper is a budget decision rather than a claim that he is any good. It is
+  # still a claim that he plays, which is why these players are read against each
+  # other rather than ignored. See #crowd_estimate.
+  #
+  # Being a bargain is a matter of degree, though, and this used to be a yes or no
+  # decided by a share of the field: the cheapest tenth of a position. That was
+  # wrong twice. Prices bunch on the floor, so a tenth by rank was 32% of
+  # goalkeepers and 47% of midfielders. And a share of a tied field is not a line,
+  # it is a cliff somebody is always standing on: the ninety-two midfielders at
+  # five million sat at 0.0996 of their position against a threshold of 0.1, so one
+  # more player priced below them would have moved the lot at once. Repricing a
+  # single unowned midfielder by a step shifted the whole midfield table by an
+  # average of sixteen places, and one player by a hundred and twenty-two. FPL
+  # reprices players every night, and a forecast that lurches on somebody else's
+  # price is one that cannot be marked against what happens.
+  #
+  # So it is measured in money, where a pound is a pound however many players
+  # happen to share it, and it fades rather than stopping. The cheapest man in a
+  # position is a complete bargain, half a million above him is half a bargain, and
+  # a million above him is not a bargain at all. A million is two price steps: past
+  # that a pick is about the player rather than about the budget.
+  CHEAP_BAND = 10.0
 
   # What this week's transfers say, measured against the people who actually own
   # him: a hundred thousand sales is nothing from two million owners and a rout
@@ -292,10 +351,10 @@ class ExpectedPoints < ApplicationService
       form_swing: FORM_SWING, form_swing_growth: FORM_SWING_GROWTH,
       clean_sheet_step: CLEAN_SHEET_STEP, attack_step: ATTACK_STEP, save_step: SAVE_STEP,
       concede_step: CONCEDE_STEP, defensive_step: DEFENSIVE_STEP, club_evidence: CLUB_EVIDENCE,
-      clamp_width: CLAMP_WIDTH, perf_growth: PERF_GROWTH,
-      price_power: PRICE_POWER, price_power_floor: PRICE_POWER_FLOOR,
-      new_club_minutes: NEW_CLUB_MINUTES, nailed_on: NAILED_ON, cheapest: CHEAPEST,
-      exodus_floor: EXODUS_FLOOR, inflow_ceiling: INFLOW_CEILING
+      clamp_width: CLAMP_WIDTH, perf_growth: PERF_GROWTH, price_power: PRICE_POWER,
+      price_power_floor: PRICE_POWER_FLOOR, new_club_minutes: NEW_CLUB_MINUTES,
+      nailed_on: NAILED_ON, cheap_band: CHEAP_BAND, keeper_backing: KEEPER_BACKING,
+      record_power: RECORD_POWER, exodus_floor: EXODUS_FLOOR, inflow_ceiling: INFLOW_CEILING
     }
   end
 
@@ -372,15 +431,22 @@ class ExpectedPoints < ApplicationService
     theirs = crowd_estimate(ranking)
     return { points: nil, working: {} } if ours.nil? && theirs.nil?
 
-    points = blended(ranking, ours, theirs) * availability(ranking) * games_ahead(ranking) * transfer_factor(ranking)
+    points = blended(ranking, ours, theirs) * starting_share(ranking) *
+             availability(ranking) * games_ahead(ranking) * transfer_factor(ranking)
     { points: points, working: working_for(ranking, ours, theirs) }
   end
 
   # What a player is worth in a single game, before the fixture and before this
   # week's news. Nil when there is no record to read.
+  #
+  # A goalkeeper is worth what he is worth per 90, with no minutes in it. His
+  # minutes are a chance of playing rather than a share of a match, and a chance
+  # cannot be argued down by a few percent the way a rate can, so it is applied to
+  # the finished answer instead. See #starting_share.
   def our_estimate(ranking)
     share = minutes_share(ranking)
     return nil if share.nil?
+    return points_per_90(ranking) if goalkeeper?(ranking)
 
     share * points_per_90(ranking)
   end
@@ -388,15 +454,52 @@ class ExpectedPoints < ApplicationService
   # What a player standing where he stands with the crowd is typically worth, read
   # off our own figures for the players he is judged against. Where we agree with
   # them this changes nothing; where we disagree, each pulls the other.
+  #
+  # Who he is judged against depends on how cheap he is, because ownership means
+  # two different things at the two ends of a position. At the top it says a
+  # manager thought him worth funding from the rest of his side. At the bottom it
+  # mostly says he plays, because somebody has to fill the slot and the game piles
+  # into whichever cheap player is nailed on.
+  #
+  # So he is read among his budget peers and among the whole position, and the two
+  # answers are weighed by how much of a bargain he is. A man on the floor of his
+  # position is judged entirely among the cheap, where the best that can be said of
+  # him is that he is the best of them. A man a million above it is judged entirely
+  # against the field. Between the two he is part of each, which is what stops a
+  # cheap-but-not-cheapest starter being capped at an enabler's ceiling: half of
+  # Shaw is measured against every defender in the game, and he is a Manchester
+  # United starter, not somebody's bench filler. See CHEAP_BAND.
   def crowd_estimate(ranking)
     return nil if conviction(ranking).zero?
 
-    peers = bracket_of(ranking)
-    curve = crowd_curve(peers)
-    place = crowd_place(peers, ranking.player_id)
+    cheap = cheapness(ranking)
+    field = estimate_among([ ranking.position, :field ], ranking)
+    return field if cheap.zero?
+
+    budget = estimate_among([ ranking.position, :budget ], ranking)
+    return field if budget.nil?
+    return budget if field.nil?
+
+    field * (1 - cheap) + budget * cheap
+  end
+
+  # What the players he is judged against are worth to the man standing where he
+  # stands among them.
+  def estimate_among(bracket, ranking)
+    curve = crowd_curve(bracket)
+    place = crowd_place(bracket, ranking.player_id)
     return nil if curve.empty? || place.nil?
 
     curve[[ place, curve.size - 1 ].min]
+  end
+
+  # How much of a bargain he is, from one at the floor of his position to nought a
+  # band above it. See CHEAP_BAND.
+  def cheapness(ranking)
+    prices = position_prices(ranking.position)
+    return 0.0 if prices.empty?
+
+    (1 - (price(ranking) - prices.min) / CHEAP_BAND).clamp(0.0, 1.0)
   end
 
   # The market leads and the record nudges. What a player cost and how the game
@@ -424,36 +527,14 @@ class ExpectedPoints < ApplicationService
     (ours / theirs).clamp(1 - nudge_width, 1 + nudge_width)
   end
 
-  # Who a player's backing is measured against.
-  #
-  # Ownership means two different things depending on price. At the top of a
-  # position it says a manager thinks this player is worth funding from the rest
-  # of his side. At the bottom it mostly says he plays: somebody has to fill the
-  # slot, so the game piles into whichever cheap defender is nailed on, and that
-  # is a statement about the team sheet rather than about quality.
-  #
-  # Read against the whole position, an enabler is promoted into the company of
-  # players managers actually paid for. Read against the other cheap players, the
-  # same backing answers the only question worth asking of them, which is which
-  # of them starts. So the cheap are ranked among themselves, and the best the
-  # crowd can say of one is that he is the best of the cheap.
-  #
-  # This used to be a cap: among the cheapest, backing could only ever count
-  # against a player, never for him. That kept enablers down and also made the
-  # crowd mute exactly where it knows most, so two four million pound defenders
-  # at the same club could not be told apart by the forty-fold difference in how
-  # many managers had picked them.
-  def bracket_of(ranking)
-    [ ranking.position, bargain?(ranking) ]
-  end
-
+  # Who a player is measured against: everybody in his position, or everybody in
+  # it the money says is a budget pick. See #crowd_estimate for which of the two
+  # answers him, and how much.
   def in_bracket(bracket)
-    position, cheap = bracket
-    in_position(position).select { |other| bargain?(other) == cheap }
-  end
+    position, who = bracket
+    return in_position(position) if who == :field
 
-  def bargain?(ranking)
-    dearness(ranking) < CHEAPEST
+    in_position(position).select { |other| cheapness(other).positive? }
   end
 
   # Whether FPL has said he cannot play the coming week.
@@ -474,25 +555,6 @@ class ExpectedPoints < ApplicationService
   # nought whatever anybody thinks of him.
   def ruled_out?(ranking)
     optional_stat(ranking, "chance_of_playing")&.zero?
-  end
-
-  # How dear he is for his position, as the share of his peers he costs more than.
-  # Strictly more: twenty keepers sit on the four million pound floor, and counting
-  # them as dearer than each other would hand the cheapest man in the game a third
-  # of the way up the scale. Taken as a standing among them rather than as a fraction of the
-  # range, because one fifteen million pound striker would otherwise make every
-  # other expensive forward look cheap.
-  def dearness(ranking)
-    @dearness ||= {}
-    @dearness[ranking.player_id] ||= dearness_of(ranking)
-  end
-
-  def dearness_of(ranking)
-    prices = position_prices(ranking.position)
-    return 0.0 if prices.empty?
-
-    cost = price(ranking)
-    prices.count { |other| other < cost } / prices.size.to_f
   end
 
   def position_prices(position)
@@ -549,6 +611,68 @@ class ExpectedPoints < ApplicationService
   # What a signing's backing says about the team sheet. See NAILED_ON.
   def settled_in(ranking)
     REGULAR_SHARE * (ownership(ranking) / NAILED_ON).clamp(0.0, 1.0)
+  end
+
+  # A goalkeeper's chance of being the one his club picks. One for everybody else,
+  # whose minutes are already inside his own estimate. See KEEPER_BACKING.
+  def starting_share(ranking)
+    return 1.0 unless goalkeeper?(ranking)
+
+    club_shares(ranking.team_id)[ranking.player_id] || 0.0
+  end
+
+  def club_shares(team_id)
+    @club_shares ||= {}
+    @club_shares[team_id] ||= share_between(@rankings.select { |other| other.team_id == team_id })
+  end
+
+  # One place, split between the keepers who might hold it. The record says who
+  # has been playing and the backing says who is about to, and where only one of
+  # them has anything to say it says all of it: a promoted club has no record for
+  # anybody, and a weighted average of a figure and nothing would leave its whole
+  # goalmouth sharing a quarter of a place.
+  def share_between(squad)
+    record = claims(squad) { |ranking| minutes_share(ranking).to_f**RECORD_POWER }
+    backing = claims(squad) { |ranking| conviction(ranking) }
+    return record if backing.nil?
+    return backing if record.nil?
+
+    weighed(squad, record, backing, crowd_heard(squad))
+  end
+
+  def weighed(squad, record, backing, heard)
+    squad.to_h do |ranking|
+      [ ranking.player_id, record[ranking.player_id] * (1 - heard) + backing[ranking.player_id] * heard ]
+    end
+  end
+
+  # Each man's claim as a share of every claim made, or nil where nobody has one.
+  def claims(squad)
+    made = squad.to_h { |ranking| [ ranking.player_id, yield(ranking) ] }
+    total = made.values.sum
+    return nil if total.zero?
+
+    made.transform_values { |claim| claim / total }
+  end
+
+  # How much of the say the crowd gets at this club, which is how much of it has
+  # spoken. See KEEPER_BACKING.
+  def crowd_heard(squad)
+    owned = squad.sum { |ranking| ownership(ranking) }
+    owned / (owned + KEEPER_BACKING)
+  end
+
+  def goalkeeper?(ranking)
+    ranking.position == GOALKEEPER
+  end
+
+  # How much of a match he is expected to be on the pitch for, whichever way the
+  # model arrived at it. Reported rather than scored: it is the figure that
+  # actually multiplied his answer, so the page and the arithmetic agree.
+  def played_share(ranking)
+    return starting_share(ranking) if goalkeeper?(ranking)
+
+    minutes_share(ranking).to_f
   end
 
   def minutes_played(ranking)
@@ -881,7 +1005,7 @@ class ExpectedPoints < ApplicationService
 
   def estimates(ranking, ours, theirs)
     {
-      minutes: (minutes_share(ranking).to_f * availability(ranking) * FULL_MATCH).round,
+      minutes: (played_share(ranking) * availability(ranking) * FULL_MATCH).round,
       per_90: points_per_90(ranking).round(2),
       ours: ours&.round(2),
       crowd: theirs&.round(2),
