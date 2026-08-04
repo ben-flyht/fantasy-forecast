@@ -23,7 +23,9 @@ class Forecaster < ApplicationService
   # still trace back to what actually produced them.
   #
   # 2: a fitness flag is read from the gameweek being forecast and no earlier one.
-  MODEL = 2
+  # 3: a club has one goalkeeper's place to share out, and being a bargain is a
+  #    matter of degree measured in money rather than a bracket you are in or out of.
+  MODEL = 3
 
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek

@@ -250,13 +250,15 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   test "a promoted club with no record at all is judged as the worst defence in the league" do
     tight = (1..3).map { |id| ranking(id, position: "goalkeeper", team_id: 1) }
     leaky = (4..6).map { |id| ranking(id, position: "goalkeeper", team_id: 2) }
-    promoted = ranking(7, position: "goalkeeper", team_id: 3)
+    # Three at the promoted club too, so each squad splits its one place the same
+    # way and the comparison is of defences rather than of squad sizes.
+    promoted = (7..9).map { |id| ranking(id, position: "goalkeeper", team_id: 3) }
     stats = (1..3).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 0.70) }
                   .merge((4..6).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 1.60) })
-                  .merge(7 => regular) # promoted: nobody at the club has a Premier League record
+                  .merge((7..9).index_with { regular }) # promoted: no Premier League record at the club
     fixtures = { 1 => [ fixture ], 2 => [ fixture ], 3 => [ fixture ] }
 
-    result = forecast(tight + leaky + [ promoted ], stats, fixtures: fixtures)
+    result = forecast(tight + leaky + promoted, stats, fixtures: fixtures)
 
     assert_in_delta result[4][:points], result[7][:points], 0.01,
                     "an unknown defence is charged as the worst we know of, not as a perfect one"
@@ -575,6 +577,185 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
     assert result[1][:points] < kind[1][:points],
            "difficulty must still be read per fixture, not taken from the first one"
+  end
+
+  # A position spread across the price range, dearer players being better, since
+  # what a player's backing means depends on how cheap he is and there has to be
+  # something to tell the two ends apart. Price, ownership, and what he does.
+  def priced_field
+    # 1 and 4 keep the same record on purpose: they differ only in what they cost
+    # and who has bought them, which is what the crowd is being asked about.
+    spec = { 1 => [ 45.0, 12.0, 0.35 ], 2 => [ 45.0, 0.2, 0.30 ], 3 => [ 50.0, 6.0, 0.45 ],
+             4 => [ 50.0, 0.2, 0.35 ], 5 => [ 55.0, 4.0, 0.55 ], 6 => [ 60.0, 3.0, 0.65 ],
+             7 => [ 70.0, 8.0, 0.80 ] }
+    rankings = spec.keys.map { |id| ranking(id) }
+    stats = spec.to_h { |id, (cost, owned, xgi)| [ id, regular(cost: cost, owned: owned, xgi: xgi) ] }
+    [ rankings, stats ]
+  end
+
+  def model_for(rankings, stats)
+    ExpectedPoints.new(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] }, season_started: false)
+  end
+
+  def order_of(result, rankings)
+    rankings.sort_by { |r| -result[r.player_id][:points] }.each_with_index.to_h { |r, i| [ r.player_id, i + 1 ] }
+  end
+
+  # The reason this is measured in money. A share of a tied field is not a line,
+  # it is a cliff somebody is always standing on, and one player's overnight
+  # reprice used to shift a whole tier across it at once.
+  test "one player being repriced does not move everybody else" do
+    rankings, stats = priced_field
+    before = order_of(forecast(rankings, stats), rankings)
+
+    repriced = stats.merge(4 => stats[4].merge("now_cost" => 45.0)) # 5.0m to 4.5m, owned by 0.2%
+    after = order_of(forecast(rankings, repriced), rankings)
+
+    moved = (before.keys - [ 4 ]).map { |id| (before[id] - after[id]).abs }
+    assert_operator moved.max, :<=, 1,
+                    "an unowned player getting cheaper says nothing about anybody else"
+  end
+
+  test "players sharing the floor price do not push each other up the scale" do
+    rankings, stats = priced_field
+    alone = forecast(rankings, stats)
+
+    # Twenty more on the floor, owned by nobody and with nothing on record, so
+    # they add no backing and no figure to any curve. Under a rank share they
+    # would still have moved every line in the position.
+    crowd = (100..119).map { |id| ranking(id) }
+    padded = stats.merge((100..119).index_with { { "now_cost" => 45.0, "selected_by_percent" => 0.0 } })
+    packed = forecast(rankings + crowd, padded)
+
+    rankings.each do |r|
+      assert_in_delta alone[r.player_id][:points], packed[r.player_id][:points], 0.001,
+                      "#{r.player_id} moved because other players happen to share a price"
+    end
+  end
+
+  test "a cheap player the game has bought outranks a dear one nobody has" do
+    rankings, stats = priced_field
+
+    result = forecast(rankings, stats)
+
+    assert_operator result[1][:points], :>, result[4][:points],
+                    "4.5m and owned by a tenth of the game beats 5.0m and owned by nobody"
+  end
+
+  # The cheapest man in a position is a complete bargain, half a million above him
+  # is half a bargain, and a million above him is not a bargain at all.
+  test "being a bargain fades with price rather than stopping at a line" do
+    rankings, stats = priced_field
+    model = model_for(rankings, stats)
+    floor, half_a_step, a_step = rankings.values_at(0, 2, 4) # 4.5m, 5.0m, 5.5m
+
+    assert_in_delta 1.0, model.send(:cheapness, floor), 0.001
+    assert_in_delta 0.5, model.send(:cheapness, half_a_step), 0.001
+    assert_in_delta 0.0, model.send(:cheapness, a_step), 0.001
+  end
+
+  # Two keepers at one club, and what each of them brings to the argument over
+  # who plays: minutes on record, and how much of the game has bought him.
+  def keepers(first:, second:)
+    rankings = [ ranking(1, position: "goalkeeper", team_id: 1),
+                 ranking(2, position: "goalkeeper", team_id: 1) ]
+    stats = { 1 => regular(**first), 2 => regular(**second) }
+    forecast(rankings, stats)
+  end
+
+  # What share of his club's one place a keeper was given, read back out of the
+  # answer: minutes are the figure the model says it multiplied by.
+  def share_of(result, player_id)
+    result[player_id][:working][:minutes] / ExpectedPoints::FULL_MATCH
+  end
+
+  test "a club's keepers share the one place it has to give" do
+    result = keepers(first: { minutes: 3000.0, owned: 20.0 }, second: { minutes: 1500.0, owned: 15.0 })
+
+    assert_in_delta 1.0, share_of(result, 1) + share_of(result, 2), 0.02,
+                    "two keepers at a club cannot both play every week"
+  end
+
+  test "a club nobody owns is left to its record" do
+    result = keepers(first: { minutes: 3000.0, owned: 0.2 }, second: { minutes: 200.0, owned: 0.1 })
+
+    assert_operator share_of(result, 1), :>, 0.9,
+                    "a first choice is not marked down for having a deputy nobody has picked"
+  end
+
+  test "a club the game is split over is decided by the split, not by last season" do
+    result = keepers(first: { minutes: 3000.0, owned: 1.0 }, second: { minutes: 600.0, owned: 25.0 })
+
+    assert_operator share_of(result, 2), :>, share_of(result, 1),
+                    "a quarter of the game backing the newcomer outweighs the incumbent's old minutes"
+  end
+
+  test "a club with no record for anybody falls back to what the crowd has backed" do
+    promoted = { "selected_by_percent" => 8.0, "now_cost" => 45.0 }
+    reserve = { "selected_by_percent" => 0.5, "now_cost" => 40.0 }
+    # Keepers elsewhere with records, at both ends of the price range, so each
+    # price bracket has somebody measurable in it. A bracket of men who cannot be
+    # measured has no curve to read a standing off at all.
+    elsewhere = (3..5).map { |id| ranking(id, position: "goalkeeper", team_id: id) }
+    rankings = [ ranking(1, position: "goalkeeper", team_id: 1),
+                 ranking(2, position: "goalkeeper", team_id: 1) ] + elsewhere
+    stats = { 1 => promoted, 2 => reserve, 3 => regular(cost: 40.0), 4 => regular(cost: 45.0),
+              5 => regular(cost: 50.0) }
+    fixtures = (1..5).index_with { [ fixture ] }
+
+    result = forecast(rankings, stats, fixtures: fixtures)
+
+    assert_in_delta 1.0, share_of(result, 1) + share_of(result, 2), 0.02,
+                    "a promoted club still puts somebody in goal, so its place is shared out rather than left empty"
+    assert_operator share_of(result, 1), :>, share_of(result, 2),
+                    "and the crowd says which of them it is"
+  end
+
+  test "many times a deputy's minutes is a first choice, not a proportionally better one" do
+    result = keepers(first: { minutes: 2900.0, owned: 4.0 }, second: { minutes: 1000.0, owned: 1.0 })
+
+    assert_operator share_of(result, 1), :>, 0.85,
+                    "played three times as much means he is the goalkeeper, not that he is three times as likely"
+  end
+
+  # The crowd is allowed to say a keeper has taken the shirt, because it knows
+  # about a signing or a demotion that last season's minutes cannot. What it may
+  # not do is settle the question on its own while the record still disagrees.
+  test "backing cannot hand a deputy the whole place over a record that disagrees" do
+    result = keepers(first: { minutes: 3200.0, owned: 3.0 }, second: { minutes: 0.0, owned: 12.0 })
+
+    assert_operator share_of(result, 2), :<, 0.6,
+                    "four times the backing does not make a man who has never played a certain starter"
+    assert_operator share_of(result, 2), :>, 0.3,
+                    "but it is heard, because it knows about signings and demotions that a record cannot"
+  end
+
+  # The check that found the bug this rule exists for, kept because it will find
+  # the next one: a keeper's place cannot be created or destroyed, only shared.
+  test "no club fields more or less than one goalkeeper" do
+    squads = (1..4).flat_map do |club|
+      (1..3).map { |slot| ranking(club * 10 + slot, position: "goalkeeper", team_id: club) }
+    end
+    stats = squads.each_with_index.to_h do |keeper, index|
+      [ keeper.player_id, regular(minutes: [ 3000.0, 900.0, 0.0 ][index % 3], owned: [ 15.0, 2.0, 0.1 ][index % 3]) ]
+    end
+    fixtures = (1..4).index_with { [ fixture ] }
+
+    result = forecast(squads, stats, fixtures: fixtures)
+
+    squads.group_by(&:team_id).each do |club, keepers|
+      shared = keepers.sum { |keeper| share_of(result, keeper.player_id) }
+      assert_in_delta 1.0, shared, 0.02, "club #{club} is fielding #{shared.round(2)} goalkeepers"
+    end
+  end
+
+  test "an outfield player's minutes are untouched by any of this" do
+    result = forecast([ ranking(1, position: "defender"), ranking(2, position: "defender") ],
+                      { 1 => regular(minutes: 3000.0), 2 => regular(minutes: 3000.0) })
+
+    assert_equal 90, result[1][:working][:minutes]
+    assert_in_delta result[1][:points], result[2][:points], 0.001,
+                    "ten outfield players at a club do not share one shirt between them"
   end
 
   test "the working stores the figures it multiplied, not sentences about them" do
