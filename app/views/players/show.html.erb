@@ -16,21 +16,8 @@
 <div class="mt-6">
   <h1 class="sr-only"><%= @player.full_name %></h1>
 
-  <% if @forecast %>
-    <%= form_with url: player_path(@player), method: :get, class: "mb-3" do %>
-      <div class="inline-flex items-center gap-1 rounded-lg bg-zinc-100 p-1" role="radiogroup">
-        <% [ [ "gameweek", "Next Gameweek" ], [ "season", "Rest of Season" ] ].each do |value, label| %>
-          <% active = @horizon == value %>
-          <label class="px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer transition-colors <%= active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900" %>">
-            <%= radio_button_tag :horizon, value, active, class: "sr-only", onchange: "this.form.requestSubmit()" %><%= label %>
-          </label>
-        <% end %>
-      </div>
-    <% end %>
-  <% end %>
-
   <% if @player_ranking %>
-    <%= render PlayerCardComponent.new(ranking: @player_ranking, player: @player, facts: @player_facts, show_position: true, hero: true) %>
+    <%= render PlayerHeroComponent.new(player: @player, facts: @player_facts) %>
   <% else %>
     <div class="flex items-start gap-6">
       <%= render PlayerAvatarComponent.new(player: @player, size: :large) %>
@@ -55,19 +42,50 @@
 </div>
 
 <!-- Why this grade -->
-<% if @forecast %>
-  <% season = @forecast[:horizon] == "season" %>
-  <div class="mt-8 rounded-lg bg-zinc-100 p-4">
-    <% if @forecast[:score] %>
-      <p class="text-3xl font-bold text-zinc-950 leading-none">
-        <%= format("%.1f", @forecast[:score]) %>
-        <span class="text-sm font-medium text-zinc-500">expected points <%= season ? "rest of season" : "this gameweek" %></span>
-      </p>
-    <% end %>
-    <% if @forecast[:tier] %>
-      <p class="mt-2 text-sm text-zinc-600"><%= TierCalculator::TIERS.dig(@forecast[:tier], :description) %></p>
-    <% end %>
-  </div>
+<%# The horizon changes nothing above this panel, so only the panel navigates. %>
+<%= turbo_frame_tag "player_forecast", data: { turbo_action: "advance" } do %>
+  <% if @forecast %>
+    <% season = @forecast[:horizon] == "season" %>
+    <div class="mt-4 rounded-xl bg-zinc-100 p-5 sm:p-7">
+      <div class="flex flex-col gap-5 lg:flex-row-reverse lg:items-start lg:justify-between">
+        <%= form_with url: player_path(@player), method: :get, class: "shrink-0" do %>
+          <div class="inline-flex items-center gap-1 rounded-lg bg-zinc-200/70 p-1" role="radiogroup">
+            <% [ [ "gameweek", "Next Gameweek" ], [ "season", "Rest of Season" ] ].each do |value, label| %>
+              <% active = @horizon == value %>
+              <label class="px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer transition-colors <%= active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900" %>">
+                <%= radio_button_tag :horizon, value, active, class: "sr-only", onchange: "this.form.requestSubmit()" %><%= label %>
+              </label>
+            <% end %>
+          </div>
+        <% end %>
+
+        <dl class="flex flex-wrap items-baseline gap-x-6 gap-y-4 lg:gap-x-10">
+          <% if @forecast[:rank] %>
+            <div>
+              <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Rank</dt>
+              <dd class="mt-1.5 text-3xl font-extrabold leading-none tracking-[-0.03em] tabular-nums text-zinc-950">#<%= @forecast[:rank] %></dd>
+            </div>
+          <% end %>
+          <% if @forecast[:grade] %>
+            <div>
+              <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Grade</dt>
+              <dd class="mt-1.5 text-3xl font-extrabold leading-none tracking-[-0.03em] text-zinc-950"><%= @forecast[:grade] %></dd>
+            </div>
+          <% end %>
+          <% if @forecast[:score] %>
+            <div>
+              <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Expected points <%= season ? "rest of season" : "this gameweek" %></dt>
+              <dd class="mt-1.5 text-3xl font-extrabold leading-none tracking-[-0.03em] tabular-nums text-zinc-950"><%= format("%.1f", @forecast[:score]) %></dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+
+      <% if @forecast[:tier] %>
+        <p class="mt-5 text-sm text-zinc-600"><%= TierCalculator::TIERS.dig(@forecast[:tier], :description) %></p>
+      <% end %>
+    </div>
+  <% end %>
 <% end %>
 
 <!-- Fixtures & Form -->
