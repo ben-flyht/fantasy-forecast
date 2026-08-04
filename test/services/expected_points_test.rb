@@ -124,6 +124,85 @@ class ExpectedPointsTest < ActiveSupport::TestCase
            "and his goalkeeper minds less, because the shots come to him"
   end
 
+  test "the hardest fixture in the game is never a bonus, however many saves it brings" do
+    keeper = regular(clean_sheets: 0.29).merge("last_season_saves_per_90" => 2.87,
+                                               "last_season_expected_goals_conceded_per_90" => 1.49)
+    rankings = [ ranking(1, position: "goalkeeper") ]
+
+    ordinary = forecast(rankings, { 1 => keeper })
+    cruel = forecast(rankings, { 1 => keeper }, fixtures: { 1 => [ fixture(5) ] })
+
+    assert_operator cruel[1][:points], :<, ordinary[1][:points],
+                    "a keeper at a leaky club away at the champions is worth less, not more"
+  end
+
+  test "a keeper is charged for the goals that go past him, not only for the clean sheet he misses" do
+    rankings = [ ranking(1, position: "goalkeeper"), ranking(2, position: "goalkeeper") ]
+    leaky = regular(clean_sheets: 0.25).merge("last_season_expected_goals_conceded_per_90" => 1.60)
+    tight = regular(clean_sheets: 0.25).merge("last_season_expected_goals_conceded_per_90" => 0.70)
+
+    result = forecast(rankings, { 1 => leaky, 2 => tight })
+
+    assert_operator result[2][:points], :>, result[1][:points],
+                    "two keepers who keep sheets alike are still told apart by what gets past them"
+  end
+
+  test "only whole pairs of goals are docked" do
+    rankings = [ ranking(1, position: "defender") ]
+    stats = { 1 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.50) }
+    free = { 1 => regular }
+
+    charged = forecast(rankings, stats)
+    uncharged = forecast(rankings, free)
+
+    lost = uncharged[1][:points] - charged[1][:points]
+    assert_operator lost, :<, 0.75, "charging for every second goal is not charging for half of them"
+    assert_operator lost, :>, 0.35, "but a side shipping one and a half a game does pay for them"
+  end
+
+  test "a defender with no record of his own concedes at the rate of the club he has joined" do
+    rankings = [ ranking(1, position: "defender", team_id: 1), ranking(2, position: "defender", team_id: 1),
+                 ranking(3, position: "defender", team_id: 2), ranking(4, position: "defender", team_id: 2) ]
+    stats = { 1 => regular.merge("last_season_expected_goals_conceded_per_90" => 0.70), 2 => regular,
+              3 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.60), 4 => regular }
+    fixtures = { 1 => [ fixture ], 2 => [ fixture ] }
+
+    result = forecast(rankings, stats, fixtures: fixtures)
+
+    assert_in_delta result[1][:points], result[2][:points], 0.01, "he is judged by the defence he plays in"
+    assert_operator result[2][:points], :>, result[4][:points],
+                    "and a tight defence is still worth more than a leaky one"
+  end
+
+  test "a promoted club with no record at all is judged as the worst defence in the league" do
+    rankings = [ ranking(1, position: "goalkeeper", team_id: 1), ranking(2, position: "goalkeeper", team_id: 2),
+                 ranking(3, position: "goalkeeper", team_id: 3) ]
+    stats = { 1 => regular.merge("last_season_expected_goals_conceded_per_90" => 0.70),
+              2 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.60),
+              3 => regular } # promoted: nobody at the club has a Premier League record
+    fixtures = { 1 => [ fixture ], 2 => [ fixture ], 3 => [ fixture ] }
+
+    result = forecast(rankings, stats, fixtures: fixtures)
+
+    assert_in_delta result[2][:points], result[3][:points], 0.01,
+                    "an unknown defence is charged as the worst we know of, not as a perfect one"
+    assert_operator result[1][:points], :>, result[3][:points],
+                    "so promotion is no longer worth more than keeping goal behind the best defence in the game"
+  end
+
+  test "the goals that go past a defender are nothing to the man in front of him" do
+    rankings = [ ranking(1, position: "midfielder"), ranking(2, position: "forward") ]
+    stats = { 1 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.60),
+              2 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.60) }
+    clean = { 1 => regular, 2 => regular }
+
+    conceding = forecast(rankings, stats)
+    unbothered = forecast(rankings, clean)
+
+    assert_equal unbothered[1][:points], conceding[1][:points], "FPL docks nobody in midfield for them"
+    assert_equal unbothered[2][:points], conceding[2][:points], "nor anybody up front"
+  end
+
   test "a kind fixture is worth most to the defender with the best record of clean sheets" do
     rankings = [ ranking(1, position: "defender"), ranking(2, position: "defender") ]
     stats = { 1 => regular(clean_sheets: 0.50), 2 => regular(clean_sheets: 0.10) }

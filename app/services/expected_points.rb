@@ -18,9 +18,11 @@ class ExpectedPoints < ApplicationService
   STAT_TYPES = %w[
     season_minutes last_season_minutes chance_of_playing
     expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90 saves_per_90
+    expected_goals_conceded_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
     last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
     last_season_clean_sheets_per_90 last_season_saves_per_90 last_season_bonus
+    last_season_expected_goals_conceded_per_90
   ].freeze
 
   # Where each measurement is read from before a ball is kicked.
@@ -38,7 +40,8 @@ class ExpectedPoints < ApplicationService
     "expected_goals_per_90" => "last_season_expected_goals_per_90",
     "expected_goal_involvements_per_90" => "last_season_expected_goal_involvements_per_90",
     "clean_sheets_per_90" => "last_season_clean_sheets_per_90",
-    "saves_per_90" => "last_season_saves_per_90"
+    "saves_per_90" => "last_season_saves_per_90",
+    "expected_goals_conceded_per_90" => "last_season_expected_goals_conceded_per_90"
   }.freeze
 
   FULL_MATCH = 90.0
@@ -88,6 +91,13 @@ class ExpectedPoints < ApplicationService
   # FPL's scoring table, by position.
   GOAL = { "goalkeeper" => 10, "defender" => 6, "midfielder" => 5, "forward" => 4 }.freeze
   CLEAN_SHEET = { "goalkeeper" => 4, "defender" => 4, "midfielder" => 1, "forward" => 0 }.freeze
+
+  # The other side of a clean sheet, and a separate rule rather than the same one
+  # read backwards: a keeper or defender loses a point for every second goal his
+  # side concedes, whether or not the sheet was ever going to be clean. Nobody
+  # further up the pitch pays for them.
+  CONCEDED = { "goalkeeper" => 1, "defender" => 1, "midfielder" => 0, "forward" => 0 }.freeze
+
   ASSIST = 3
   SAVES_PER_POINT = 3.0
 
@@ -147,10 +157,30 @@ class ExpectedPoints < ApplicationService
   # a reader can feel.
   ATTACK_STEP = 1.4
 
-  # Saves run the other way, well below one: the afternoon that denies a
-  # goalkeeper his clean sheet is the afternoon that keeps him busy, and pushed
-  # this far it gives a keeper a real reason to prefer the harder game.
-  SAVE_STEP = 0.62
+  # Saves run the other way: the afternoon that denies a goalkeeper his clean
+  # sheet is the afternoon that keeps him busy.
+  #
+  # How much busier is the whole question, and it was answered far too generously.
+  # At 0.62 the cruellest fixture in the game handed a keeper two and a half times
+  # his usual saves, which no goalkeeper has ever managed: the best sides take
+  # something like a third more shots than an ordinary opponent, not twice as
+  # many. The arithmetic then said the same thing every week, because three saves
+  # are worth one point and a clean sheet is worth four: a Bournemouth keeper away
+  # at Man City was the second best pick in the game, ahead of every keeper with
+  # an easy afternoon, purely for the shots he was going to face.
+  #
+  # So the step is back where the shot counts put it. A hard fixture still costs a
+  # keeper less than it costs his defenders, which is the true part of the idea,
+  # and it is still a cost.
+  SAVE_STEP = 0.87
+
+  # Goals conceded run with the opponent rather than against him, so this sits
+  # below one like the saves it comes with. A step of a quarter puts about half
+  # again as many goals past a side facing the champions as facing an ordinary
+  # team, which is roughly what the goal records show. It is deliberately gentler
+  # than the clean sheet step: whether a sheet stays clean at all turns on the
+  # opponent far more than how many goals eventually go past.
+  CONCEDE_STEP = 0.8
 
   # What the crowd is willing to pay for him, and how far we let that speak.
   #
@@ -241,6 +271,7 @@ class ExpectedPoints < ApplicationService
       regular_share: REGULAR_SHARE, unproven_minutes: UNPROVEN_MINUTES,
       form_swing: FORM_SWING, form_swing_growth: FORM_SWING_GROWTH,
       clean_sheet_step: CLEAN_SHEET_STEP, attack_step: ATTACK_STEP, save_step: SAVE_STEP,
+      concede_step: CONCEDE_STEP,
       clamp_width: CLAMP_WIDTH, perf_growth: PERF_GROWTH,
       price_power: PRICE_POWER, price_power_floor: PRICE_POWER_FLOOR,
       new_club_minutes: NEW_CLUB_MINUTES, nailed_on: NAILED_ON, cheapest: CHEAPEST,
@@ -540,6 +571,7 @@ class ExpectedPoints < ApplicationService
     attacking_points(ranking) * swing(ATTACK_STEP, fixture) +
       clean_sheet_points(ranking) * swing(CLEAN_SHEET_STEP, fixture) +
       save_points(ranking) * swing(SAVE_STEP, fixture) +
+      conceded_points(ranking, fixture) +
       bonus_points(ranking)
   end
 
@@ -593,6 +625,77 @@ class ExpectedPoints < ApplicationService
 
   def clean_sheet_points(ranking)
     CLEAN_SHEET.fetch(ranking.position, 0) * record(ranking, "clean_sheets_per_90")
+  end
+
+  # What the goals that go past him cost, which until now was nothing at all: a
+  # keeper at a leaky club was charged for the clean sheets he would not keep and
+  # given the goals themselves for free.
+  #
+  # This one takes the fixture itself rather than being multiplied by a swing
+  # afterwards, because the points do not follow the goals in a straight line and
+  # so cannot be scaled after the fact. See #pairs_of.
+  def conceded_points(ranking, fixture)
+    penalty = CONCEDED.fetch(ranking.position, 0)
+    return 0.0 if penalty.zero?
+
+    -penalty * pairs_of(goals_past_him(ranking, fixture))
+  end
+
+  def goals_past_him(ranking, fixture)
+    conceded_rate(ranking) * swing(CONCEDE_STEP, fixture)
+  end
+
+  # How many goals his side lets in, per 90.
+  #
+  # His own figure first, and his club's where he has none: conceding is something
+  # a team does, so a man signed from abroad concedes at the rate of the defence he
+  # has joined rather than at no rate at all.
+  #
+  # A promoted club has no Premier League record for anybody, and a missing rate
+  # must not read as a defence nobody scores against. Left as nought it handed the
+  # three sides most likely to ship goals the only clean bill in the league, and
+  # floated their defenders up the table for it. So they are judged by the worst
+  # record among the clubs we do have one for, which is roughly where a promoted
+  # side ends up. It is a guess, but it is a guess in the direction the evidence
+  # points, which nought is not.
+  def conceded_rate(ranking)
+    own = record(ranking, "expected_goals_conceded_per_90")
+    return own if own.positive?
+
+    club_rates[ranking.team_id] || worst_club_rate
+  end
+
+  # What each club lets in, taken as the middle of its players' figures so that one
+  # man who played only the afternoons it went wrong cannot speak for the defence.
+  def club_rates
+    @club_rates ||= @rankings.group_by(&:team_id).each_with_object({}) do |(team_id, members), rates|
+      recorded = members.map { |member| record(member, "expected_goals_conceded_per_90") }.select(&:positive?)
+      rates[team_id] = middle_of(recorded) if recorded.any?
+    end
+  end
+
+  def worst_club_rate
+    @worst_club_rate ||= club_rates.values.max.to_f
+  end
+
+  def middle_of(values)
+    values.sort[values.size / 2]
+  end
+
+  # How many whole pairs of goals to expect, since only the second of each pair
+  # costs anybody a point.
+  #
+  # Half the goals is the obvious answer and the wrong one, because the lone goal
+  # in a one-nil defeat is free and half the time a side conceding two ships them
+  # in separate matches. Goals arrive at random and independently, and for
+  # arrivals like that the pairs come out as the goals themselves less the chance
+  # there is an odd one left over. On a side shipping one and a half a game the
+  # difference is a third of a point every week, all of it charged to the clubs
+  # that concede most.
+  def pairs_of(goals)
+    return 0.0 unless goals.positive?
+
+    (goals - (1 - Math.exp(-2 * goals)) / 2) / 2
   end
 
   # Only ever anything for a keeper, so this needs no position of its own.
