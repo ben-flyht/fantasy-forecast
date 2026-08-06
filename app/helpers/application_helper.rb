@@ -10,7 +10,7 @@ module ApplicationHelper
   end
 
   def meta_image
-    content_for?(:meta_image) ? content_for(:meta_image) : "#{BASE_URL}/icon.png"
+    content_for?(:meta_image) ? content_for(:meta_image) : "#{BASE_URL}/icon.png?v=#{FantasyForecast::ICON_VERSION}"
   end
 
   def meta_url
@@ -65,7 +65,7 @@ module ApplicationHelper
 
   def organization_schema
     { "@type": "Organization", "@id": "#{BASE_URL}/#organization", "name": "Fantasy Forecast",
-      "url": "#{BASE_URL}/", "logo": { "@type": "ImageObject", "url": "#{BASE_URL}/icon.png" }, "sameAs": [] }
+      "url": "#{BASE_URL}/", "logo": { "@type": "ImageObject", "url": "#{BASE_URL}/icon.png?v=#{FantasyForecast::ICON_VERSION}" }, "sameAs": [] }
   end
 
   def player_schema(player)
