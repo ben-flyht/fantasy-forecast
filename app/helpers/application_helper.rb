@@ -6,7 +6,7 @@ module ApplicationHelper
   end
 
   def meta_description
-    content_for?(:meta_description) ? content_for(:meta_description) : "FPL player rankings graded A to F. Our algorithm lets the market — price and ownership — lead, weighed against form, fixtures, and expected goals, to help you make better Fantasy Premier League decisions."
+    content_for?(:meta_description) ? content_for(:meta_description) : "FPL player rankings, graded. Our algorithm lets the market — price and ownership — lead, weighed against form, fixtures, and expected goals, to help you make better Fantasy Premier League decisions."
   end
 
   def meta_image
@@ -60,7 +60,7 @@ module ApplicationHelper
   def website_schema
     { "@type": "WebSite", "@id": "#{BASE_URL}/#website", "url": "#{BASE_URL}/",
       "name": "Fantasy Forecast",
-      "description": "FPL player rankings graded A to F to help you make better Fantasy Premier League decisions" }
+      "description": "FPL player rankings, graded, to help you make better Fantasy Premier League decisions" }
   end
 
   def organization_schema

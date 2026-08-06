@@ -53,15 +53,19 @@ class TierCalculator < ApplicationService
     end
   end
 
-  GRADE_LETTERS = { 1 => "A", 2 => "B", 3 => "C", 4 => "D", 5 => "F" }.freeze
+  # Four grades, and a dash for everyone below them. A player we would avoid is not
+  # given a bad letter, he is simply not graded: the grader has nothing to say about
+  # a man who may not play.
+  GRADE_LETTERS = { 1 => "A", 2 => "B", 3 => "C", 4 => "D" }.freeze
+  UNGRADED = "-".freeze
 
   BAND_FLOORS = { 1 => 4.25, 2 => 3.25, 3 => 2.25, 4 => 1.25, 5 => 0.25 }.freeze
 
   def self.grade_from_points(points)
-    return "-" if points.nil?
+    return UNGRADED if points.nil?
 
     tier = tier_from_points(points)
-    return "-" if tier == 5
+    return UNGRADED if tier == 5
 
     "#{GRADE_LETTERS[tier]}#{grade_suffix(points.to_f - BAND_FLOORS[tier])}"
   end

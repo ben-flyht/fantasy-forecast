@@ -7,7 +7,7 @@
       <h2 class="text-lg font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> Rankings — <%= horizon_label %></h2>
       <p class="mt-2">
         Our algorithm ranks every Premier League <%= @position_filter %> for <%= horizon_label %> by starting from the market — each player's price and ownership — and weighing it against recent form, upcoming fixtures, and expected goals.
-        Players are graded from A (must-start picks) down to F (best avoided).
+        Players are graded from A (must-start picks) down to D (marginal). Anyone we would avoid is left ungraded.
       </p>
     </div>
 
@@ -71,7 +71,7 @@
       <h3 class="font-semibold text-zinc-900">Grade System</h3>
       <ul class="mt-1 space-y-1">
         <% TierCalculator::TIERS.each do |tier, info| %>
-          <li><span class="font-semibold text-zinc-900"><%= TierCalculator::GRADE_LETTERS[tier] %></span> — <%= info[:description] %></li>
+          <li><span class="font-semibold text-zinc-900"><%= TierCalculator::GRADE_LETTERS.fetch(tier, TierCalculator::UNGRADED) %></span> — <%= info[:description] %></li>
         <% end %>
       </ul>
     </div>
