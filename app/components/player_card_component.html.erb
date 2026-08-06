@@ -2,23 +2,25 @@
      onclick="Turbo.visit('<%= helpers.player_path(player) %>')"
      role="link" tabindex="0"
      onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
-  <div class="w-[54px] shrink-0 flex items-center justify-center text-[32px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><%= rank %></div>
+  <div class="w-[54px] shrink-0 flex items-center justify-center text-[32px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><span class="relative left-[5px]"><%= rank %></span></div>
 
   <div class="relative flex-1 overflow-hidden">
     <%# 26px over the card's 96px is 15.06 degrees, the same lean as the row and the logo. %>
     <div class="absolute inset-0 z-0 overflow-hidden [clip-path:polygon(26px_0,100%_0,calc(100%_-_26px)_100%,0_100%)]">
       <div class="absolute inset-0" style="background-color: <%= color %>"></div>
       <% if team&.badge_url %>
-        <span class="absolute right-[3px] top-1/2 -translate-y-1/2 h-[120px] w-[120px] pointer-events-none opacity-[.2]">
+        <span class="absolute right-[-9px] top-1/2 -translate-y-1/2 h-[120px] w-[120px] pointer-events-none opacity-[.2]">
           <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain #{team.on_light? ? 'brightness-0' : 'brightness-0 invert'}" %>
         </span>
-        <span class="absolute right-[3px] top-1/2 -translate-y-1/2 h-[120px] w-[120px] pointer-events-none opacity-[.22]">
+        <span class="absolute right-[-9px] top-1/2 -translate-y-1/2 h-[120px] w-[120px] pointer-events-none opacity-[.22]">
           <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain" %>
         </span>
       <% end %>
     </div>
 
-    <div class="relative z-[1] h-full flex flex-col justify-center pl-6 <%= text_class %>">
+    <%# pl-8 is set by the given name, the line the cut runs closest to: it clears the edge
+        by 14px there, and the lines below inherit more room as the cut leans away. %>
+    <div class="relative z-[1] h-full flex flex-col justify-center pl-8 <%= text_class %>">
       <% if player.given_name.present? %>
         <div class="text-[10px] font-bold tracking-[-0.02em] uppercase opacity-80 leading-none mb-[3px] whitespace-nowrap"><%= player.given_name %></div>
       <% end %>
@@ -35,7 +37,7 @@
     </div>
 
     <% if player.cutout_url %>
-      <span class="absolute right-6 bottom-0 h-[100px] z-[2] pointer-events-none">
+      <span class="absolute right-3 bottom-0 h-[100px] z-[2] pointer-events-none">
         <%= image_tag player.cutout_url, alt: "",
               class: "block h-full w-auto object-bottom drop-shadow-[0_5px_9px_rgba(0,0,0,0.22)]",
               onerror: "this.parentElement.remove()" %>
@@ -43,5 +45,5 @@
     <% end %>
   </div>
 
-  <div class="w-[54px] shrink-0 flex items-center justify-center text-[32px] font-extrabold tracking-[-0.03em] leading-none text-zinc-900"><%= grade %></div>
+  <div class="w-[54px] shrink-0 flex items-center justify-center text-[32px] font-extrabold tracking-[-0.03em] leading-none text-zinc-900"><span class="relative right-[8px]"><%= grade %></span></div>
 </div>

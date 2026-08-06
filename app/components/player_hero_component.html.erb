@@ -1,11 +1,17 @@
 <div class="relative h-[260px] sm:h-[280px] lg:h-[300px] overflow-hidden rounded-xl border border-zinc-200 shadow-sm <%= text_class %>"
      style="background-color: <%= color %>">
   <% if team&.badge_url %>
-    <span class="pointer-events-none absolute top-1/2 -right-11 z-0 h-[280px] w-[280px] -translate-y-1/2 sm:h-[320px] sm:w-[320px] lg:h-[340px] lg:w-[340px]">
-      <%= image_tag team.badge_url, alt: "", class: "h-full w-full object-contain opacity-20 #{badge_silhouette}" %>
-    </span>
-    <span class="pointer-events-none absolute top-1/2 -right-11 z-0 h-[280px] w-[280px] -translate-y-1/2 sm:h-[320px] sm:w-[320px] lg:h-[340px] lg:w-[340px]">
-      <%= image_tag team.badge_url, alt: "", class: "h-full w-full object-contain opacity-[.22]" %>
+    <%# The badge sits centred on the player rather than on the panel, so it reads as
+        something he is standing in front of. The outer span traces the cutout's box:
+        same corner, same height, and the aspect ratio the Premier League serves its
+        photos at, so the centring holds even when there is no cutout to stand there. %>
+    <span class="pointer-events-none absolute bottom-0 right-5 z-0 aspect-[219/280] h-[208px] sm:right-7 sm:h-[248px] lg:h-[276px]">
+      <span class="absolute left-1/2 top-1/2 h-[280px] w-[280px] -translate-x-1/2 -translate-y-1/2 sm:h-[320px] sm:w-[320px] lg:h-[340px] lg:w-[340px]">
+        <%= image_tag team.badge_url, alt: "", class: "h-full w-full object-contain opacity-20 #{badge_silhouette}" %>
+      </span>
+      <span class="absolute left-1/2 top-1/2 h-[280px] w-[280px] -translate-x-1/2 -translate-y-1/2 sm:h-[320px] sm:w-[320px] lg:h-[340px] lg:w-[340px]">
+        <%= image_tag team.badge_url, alt: "", class: "h-full w-full object-contain opacity-[.22]" %>
+      </span>
     </span>
   <% end %>
 
