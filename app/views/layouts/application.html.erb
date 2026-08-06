@@ -43,7 +43,9 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <%# 800 carries the logo, the ranks, the grades and every player name. Without it the
+        browser fakes the weight and the logo's measured spacing stops being true. %>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -59,8 +61,8 @@
   <body class="bg-white">
     <nav class="border-b border-zinc-950/10">
       <div class="container mx-auto px-4 py-4">
-        <%= link_to root_path, class: "text-base/6 font-semibold text-zinc-950" do %>
-          ⚡ Fantasy Forecast
+        <%= link_to root_path, "aria-label": "Fantasy Forecast", class: "inline-block" do %>
+          <%= render "shared/logo" %>
         <% end %>
       </div>
     </nav>
@@ -85,7 +87,7 @@
       <div class="container mx-auto px-4 py-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p class="text-sm font-semibold text-zinc-950">⚡ Fantasy Forecast</p>
+            <%= render "shared/logo", size: "0.875rem" %>
             <p class="text-xs/6 text-zinc-500 mt-1">FPL player rankings, graded A to F.</p>
           </div>
           <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs/6 text-zinc-500">

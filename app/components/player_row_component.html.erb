@@ -9,7 +9,8 @@
   <td class="p-0 w-full align-middle bg-white border-y border-zinc-200 group-hover:bg-zinc-50">
     <div class="relative h-[104px] w-full overflow-hidden">
       <div class="relative z-[1] flex items-center h-full w-full pl-10 <%= text_class %>">
-        <div class="absolute inset-0 z-0 overflow-hidden [clip-path:polygon(26px_0,100%_0,calc(100%_-_44px)_100%,0_100%)]">
+        <%# 28px over 104px is 15.06 degrees: Inter's slash, the same lean as the logo. %>
+        <div class="absolute inset-0 z-0 overflow-hidden [clip-path:polygon(28px_0,100%_0,calc(100%_-_28px)_100%,0_100%)]">
           <div class="absolute inset-0" style="background-color: <%= color %>"></div>
           <% if team&.badge_url %>
             <span class="absolute right-0 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.2]">

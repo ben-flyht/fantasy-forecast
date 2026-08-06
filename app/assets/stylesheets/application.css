@@ -7,10 +7,7 @@
  * depending on specificity.
  *
  * Consider organizing styles into separate files for maintainability.
+ *
+ * Tailwind's entry point is app/assets/tailwind/application.css. Anything written here is served
+ * raw to the browser, so @import "tailwindcss" and @theme do nothing: put them there instead.
  */
-
-@import "tailwindcss";
-
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-}

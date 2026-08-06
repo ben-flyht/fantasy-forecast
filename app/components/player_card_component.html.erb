@@ -5,7 +5,8 @@
   <div class="w-[54px] shrink-0 flex items-center justify-center text-[32px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><%= rank %></div>
 
   <div class="relative flex-1 overflow-hidden">
-    <div class="absolute inset-0 z-0 overflow-hidden [clip-path:polygon(18px_0,100%_0,calc(100%_-_32px)_100%,0_100%)]">
+    <%# 26px over the card's 96px is 15.06 degrees, the same lean as the row and the logo. %>
+    <div class="absolute inset-0 z-0 overflow-hidden [clip-path:polygon(26px_0,100%_0,calc(100%_-_26px)_100%,0_100%)]">
       <div class="absolute inset-0" style="background-color: <%= color %>"></div>
       <% if team&.badge_url %>
         <span class="absolute right-[3px] top-1/2 -translate-y-1/2 h-[120px] w-[120px] pointer-events-none opacity-[.2]">

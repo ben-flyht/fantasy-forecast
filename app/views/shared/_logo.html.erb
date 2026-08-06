@@ -1,0 +1,4 @@
+<%# Pass `size` as any CSS length to scale the whole lockup: every measurement is in em. %>
+<%= tag.span class: "logo", style: ("--size: #{size}" if local_assigns[:size]) do %>
+  <span class="logo__fantasy">Fantasy</span><span class="logo__forecast">Forecast</span>
+<% end %>

@@ -1,5 +1,63 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * The logo. Fantasy in ink, Forecast reversed out of a field cut at 15.06 degrees:
+ * the angle of Inter's own forward slash, and the angle every clip-path on the site
+ * leans at.
+ *
+ * Spacing is written as the white you should see minus the white the letter already
+ * brings, because a Y opens away from the baseline and an F does not. Centre the cut
+ * on the boxes instead and it lands 37% nearer the F. Every figure is measured off
+ * Inter's outlines at weight 800, so they only hold while the font really loads at 800.
+ */
+.logo {
+  --size: 1.0625rem;
+  --height: 1.9em;
+  --tan: 0.2691;                                  /* tan(15.06deg) */
+  --run: calc(var(--height) * var(--tan));        /* how far the cut travels */
+
+  --gap: 0.42em;                                  /* white either side of the cut */
+  --endcap: 0.52em;                               /* white at the closed end */
+  --reversed: 0.03em;                             /* light on dark eats its own space */
+
+  --after-y: 0.2029em;                            /* white Inter builds in after a Y */
+  --before-f: 0.0567em;                           /* before an F */
+  --after-t: 0.2099em;                            /* after a T */
+
+  display: inline-flex;
+  align-items: stretch;
+  height: var(--height);
+  font-family: var(--font-sans);
+  font-size: var(--size);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-zinc-950);
+}
+
+.logo__fantasy {
+  display: flex;
+  align-items: center;
+  margin-left: calc(0em - var(--before-f));       /* align the F's stem, not its box */
+}
+
+.logo__forecast {
+  display: flex;
+  align-items: center;
+  background: var(--color-zinc-950);
+  color: #fff;
+  clip-path: polygon(var(--run) 0, 100% 0, calc(100% - var(--run)) 100%, 0 100%);
+  margin-left: calc(var(--gap) - var(--after-y) - var(--run) / 2);
+  padding-left: calc(var(--gap) - var(--before-f) + var(--reversed) + var(--run) / 2);
+  padding-right: calc(var(--endcap) - var(--after-t) + var(--run) / 2);
+}
+
 .price-slider input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
