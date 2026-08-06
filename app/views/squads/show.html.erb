@@ -1,0 +1,74 @@
+<% document_title = "Best FPL Team #{@horizon == 'season' ? 'for the Rest of Season' : "GW#{@gameweek&.fpl_id}"} | Fantasy Forecast" %>
+<% content_for :meta_title, document_title %>
+<% content_for :meta_description, "The best Fantasy Premier League squad £100.0m can buy for #{horizon_label.downcase}, picked from our own forecasts. Eleven starters, four substitutes, and the captain to take." %>
+
+<div class="mb-6 flex items-start justify-between gap-4">
+  <div>
+    <h1 class="text-xl sm:text-2xl font-semibold text-zinc-900">The Best £100.0m Squad, <%= horizon_label %></h1>
+    <p class="mt-1 text-sm text-zinc-500">Check the forecast before you pick your team.</p>
+  </div>
+  <div class="flex shrink-0 items-center gap-1">
+    <%= link_to "Next Gameweek", squad_path,
+          class: "px-3 py-1.5 text-sm font-medium rounded-lg #{@horizon == 'gameweek' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900'}" %>
+    <%= link_to "Rest of Season", season_squad_path,
+          class: "px-3 py-1.5 text-sm font-medium rounded-lg #{@horizon == 'season' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900'}" %>
+  </div>
+</div>
+
+<% if @squad %>
+  <div class="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-zinc-200 bg-zinc-50 px-5 py-4">
+    <% [ [ "Formation", @squad.formation ],
+         [ "Expected points", format("%.1f", @squad.expected_points) ],
+         [ "Spent", player_price(@squad.cost) ],
+         [ "In the bank", player_price(@squad.banked) ] ].each do |label, value| %>
+      <div>
+        <dt class="text-[10px] font-bold uppercase leading-none tracking-wider text-zinc-400"><%= label %></dt>
+        <dd class="mt-1 text-base font-bold leading-none tabular-nums text-zinc-900"><%= value %></dd>
+      </div>
+    <% end %>
+  </div>
+
+  <h2 class="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Starting XI</h2>
+  <div class="flex flex-col gap-2">
+    <% %w[goalkeeper defender midfielder forward].each do |position| %>
+      <% @squad.starters_in(position).each do |pick| %>
+        <%= render SquadPickComponent.new(pick: pick, player: @players[pick["player_id"]],
+                                          captain: pick == @squad.captain) %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <h2 class="mt-8 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+    Bench, in the order they come on
+  </h2>
+  <div class="flex flex-col gap-2">
+    <% @squad.bench.each_with_index do |pick, index| %>
+      <%= render SquadPickComponent.new(pick: pick, player: @players[pick["player_id"]],
+                                        order: index + 1) %>
+    <% end %>
+  </div>
+
+  <div class="mt-8 space-y-2 text-xs/6 text-zinc-500">
+    <p>
+      Picked to FPL's own rules: fifteen players, two keepers, five defenders, five
+      midfielders, three forwards, no more than three from any one club, and
+      <%= player_price(SquadOptimiser::BUDGET) %> to spend.
+    </p>
+    <p>
+      A substitute only scores when a starter does not play, so the eleven are weighed in
+      full and the bench by how often each place is actually used. Players FPL has flagged
+      as anything other than fully available are left out.
+    </p>
+    <p>
+      This is the squad to build from scratch, so it is a wildcard answer rather than a
+      transfer one. It knows nothing about the team you already own.
+    </p>
+  </div>
+<% else %>
+  <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center">
+    <h2 class="text-sm font-medium text-zinc-900">No squad yet</h2>
+    <p class="mt-1 text-sm text-zinc-500">
+      There is no forecast for <%= horizon_label.downcase %> to build one from.
+    </p>
+  </div>
+<% end %>

@@ -30,6 +30,10 @@ Rails.application.routes.draw do
   # Player detail page
   resources :players, only: [ :show ]
 
+  # The best fifteen £100.0m buys. Two horizons, the same as the rankings.
+  get "squad", to: "squads#show", as: :squad, defaults: { horizon: "gameweek" }
+  get "squad/season", to: "squads#show", as: :season_squad, defaults: { horizon: "season" }
+
   # Dynamic robots.txt based on environment
   get "robots.txt", to: "application#robots", defaults: { format: "text" }
 

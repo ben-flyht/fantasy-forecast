@@ -71,6 +71,47 @@ class Fpl::HourlyPipelineTest < ActiveSupport::TestCase
     assert_predicate Forecast.where(gameweek: gameweeks(:next_gw), horizon: "season"), :any?
   end
 
+  # A legal squad needs fifteen players across at least five clubs, which this stub's
+  # small pool cannot field. The search itself is covered by SquadOptimiserTest; what
+  # matters here is when the run reaches for it.
+  def stored_squad(gameweek)
+    Squad.create!(gameweek: gameweek, horizon: "gameweek", formation: "4-4-2",
+                  cost: 1000, expected_points: 50.0, picks: [])
+  end
+
+  def horizons_searched(gameweek)
+    searched = []
+    original = SquadOptimiser.method(:call)
+    SquadOptimiser.define_singleton_method(:call) { |**args| searched << args[:horizon] }
+    Fpl::HourlyPipeline.new.send(:optimise_squads, gameweek)
+    searched
+  ensure
+    SquadOptimiser.define_singleton_method(:call, original)
+  end
+
+  # The run happens every hour whether or not football has, and the answer cannot change
+  # while its inputs have not.
+  test "leaves a squad alone when no forecast has moved since it was written" do
+    stub_fpl
+    run_pipeline
+    gameweek = gameweeks(:next_gw)
+    stored_squad(gameweek)
+    Forecast.where(gameweek: gameweek).update_all(updated_at: 1.hour.ago)
+
+    assert_equal [ "season" ], horizons_searched(gameweek),
+                 "only the horizon without a current squad should be searched again"
+  end
+
+  test "searches again once a forecast is newer than the squad" do
+    stub_fpl
+    run_pipeline
+    gameweek = gameweeks(:next_gw)
+    stored_squad(gameweek)
+    Forecast.where(gameweek: gameweek).update_all(updated_at: 1.minute.from_now)
+
+    assert_includes horizons_searched(gameweek), "gameweek"
+  end
+
   test "files this run's readings against the gameweek this run made current" do
     stub_fpl
 
