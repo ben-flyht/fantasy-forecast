@@ -1,11 +1,16 @@
-<% content_for :meta_title, "Best FPL #{@position_filter&.capitalize}s #{horizon_short} | Fantasy Forecast" %>
+<%# Named once, used twice: the head needs it on a full render, and the frame needs it
+    again on every swap, because Turbo will not touch the title on a frame visit. %>
+<% document_title = "Best FPL #{@position_filter&.capitalize}s #{horizon_short} | Fantasy Forecast" %>
+<% content_for :meta_title, document_title %>
 <% content_for :meta_description, "FPL #{@position_filter} rankings for #{horizon_label}. Player picks graded A to F, led by price and ownership and weighed against form, fixtures, and expected goals to help you win at Fantasy Premier League." %>
 <% content_for :meta_url, @canonical_path ? "#{ApplicationHelper::BASE_URL}#{@canonical_path}" : root_url %>
 
 <%= turbo_frame_tag "rankings_container" do %>
     <div class="mb-6">
-      <h1 class="text-xl sm:text-2xl font-semibold text-zinc-900"><%= @page_title %></h1>
-      <p class="mt-1 text-sm text-zinc-500">What the market backs, checked against form, fixtures, and expected goals — graded A to F.</p>
+      <h1 class="text-xl sm:text-2xl font-semibold text-zinc-900"
+          data-controller="page-title"
+          data-page-title-text-value="<%= document_title %>"><%= @page_title %></h1>
+      <p class="mt-1 text-sm text-zinc-500">The market picks the favourites. We check them against form, fixtures and expected goals, then grade A to F.</p>
       <% if @forecast_at %>
         <p class="mt-1 text-xs text-zinc-400">
           Updated

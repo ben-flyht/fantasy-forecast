@@ -38,4 +38,30 @@ class RankingsTest < ApplicationSystemTestCase
     assert_no_text "Content missing"
     assert_current_path gameweek_position_path(gameweek: 1, position: "defenders")
   end
+
+  # A frame swap rewrites the frame and pushes a new URL, but leaves the title alone,
+  # so the tab and the browser history can end up naming a page nobody is looking at.
+  test "the browser title follows the horizon" do
+    visit gameweek_position_path(gameweek: 1, position: "defenders")
+    assert_title "Best FPL Defenders GW1 | Fantasy Forecast"
+
+    select "Rest of Season", from: "gameweek"
+
+    assert_current_path season_position_path(position: "defenders")
+    assert_title "Best FPL Defenders Rest of Season | Fantasy Forecast"
+  end
+
+  test "the browser title follows the position" do
+    midfielder = Player.create!(first_name: "Test", last_name: "Midfielder", short_name: "T.Midfielder",
+                                fpl_id: 9701, code: 9701, team: @team, position: "midfielder")
+    Forecast.create!(player: midfielder, gameweek: @gameweek, rank: 1, score: 4.0, horizon: "gameweek")
+
+    visit gameweek_position_path(gameweek: 1, position: "defenders")
+    assert_title "Best FPL Defenders GW1 | Fantasy Forecast"
+
+    find("label", text: "MID").click
+
+    assert_current_path gameweek_position_path(gameweek: 1, position: "midfielders")
+    assert_title "Best FPL Midfielders GW1 | Fantasy Forecast"
+  end
 end
