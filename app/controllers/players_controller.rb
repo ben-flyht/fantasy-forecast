@@ -4,6 +4,14 @@ class PlayersController < ApplicationController
   # Facts about a player we report rather than rate. See #load_row_facts.
   ROW_FACT_TYPES = %w[now_cost selected_by_percent transfers_in transfers_out].freeze
 
+  # FPL publishes its own expected points for the coming week. It costs one more
+  # reading and it is the fairest check a reader can make on ours, so a player's
+  # own page carries it. The rankings do not: three hundred rows do not need a
+  # second opinion each.
+  FPL_EXPECTED_POINTS = "ep_next".freeze
+
+  SHOW_FACT_TYPES = (ROW_FACT_TYPES + [ FPL_EXPECTED_POINTS ]).freeze
+
   # How deep a list is worth reading in each position. Past this you are scrolling
   # through players nobody is choosing between, and the tail is where a forecast is
   # least reliable anyway: those are the players whose minutes we are guessing at.
@@ -86,7 +94,18 @@ class PlayersController < ApplicationController
   def load_player_page
     load_player_performances
     load_upcoming_fixtures
+    load_player_context
     @related = RelatedComparisons.call(players: @player, gameweek: @next_gameweek, horizon: @horizon)
+  end
+
+  # Everything beside the forecast: who he is, who he is up against, and what he
+  # has been doing. Each is asked its own question and answers for itself, so a
+  # page section that has nothing to say simply does not appear.
+  def load_player_context
+    @profile = PlayerProfile.call(player: @player, gameweek: @next_gameweek)
+    @comparison = PlayerComparison.call(player: @player, gameweek: @next_gameweek,
+                                        horizon: @horizon, divisor: season_divisor)
+    @history = PlayerHistory.call(player: @player, horizon: @horizon)
   end
 
   def load_player_forecast
@@ -96,9 +115,10 @@ class PlayersController < ApplicationController
     return unless forecast
 
     @forecast_at = forecast.updated_at
+    @working = forecast.working
     @forecast = forecast_summary(forecast)
     @player_ranking = player_ranking(forecast)
-    @player_facts = latest_snapshot_stats([ @player.id ], ROW_FACT_TYPES)[@player.id]
+    @player_facts = latest_snapshot_stats([ @player.id ], SHOW_FACT_TYPES)[@player.id]
   end
 
   def forecast_summary(forecast)

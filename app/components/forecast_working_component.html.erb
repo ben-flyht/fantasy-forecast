@@ -1,0 +1,111 @@
+<div class="mt-6 border-t border-zinc-200 pt-5">
+  <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">How we got there</h2>
+
+  <div class="mt-4 grid gap-x-10 gap-y-6 sm:grid-cols-2">
+    <!-- What he is worth in a single game -->
+    <div>
+      <p class="text-sm font-semibold text-zinc-900">
+        Worth <span class="tabular-nums"><%= points(estimate) %></span> points a game
+      </p>
+
+      <% if estimates_differ? %>
+        <dl class="mt-2 space-y-1 text-sm text-zinc-600">
+          <div class="flex justify-between gap-4">
+            <dt>What his record says</dt>
+            <dd class="tabular-nums font-medium text-zinc-900"><%= points(ours) %></dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt>What his price and ownership say</dt>
+            <dd class="tabular-nums font-medium text-zinc-900"><%= points(crowd) %></dd>
+          </div>
+        </dl>
+        <% if record_swing %>
+          <p class="mt-2 text-sm text-zinc-600">
+            His record argues him <strong class="font-semibold text-zinc-900"><%= percentage(record_swing) %></strong>
+            against what the market pays for him.
+          </p>
+        <% end %>
+      <% elsif both_estimates? %>
+        <p class="mt-2 text-sm text-zinc-600">
+          His record and his price say the same thing, so there is nothing to argue about.
+        </p>
+      <% elsif crowd.nil? %>
+        <p class="mt-2 text-sm text-zinc-600">The market has no reading on him, so this is his record alone.</p>
+      <% else %>
+        <p class="mt-2 text-sm text-zinc-600">We have no record to read yet, so this is his price and ownership alone.</p>
+      <% end %>
+
+      <p class="mt-2 text-xs text-zinc-500">
+        <% if rate_worth_stating? %>
+          Built from <span class="tabular-nums font-medium"><%= points(per_90) %></span> points per 90 minutes,
+          over an expected <span class="tabular-nums font-medium"><%= minutes %></span> minutes a game.
+        <% elsif plays_full_match? %>
+          He is expected to play the full 90 minutes.
+        <% elsif minutes&.positive? %>
+          Over an expected <span class="tabular-nums font-medium"><%= minutes %></span> minutes a game.
+        <% end %>
+        <% if form_swing %>
+          His recent form is <span class="tabular-nums font-medium"><%= percentage(form_swing) %></span> on his usual, already inside this rate.
+        <% end %>
+      </p>
+    </div>
+
+    <!-- What the horizon does to it -->
+    <div>
+      <% if opponents.empty? %>
+        <p class="text-sm font-semibold text-zinc-900">No fixture, so nothing to score.</p>
+      <% elsif season? %>
+        <p class="text-sm font-semibold text-zinc-900">
+          <%= pluralize(opponents.size, "fixture") %> to come, worth
+          <span class="tabular-nums">&times;<%= format("%.1f", games) %></span>
+        </p>
+        <% if average_difficulty %>
+          <p class="mt-2 text-sm text-zinc-600">
+            Averaging <span class="tabular-nums font-medium text-zinc-900"><%= format("%.1f", average_difficulty) %></span>
+            out of 5 for difficulty, each counted for what it is worth to him.
+          </p>
+        <% end %>
+      <% elsif single_fixture %>
+        <p class="text-sm font-semibold text-zinc-900">
+          <%= single_fixture[:name] %>
+          <span class="font-normal text-zinc-500">(<%= single_fixture[:home] ? "home" : "away" %>)</span>
+        </p>
+        <p class="mt-2 text-sm text-zinc-600">
+          <% if single_fixture[:difficulty]&.positive? %>
+            Rated <span class="tabular-nums font-medium text-zinc-900"><%= single_fixture[:difficulty] %> out of 5</span> for difficulty<%= fixture_effect ? "," : ", which is an ordinary afternoon and leaves the estimate where it is." %>
+          <% end %>
+          <% if fixture_effect %>
+            worth <strong class="font-semibold text-zinc-900"><%= percentage(fixture_effect) %></strong> to a player like him.
+          <% end %>
+        </p>
+      <% else %>
+        <p class="text-sm font-semibold text-zinc-900">
+          <%= pluralize(opponents.size, "fixture") %> this gameweek, worth
+          <span class="tabular-nums">&times;<%= format("%.2f", games) %></span>
+        </p>
+        <ul class="mt-2 space-y-1 text-sm">
+          <% opponents.each do |opponent| %>
+            <li class="flex justify-between gap-4 text-zinc-600">
+              <span><%= opponent[:name] %> <span class="text-zinc-400">(<%= opponent[:home] ? "H" : "A" %>)</span></span>
+              <% if opponent[:difficulty]&.positive? %>
+                <span class="tabular-nums text-zinc-500">difficulty <%= opponent[:difficulty] %>/5</span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+
+      <% if transfer_swing %>
+        <p class="mt-2 text-sm text-zinc-600">
+          Managers are
+          <strong class="font-semibold text-zinc-900"><%= transfer_swing > 1 ? "buying" : "selling" %></strong>
+          him, worth <span class="tabular-nums font-medium text-zinc-900"><%= percentage(transfer_swing) %></span>.
+        </p>
+      <% end %>
+    </div>
+  </div>
+
+  <% if caveats.any? %>
+    <p class="mt-4 text-xs text-zinc-500"><%= caveats.join(" ") %></p>
+  <% end %>
+</div>

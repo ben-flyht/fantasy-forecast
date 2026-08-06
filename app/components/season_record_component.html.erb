@@ -1,0 +1,36 @@
+<section class="mt-8">
+  <h2 class="text-base/6 font-semibold text-zinc-950">This season</h2>
+
+  <% if totals.any? %>
+    <dl class="mt-3 flex flex-wrap gap-x-10 gap-y-4 rounded-xl bg-zinc-50 px-5 py-4">
+      <% totals.each do |label, value| %>
+        <div>
+          <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500"><%= label %></dt>
+          <dd class="mt-1 text-lg font-extrabold leading-none tracking-[-0.02em] tabular-nums text-zinc-950"><%= value %></dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <% if trends.any? %>
+    <ul class="mt-4 divide-y divide-zinc-100">
+      <% trends.each do |trend| %>
+        <li class="flex items-center gap-4 py-2.5">
+          <span class="flex-1 text-sm text-zinc-600"><%= trend.label %></span>
+          <span class="text-sm font-semibold tabular-nums text-zinc-950"><%= latest(trend) %></span>
+          <%= render SparklineComponent.new(values: trend.points.map(&:value)) %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <% if history.price_history.moving? %>
+    <div class="mt-4 flex items-center gap-4 border-t border-zinc-100 pt-3">
+      <span class="flex-1 text-sm text-zinc-600">Price</span>
+      <span class="text-sm font-semibold tabular-nums text-zinc-950">
+        <%= helpers.player_price(history.price_history.latest) %>
+      </span>
+      <%= render SparklineComponent.new(values: history.price_history.points.map(&:value)) %>
+    </div>
+  <% end %>
+</section>

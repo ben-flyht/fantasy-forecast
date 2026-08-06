@@ -45,8 +45,11 @@
   <% end %>
 </div>
 
+<!-- Set pieces, fitness and the rest of what we report without rating -->
+<%= render PlayerProfileComponent.new(profile: @profile) %>
+
 <!-- Why this grade -->
-<%# The horizon toggle now lives in the heading, so the whole page navigates rather
+<%# The horizon toggle lives in the heading, so the whole page navigates rather
     than the panel alone. Turbo Drive still swaps the body without a reload. %>
 <% if @forecast %>
   <% reach = Horizon.find(@forecast[:horizon]) %>
@@ -56,6 +59,7 @@
         <div>
           <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Rank</dt>
           <dd class="mt-1.5 text-3xl font-extrabold leading-none tracking-[-0.03em] tabular-nums text-zinc-950">#<%= @forecast[:rank] %></dd>
+          <dd><%= render RankMovementComponent.new(history: @history) %></dd>
         </div>
       <% end %>
       <% if @forecast[:grade] %>
@@ -73,10 +77,31 @@
     </dl>
 
     <% if @forecast[:tier] %>
-      <p class="mt-5 text-sm text-zinc-600"><%= TierCalculator::TIERS.dig(@forecast[:tier], :description) %></p>
+      <p class="mt-5 text-sm font-medium text-zinc-800"><%= TierCalculator::TIERS.dig(@forecast[:tier], :description) %></p>
     <% end %>
+
+    <%# The one figure on the page a reader can mark ours against for free. FPL
+        publishes it for the coming week only, so the other horizons say nothing. %>
+    <% if @forecast[:horizon] == "gameweek" && (verdict = against_fpl(@forecast[:score], @player_facts&.dig(PlayersController::FPL_EXPECTED_POINTS))) %>
+      <p class="mt-1 text-sm text-zinc-600"><%= verdict %></p>
+    <% end %>
+
+    <%# The arithmetic that produced the figures above, in the same panel as
+        them: the number and its reasons are one thought, not two. %>
+    <%= render ForecastWorkingComponent.new(working: @working, horizon: @horizon,
+                                            position: @player.position, chance: @profile.chance_of_playing) %>
+
+    <%# What else the money buys, beside what he is worth: one decision, one panel. %>
+    <%= render AlternativesComponent.new(comparison: @comparison, player: @player, horizon: @horizon) %>
   </div>
 <% end %>
+
+<!-- Who is in his way for a place in the side -->
+<%= render PlayerOptionsComponent.new(
+      entries: @comparison.rivals, horizon: @horizon,
+      cost: @comparison.cost, score: @forecast&.dig(:score)&.to_f,
+      title: "Competing for a start",
+      subtitle: "Every #{@player.position} at #{@player.team&.name}, best forecast first." ) %>
 
 <%# The players he is genuinely being chosen among, each with a page that answers
     the pair outright. %>
@@ -111,3 +136,6 @@
         note: nil,
         empty_message: "No matches played yet this season." %>
 </div>
+
+<!-- What he has actually done, and which way the rates are moving -->
+<%= render SeasonRecordComponent.new(history: @history) %>

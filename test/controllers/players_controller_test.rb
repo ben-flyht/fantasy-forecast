@@ -413,4 +413,55 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, top.short_name
     assert_equal "2", response.body[/tabular-nums text-zinc-900">(\d+)</, 1]
   end
+
+  # A page that leans on a dozen readings must not fall over when a player has
+  # none of them. All three cases below exist in the real data.
+  test "a player with no forecast still renders his page" do
+    stranger = Player.create!(first_name: "No", last_name: "Forecast", short_name: "N.Forecast",
+                              team: @test_team, position: "defender", fpl_id: 611)
+
+    get player_path(stranger)
+
+    assert_response :success
+    assert_includes response.body, "No Forecast"
+  end
+
+  test "a player with no club renders without competing for a start" do
+    loner = Player.create!(first_name: "No", last_name: "Club", short_name: "N.Club",
+                           position: "defender", fpl_id: 612)
+
+    get player_path(loner)
+
+    assert_response :success
+    assert_not_includes response.body, "Competing for a start"
+  end
+
+  test "a player we hold no price for is offered no alternatives" do
+    priceless = Player.create!(first_name: "No", last_name: "Price", short_name: "N.Price",
+                               team: @test_team, position: "defender", fpl_id: 613)
+    Forecast.create!(player: priceless, gameweek: @gameweek2, rank: 1, score: 4.0)
+
+    get player_path(priceless)
+
+    assert_response :success
+    assert_not_includes response.body, "affordable"
+    assert_not_includes response.body, "Better for the money"
+  end
+
+  # FPL publishes its own expected points, which is the one figure a reader can
+  # mark ours against for free. It belongs to a single week, so the season view
+  # must not quote it.
+  test "FPL's own estimate is compared for a week and left out of a season" do
+    rated = Player.create!(first_name: "Rated", last_name: "Player", short_name: "R.Player",
+                           team: @test_team, position: "defender", fpl_id: 614)
+    Forecast.create!(player: rated, gameweek: @gameweek2, rank: 1, score: 6.0, horizon: "gameweek")
+    Forecast.create!(player: rated, gameweek: @gameweek2, rank: 1, score: 90.0, horizon: "season")
+    Statistic.create!(player: rated, gameweek: @gameweek2, type: "ep_next", value: 4.0)
+
+    get player_path(rated)
+    assert_includes response.body, "FPL&#39;s own estimate of 4.0"
+
+    get player_path(rated, horizon: "season")
+    assert_not_includes response.body, "FPL&#39;s own estimate"
+  end
 end
