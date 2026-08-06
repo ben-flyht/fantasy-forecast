@@ -15,6 +15,15 @@ Rails.application.routes.draw do
   get "gameweeks/ros/:position", to: redirect("/season/%{position}", status: 301),
       constraints: { position: POSITIONS }
 
+  # Him or him: the question a manager asks when he has already narrowed it to
+  # two, with an address of its own so it can be found by asking it.
+  # Two player addresses and a separator, and no dots: a card asked for as .png
+  # stays a card rather than becoming a third player.
+  PAIR = /[a-z0-9\-]+-vs-[a-z0-9\-]+/
+
+  get "compare", to: "comparisons#index", as: :comparisons
+  get "compare/:pair", to: "comparisons#show", as: :comparison, constraints: { pair: PAIR }
+
   # Redirect old /players path to root
   get "players", to: redirect("/", status: 301)
 

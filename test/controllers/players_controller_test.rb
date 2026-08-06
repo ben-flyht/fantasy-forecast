@@ -97,6 +97,82 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "a player page offers the arguments he is part of" do
+    rival = Player.create!(first_name: "Test", last_name: "Keeper", team: @test_team,
+                           position: @player.position, fpl_id: 998)
+    Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 4.2)
+    Forecast.create!(player: rival, gameweek: @gameweek2, rank: 2, score: 4.0)
+
+    get player_path(@player)
+
+    assert_select "a[href=?]", comparison_path(pair: Comparison.new(@player, rival).slug)
+  end
+
+  test "a ranking page has a share card of its own" do
+    Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1, score: 4.2)
+
+    get gameweek_position_path(gameweek: 5, position: "#{@player.position}s", format: :png)
+
+    assert_response :success
+    assert_equal "image/png", response.media_type
+    assert_equal [ ShareCard::WIDTH, ShareCard::HEIGHT ], png_size(response.body)
+  end
+
+  test "a player has a share card of his own" do
+    Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 4.2)
+
+    get player_path(@player, format: :png)
+
+    assert_response :success
+    assert_equal [ ShareCard::WIDTH, ShareCard::HEIGHT ], png_size(response.body)
+  end
+
+  test "a player with no forecast still has a card" do
+    get player_path(@player2, format: :png)
+
+    assert_response :success
+    assert_equal [ ShareCard::WIDTH, ShareCard::HEIGHT ], png_size(response.body)
+  end
+
+  test "an old address for a card is sent to the card, not the page" do
+    get "/players/wrong-slug-#{@player.fpl_id}.png"
+
+    assert_redirected_to player_path(@player, format: :png)
+  end
+
+  test "a ranking page tells a preview where to find its card" do
+    get season_position_path(position: "midfielders")
+
+    assert_select "meta[property='og:image'][content=?]",
+                  "#{ApplicationHelper::BASE_URL}/season/midfielders.png"
+    assert_select "meta[property='og:image:width'][content=?]", ShareCard::WIDTH.to_s
+  end
+
+  test "a player page tells a preview where to find its card" do
+    get player_path(@player)
+
+    assert_select "meta[property='og:image'][content=?]",
+                  "#{ApplicationHelper::BASE_URL}#{player_path(@player)}.png"
+  end
+
+  test "the front page is its own canonical, not the coming gameweek's" do
+    get root_path
+
+    assert_select "link[rel=canonical][href=?]", "#{ApplicationHelper::BASE_URL}/"
+  end
+
+  test "a filtered front page still answers to the front page" do
+    get root_path, params: { team_id: @test_team.id }
+
+    assert_select "link[rel=canonical][href=?]", "#{ApplicationHelper::BASE_URL}/"
+  end
+
+  test "a ranking page is its own canonical" do
+    get season_position_path(position: "midfielders")
+
+    assert_select "link[rel=canonical][href=?]", "#{ApplicationHelper::BASE_URL}/season/midfielders"
+  end
+
   test "should redirect old query-param URLs to clean URLs" do
     get root_path, params: { gameweek: 5, position: "midfielder" }
     assert_response :moved_permanently

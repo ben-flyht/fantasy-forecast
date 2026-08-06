@@ -1,0 +1,73 @@
+<% horizon_words = @head_to_head.season? ? "Rest of Season" : "Gameweek #{@gameweek&.fpl_id}" %>
+<% content_for :meta_title, "#{comparison_title(@comparison)} FPL #{horizon_words} | Fantasy Forecast" %>
+<% content_for :meta_description, "#{comparison_question(@comparison)} #{verdict_line(@head_to_head)} Both graded A to F from price, ownership, form and fixtures." %>
+<% content_for :meta_url, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug)}" %>
+<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug, format: :png)}" %>
+
+<%= link_to root_path(position: @comparison.left.position), class: "inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-950" do %>
+  <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+  </svg>
+  Back to Rankings
+<% end %>
+
+<h1 class="mt-6 text-2xl sm:text-3xl font-semibold tracking-[-0.02em] text-zinc-950">
+  <%= comparison_question(@comparison) %>
+</h1>
+
+<div class="mt-4 rounded-xl bg-zinc-100 p-5 sm:p-7">
+  <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Our answer, <%= horizon_words.downcase %></p>
+  <p class="mt-1.5 text-3xl sm:text-4xl font-extrabold leading-none tracking-[-0.03em] text-zinc-950">
+    <%= verdict_name(@head_to_head) %>
+  </p>
+  <p class="mt-3 text-sm text-zinc-700"><%= verdict_line(@head_to_head) %></p>
+
+  <%= form_with url: comparison_path(pair: @comparison.slug), method: :get, class: "mt-5" do %>
+    <div class="inline-flex items-center gap-1 rounded-lg bg-zinc-200/70 p-1" role="radiogroup">
+      <% [ [ "gameweek", "Next Gameweek" ], [ "season", "Rest of Season" ] ].each do |value, label| %>
+        <% active = @horizon == value %>
+        <label class="px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer transition-colors <%= active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900" %>">
+          <%= radio_button_tag :horizon, value, active, class: "sr-only", onchange: "this.form.requestSubmit()" %><%= label %>
+        </label>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  <% @head_to_head.sides.each do |side| %>
+    <%= render "comparisons/side", side: side, head_to_head: @head_to_head,
+               winner: @head_to_head.winner == side %>
+  <% end %>
+</div>
+
+<section class="mt-10">
+  <h2 class="text-lg font-semibold text-zinc-900">
+    How we read <%= comparison_title(@comparison).delete_suffix("?") %>
+  </h2>
+  <p class="mt-2 text-sm text-zinc-600">
+    Both players are forecast the same way: their price and how many managers own them lead, weighed
+    against minutes, recent form, expected goals and assists, and who they are playing.
+    <%= @head_to_head.season? ?
+        "Rest-of-season scores are totals, so they are read as the week they average to before they are graded." :
+        "The score is the points we expect from the coming gameweek alone." %>
+    <% if @head_to_head.tie? && @head_to_head.sides.all?(&:forecast?) %>
+      The gap here is under <%= HeadToHead::CLOSE %> of a point a week, which is smaller than the
+      difference our forecast can honestly claim to see, so neither is a clear pick.
+    <% end %>
+  </p>
+</section>
+
+<% if @related.any? %>
+  <section class="mt-8">
+    <h2 class="text-lg font-semibold text-zinc-900">Other players worth weighing against these two</h2>
+    <ul class="mt-3 flex flex-wrap gap-2">
+      <% @related.each do |pair| %>
+        <li>
+          <%= link_to comparison_title(pair), comparison_path(pair: pair.slug),
+              class: "inline-block rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>

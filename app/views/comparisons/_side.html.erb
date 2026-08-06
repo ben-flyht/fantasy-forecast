@@ -1,0 +1,49 @@
+<% player = side.player %>
+<div class="rounded-xl border <%= winner ? "border-zinc-900" : "border-zinc-200" %> overflow-hidden">
+  <div class="h-2" style="background-color: <%= player.team&.color || Team::DEFAULT_COLOR %>"></div>
+
+  <div class="p-5">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <%= link_to player_path(player), class: "text-lg font-semibold text-zinc-950 hover:underline" do %>
+          <%= player.full_name %>
+        <% end %>
+        <p class="mt-0.5 text-sm text-zinc-500">
+          <%= player.team&.name %> &middot; <%= player.position.capitalize %>
+        </p>
+      </div>
+      <% if winner %>
+        <span class="shrink-0 rounded-md bg-zinc-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Our pick</span>
+      <% end %>
+    </div>
+
+    <dl class="mt-5 flex flex-wrap items-baseline gap-x-8 gap-y-4">
+      <div>
+        <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Grade</dt>
+        <dd class="mt-1.5 text-3xl font-extrabold leading-none tracking-[-0.03em] text-zinc-950"><%= side.grade || "—" %></dd>
+      </div>
+      <div>
+        <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+          Expected points <%= head_to_head.season? ? "rest of season" : "this gameweek" %>
+        </dt>
+        <dd class="mt-1.5 text-3xl font-extrabold leading-none tracking-[-0.03em] tabular-nums text-zinc-950">
+          <%= side.forecast? ? format("%.1f", side.score) : "—" %>
+        </dd>
+      </div>
+      <% if side.rank %>
+        <div>
+          <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Rank</dt>
+          <dd class="mt-1.5 text-3xl font-extrabold leading-none tracking-[-0.03em] tabular-nums text-zinc-950">#<%= side.rank %></dd>
+        </div>
+      <% end %>
+    </dl>
+
+    <p class="mt-5 text-sm text-zinc-600">
+      <%= [ player_price(side.cost), player_ownership(side.ownership), comparison_fixture(side) ].compact.join(" · ") %>
+    </p>
+
+    <% if side.tier %>
+      <p class="mt-2 text-sm text-zinc-700"><%= TierCalculator::TIERS.dig(side.tier, :description) %></p>
+    <% end %>
+  </div>
+</div>

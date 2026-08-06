@@ -1,5 +1,6 @@
 <% content_for :meta_title, "#{@player.full_name} - Fantasy Forecast" %>
 <% content_for :meta_description, "#{@player.full_name} fantasy football stats, rankings, and news. Get the latest forecast and performance data for your FPL decisions." %>
+<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{@card_path}" %>
 <% content_for :head do %>
   <%= player_structured_data(@player) %>
 <% end %>
@@ -86,6 +87,23 @@
       <% end %>
     </div>
   <% end %>
+<% end %>
+
+<%# The players he is genuinely being chosen among, each with a page that answers
+    the pair outright. %>
+<% if @related&.any? %>
+  <section class="mt-8">
+    <h2 class="text-base/6 font-semibold text-zinc-950">Him or him?</h2>
+    <p class="mt-1 text-sm text-zinc-500">The players our forecast puts next to him, answered one pair at a time.</p>
+    <ul class="mt-3 flex flex-wrap gap-2">
+      <% @related.each do |pair| %>
+        <li>
+          <%= link_to comparison_title(pair), comparison_path(pair: pair.slug),
+              class: "inline-block rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
 <% end %>
 
 <!-- Fixtures & Form -->

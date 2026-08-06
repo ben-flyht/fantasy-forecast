@@ -52,6 +52,18 @@ class Player < ApplicationRecord
     "#{slug}-#{fpl_id}"
   end
 
+  # The player an address names. The name in front of it is there to be read, so
+  # it can change with a transfer or a spelling correction without breaking the
+  # link: the number on the end is the one that identifies him.
+  #
+  # A bare number is an address from before the names were added, and still works.
+  def self.from_param(param)
+    param = param.to_s
+    return find(param) if param.match?(/\A\d+\z/)
+
+    find_by!(fpl_id: param.split("-").last)
+  end
+
   def photo_url(size: "40x40")
     return nil unless code.present?
     "https://resources.premierleague.com/premierleague25/photos/players/#{size}/#{code}.png"

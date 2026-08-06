@@ -1,0 +1,38 @@
+<% content_for :meta_title, "FPL Player Comparisons: Who Should I Pick? | Fantasy Forecast" %>
+<% content_for :meta_description, "Head-to-head FPL player comparisons, answered. Every pair graded A to F with expected points for the coming gameweek, from price, ownership, form and fixtures." %>
+<% content_for :meta_url, "#{ApplicationHelper::BASE_URL}#{comparisons_path}" %>
+
+<h1 class="text-xl sm:text-2xl font-semibold text-zinc-900">Him or him?</h1>
+<p class="mt-1 text-sm text-zinc-500">
+  The picks worth arguing about
+  <%= @gameweek ? "for Gameweek #{@gameweek.fpl_id}" : "this season" %>: players our forecast puts
+  next to each other, where the choice is genuinely close.
+</p>
+
+<% if @pairs.any? %>
+  <% @pairs.each do |position, pairs| %>
+    <section class="mt-8">
+      <h2 class="text-lg font-semibold text-zinc-900"><%= position.capitalize %>s</h2>
+      <ul class="mt-3 flex flex-wrap gap-2">
+        <% pairs.each do |pair| %>
+          <li>
+            <%= link_to comparison_title(pair), comparison_path(pair: pair.slug),
+                class: "inline-block rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <section class="mt-10">
+    <h2 class="text-lg font-semibold text-zinc-900">How a comparison is answered</h2>
+    <p class="mt-2 text-sm text-zinc-600">
+      Both players are forecast the same way, from the same stored numbers the rankings are read from,
+      so a comparison can never disagree with the tables. Price and ownership lead, weighed against
+      minutes, recent form, expected goals and assists, and who they are playing. Where the gap is
+      under <%= HeadToHead::CLOSE %> of a point a week we say so rather than invent a winner.
+    </p>
+  </section>
+<% else %>
+  <p class="mt-8 text-sm text-zinc-500">No forecasts yet for the coming gameweek, so there is nothing to compare.</p>
+<% end %>

@@ -12,5 +12,12 @@ module ActiveSupport
     fixtures :all
 
     # Add more helper methods to be used by all tests here...
+
+    # A PNG says how big it is in the eight bytes after its header, which is the
+    # cheapest way to ask a share card whether it came out the shape social sites
+    # ask for.
+    def png_size(bytes)
+      bytes[16, 8].unpack("N2")
+    end
   end
 end

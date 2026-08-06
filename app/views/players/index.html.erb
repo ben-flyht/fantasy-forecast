@@ -4,6 +4,7 @@
 <% content_for :meta_title, document_title %>
 <% content_for :meta_description, "FPL #{@position_filter} rankings for #{horizon_label}. Every player graded, led by price and ownership and weighed against form, fixtures, and expected goals to help you win at Fantasy Premier League." %>
 <% content_for :meta_url, @canonical_path ? "#{ApplicationHelper::BASE_URL}#{@canonical_path}" : root_url %>
+<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{@card_path}" %>
 
 <%= turbo_frame_tag "rankings_container" do %>
     <div class="mb-6 flex items-start justify-between gap-4">

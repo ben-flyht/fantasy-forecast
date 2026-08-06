@@ -1,4 +1,6 @@
 class PlayersController < ApplicationController
+  include ServesCards
+
   # Facts about a player we report rather than rate. See #load_row_facts.
   ROW_FACT_TYPES = %w[now_cost selected_by_percent transfers_in transfers_out].freeze
 
@@ -31,22 +33,23 @@ class PlayersController < ApplicationController
     return unless validate_gameweek
 
     load_rankings_page
+
+    respond_to do |format|
+      format.html
+      format.png { send_card("cards/rankings", rankings_card_key) }
+    end
   end
 
   def show
     @player = find_player_from_param
+    return if redirect_to_canonical_player
 
-    # Redirect to canonical URL if accessed via old-style or incorrect slug
-    unless params[:id] == @player.to_param
-      redirect_to player_path(@player), status: :moved_permanently
-      return
+    load_player
+
+    respond_to do |format|
+      format.html { load_player_page }
+      format.png { send_card("cards/player", player_card_key) }
     end
-
-    @next_gameweek = Gameweek.next_gameweek
-    @horizon = params[:horizon] == SEASON ? SEASON : "gameweek"
-    load_player_forecast
-    load_player_performances
-    load_upcoming_fixtures
   end
 
   private
@@ -62,12 +65,36 @@ class PlayersController < ApplicationController
     build_page_title
   end
 
+  # An old-style address, or a name that has since changed. Either way there is
+  # one address for him, and a card asked for is still a card when it arrives.
+  def redirect_to_canonical_player
+    return false if params[:id] == @player.to_param
+
+    redirect_to player_path(@player, format: params[:format]), status: :moved_permanently
+    true
+  end
+
+  def load_player
+    @next_gameweek = Gameweek.next_gameweek
+    @horizon = params[:horizon] == SEASON ? SEASON : "gameweek"
+    @card_path = player_path(@player, format: :png)
+    load_player_forecast
+  end
+
+  # The rest of the page, which a card has no use for.
+  def load_player_page
+    load_player_performances
+    load_upcoming_fixtures
+    @related = RelatedComparisons.call(players: @player, gameweek: @next_gameweek, horizon: @horizon)
+  end
+
   def load_player_forecast
     return unless @next_gameweek
 
     forecast = @player.forecasts.where(horizon: @horizon).includes(:gameweek).find_by(gameweek: @next_gameweek)
     return unless forecast
 
+    @forecast_at = forecast.updated_at
     @forecast = forecast_summary(forecast)
     @player_ranking = player_ranking(forecast)
     @player_facts = latest_snapshot_stats([ @player.id ], ROW_FACT_TYPES)[@player.id]
@@ -103,7 +130,7 @@ class PlayersController < ApplicationController
   end
 
   def season_divisor
-    @horizon == SEASON ? [ Gameweek.remaining.count, 1 ].max : 1
+    @horizon == SEASON ? Gameweek.remaining_count : 1
   end
 
   def load_player_performances
@@ -257,7 +284,7 @@ class PlayersController < ApplicationController
   # A season total is read as its per-gameweek average, so it meets the same tier
   # bands a single week does.
   def tier_divisor
-    season? ? [ Gameweek.remaining.count, 1 ].max : 1
+    season? ? Gameweek.remaining_count : 1
   end
 
   # When the numbers on the page were worked out. They are rewritten on the hour
@@ -403,7 +430,33 @@ class PlayersController < ApplicationController
     @page_title = "Player Rankings - #{horizon_label}"
     @page_title += " #{@position_filter.capitalize}s" if @position_filter.present?
     @page_title += " - #{Team.find_by(id: @team_filter)&.name}" if @team_filter
-    @canonical_path = rankings_path(horizon_param, @position_filter)
+    @canonical_path = canonical_path
+    @card_path = rankings_path(horizon_param, @position_filter, format: :png)
+  end
+
+  # A card is drawn from the forecast and nothing else, so the reading it was
+  # drawn from is the whole of its name. A fresh forecast is a fresh card.
+  def rankings_card_key
+    [ "rankings_card", @position_filter, horizon_param, @forecast_at&.to_i ].join("/")
+  end
+
+  def player_card_key
+    [ "player_card", @player.to_param, @horizon, @forecast_at&.to_i ].join("/")
+  end
+
+  # The front page stands for itself.
+  #
+  # It used to name the coming gameweek's page as its canonical, which handed the
+  # site's strongest address to one that goes stale the week it is played: every
+  # week the front page pointed somewhere new, and every page it had pointed at
+  # was left behind. A filtered view of the front page still answers to the front
+  # page, which is what a canonical is for.
+  def canonical_path
+    front_page? ? root_path : rankings_path(horizon_param, @position_filter)
+  end
+
+  def front_page?
+    request.path == root_path && @position_filter == "forward"
   end
 
   def next_gameweek
