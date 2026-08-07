@@ -26,6 +26,31 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes assigns_shortlist.map(&:player_id), players(:injured_player).id
   end
 
+  # The rankings used to live here. A link written before they moved should still land
+  # on what it asked for rather than on a page that ignores it.
+  test "a link carrying the rankings' own filters is sent after them" do
+    get root_path, params: { position: "midfielder" }
+
+    assert_response :moved_permanently
+    assert_redirected_to rankings_path(position: "midfielder")
+  end
+
+  test "an old filtered link ends up at the address that filter lives at" do
+    get root_path, params: { gameweek: 21, position: "midfielder" }
+    follow_redirect!
+
+    assert_redirected_to gameweek_position_path(gameweek: 21, position: "midfielders")
+  end
+
+  # A tracking parameter is not a filter. Bouncing every shared link through a redirect
+  # would be worse than the problem this solves.
+  test "a link with tracking on it is left alone" do
+    get root_path, params: { utm_source: "twitter", fbclid: "abc123" }
+
+    assert_response :success
+    assert_select "h1"
+  end
+
   test "the front page stands for itself" do
     get root_path
 

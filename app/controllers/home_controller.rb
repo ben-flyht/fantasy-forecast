@@ -12,7 +12,15 @@ class HomeController < ApplicationController
   ARGUMENTS_PER_POSITION = 2
   HORIZON = "gameweek".freeze
 
+  # The rankings used to be at this address, so links carrying their filters are still
+  # arriving: bookmarks, and anything shared before they moved. Only these names count
+  # as one. A tracking parameter is not a filter, and a link with utm tags on it should
+  # land on the front page rather than be bounced somewhere it never meant to go.
+  FILTERS = %w[gameweek position team_id min_price max_price horizon].freeze
+
   def show
+    return if redirect_to_rankings
+
     @gameweek = Gameweek.next_gameweek
     load_shortlist
     @squad = Squad.find_by(gameweek: @gameweek, horizon: HORIZON)
@@ -20,6 +28,17 @@ class HomeController < ApplicationController
   end
 
   private
+
+  # Sent on rather than quietly ignored. The rankings then tidy it into the address
+  # that filter actually lives at, which is one more hop for a link written before any
+  # of this moved and none at all for everybody else.
+  def redirect_to_rankings
+    filters = params.permit(*FILTERS).to_h.compact_blank
+    return false if filters.empty?
+
+    redirect_to rankings_path(filters), status: :moved_permanently
+    true
+  end
 
   # A couple from each position rather than all of one, so the front page does not
   # read as a page about forwards.
