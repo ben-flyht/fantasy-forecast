@@ -26,6 +26,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Booting Rails at all needs libvips: Active Storage loads its vips analyzer as
+      # the engine loads, whatever the variant processor is set to.
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips
+
       - name: Checkout code
         uses: actions/checkout@v6
 
@@ -74,7 +79,9 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config google-chrome-stable
+        # libvips draws the share cards, and the tests assert the pictures that come
+        # out, so the runner needs the library the dyno already has.
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config google-chrome-stable libvips
 
       - name: Checkout code
         uses: actions/checkout@v6
