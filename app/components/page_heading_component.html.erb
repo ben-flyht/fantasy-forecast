@@ -20,7 +20,7 @@
 <% end %>
 
 <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-5 sm:items-center">
-  <div class="sm:col-span-full sm:row-start-1">
+  <div class="<%= title_placement %>">
     <h1 class="text-xl sm:text-2xl font-semibold tracking-[-0.015em] text-balance text-zinc-900"><%= title %></h1>
     <% if subtitle %>
       <p class="mt-1 text-sm text-zinc-500"><%= subtitle %></p>
@@ -34,7 +34,7 @@
   <% end %>
 
   <% if updated_at %>
-    <p class="whitespace-nowrap text-xs text-zinc-400 sm:row-start-2 <%= updated_placement %>">
+    <p class="whitespace-nowrap text-xs text-zinc-400 <%= updated_placement %>">
       Updated
       <time datetime="<%= updated_at.iso8601 %>" title="<%= l updated_at, format: :long %>"><%= time_ago_in_words(updated_at) %> ago</time>
     </p>

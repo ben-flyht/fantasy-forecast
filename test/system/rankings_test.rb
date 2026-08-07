@@ -1,10 +1,10 @@
 require "application_system_test_case"
 
-# The horizon dropdown is driven by JavaScript, which builds the URL it visits.
-# That makes it the one part of the rankings page no controller test can reach:
-# when the season was renamed, the dropdown kept sending managers to a route that
-# no longer existed, every request returned a 404, and Turbo wrote "Content
-# missing" into the frame. Everything else was green.
+# The horizon and the positions are links inside a Turbo frame. That makes them the
+# one part of the rankings page no controller test can reach: when the season was
+# renamed, the control kept sending managers to a route that no longer existed, every
+# request returned a 404, and Turbo wrote "Content missing" into the frame. Everything
+# else was green.
 class RankingsTest < ApplicationSystemTestCase
   setup do
     Forecast.destroy_all
@@ -21,7 +21,7 @@ class RankingsTest < ApplicationSystemTestCase
     visit gameweek_position_path(gameweek: 1, position: "defenders")
     assert_text @player.short_name
 
-    select "Rest of Season", from: "gameweek"
+    click_link "Rest of Season"
 
     # The frame should hold rankings, not Turbo's missing-content notice.
     assert_no_text "Content missing"
@@ -32,7 +32,7 @@ class RankingsTest < ApplicationSystemTestCase
   test "switching back to the coming week shows that week's rankings" do
     visit season_position_path(position: "defenders")
 
-    select "Next Gameweek", from: "gameweek"
+    click_link "Gameweek 1"
 
     assert_text @player.short_name
     assert_no_text "Content missing"
@@ -45,7 +45,7 @@ class RankingsTest < ApplicationSystemTestCase
     visit gameweek_position_path(gameweek: 1, position: "defenders")
     assert_title "Best FPL Defenders GW1 | Fantasy Forecast"
 
-    select "Rest of Season", from: "gameweek"
+    click_link "Rest of Season"
 
     assert_current_path season_position_path(position: "defenders")
     assert_title "Best FPL Defenders Rest of Season | Fantasy Forecast"
@@ -59,7 +59,7 @@ class RankingsTest < ApplicationSystemTestCase
     visit gameweek_position_path(gameweek: 1, position: "defenders")
     assert_title "Best FPL Defenders GW1 | Fantasy Forecast"
 
-    find("label", text: "MID").click
+    click_link "Midfielders"
 
     assert_current_path gameweek_position_path(gameweek: 1, position: "midfielders")
     assert_title "Best FPL Midfielders GW1 | Fantasy Forecast"

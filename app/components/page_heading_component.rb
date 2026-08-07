@@ -41,9 +41,21 @@ class PageHeadingComponent < ViewComponent::Base
 
   def utility_alignment = back.present? ? "justify-between" : "justify-end"
 
-  # With no toggle the timestamp takes its slot, because a lone timestamp hanging
-  # off the right of a heading reads as something that got left behind.
+  # Where the timestamp sits, which depends on whether there is a second row at all.
+  #
+  # Beside the toggle when there is one: they are both things you do to the page
+  # rather than things the page says. With no toggle there is no second row to join,
+  # so it pairs with the title instead. Dropped to the left on its own it sat directly
+  # under the subtitle and read as a third line of it rather than as a note of when
+  # this was worked out.
   def updated_placement
-    horizons ? "sm:col-start-2 sm:justify-self-end" : "sm:col-start-1 sm:justify-self-start"
+    return "sm:col-start-2 sm:row-start-2 sm:justify-self-end" if horizons
+
+    "sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:self-center"
+  end
+
+  # The title only spans the grid when something else needs the row beneath it.
+  def title_placement
+    horizons ? "sm:col-span-full sm:row-start-1" : "sm:col-start-1 sm:row-start-1"
   end
 end

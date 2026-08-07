@@ -85,17 +85,31 @@ class PageHeadingComponentTest < ViewComponent::TestCase
     assert_selector %(time[datetime="#{moment.iso8601}"]), text: "12 minutes ago"
   end
 
-  # A lone timestamp hanging off the right of a heading reads as something left
-  # behind, so with no toggle it takes the toggle's place instead.
-  test "with no toggle the timestamp takes the toggle's slot" do
+  # With no toggle there is no second row for it to sit on, and dropped to the left on
+  # its own it landed directly under the subtitle and read as a third line of it. It
+  # pairs with the title instead, on the same row and the same side it sits on
+  # everywhere else.
+  test "with no toggle the timestamp pairs with the title" do
     render_inline PageHeadingComponent.new(title: "Who to Captain", updated_at: 1.hour.ago)
 
-    assert_selector "p.sm\\:col-start-1.sm\\:justify-self-start"
+    assert_selector "p.sm\\:col-start-2.sm\\:row-start-1.sm\\:justify-self-end"
+    assert_selector "div.sm\\:col-start-1.sm\\:row-start-1 h1", text: "Who to Captain"
   end
 
-  test "with a toggle the timestamp sits opposite it" do
+  test "with a toggle the timestamp sits opposite it, a row below the title" do
     render_inline PageHeadingComponent.new(title: "Best FPL Forwards", updated_at: 1.hour.ago, horizons: horizons)
 
-    assert_selector "p.sm\\:col-start-2.sm\\:justify-self-end"
+    assert_selector "p.sm\\:col-start-2.sm\\:row-start-2.sm\\:justify-self-end"
+    assert_selector "div.sm\\:col-span-full h1", text: "Best FPL Forwards"
+  end
+
+  # Whichever row it lands on, it is on the same side of the page: a reader looking
+  # for when this was worked out should not have to find it somewhere new per page.
+  test "the timestamp is right-aligned on every page" do
+    [ nil, horizons ].each do |toggle|
+      render_inline PageHeadingComponent.new(title: "A Page", updated_at: 1.hour.ago, horizons: toggle)
+
+      assert_selector "p.sm\\:justify-self-end"
+    end
   end
 end
