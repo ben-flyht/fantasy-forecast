@@ -44,16 +44,10 @@ module ComparisonsHelper
   #
   # The grade next to it is still read from the week, because a grade is a mark out
   # of ten and has to mean the same thing at every distance. See HeadToHead#weekly.
-  # A tenth of a point separates two players over one gameweek and means nothing
-  # over thirty-eight, so the decimal is dropped once the number is large enough
-  # not to need it. It also keeps a season total clear of the photograph on the
-  # share card, where the figure is set at 112 point.
-  WHOLE_POINTS = 100
-
   def headline_points(side)
     return unless side.forecast?
 
-    side.score >= WHOLE_POINTS ? side.score.round.to_s : format("%.1f", side.score)
+    card_points(side.score)
   end
 
   # A side of a comparison in the terms the compact card asks for, so the pair are

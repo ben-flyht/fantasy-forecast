@@ -5,7 +5,14 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     @salah = players(:midfielder)
     @palmer = players(:midfielder_two)
     @gameweek = gameweeks(:next_gw)
+    # Both halves of the table are cleared, so a test that says a figure is missing
+    # is describing an empty page rather than a page full of fixtures.
     Statistic.delete_all
+    Forecast.delete_all
+  end
+
+  def expectation(player, horizon, score)
+    Forecast.create!(player: player, gameweek: @gameweek, horizon: horizon, score: score, rank: 1)
   end
 
   def reading(player, type, value)
@@ -89,5 +96,41 @@ class ComparisonStatsTest < ActiveSupport::TestCase
 
   test "nothing recorded means nothing to compare" do
     assert_empty stats
+  end
+
+  # The answer leads and the working follows. A manager who disagrees with the pick
+  # reads down from it; he should not have to read up to find it.
+  test "what we expect comes first, at all three distances" do
+    expectation(@salah, Horizon::GAMEWEEK, 6.4)
+    expectation(@salah, Horizon::UPCOMING, 30.9)
+    expectation(@salah, Horizon::SEASON, 244.6)
+
+    assert_equal "What we expect", stats.first.title
+    assert_equal [ "This gameweek", "Next 5 gameweeks", "Rest of season" ],
+                 stats.first.rows.map(&:label)
+    assert_equal "6.4", row("This gameweek").left
+    assert_equal "245", row("Rest of season").left,
+                 "a tenth of a point over a season is a precision we do not have"
+  end
+
+  test "the man we expect more of leads the row" do
+    expectation(@salah, Horizon::SEASON, 244.6)
+    expectation(@palmer, Horizon::SEASON, 190.2)
+
+    assert_equal :left, row("Rest of season").leader
+  end
+
+  # FPL leaves last season's totals in the current-season fields all summer, so
+  # before a ball is kicked this group is last season's record under this season's
+  # name. That is the reading that had the page arguing with its own answer.
+  test "there is no this season until a gameweek has been played" do
+    reading(@salah, "season_points", 120)
+    Gameweek.update_all(is_finished: false)
+
+    assert_not_includes stats.map(&:title), "This season"
+
+    gameweeks(:finished).update!(is_finished: true)
+
+    assert_includes stats.map(&:title), "This season"
   end
 end

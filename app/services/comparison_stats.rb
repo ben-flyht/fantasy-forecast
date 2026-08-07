@@ -17,8 +17,27 @@ class ComparisonStats < ApplicationService
 
   Group = Struct.new(:title, :rows, keyword_init: true)
 
+  # What we expect of them, which is the only part of this table about the season
+  # being forecast. Everything below it is a record of football already played, and
+  # until a ball is kicked that record is last season's however it is labelled.
+  #
+  # It leads the table because it is the answer. The rows underneath are the working.
+  EXPECTED = "What we expect".freeze
+
+  EXPECTED_POINTS = [
+    Stat.new(key: Horizon::GAMEWEEK, label: "This gameweek", format: :one, better: :high),
+    Stat.new(key: Horizon::UPCOMING, label: "Next #{Horizon::WINDOW} gameweeks", format: :one, better: :high),
+    Stat.new(key: Horizon::SEASON, label: "Rest of season", format: :whole, better: :high)
+  ].freeze
+
+  # Drawn only once there is a season to describe. FPL leaves last season's totals
+  # in the current-season fields all summer, so before the first gameweek this group
+  # is last season's record wearing this season's name, which is exactly the reading
+  # that makes the page argue with itself.
+  THIS_SEASON = "This season".freeze
+
   GROUPS = {
-    "This season" => [
+    THIS_SEASON => [
       Stat.new(key: "season_points", label: "Total points", format: :whole, better: :high),
       Stat.new(key: "points_per_game", label: "Points per game", format: :one, better: :high),
       Stat.new(key: "form", label: "Form", format: :one, better: :high),
@@ -28,7 +47,7 @@ class ComparisonStats < ApplicationService
     ],
     "Underlying numbers, per 90" => [
       Stat.new(key: "expected_goals_per_90", label: "Expected goals", format: :two, better: :high),
-      Stat.new(key: "expected_goal_involvements_per_90", label: "Expected goals and assists", format: :two, better: :high),
+      Stat.new(key: "expected_assists_per_90", label: "Expected assists", format: :two, better: :high),
       Stat.new(key: "expected_goals_conceded_per_90", label: "Expected goals conceded", format: :two, better: :low),
       Stat.new(key: "clean_sheets_per_90", label: "Clean sheets", format: :two, better: :high),
       Stat.new(key: "saves_per_90", label: "Saves", format: :two, better: :high),
@@ -64,26 +83,53 @@ class ComparisonStats < ApplicationService
   end
 
   def call
-    GROUPS.filter_map do |title, stats|
-      rows = stats.filter_map { |stat| row_for(stat) }
-      Group.new(title: title, rows: rows) if rows.any?
-    end
+    [ expected_group, *recorded_groups ].compact
   end
 
   private
 
   attr_reader :left, :right
 
-  def row_for(stat)
-    values = readings_for(stat)
+  def expected_group
+    group_of(EXPECTED, EXPECTED_POINTS, forecasts)
+  end
+
+  def recorded_groups
+    GROUPS.filter_map do |title, stats|
+      next if title == THIS_SEASON && !season_started?
+
+      group_of(title, stats, readings)
+    end
+  end
+
+  def group_of(title, stats, source)
+    rows = stats.filter_map { |stat| row_for(stat, source) }
+    Group.new(title: title, rows: rows) if rows.any?
+  end
+
+  def row_for(stat, source)
+    values = readings_for(stat, source)
     return if values.compact.empty?
 
     Row.new(label: stat.label, leader: leader(stat, *values),
             left: display(stat, values.first), right: display(stat, values.last))
   end
 
-  def readings_for(stat)
-    [ readings.dig(left.id, stat.key), readings.dig(right.id, stat.key) ]
+  def readings_for(stat, source)
+    [ source.dig(left.id, stat.key), source.dig(right.id, stat.key) ]
+  end
+
+  def season_started?
+    Gameweek.finished.any?
+  end
+
+  # What we expect of each of them at each distance, keyed the way the readings are
+  # so that one row builder draws both.
+  def forecasts
+    @forecasts ||= Forecast.where(gameweek: Gameweek.next_gameweek, player_id: [ left.id, right.id ])
+                           .each_with_object({}) do |forecast, by_player|
+      (by_player[forecast.player_id] ||= {})[forecast.horizon] = forecast.score.to_f
+    end
   end
 
   # Which of the two the figure favours, where the figure favours anybody. Equal is
