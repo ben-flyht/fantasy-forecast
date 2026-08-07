@@ -10,13 +10,26 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   end
 
   # A regular starter with a decent record behind him.
-  def regular(minutes: 3000.0, xg: 0.30, xgi: 0.50, clean_sheets: 0.30, owned: 5.0, cost: 60.0)
+  #
+  # assists is a season's total, like bonus, and conceded is what his side is
+  # expected to let in per game: 1.20 is a middling defence, which keeps about a
+  # third of its sheets clean. Between them they are what a clean sheet and an
+  # assist are now read from. See ExpectedPoints#clean_sheet_points.
+  def regular(minutes: 3000.0, xg: 0.30, xgi: 0.50, assists: 6.0, conceded: 1.20,
+              owned: 5.0, cost: 60.0)
     {
       "last_season_minutes" => minutes, "last_season_expected_goals_per_90" => xg,
       "last_season_expected_goal_involvements_per_90" => xgi,
-      "last_season_clean_sheets_per_90" => clean_sheets,
+      "last_season_assists" => assists,
+      "last_season_expected_goals_conceded_per_90" => conceded,
       "selected_by_percent" => owned, "now_cost" => cost
     }
+  end
+
+  # A player with nothing of his own to say about conceding, so his club answers
+  # for him. Both the clean sheet and the goals past him read from that one figure.
+  def newcomer
+    regular.except("last_season_expected_goals_conceded_per_90")
   end
 
   def forecast(rankings, stats, fixtures: { 1 => [ fixture ] }, managers: nil, movers: [])
@@ -27,9 +40,10 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   test "expected points is minutes, times what he is worth per 90, times the games ahead" do
     result = forecast([ ranking(1) ], { 1 => regular })
 
-    # 90 minutes of a 0.3 xG, 0.2 xA midfielder on a level fixture: two points for
-    # turning up, plus what he is worth on top, shrunk for sample size
-    assert_in_delta 4.1, result[1][:points], 0.1
+    # 90 minutes of a 0.3 xG midfielder with six assists behind him, on a level
+    # fixture: two points for turning up, plus what he is worth on top. A full
+    # season of minutes, so nothing is held back for doubt.
+    assert_in_delta 4.34, result[1][:points], 0.1
   end
 
   test "before the season, minutes are read against a full campaign" do
@@ -47,7 +61,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
   test "a hair between two players is not rounded into a tie" do
     rankings = [ ranking(1), ranking(2) ]
-    stats = { 1 => regular(xgi: 0.500), 2 => regular(xgi: 0.503) }
+    stats = { 1 => regular(assists: 6.0), 2 => regular(assists: 6.3) }
 
     result = forecast(rankings, stats)
 
@@ -103,7 +117,8 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
   test "turning up is worth the same whoever the opponent is" do
     rankings = [ ranking(1) ]
-    stats = { 1 => regular(xg: 0.0, xgi: 0.0, clean_sheets: 0.0) } # paid for nothing but being there
+    # paid for nothing but being there: no goals, no assists, nothing to keep out
+    stats = { 1 => regular(xg: 0.0, xgi: 0.0, assists: 0.0, conceded: 0.0) }
 
     kind = forecast(rankings, stats, fixtures: { 1 => [ fixture(1) ] })
     cruel = forecast(rankings, stats, fixtures: { 1 => [ fixture(5) ] })
@@ -114,8 +129,9 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
   test "a hard afternoon costs a defender his clean sheet and brings a goalkeeper saves" do
     rankings = [ ranking(1, position: "defender"), ranking(2, position: "goalkeeper") ]
-    stats = { 1 => regular(clean_sheets: 0.35),
-              2 => regular(clean_sheets: 0.35).merge("last_season_saves_per_90" => 3.0) }
+    # 1.05 expected against is a 0.35 chance of the sheet staying clean
+    stats = { 1 => regular(conceded: 1.05),
+              2 => regular(conceded: 1.05).merge("last_season_saves_per_90" => 3.0) }
 
     cruel = forecast(rankings, stats, fixtures: { 1 => [ fixture(5) ] })
 
@@ -125,8 +141,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   end
 
   test "the hardest fixture in the game is never a bonus, however many saves it brings" do
-    keeper = regular(clean_sheets: 0.29).merge("last_season_saves_per_90" => 2.87,
-                                               "last_season_expected_goals_conceded_per_90" => 1.49)
+    keeper = regular(conceded: 1.49).merge("last_season_saves_per_90" => 2.87)
     rankings = [ ranking(1, position: "goalkeeper") ]
 
     ordinary = forecast(rankings, { 1 => keeper })
@@ -136,15 +151,18 @@ class ExpectedPointsTest < ActiveSupport::TestCase
                     "a keeper at a leaky club away at the champions is worth less, not more"
   end
 
-  test "a keeper is charged for the goals that go past him, not only for the clean sheet he misses" do
+  # Both halves of the charge read from the same figure now that a clean sheet is
+  # the chance of one rather than the share he happened to keep, so a leaky club
+  # costs its keeper twice: the sheet he will not keep, and the goals themselves.
+  test "a keeper at a leaky club is charged for the goals as well as the clean sheet" do
     rankings = [ ranking(1, position: "goalkeeper"), ranking(2, position: "goalkeeper") ]
-    leaky = regular(clean_sheets: 0.25).merge("last_season_expected_goals_conceded_per_90" => 1.60)
-    tight = regular(clean_sheets: 0.25).merge("last_season_expected_goals_conceded_per_90" => 0.70)
+    leaky = regular(conceded: 1.60)
+    tight = regular(conceded: 0.70)
 
     result = forecast(rankings, { 1 => leaky, 2 => tight })
 
     assert_operator result[2][:points], :>, result[1][:points],
-                    "two keepers who keep sheets alike are still told apart by what gets past them"
+                    "the tighter defence is worth more to the man behind it, on both counts"
   end
 
   test "only whole pairs of goals are docked" do
@@ -166,7 +184,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     newcomers = [ ranking(4, position: "defender", team_id: 1), ranking(8, position: "defender", team_id: 2) ]
     stats = (1..3).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 0.70) }
                   .merge((5..7).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 1.60) })
-                  .merge(4 => regular, 8 => regular)
+                  .merge(4 => newcomer, 8 => newcomer)
     fixtures = { 1 => [ fixture ], 2 => [ fixture ] }
 
     result = forecast(tight + leaky + newcomers, stats, fixtures: fixtures)
@@ -255,7 +273,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     promoted = (7..9).map { |id| ranking(id, position: "goalkeeper", team_id: 3) }
     stats = (1..3).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 0.70) }
                   .merge((4..6).index_with { regular.merge("last_season_expected_goals_conceded_per_90" => 1.60) })
-                  .merge((7..9).index_with { regular }) # promoted: no Premier League record at the club
+                  .merge((7..9).index_with { newcomer }) # promoted: no Premier League record at the club
     fixtures = { 1 => [ fixture ], 2 => [ fixture ], 3 => [ fixture ] }
 
     result = forecast(tight + leaky + promoted, stats, fixtures: fixtures)
@@ -266,22 +284,106 @@ class ExpectedPointsTest < ActiveSupport::TestCase
                     "so promotion is no longer worth more than keeping goal behind the best defence in the game"
   end
 
-  test "the goals that go past a defender are nothing to the man in front of him" do
-    rankings = [ ranking(1, position: "midfielder"), ranking(2, position: "forward") ]
-    stats = { 1 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.60),
-              2 => regular.merge("last_season_expected_goals_conceded_per_90" => 1.60) }
-    clean = { 1 => regular, 2 => regular }
+  # FPL docks only a goalkeeper and a defender for the goals themselves, but it
+  # pays a midfielder a point for the clean sheet, so what a club concedes reaches
+  # him too. It reaches him for a quarter of what it costs the man behind him, and
+  # for none of what the goals cost on top of that.
+  test "what a club concedes is nothing to the man up front, and only a clean sheet to the one in midfield" do
+    rankings = [ ranking(1, position: "forward"), ranking(2, position: "midfielder"),
+                 ranking(3, position: "defender") ]
+    leaky = regular(conceded: 1.60)
+    tight = regular(conceded: 1.20)
 
-    conceding = forecast(rankings, stats)
-    unbothered = forecast(rankings, clean)
+    conceding = forecast(rankings, { 1 => leaky, 2 => leaky, 3 => leaky })
+    unbothered = forecast(rankings, { 1 => tight, 2 => tight, 3 => tight })
 
-    assert_equal unbothered[1][:points], conceding[1][:points], "FPL docks nobody in midfield for them"
-    assert_equal unbothered[2][:points], conceding[2][:points], "nor anybody up front"
+    assert_equal unbothered[1][:points], conceding[1][:points],
+                 "a forward is paid for none of it, neither the sheet nor the goals"
+
+    in_midfield = unbothered[2][:points] - conceding[2][:points]
+    at_the_back = unbothered[3][:points] - conceding[3][:points]
+
+    assert_operator in_midfield, :>, 0, "a midfielder still loses the clean sheet, worth one to him"
+    assert_operator at_the_back, :>, in_midfield * 4,
+                    "and a defender loses four times that, plus the goals FPL docks him for"
+  end
+
+  # Two identical defences, one of which shut teams out more often than its
+  # football deserved. Last season's luck must not be sold as next season's rate.
+  test "a clean sheet is the chance of keeping one, not the share he happened to keep" do
+    rankings = [ ranking(1, position: "defender"), ranking(2, position: "defender") ]
+    lucky = regular(conceded: 1.20).merge("last_season_clean_sheets_per_90" => 0.60)
+    ordinary = regular(conceded: 1.20).merge("last_season_clean_sheets_per_90" => 0.20)
+
+    result = forecast(rankings, { 1 => lucky, 2 => ordinary })
+
+    assert_in_delta result[1][:points], result[2][:points], 0.001,
+                    "what a side actually kept is a record of its luck as much as of its defending"
+  end
+
+  test "a defence nobody can measure keeps no clean sheets rather than every one" do
+    rankings = [ ranking(1, position: "defender", team_id: 1),
+                 ranking(2, position: "defender", team_id: 2) ]
+    best_in_the_league = regular(conceded: 0.40)
+
+    result = forecast(rankings, { 1 => newcomer, 2 => best_in_the_league },
+                      fixtures: { 1 => [ fixture ], 2 => [ fixture ] })
+
+    assert_operator result[1][:points], :<, result[2][:points],
+                    "nought expected against is no opinion, not a certainty of keeping it out"
+  end
+
+  # FPL pays for the penalty won, the deflection and the rebound. None of them are
+  # in an expected assist, and between them they are worth about half again.
+  test "an assist is what he was awarded, not what his passing was expected to earn" do
+    rankings = [ ranking(1), ranking(2) ]
+    awarded = regular(assists: 9.0)
+    quiet = regular(assists: 3.0)
+
+    result = forecast(rankings, { 1 => awarded, 2 => quiet })
+
+    assert_operator result[1][:points], :>, result[2][:points],
+                    "the man actually credited with them is worth more, whatever the passing was rated"
+  end
+
+  # Three saves in a match is a point, and five is still a point: FPL counts them
+  # per match, pays for each whole three and throws the remainder away at full time.
+  test "saves are paid in whole threes, not by the fraction" do
+    rankings = [ ranking(1, position: "goalkeeper") ]
+    busy = regular.merge("last_season_saves_per_90" => 3.0)
+
+    worth = forecast(rankings, { 1 => busy })[1][:points] -
+            forecast(rankings, { 1 => regular })[1][:points]
+
+    assert_operator worth, :<, 1.0,
+                    "three saves a game is not a point a game, whatever the arithmetic wants"
+    assert_in_delta 0.66, worth, 0.05,
+                    "he reaches three in 58 matches of a hundred, and six in eight more"
+  end
+
+  # The doubt is there to stop a rate built from a cameo topping the table. Once a
+  # man has played a season it has nothing left to ask, and taking a fixed share off
+  # him for ever took most from whoever scored most.
+  test "past a regular's season the record stops being shrunk for doubt" do
+    rankings = [ ranking(1), ranking(2), ranking(3) ]
+    # No assists, because those are counted from a total and so move with minutes
+    # in their own right. What is left varying is the doubt and nothing else.
+    stats = { 1 => regular(minutes: 2400.0, assists: 0.0),
+              2 => regular(minutes: 3400.0, assists: 0.0),
+              3 => regular(minutes: 900.0, assists: 0.0) }
+
+    result = forecast(rankings, stats)
+
+    assert_in_delta result[1][:working][:per_90], result[2][:working][:per_90], 0.001,
+                    "a season and a half is no more proof than a season"
+    assert_operator result[3][:working][:per_90], :<, result[1][:working][:per_90],
+                    "but a third of one is still short of it"
   end
 
   test "a kind fixture is worth most to the defender with the best record of clean sheets" do
     rankings = [ ranking(1, position: "defender"), ranking(2, position: "defender") ]
-    stats = { 1 => regular(clean_sheets: 0.50), 2 => regular(clean_sheets: 0.10) }
+    # 0.69 expected against keeps half his sheets clean; 2.30 keeps a tenth
+    stats = { 1 => regular(conceded: 0.69), 2 => regular(conceded: 2.30) }
 
     kind = forecast(rankings, stats, fixtures: { 1 => [ fixture(1) ] })
 
@@ -589,7 +691,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
              4 => [ 50.0, 0.2, 0.35 ], 5 => [ 55.0, 4.0, 0.55 ], 6 => [ 60.0, 3.0, 0.65 ],
              7 => [ 70.0, 8.0, 0.80 ] }
     rankings = spec.keys.map { |id| ranking(id) }
-    stats = spec.to_h { |id, (cost, owned, xgi)| [ id, regular(cost: cost, owned: owned, xgi: xgi) ] }
+    stats = spec.to_h { |id, (cost, owned, xg)| [ id, regular(cost: cost, owned: owned, xg: xg) ] }
     [ rankings, stats ]
   end
 
@@ -763,7 +865,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     working = result[1][:working]
 
     assert_equal 90, working[:minutes]
-    assert_in_delta 4.1, working[:per_90], 0.2
+    assert_in_delta 4.34, working[:per_90], 0.2
     assert_equal 1.0, working[:games], "one ordinary fixture"
     assert_equal [ { name: "Someone", home: true, difficulty: 3 } ], working[:opponents]
     assert working.values.none? { |value| value.is_a?(String) }, "wording belongs in the view"

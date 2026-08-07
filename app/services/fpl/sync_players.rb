@@ -189,7 +189,16 @@ module Fpl
       # Per-90 rates for the underlying-quality concept (a rate, not a total).
       "expected_goals_per_90" => "expected_goals_per_90",
       "expected_goal_involvements_per_90" => "expected_goal_involvements_per_90",
+      # Published in its own right, and read that way. Involvements less goals is
+      # the same figure arrived at by subtracting two numbers FPL has already
+      # rounded to a penny, which on a player creating little leaves most of the
+      # answer in the rounding.
+      "expected_assists_per_90" => "expected_assists_per_90",
       "expected_goals_conceded_per_90" => "expected_goals_conceded_per_90",
+      # What actually went past him, kept beside what was expected to, for the same
+      # reason the two are kept beside each other for a season past. See
+      # SyncPlayerHistories::RATE_TYPES.
+      "goals_conceded_per_90" => "goals_conceded_per_90",
       "saves_per_90" => "saves_per_90",
       "clean_sheets_per_90" => "clean_sheets_per_90",
       "defensive_contribution_per_90" => "defensive_contribution_per_90",
@@ -204,6 +213,10 @@ module Fpl
       # Bonus points are a tenth of a good player's return and are not in any of the
       # per-90 rates FPL publishes, so they have to be counted separately.
       "bonus" => "season_bonus",
+      # Assists are awarded rather than scored, so the forecast reads what he was
+      # actually credited with instead of what his passing was expected to earn.
+      # A total, like the bonus above it. See ExpectedPoints#assist_points.
+      "assists" => "season_assists",
       # Set-piece duty feeds underlying quality (1 = first choice). Nil when not on duty.
       "penalties_order" => "penalties_order",
       "corners_and_indirect_freekicks_order" => "corners_freekicks_order",

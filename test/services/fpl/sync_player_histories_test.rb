@@ -126,6 +126,55 @@ class Fpl::SyncPlayerHistoriesTest < ActiveSupport::TestCase
                "a record this run has rejected must not stay in circulation"
   end
 
+  def stat_for(player, type)
+    Statistic.find_by(player: player, gameweek: @gameweek, type: type)&.value
+  end
+
+  # Haaland's real 2025/26. He beat his expected goals by six per cent and his
+  # expected assists by three times over, which is the whole reason both halves of
+  # each pair are now kept: read the expected figure alone and he is a different
+  # player. Pinned to the field names FPL actually publishes, because a typo in one
+  # of those stores nothing at all and nothing else would notice.
+  test "stores what a player actually did beside what he was expected to do" do
+    stub_every_player([ { "season_name" => LAST_SEASON, "minutes" => 2953, "total_points" => 239,
+                          "goals_scored" => 27, "assists" => 8,
+                          "expected_goals" => 25.50, "expected_assists" => 2.67,
+                          "goals_conceded" => 30, "expected_goals_conceded" => 28.40 } ])
+
+    Fpl::SyncPlayerHistories.call(delay: 0)
+    player = players(:midfielder)
+
+    # Every rate lands on the penny: statistics.value is decimal(10, 2), so a rate
+    # is stored to two places whatever it was worked out to. It costs nothing on a
+    # goal rate of 0.82 and most of the answer on an expected assist rate of 0.08.
+    # Which is why the assists the forecast actually reads are kept as a season's
+    # total, where 8 is 8 and nothing is lost. See ExpectedPoints#assist_points.
+    assert_equal 8.0, stat_for(player, "last_season_assists")
+    assert_equal 0.82, stat_for(player, "last_season_goals_per_90")
+    assert_equal 0.78, stat_for(player, "last_season_expected_goals_per_90")
+    assert_equal 0.08, stat_for(player, "last_season_expected_assists_per_90")
+    assert_equal 0.91, stat_for(player, "last_season_goals_conceded_per_90")
+    assert_equal 0.87, stat_for(player, "last_season_expected_goals_conceded_per_90")
+  end
+
+  # The receipt names the set of figures it was given for. Widen that set and every
+  # player has to be asked again, or the new figures only ever reach the handful
+  # signed since the last run.
+  test "a wider set of figures asks every player again" do
+    player = players(:midfielder)
+    Statistic.create!(player: player, gameweek: @gameweek,
+                      type: Fpl::SyncPlayerHistories::CHECKED, value: 4.0)
+    stub_every_player([ { "season_name" => LAST_SEASON, "total_points" => 150, "minutes" => 2700,
+                          "goals_scored" => 12 } ])
+
+    Fpl::SyncPlayerHistories.call(delay: 0)
+
+    assert_equal 150.0, stat_for(player, "last_season_points"),
+                 "a receipt for a narrower set of figures is not a receipt for this one"
+    assert_equal Fpl::SyncPlayerHistories::RECORD_VERSION,
+                 stat_for(player, Fpl::SyncPlayerHistories::CHECKED)
+  end
+
   test "a player we could not reach is asked again rather than recorded as having no past" do
     Player.pluck(:fpl_id).each do |fpl_id|
       stub_request(:get, "https://fantasy.premierleague.com/api/element-summary/#{fpl_id}/").to_return(status: 503)
