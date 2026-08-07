@@ -25,7 +25,7 @@
       <%= player.team&.short_name %>
     </text>
     <text x="1010" y="<%= y %>" text-anchor="end" fill="#a1a1aa" font-size="26" font-weight="700">
-      <%= card_points(ranking.score, season?) %>
+      <%= card_points(ranking.score, @horizon) %>
     </text>
     <text x="1144" y="<%= y %>" text-anchor="end" fill="#fafafa" font-size="34" font-weight="800">
       <%= ranking.grade %>
@@ -34,7 +34,7 @@
 
   <% if best && (player = @players_by_id[best.player_id]) %>
     <%= render "cards/footer", label: "Our top pick", size: 44,
-               headline: "#{player.display_name.upcase} · #{card_points(best.score, season?)} XP" %>
+               headline: "#{player.display_name.upcase} · #{card_points(best.score, @horizon)} XP" %>
   <% else %>
     <%= render "cards/footer", label: "Fantasy Forecast", size: 40,
                headline: "EVERY PLAYER GRADED A TO F" %>

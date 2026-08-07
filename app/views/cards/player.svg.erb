@@ -4,7 +4,7 @@
 %>
 <% team = @player.team %>
 <% ink = card_ink(team) %>
-<% season = @horizon == "season" %>
+<% reach = Horizon.find(@horizon) %>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
      width="<%= ShareCard::WIDTH %>" height="<%= ShareCard::HEIGHT %>"
      viewBox="0 0 <%= ShareCard::WIDTH %> <%= ShareCard::HEIGHT %>"
@@ -12,7 +12,7 @@
   <rect width="1200" height="630" fill="#09090b"/>
 
   <%= render "cards/header", title: @player.full_name,
-             note: season ? "Rest of season" : "Gameweek #{@next_gameweek&.fpl_id}" %>
+             note: reach.label(gameweek: @next_gameweek&.fpl_id) %>
 
   <%# His shirt, cut on the same diagonal the rankings rows use. %>
   <clipPath id="board"><rect x="0" y="88" width="1200" height="404"/></clipPath>
@@ -31,7 +31,7 @@
     </text>
 
     <% [ [ "Grade", @forecast&.dig(:grade) || "—", 56 ],
-         [ season ? "XP rest of season" : "XP this week", card_points(@forecast&.dig(:score), season), 300 ],
+         [ "XP #{reach.short_span}", card_points(@forecast&.dig(:score), @horizon), 300 ],
          [ "Rank", @forecast&.dig(:rank) ? "##{@forecast[:rank]}" : "—", 560 ] ].each do |label, value, x| %>
       <text x="<%= x %>" y="360" fill="<%= ink %>" font-size="15" font-weight="700"
             letter-spacing="1.5" opacity="0.7"><%= label.upcase %></text>

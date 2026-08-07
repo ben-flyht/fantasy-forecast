@@ -55,7 +55,9 @@ module Fpl
       gameweek = Gameweek.next_gameweek
       return nothing_to_forecast unless gameweek
 
-      forecast = [ WeeklyForecast.call(gameweek: gameweek), SeasonForecast.call(gameweek: gameweek) ].all?
+      forecast = [ WeeklyForecast.call(gameweek: gameweek),
+                   UpcomingForecast.call(gameweek: gameweek),
+                   SeasonForecast.call(gameweek: gameweek) ].all?
       optimise_squads(gameweek)
       forecast
     end

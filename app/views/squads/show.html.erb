@@ -12,8 +12,9 @@
         updated_at: @forecast_at,
         share: ("Share this squad" if @squad),
         back: back_home,
-        horizons: forecast_horizons(gameweek: @gameweek&.fpl_id, season: season?,
-                                    gameweek_url: squad_path, season_url: season_squad_path)) %>
+        horizons: forecast_horizons(gameweek: @gameweek&.fpl_id, current: @horizon,
+                                    urls: { gameweek: squad_path, upcoming: upcoming_squad_path,
+                                            season: season_squad_path })) %>
 </div>
 
 <% if @squad %>

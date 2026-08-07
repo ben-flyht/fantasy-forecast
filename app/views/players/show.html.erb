@@ -13,9 +13,10 @@
       updated_at: @forecast_at,
       share: "Share #{@player.display_name}'s forecast",
       back: back_to("Rankings", rankings_path(position: @player.position)),
-      horizons: (forecast_horizons(gameweek: @next_gameweek&.fpl_id, season: @horizon == "season",
-                                   gameweek_url: player_path(@player),
-                                   season_url: player_path(@player, horizon: "season")) if @forecast)) %>
+      horizons: (forecast_horizons(gameweek: @next_gameweek&.fpl_id, current: @horizon,
+                                   urls: { gameweek: player_path(@player),
+                                           upcoming: player_path(@player, horizon: "upcoming"),
+                                           season: player_path(@player, horizon: "season") }) if @forecast)) %>
 
 <!-- Player Banner -->
 <div class="mt-6">
@@ -48,7 +49,7 @@
 <%# The horizon toggle now lives in the heading, so the whole page navigates rather
     than the panel alone. Turbo Drive still swaps the body without a reload. %>
 <% if @forecast %>
-  <% season = @forecast[:horizon] == "season" %>
+  <% reach = Horizon.find(@forecast[:horizon]) %>
   <div class="mt-4 rounded-xl bg-zinc-100 p-5 sm:p-7">
     <dl class="flex flex-wrap items-baseline gap-x-6 gap-y-4 lg:gap-x-10">
       <% if @forecast[:rank] %>
@@ -65,7 +66,7 @@
       <% end %>
       <% if @forecast[:score] %>
         <div>
-          <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Expected points <%= season ? "rest of season" : "this gameweek" %></dt>
+          <dt class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Expected points for <%= reach.span %></dt>
           <dd class="mt-1.5 text-3xl font-extrabold leading-none tracking-[-0.03em] tabular-nums text-zinc-950"><%= format("%.1f", @forecast[:score]) %></dd>
         </div>
       <% end %>

@@ -37,7 +37,7 @@ class ComparisonsController < ApplicationController
   private
 
   def horizon
-    params[:horizon] == SEASON ? SEASON : "gameweek"
+    Horizon.find(params[:horizon]).key
   end
 
   def load_head_to_head

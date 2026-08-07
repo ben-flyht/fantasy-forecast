@@ -98,8 +98,8 @@ class Fpl::HourlyPipelineTest < ActiveSupport::TestCase
     stored_squad(gameweek)
     Forecast.where(gameweek: gameweek).update_all(updated_at: 1.hour.ago)
 
-    assert_equal [ "season" ], horizons_searched(gameweek),
-                 "only the horizon without a current squad should be searched again"
+    assert_equal [ "upcoming", "season" ], horizons_searched(gameweek),
+                 "only the horizons without a current squad should be searched again"
   end
 
   test "searches again once a forecast is newer than the squad" do

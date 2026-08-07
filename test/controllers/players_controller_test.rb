@@ -201,10 +201,12 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
 
     # Still defaults to the latest gameweek that has forecasts (5) for display
     assert_includes response.body, "Gameweek 5"
-    # The horizon toggle offers two horizons, never a list of every week played
-    assert_select "[aria-label='Forecast horizon'] a", text: "Rest of Season"
-    assert_select "[aria-label='Forecast horizon'] a", text: "Gameweek 1", count: 0
-    assert_select "[aria-label='Forecast horizon'] a", count: 2
+    # The toggle offers the three distances a forecast is read at, never a list of
+    # every week played. Matched on the accessible name: each option carries a short
+    # name and a full one, and the visible text is whichever the breakpoint picks.
+    assert_select "[aria-label='Forecast horizon'] a[aria-label='Rest of Season']"
+    assert_select "[aria-label='Forecast horizon'] a[aria-label='Gameweek 1']", count: 0
+    assert_select "[aria-label='Forecast horizon'] a", count: 3
   end
 
   test "the season route shows season forecasts" do
@@ -214,7 +216,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, @player.short_name
     assert_includes response.body, "Rest of Season"
-    assert_select "[aria-label='Forecast horizon'] a[aria-current=page]", text: "Rest of Season"
+    assert_select "[aria-label='Forecast horizon'] a[aria-current=page][aria-label='Rest of Season']"
   end
 
   test "the season page the horizon dropdown asks for is the season page" do
@@ -241,9 +243,10 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   test "the horizon toggle names the gameweek and the season, as links" do
     get rankings_path
 
-    assert_select "[aria-label='Forecast horizon'] a", text: "Gameweek 2"
-    assert_select "[aria-label='Forecast horizon'] a", text: "Rest of Season"
-    assert_select "[aria-label='Forecast horizon'] a[aria-current=page]", text: "Gameweek 2"
+    assert_select "[aria-label='Forecast horizon'] a[aria-label='Gameweek 2']"
+    assert_select "[aria-label='Forecast horizon'] a[aria-label='Next 5 Gameweeks']"
+    assert_select "[aria-label='Forecast horizon'] a[aria-label='Rest of Season']"
+    assert_select "[aria-label='Forecast horizon'] a[aria-current=page][aria-label='Gameweek 2']"
   end
 
   # The positions are the same control as the horizon, and links for the same

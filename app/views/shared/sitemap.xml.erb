@@ -21,9 +21,14 @@
     <priority>0.9</priority>
   </url>
 
-  <!-- The best fifteen the budget buys, both horizons -->
+  <!-- The best fifteen the budget buys, at each distance it is picked over -->
   <url>
     <loc><%= @base_url %><%= squad_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc><%= @base_url %><%= upcoming_squad_path %></loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
@@ -33,8 +38,15 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Season Rankings Pages: the one ranking URL that is good all year -->
+  <!-- The two ranking URLs that are good all year: the run of fixtures ahead, and
+       the whole of what is left. A gameweek's own page goes stale the week it is
+       played; these two never do. -->
   <% %w[forwards midfielders defenders goalkeepers].each do |position| %>
+  <url>
+    <loc><%= @base_url %><%= upcoming_position_path(position: position) %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
   <url>
     <loc><%= @base_url %><%= season_position_path(position: position) %></loc>
     <changefreq>daily</changefreq>

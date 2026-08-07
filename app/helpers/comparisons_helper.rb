@@ -38,7 +38,7 @@ module ComparisonsHelper
   def weekly_points(head_to_head, side)
     return unless side.forecast?
 
-    format("%.1f", side.score / (head_to_head.season? ? Gameweek.remaining_count : 1))
+    format("%.1f", side.score / Horizon.find(head_to_head.horizon).divisor)
   end
 
   # A side of a comparison in the terms the compact card asks for, so the pair are
@@ -79,7 +79,7 @@ module ComparisonsHelper
   end
 
   def horizon_line(head_to_head)
-    head_to_head.season? ? "Expected points for the rest of the season." : "Expected points this gameweek."
+    "Expected points for #{Horizon.find(head_to_head.horizon).span}."
   end
 
   # A player we cannot forecast is not a player we rate at nought, and the page
