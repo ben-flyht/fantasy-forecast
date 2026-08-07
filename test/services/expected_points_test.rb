@@ -11,16 +11,16 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
   # A regular starter with a decent record behind him.
   #
-  # assists is a season's total, like bonus, and conceded is what his side is
-  # expected to let in per game: 1.20 is a middling defence, which keeps about a
-  # third of its sheets clean. Between them they are what a clean sheet and an
-  # assist are now read from. See ExpectedPoints#clean_sheet_points.
-  def regular(minutes: 3000.0, xg: 0.30, xgi: 0.50, assists: 6.0, conceded: 1.20,
+  # xa is what his passing was expected to be worth per game, and conceded is what
+  # his side is expected to let in: 1.20 is a middling defence, which keeps about a
+  # third of its sheets clean. Between them they are what an assist and a clean
+  # sheet are now read from. See ExpectedPoints#assist_points.
+  def regular(minutes: 3000.0, xg: 0.30, xgi: 0.50, xa: 0.20, conceded: 1.20,
               owned: 5.0, cost: 60.0)
     {
       "last_season_minutes" => minutes, "last_season_expected_goals_per_90" => xg,
       "last_season_expected_goal_involvements_per_90" => xgi,
-      "last_season_assists" => assists,
+      "last_season_expected_assists_per_90" => xa,
       "last_season_expected_goals_conceded_per_90" => conceded,
       "selected_by_percent" => owned, "now_cost" => cost
     }
@@ -32,6 +32,15 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     regular.except("last_season_expected_goals_conceded_per_90")
   end
 
+  # What 0.20 expected assists a game is worth to a player in this position,
+  # measured against the same player creating nothing at all.
+  def assist_worth(position)
+    rankings = [ ranking(1, position: position) ]
+    creating = forecast(rankings, { 1 => regular(xa: 0.20) })[1][:working][:per_90]
+    barren = forecast(rankings, { 1 => regular(xa: 0.0) })[1][:working][:per_90]
+    creating - barren
+  end
+
   def forecast(rankings, stats, fixtures: { 1 => [ fixture ] }, managers: nil, movers: [])
     ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: fixtures,
                        season_started: false, managers: managers, movers: movers)
@@ -40,10 +49,10 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   test "expected points is minutes, times what he is worth per 90, times the games ahead" do
     result = forecast([ ranking(1) ], { 1 => regular })
 
-    # 90 minutes of a 0.3 xG midfielder with six assists behind him, on a level
-    # fixture: two points for turning up, plus what he is worth on top. A full
-    # season of minutes, so nothing is held back for doubt.
-    assert_in_delta 4.34, result[1][:points], 0.1
+    # 90 minutes of a 0.3 xG, 0.2 xA midfielder on a level fixture: two points for
+    # turning up, plus what he is worth on top. A full season of minutes behind
+    # him, so nothing is held back for doubt.
+    assert_in_delta 4.58, result[1][:points], 0.1
   end
 
   test "before the season, minutes are read against a full campaign" do
@@ -61,7 +70,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
   test "a hair between two players is not rounded into a tie" do
     rankings = [ ranking(1), ranking(2) ]
-    stats = { 1 => regular(assists: 6.0), 2 => regular(assists: 6.3) }
+    stats = { 1 => regular(xa: 0.20), 2 => regular(xa: 0.21) }
 
     result = forecast(rankings, stats)
 
@@ -118,7 +127,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   test "turning up is worth the same whoever the opponent is" do
     rankings = [ ranking(1) ]
     # paid for nothing but being there: no goals, no assists, nothing to keep out
-    stats = { 1 => regular(xg: 0.0, xgi: 0.0, assists: 0.0, conceded: 0.0) }
+    stats = { 1 => regular(xg: 0.0, xgi: 0.0, xa: 0.0, conceded: 0.0) }
 
     kind = forecast(rankings, stats, fixtures: { 1 => [ fixture(1) ] })
     cruel = forecast(rankings, stats, fixtures: { 1 => [ fixture(5) ] })
@@ -333,17 +342,28 @@ class ExpectedPointsTest < ActiveSupport::TestCase
                     "nought expected against is no opinion, not a certainty of keeping it out"
   end
 
-  # FPL pays for the penalty won, the deflection and the rebound. None of them are
-  # in an expected assist, and between them they are worth about half again.
-  test "an assist is what he was awarded, not what his passing was expected to earn" do
-    rankings = [ ranking(1), ranking(2) ]
-    awarded = regular(assists: 9.0)
-    quiet = regular(assists: 3.0)
+  # FPL pays for the penalty won, the deflection and the rebound, none of which an
+  # expected assist counts, so the expected figure is lifted to what the league is
+  # actually awarded. A forward is paid most for it: he is the man fouled for the
+  # penalty and the man whose saved shot falls to somebody else.
+  test "an expected assist is lifted to what FPL actually awards, hardest up front" do
+    in_midfield = assist_worth("midfielder")
+    up_front = assist_worth("forward")
 
-    result = forecast(rankings, { 1 => awarded, 2 => quiet })
+    assert_in_delta 0.78, in_midfield, 0.01, "three points an assist, lifted a third again"
+    assert_in_delta 1.35, up_front, 0.01, "and more than twice over for a forward"
+    assert_operator up_front, :>, in_midfield,
+                    "he wins the penalty and his saved shot falls to somebody else"
+  end
 
-    assert_operator result[1][:points], :>, result[2][:points],
-                    "the man actually credited with them is worth more, whatever the passing was rated"
+  test "creating more is worth more, and nothing is paid for creating nothing" do
+    rankings = [ ranking(1), ranking(2), ranking(3) ]
+    stats = { 1 => regular(xa: 0.30), 2 => regular(xa: 0.10), 3 => regular(xa: 0.0) }
+
+    result = forecast(rankings, stats)
+
+    assert_operator result[1][:points], :>, result[2][:points]
+    assert_operator result[2][:points], :>, result[3][:points]
   end
 
   # Three saves in a match is a point, and five is still a point: FPL counts them
@@ -366,11 +386,8 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   # him for ever took most from whoever scored most.
   test "past a regular's season the record stops being shrunk for doubt" do
     rankings = [ ranking(1), ranking(2), ranking(3) ]
-    # No assists, because those are counted from a total and so move with minutes
-    # in their own right. What is left varying is the doubt and nothing else.
-    stats = { 1 => regular(minutes: 2400.0, assists: 0.0),
-              2 => regular(minutes: 3400.0, assists: 0.0),
-              3 => regular(minutes: 900.0, assists: 0.0) }
+    stats = { 1 => regular(minutes: 2400.0), 2 => regular(minutes: 3400.0),
+              3 => regular(minutes: 900.0) }
 
     result = forecast(rankings, stats)
 
@@ -865,7 +882,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     working = result[1][:working]
 
     assert_equal 90, working[:minutes]
-    assert_in_delta 4.34, working[:per_90], 0.2
+    assert_in_delta 4.58, working[:per_90], 0.2
     assert_equal 1.0, working[:games], "one ordinary fixture"
     assert_equal [ { name: "Someone", home: true, difficulty: 3 } ], working[:opponents]
     assert working.values.none? { |value| value.is_a?(String) }, "wording belongs in the view"

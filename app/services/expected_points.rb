@@ -20,7 +20,7 @@ class ExpectedPoints < ApplicationService
     expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90 saves_per_90
     expected_goals_conceded_per_90 defensive_contribution_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
-    season_assists last_season_assists
+    expected_assists_per_90
     last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
     last_season_clean_sheets_per_90 last_season_saves_per_90 last_season_bonus
     last_season_expected_goals_conceded_per_90 last_season_defensive_contribution_per_90
@@ -38,7 +38,7 @@ class ExpectedPoints < ApplicationService
   LAST_SEASON = {
     "season_minutes" => "last_season_minutes",
     "season_bonus" => "last_season_bonus",
-    "season_assists" => "last_season_assists",
+    "expected_assists_per_90" => "last_season_expected_assists_per_90",
     "expected_goals_per_90" => "last_season_expected_goals_per_90",
     "expected_goal_involvements_per_90" => "last_season_expected_goal_involvements_per_90",
     "clean_sheets_per_90" => "last_season_clean_sheets_per_90",
@@ -114,6 +114,27 @@ class ExpectedPoints < ApplicationService
   CLUB_EVIDENCE = 3
 
   ASSIST = 3
+
+  # What FPL awards against what an expected assist measures.
+  #
+  # An expected assist is the chance the pass created. FPL also pays the man who
+  # won the penalty, the man whose cross went in off a defender, and the man whose
+  # saved shot fell to a team-mate. None of that is in the expected figure, and
+  # last season the league was awarded 738 assists against 542 expected.
+  #
+  # Read per position because the gap is not one thing. A forward is paid more
+  # than twice his expected figure, being the man fouled for the penalty and the
+  # man whose rebound somebody else tucks away; further back it is about a third
+  # again. Measured on last season's league totals.
+  #
+  # Calibrated on the league and not on the player, deliberately. Read a man's own
+  # assists straight and the model buys whoever happened to have a freakish season:
+  # Bruno Fernandes was credited with 24 against an expected 12, and taking that at
+  # face value made him the best midfielder in the game by a margin he has never
+  # actually held. The league ratio corrects what the expected figure does not
+  # count without banking what one player got lucky on.
+  ASSIST_AWARDED = { "goalkeeper" => 1.3, "defender" => 1.3,
+                     "midfielder" => 1.3, "forward" => 2.25 }.freeze
 
   # Saves to the point, counted rather than divided by. See #save_points.
   SAVES_PER_POINT = 3
@@ -790,29 +811,19 @@ class ExpectedPoints < ApplicationService
     GOAL.fetch(ranking.position, 4) * goals(ranking)
   end
 
-  # What he was actually credited with, rather than what his passing was expected
-  # to be worth.
-  #
-  # An expected assist measures the chance the pass created, and FPL does not pay
-  # on that basis. It pays for winning a penalty, for a deflection, for a rebound
-  # off a save and for the pass before a solo run, none of which the expected
-  # figure counts. The gap is not small and it is not noise: Haaland was credited
-  # with eight against an expected 2.67, and across the league the awarded figure
-  # runs about half again above the expected one.
+  # What his creating is worth, priced at what the league is actually paid for it.
   #
   # Goals need no such correction and are still read from what was expected,
-  # because over a season a player scores about what his chances were worth. The
-  # difference is that goals are scored and assists are awarded.
+  # because over a season a man scores about what his chances were worth. The
+  # difference is that goals are scored and assists are awarded, and FPL awards
+  # them on a broader definition than the expected figure measures.
   #
-  # Counted from his total the way bonus is, and for the same reason: divided by
-  # the minutes he actually played, one assist off the bench reads as a creator's
-  # rate. It also keeps the figure off the floor of a column that stores two
-  # decimal places, where a small rate loses most of itself. See #bonus_points.
+  # See ASSIST_AWARDED for the size of that gap, why the correction is taken from
+  # the league rather than from the player's own assists, and why it differs by
+  # position.
   def assist_points(ranking)
-    played = minutes_played(ranking).to_f
-    return 0.0 if played.zero?
-
-    ASSIST * record(ranking, "season_assists") / ([ played, UNPROVEN_MINUTES ].max / FULL_MATCH)
+    ASSIST * ASSIST_AWARDED.fetch(ranking.position, 1.3) *
+      record(ranking, "expected_assists_per_90")
   end
 
   # A clean sheet is worth the chance of keeping one, which is not the same as the
