@@ -61,6 +61,11 @@ class ExpectedPoints < ApplicationService
   # from one lucky cameo cannot top the table.
   UNPROVEN_MINUTES = 450.0
 
+  # A regular's season, which is what a record has to reach before the doubt lifts
+  # from it entirely. A fixed quantity of football rather than however much has
+  # been played so far. See #credibility.
+  PROVEN_MINUTES = GAMEWEEKS_IN_SEASON * FULL_MATCH * REGULAR_SHARE
+
   # A player who has just changed clubs has a minutes record belonging to somebody
   # else's team sheet. Three thousand minutes at Newcastle says nothing about
   # whether he is first choice at Tottenham, so his record is allowed to argue for
@@ -1009,9 +1014,15 @@ class ExpectedPoints < ApplicationService
   # So the curve is measured against a regular's season. That much football earns
   # full credit and only a record short of it is shrunk, which is all the doubt
   # was ever for.
+  # Measured against a whole season and not against the football played so far.
+  # Those are the same number in August and nothing alike in September: read
+  # against the season to date, a man who played the only gameweek there has been
+  # has played all of it, and one match would buy the full credit that a career is
+  # meant to. One match is precisely the evidence UNPROVEN_MINUTES exists to
+  # distrust.
   def credibility(ranking)
     played = minutes_played(ranking).to_f
-    ceiling = regular_minutes / (regular_minutes + UNPROVEN_MINUTES)
+    ceiling = PROVEN_MINUTES / (PROVEN_MINUTES + UNPROVEN_MINUTES)
 
     ((played / (played + UNPROVEN_MINUTES)) / ceiling).clamp(0.0, 1.0)
   end

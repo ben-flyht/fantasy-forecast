@@ -397,6 +397,25 @@ class ExpectedPointsTest < ActiveSupport::TestCase
                     "but a third of one is still short of it"
   end
 
+  # A season's evidence is a fixed quantity of football, not however much has been
+  # played so far. Measured against the season to date, the man who played the only
+  # gameweek there has been has played all of it, and one match buys the full trust
+  # a career is meant to. One match is what the doubt is there for.
+  test "one gameweek into the season, a single appearance is not a season's proof" do
+    rankings = [ ranking(1), ranking(2) ]
+    played = { "expected_goals_per_90" => 0.30, "expected_assists_per_90" => 0.20,
+               "expected_goals_conceded_per_90" => 1.20, "selected_by_percent" => 5.0,
+               "now_cost" => 60.0 }
+    stats = { 1 => played.merge("season_minutes" => 90.0),
+              2 => played.merge("season_minutes" => 2400.0) }
+
+    result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                 season_started: true, gameweeks_played: 1)
+
+    assert_operator result[1][:working][:per_90], :<, result[2][:working][:per_90],
+                    "ninety minutes is ninety minutes, whether or not it is all there has been"
+  end
+
   test "a kind fixture is worth most to the defender with the best record of clean sheets" do
     rankings = [ ranking(1, position: "defender"), ranking(2, position: "defender") ]
     # 0.69 expected against keeps half his sheets clean; 2.30 keeps a tenth

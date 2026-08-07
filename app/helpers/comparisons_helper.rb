@@ -33,12 +33,27 @@ module ComparisonsHelper
     "#{comparison.left.full_name} or #{comparison.right.full_name}?"
   end
 
-  # What a card is worth showing as a headline number: the week a score describes,
-  # so both horizons read on the scale the grades use.
-  def weekly_points(head_to_head, side)
+  # The big number on a card: what he is expected to score over the horizon being
+  # read, as it stands.
+  #
+  # It used to be divided back down to a single week so that every horizon read on
+  # the scale the grades are struck on. That answered a question nobody asks. A
+  # manager looking at five gameweeks wants to know what five gameweeks are worth,
+  # and one looking at the season wants the season. It also had the card quietly
+  # disagreeing with the sentence beneath it, which has always quoted the total.
+  #
+  # The grade next to it is still read from the week, because a grade is a mark out
+  # of ten and has to mean the same thing at every distance. See HeadToHead#weekly.
+  # A tenth of a point separates two players over one gameweek and means nothing
+  # over thirty-eight, so the decimal is dropped once the number is large enough
+  # not to need it. It also keeps a season total clear of the photograph on the
+  # share card, where the figure is set at 112 point.
+  WHOLE_POINTS = 100
+
+  def headline_points(side)
     return unless side.forecast?
 
-    format("%.1f", side.score / Horizon.find(head_to_head.horizon).divisor)
+    side.score >= WHOLE_POINTS ? side.score.round.to_s : format("%.1f", side.score)
   end
 
   # A side of a comparison in the terms the compact card asks for, so the pair are
@@ -53,7 +68,7 @@ module ComparisonsHelper
       ),
       player: side.player,
       facts: { "now_cost" => side.cost, "selected_by_percent" => side.ownership },
-      leading: weekly_points(head_to_head, side) || "—"
+      leading: headline_points(side) || "—"
     }
   end
 
