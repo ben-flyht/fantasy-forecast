@@ -1,0 +1,19 @@
+<div class="flex gap-1 rounded-lg bg-zinc-200/70 p-1 sm:inline-flex" role="group" aria-label="<%= label %>">
+  <% options.each do |option| %>
+    <% if option.abbreviated? %>
+      <%# Both names are here and the breakpoint chooses. aria-label overrides the
+          markup, so a screen reader hears the full name at either width rather than
+          reading both spans out one after the other. %>
+      <%= link_to option.url, "aria-label": option.label,
+            "aria-current": ("page" if option.current?),
+            class: option_classes(option) do %>
+        <span class="sm:hidden"><%= option.short_label %></span>
+        <span class="hidden sm:inline"><%= option.label %></span>
+      <% end %>
+    <% else %>
+      <%= link_to option.label, option.url,
+            "aria-current": ("page" if option.current?),
+            class: option_classes(option) %>
+    <% end %>
+  <% end %>
+</div>

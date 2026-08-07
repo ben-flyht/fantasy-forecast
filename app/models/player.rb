@@ -52,6 +52,13 @@ class Player < ApplicationRecord
     "#{slug}-#{fpl_id}"
   end
 
+  # Every name he might be looked up by: what he is called, what FPL calls him, and
+  # each half of it on its own. A manager types the name he knows, and that is a last
+  # name for Haaland, a first name for Gabriel, and neither for Hato.
+  def searchable_names
+    [ display_name, full_name, first_name, last_name, read_attribute(:short_name) ].compact_blank.uniq
+  end
+
   # The player an address names. The name in front of it is there to be read, so
   # it can change with a transfer or a spelling correction without breaking the
   # link: the number on the end is the one that identifies him.

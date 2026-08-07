@@ -33,6 +33,34 @@ class HeadToHeadTest < ActiveSupport::TestCase
     assert_nil compare.winner
   end
 
+  # A manager holding two players and one transfer has to pick one of them, so
+  # declining to answer sends him away to guess.
+  test "a gap too small to trust still names a pick" do
+    forecast(@salah, 4.10)
+    forecast(@palmer, 4.00, rank: 2)
+
+    assert compare.close?, "the gap is under the threshold"
+    assert_equal @salah, compare.pick.player
+    assert_equal @palmer, compare.runner_up.player
+  end
+
+  test "a comfortable pick is not called a close one" do
+    forecast(@salah, 5.4)
+    forecast(@palmer, 3.9, rank: 2)
+
+    assert_not compare.close?
+    assert_equal @salah, compare.pick.player
+  end
+
+  # There is nothing to pick between when there is nothing to pick from.
+  test "no forecast for one of them means no pick at all" do
+    forecast(@salah, 5.4)
+
+    assert_not compare.forecast?
+    assert_nil compare.pick
+    assert_nil compare.runner_up
+  end
+
   test "a player we cannot forecast is not a player we rate at nought" do
     forecast(@salah, 5.4)
 

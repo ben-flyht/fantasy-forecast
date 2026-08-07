@@ -1,4 +1,8 @@
-<%# The one thing the card is for, along the bottom, and who says so. %>
-<text x="56" y="566" fill="#71717a" font-size="16" font-weight="700" letter-spacing="2"><%= label.upcase %></text>
-<text x="56" y="600" fill="#fafafa" font-size="<%= size %>" font-weight="800" letter-spacing="-1"><%= headline %></text>
-<text x="1144" y="600" text-anchor="end" fill="#71717a" font-size="20" font-weight="700">fantasyforecast.co.uk</text>
+<%# The one thing the card is for, along the bottom, and whose forecast it is. %>
+<% ink = local_assigns.fetch(:theme, card_theme) %>
+<text x="56" y="566" fill="<%= ink[:faint] %>" font-size="16" font-weight="700" letter-spacing="2"><%= label.upcase %></text>
+<text x="56" y="600" fill="<%= ink[:ink] %>" font-size="<%= size %>" font-weight="800" letter-spacing="-1"><%= headline %></text>
+
+<%= render "cards/wordmark", size: 22, right: 1144, middle: 570,
+           ink: ink[:ink], field: ink[:ink], reversed: ink[:reversed] %>
+<text x="1144" y="612" text-anchor="end" fill="<%= ink[:faint] %>" font-size="15" font-weight="700" letter-spacing="0.5">fantasyforecast.co.uk</text>

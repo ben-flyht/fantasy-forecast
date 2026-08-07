@@ -1,0 +1,70 @@
+<%#
+  Pick two players and go and read the argument.
+
+  The pairs listed below this are the ones our own forecast puts closest together,
+  which is a good list and is never the pair somebody actually arrived holding. Every
+  pair in the game has an address; this is how you reach the one you want.
+%>
+<section class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5"
+         data-controller="comparison-builder"
+         data-comparison-builder-url-value="<%= comparison_search_path %>">
+  <h2 class="text-base font-semibold text-zinc-900">Compare any two players</h2>
+  <p class="mt-1 text-sm text-zinc-500">Start typing a name. Every pair in the game has a page.</p>
+
+  <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-start">
+    <% 2.times do |slot| %>
+      <% if slot == 1 %>
+        <div class="hidden self-center pt-2 text-sm font-semibold text-zinc-400 sm:block">or</div>
+      <% end %>
+
+      <div class="relative">
+        <label class="sr-only" for="comparison-player-<%= slot %>">
+          <%= slot.zero? ? "First player" : "Second player" %>
+        </label>
+
+        <input type="text" id="comparison-player-<%= slot %>"
+               data-comparison-builder-target="input"
+               data-action="input->comparison-builder#search keydown->comparison-builder#keydown"
+               autocomplete="off"
+               placeholder="<%= slot.zero? ? "First player" : "Second player" %>"
+               class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+
+        <%# What you picked, standing where the box was. %>
+        <div class="flex items-center justify-between gap-2 rounded-lg border border-zinc-900 bg-white px-3 py-2"
+             data-comparison-builder-target="chosen" hidden></div>
+
+        <button type="button" hidden
+                data-comparison-builder-target="clear"
+                data-slot="<%= slot %>"
+                data-action="comparison-builder#clear"
+                class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-400 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                aria-label="Choose a different <%= slot.zero? ? "first" : "second" %> player">
+          <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+
+        <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
+             data-comparison-builder-target="results" role="listbox" hidden></div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="mt-4 flex flex-wrap items-center gap-3">
+    <button type="button"
+            data-comparison-builder-target="submit"
+            data-action="comparison-builder#compare"
+            class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            disabled>
+      Compare them
+    </button>
+    <p class="text-xs text-zinc-500" data-comparison-builder-target="hint">Pick two players.</p>
+  </div>
+
+  <noscript>
+    <p class="mt-3 text-xs text-zinc-500">
+      Searching needs JavaScript. The pairs below all work without it, and so does every
+      /compare address once you have one.
+    </p>
+  </noscript>
+</section>

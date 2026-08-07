@@ -205,8 +205,21 @@ class SquadOptimiser < ApplicationService
          .first(count)
   end
 
+  # What the eleven is expected to score, armband included.
+  #
+  # The captain's points are doubled, and the armband goes on the best player in the
+  # side, so an eleven is worth its own total plus its best man again. Leaving that out
+  # did not just report a smaller number, it searched for a different squad: doubling
+  # the top score changes what the budget is willing to pay for one great player rather
+  # than two good ones.
   def eleven_points(squad, formation)
-    eleven(squad, formation).sum { |pick| pick[:expected_points] }
+    starting = eleven(squad, formation)
+
+    starting.sum { |pick| pick[:expected_points] } + armband(starting)
+  end
+
+  def armband(starting)
+    starting.map { |pick| pick[:expected_points] }.max.to_f
   end
 
   # The eleven in full, plus each bench place discounted by how often it is used.

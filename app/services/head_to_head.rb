@@ -62,7 +62,27 @@ class HeadToHead < ApplicationService
     [ left, right ]
   end
 
-  # The one we would have, or nothing if the pair are too close to separate.
+  # The one we would have. Always answers where there is a forecast to answer from,
+  # even by a hundredth of a point.
+  #
+  # We used to decline below CLOSE, which was honest and useless: a manager with two
+  # names and one transfer has to pick one of them, and "too close to call" sends him
+  # away to guess. So the pick is always named and the margin is reported alongside
+  # it, which lets him weigh the answer rather than not have one.
+  def pick
+    return unless forecast?
+
+    ranked.first
+  end
+
+  def runner_up
+    return unless forecast?
+
+    ranked.last
+  end
+
+  # The one we would have, when we would have one strongly enough to say so without
+  # qualification. See #close? for the rest.
   def winner
     return if tie?
 
@@ -75,10 +95,23 @@ class HeadToHead < ApplicationService
     ranked.last
   end
 
+  # Both have a forecast, so there is something to compare at all.
+  def forecast?
+    left.forecast? && right.forecast?
+  end
+
   # Neither has a forecast, or they are close enough that picking between them on
   # our numbers would be a false precision.
   def tie?
-    return true unless left.forecast? && right.forecast?
+    return true unless forecast?
+
+    close?
+  end
+
+  # A pick we would not argue hard for: the gap is smaller than the difference our
+  # forecast can honestly claim to see.
+  def close?
+    return false unless forecast?
 
     margin < CLOSE
   end

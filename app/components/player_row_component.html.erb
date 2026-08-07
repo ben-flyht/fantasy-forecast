@@ -3,7 +3,7 @@
     role="link" tabindex="0"
     onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
   <td class="w-[104px] pl-[10px] text-center align-middle bg-white border-y border-l border-zinc-200 rounded-l-xl group-hover:bg-zinc-50">
-    <span class="text-[46px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><%= rank %></span>
+    <span class="text-[46px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><%= leading %></span>
   </td>
 
   <td class="p-0 w-full align-middle bg-white border-y border-zinc-200 group-hover:bg-zinc-50">
@@ -26,7 +26,7 @@
           <% if player.given_name.present? %>
             <span class="row-start-2 self-end leading-none text-xs font-bold tracking-[-0.02em] uppercase opacity-80 whitespace-nowrap"><%= player.given_name %></span>
           <% end %>
-          <span class="row-start-4 self-center leading-none text-2xl font-extrabold tracking-[-0.02em] uppercase whitespace-nowrap"><%= player.display_name %></span>
+          <span class="row-start-4 self-center leading-none text-2xl font-extrabold tracking-[-0.02em] uppercase whitespace-nowrap"><%= player.display_name %><% if captain? %><span class="ml-[7px] text-base align-top opacity-90">(C)</span><% end %></span>
           <span class="row-start-6 self-start leading-none text-[12.5px] font-bold whitespace-nowrap flex items-center gap-[7px]">
             <span><%= team&.name %></span>
             <% if cost %>

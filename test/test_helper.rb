@@ -19,5 +19,18 @@ module ActiveSupport
     def png_size(bytes)
       bytes[16, 8].unpack("N2")
     end
+
+    # One transparent pixel, standing in for every photograph a card embeds.
+    PIXEL = Base64.decode64(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+
+    # A card with players on it fetches their pictures. No test should be asking the
+    # Premier League for one, and a test that quietly did would pass or fail
+    # depending on whether their CDN happened to answer.
+    def stub_player_images
+      stub_request(:get, %r{resources\.premierleague\.com/.*\.png})
+        .to_return(status: 200, body: PIXEL, headers: { "Content-Type" => "image/png" })
+    end
   end
 end

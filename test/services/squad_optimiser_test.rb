@@ -35,6 +35,55 @@ class SquadOptimiserTest < ActiveSupport::TestCase
     end
   end
 
+  # The armband doubles whatever the man wearing it scores, so a squad's expected
+  # points are the eleven plus its best player again. Without it the number is not
+  # what a manager would actually score, and the search is buying the wrong squad.
+  test "the total counts the captain twice" do
+    build_pool
+    squad = SquadOptimiser.call(gameweek: @gameweek)
+
+    eleven = squad.starters.sum { |pick| pick["expected_points"].to_f }
+    best = squad.starters.map { |pick| pick["expected_points"].to_f }.max
+
+    assert_in_delta eleven + best, squad.expected_points.to_f, 0.001
+    assert_in_delta best, squad.captain["expected_points"].to_f, 0.001
+  end
+
+  # The armband has to be part of what the search is choosing, not a number added to
+  # its answer afterwards. This pool is built so the two are different squads: one
+  # great player is worth less than two good ones until you double him, and worth more
+  # once you do. If the search is captain-aware it buys the great player.
+  test "it pays for one great player rather than two good ones, because of the armband" do
+  star = pooled("midfielder", 0, score: 20.0, cost: 400)
+  good = 2.times.map { |i| pooled("midfielder", 10 + i, score: 12.0, cost: 200) }
+  fill_the_rest
+
+  squad = SquadOptimiser.call(gameweek: @gameweek)
+  ids = squad.player_ids
+
+  assert_includes ids, star.id, "the search did not buy the player worth doubling"
+  assert_empty good.map(&:id) & ids
+  end
+
+  # One player at a price and a score of my choosing.
+  def pooled(position, index, score:, cost:)
+  @pool_id = (@pool_id || 0) + 1
+  player = Player.create!(first_name: "P", last_name: "#{position}#{index}",
+                          short_name: "#{position[0, 3].upcase}#{index}",
+                          fpl_id: 8000 + @pool_id, code: 8000 + @pool_id,
+                          team: @teams[@pool_id % @teams.size], position: position)
+  Forecast.create!(player: player, gameweek: @gameweek, horizon: "gameweek", rank: index + 1, score: score)
+  Statistic.create!(player: player, gameweek: @gameweek, type: "now_cost", value: cost)
+  player
+  end
+
+  # Enough cheap, identical players to make a legal squad around whoever is on trial.
+  def fill_the_rest
+  { "goalkeeper" => 4, "defender" => 8, "midfielder" => 6, "forward" => 6 }.each do |position, count|
+    count.times { |i| pooled(position, 100 + i, score: 2.0, cost: 40) }
+  end
+  end
+
   test "it picks a squad that obeys every one of FPL's rules" do
     build_pool
     squad = SquadOptimiser.call(gameweek: @gameweek)

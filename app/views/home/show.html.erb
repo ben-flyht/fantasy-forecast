@@ -1,0 +1,202 @@
+<%# The gameweek is in the title because it is the difference between a page that
+    looks current and one that looks like it was written in August. %>
+<% content_for :meta_title, "FPL Rankings and Predictions#{" for Gameweek #{@gameweek.fpl_id}" if @gameweek} | Fantasy Forecast" %>
+<% content_for :meta_description, "Every Fantasy Premier League player graded A to F from expected points. The best FPL players this week, who to captain, the best £100.0m squad, and head-to-head comparisons answered." %>
+<% content_for :meta_url, ApplicationHelper::BASE_URL %>
+<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{squad_path(format: :png)}" if @squad %>
+<% content_for :meta_image_height, ShareCard::SQUARE if @squad %>
+
+<section>
+  <%# The heading says what the page is, in the words somebody would have typed to
+      arrive at it. Nothing to share and nowhere to go back to, so the front page
+      gets a title and a line and no utility row at all. %>
+  <%= render PageHeadingComponent.new(
+        title: "FPL Rankings and Predictions#{" for Gameweek #{@gameweek.fpl_id}" if @gameweek}",
+        subtitle: "Check the forecast before you pick your team.") %>
+
+  <p class="mt-3 max-w-2xl text-sm/6 text-zinc-600">
+    Every Fantasy Premier League player is forecast for the coming gameweek and for the rest
+    of the season, then graded A to F on what he is expected to return. Price and ownership
+    lead, weighed against minutes, form, expected goals and assists, and who he is playing.
+    The numbers are rewritten every hour and every page on this site is read from the same
+    ones, so nothing here can disagree with anything else here.
+  </p>
+
+  <%# The positions people actually search for, said in the words they search for
+      them in. The pages behind these links already rank; what they were missing was
+      anything on this site pointing at them by name. %>
+  <nav class="mt-5 flex flex-wrap gap-2" aria-label="FPL rankings by position">
+    <% %w[goalkeepers defenders midfielders forwards].each do |position| %>
+      <%= link_to "Best FPL #{position} this week",
+            gameweek_position_path(gameweek: @gameweek.fpl_id, position: position),
+            class: "inline-block rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" if @gameweek %>
+    <% end %>
+  </nav>
+</section>
+
+<section class="mt-12">
+  <div class="flex items-end justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-semibold text-zinc-900">
+        The best players <%= @gameweek ? "in Gameweek #{@gameweek.fpl_id}" : "right now" %>
+      </h2>
+      <p class="mt-1 text-sm text-zinc-500">Whatever they play, in order of expected points.</p>
+    </div>
+    <%= link_to "All rankings", rankings_path,
+          class: "shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+  </div>
+
+  <% if @shortlist.any? %>
+    <div class="mt-4 hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[720px] table-fixed border-separate border-spacing-y-2 text-zinc-950">
+        <thead>
+          <tr class="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
+            <th class="w-[104px] pb-2 text-center">Rank</th>
+            <th class="pb-2 pl-10 text-left">Player</th>
+            <th class="w-[104px] pb-2 text-center">Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @shortlist.each do |ranking| %>
+            <%= render PlayerRowComponent.new(ranking: ranking, player: @players[ranking.player_id],
+                                              facts: @costs[ranking.player_id]) %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-4 md:hidden flex flex-col gap-2">
+      <% @shortlist.each do |ranking| %>
+        <%= render PlayerCardComponent.new(ranking: ranking, player: @players[ranking.player_id],
+                                           facts: @costs[ranking.player_id]) %>
+      <% end %>
+    </div>
+
+    <p class="mt-4 text-sm/6 text-zinc-600">
+      A grade is absolute, not a share of whoever tops a position: four expected points is four
+      expected points whether he keeps goal or plays up front. Two of those points are simply
+      turning up, so the grade is what a player is expected to add on top.
+      <%= link_to "See every player, by position", rankings_path, class: "font-medium text-zinc-900 underline underline-offset-2" %>.
+    </p>
+  <% else %>
+    <p class="mt-4 text-sm text-zinc-500">No forecast yet for the coming gameweek.</p>
+  <% end %>
+</section>
+
+<%# The armband, which is the one decision every manager makes every week. The top
+    of the list above is already the answer, so this says so and sends you to the
+    page that argues it properly. %>
+<% if (captain_pick = @shortlist.first) && (captain_player = @players[captain_pick.player_id]) %>
+  <section class="mt-14">
+    <div class="flex items-end justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold text-zinc-900">
+          Who to captain<%= " in Gameweek #{@gameweek.fpl_id}" if @gameweek %>
+        </h2>
+        <p class="mt-1 text-sm text-zinc-500">The armband doubles his score, so it belongs on the highest forecast in the game.</p>
+      </div>
+      <%= link_to "Captain picks", captain_path,
+            class: "shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+    </div>
+
+    <p class="mt-4 max-w-2xl text-sm/6 text-zinc-600">
+      Our captain pick is
+      <%= link_to captain_player.display_name, player_path(captain_player), class: "font-medium text-zinc-900 underline underline-offset-2" %>
+      of <%= captain_player.team&.name %>, on <%= format("%.1f", captain_pick.score.to_f) %> expected points before
+      the armband doubles them.
+      <%= link_to "See the captain options and a differential", captain_path, class: "font-medium text-zinc-900 underline underline-offset-2" %>.
+    </p>
+  </section>
+<% end %>
+
+<section class="mt-14">
+  <div class="flex items-end justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-semibold text-zinc-900">The best £100.0m squad</h2>
+      <p class="mt-1 text-sm text-zinc-500">The squad to build from scratch, if you were starting today.</p>
+    </div>
+    <%= link_to "See the squad", squad_path,
+          class: "shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+  </div>
+
+  <% if @squad %>
+    <%# A square card set full width would stand a thousand pixels tall on a desktop and
+        turn a preview into the page, so it is capped at the size it is actually met at.
+        That leaves half the row empty, which is where the explanation goes: beside the
+        picture where there is room for it, under it where there is not. %>
+    <div class="mt-4 grid gap-6 md:grid-cols-[minmax(0,26rem)_1fr] md:items-start md:gap-8">
+      <div class="flex flex-col gap-3">
+        <%# The real dimensions are declared so the browser reserves a square rather than
+            the letterbox the other cards use, and the page does not jump. %>
+        <%= link_to squad_path, class: "block overflow-hidden rounded-xl border border-zinc-200" do %>
+          <%= image_tag squad_path(format: :png), width: ShareCard::WIDTH, height: ShareCard::SQUARE,
+                class: "block h-auto w-full",
+                alt: "The best FPL squad for #{@gameweek ? "Gameweek #{@gameweek.fpl_id}" : 'the coming gameweek'}: #{@squad.formation}, #{@squad.expected_points.round} expected points" %>
+        <% end %>
+
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <%= render "shared/share", label: "Share this squad", url: "#{ApplicationHelper::BASE_URL}#{squad_path}",
+                     title: "The best £100.0m FPL squad" %>
+          <p class="text-xs text-zinc-500">That picture is what lands in the chat.</p>
+        </div>
+      </div>
+
+      <p class="max-w-prose text-sm/6 text-zinc-600">
+        Picked to FPL's own rules: fifteen players, two keepers, five defenders, five midfielders,
+        three forwards, no more than three from any one club, and <%= player_price(SquadOptimiser::BUDGET) %>
+        to spend. A substitute only scores when a starter does not play, so the eleven are weighed in
+        full and the bench by how often each place is actually used. It knows nothing about the team
+        you already own, so it is a squad to build towards rather than a set of transfers.
+      </p>
+    </div>
+  <% else %>
+    <p class="mt-4 text-sm text-zinc-500">No squad has been picked for the coming gameweek yet.</p>
+  <% end %>
+</section>
+
+<section class="mt-14">
+  <div class="flex items-end justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-semibold text-zinc-900">Him or him?</h2>
+      <p class="mt-1 text-sm text-zinc-500">The picks where the choice is genuinely close.</p>
+    </div>
+    <%= link_to "All comparisons", comparisons_path,
+          class: "shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+  </div>
+
+  <% if @arguments.any? %>
+    <ul class="mt-4 flex flex-wrap gap-2">
+      <% @arguments.each do |pair| %>
+        <li>
+          <%= link_to comparison_title(pair), comparison_path(pair: pair.slug),
+                class: "inline-block rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+        </li>
+      <% end %>
+    </ul>
+
+    <p class="mt-4 max-w-2xl text-sm/6 text-zinc-600">
+      Both players in a comparison are forecast the same way, from the same stored numbers the
+      rankings are read from. Where the gap is under <%= HeadToHead::CLOSE %> of a point a week we
+      say there is nothing to choose between them, which is the honest answer.
+    </p>
+  <% else %>
+    <p class="mt-4 text-sm text-zinc-500">No forecasts yet for the coming gameweek, so there is nothing to compare.</p>
+  <% end %>
+</section>
+
+<%= render "shared/faq", title: "Fantasy Premier League FAQ", pairs: [
+      [ "Who are the best FPL players this week?",
+        @shortlist.any? ?
+          "Our highest forecasts#{" for Gameweek #{@gameweek.fpl_id}" if @gameweek} are #{@shortlist.first(3).map { |ranking| "#{@players[ranking.player_id]&.display_name} (#{@players[ranking.player_id]&.team&.short_name})" }.to_sentence}. The full ten are in the table above, ordered by the points we expect them to score rather than by their place in a position table." :
+          "There is no forecast for the coming gameweek yet. The table fills in as soon as the fixtures and prices for the week are published." ],
+      [ "How are FPL players ranked and graded?",
+        "Price and how many managers own a player lead, because between them the market already knows most of what there is to know. That is then weighed against minutes, recent form, expected goals and assists, and fixture difficulty, to give the points we expect from him. Grades are absolute: four expected points is an A whether he keeps goal or plays up front, and a player we would avoid is left ungraded rather than given a bad letter." ],
+      [ "How often do the FPL rankings update?",
+        "Every hour. Prices, ownership, transfers and team news all move during the week, so the forecast is rewritten rather than published once and left." ],
+      [ "Is Fantasy Forecast free?",
+        "Yes. Every ranking, the squad, the captain pick and every player comparison are free, with no account needed." ],
+      [ "What is the best FPL team to pick right now?",
+        @squad ?
+          "Our #{player_price(SquadOptimiser::BUDGET)} squad is a #{@squad.formation} on #{@squad.expected_points.round} expected points, picked to FPL's own rules: fifteen players, no more than three from any one club. It knows nothing about the team you already own." :
+          "No squad has been picked for the coming gameweek yet. The squad page fills in once there is a forecast to build one from." ]
+    ] %>

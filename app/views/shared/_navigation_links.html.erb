@@ -1,0 +1,6 @@
+<%# The links themselves. Which page you are on is said in the markup as well as the
+    colour, because colour alone is not an answer to a screen reader. %>
+<% navigation_links.each do |label, path, current| %>
+  <%= link_to label, path, "aria-current": ("page" if current),
+        class: "#{style} #{current ? 'bg-zinc-900 text-white' : resting}" %>
+<% end %>

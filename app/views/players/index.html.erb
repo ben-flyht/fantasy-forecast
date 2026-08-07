@@ -6,38 +6,46 @@
 <% content_for :meta_url, @canonical_path ? "#{ApplicationHelper::BASE_URL}#{@canonical_path}" : root_url %>
 <% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{@card_path}" %>
 
-<%= turbo_frame_tag "rankings_container" do %>
-    <div class="mb-6 flex items-start justify-between gap-4">
-      <div>
-        <h1 class="text-xl sm:text-2xl font-semibold text-zinc-900"
-            data-controller="page-title"
-            data-page-title-text-value="<%= document_title %>"><%= @page_title %></h1>
-        <p class="mt-1 text-sm text-zinc-500">Check the forecast before you pick your team.</p>
-      </div>
-      <% if @forecast_at %>
-        <p class="mt-1 shrink-0 text-xs text-zinc-400">
-          Updated
-          <time datetime="<%= @forecast_at.iso8601 %>" title="<%= l @forecast_at, format: :long %>"><%= time_ago_in_words(@forecast_at) %> ago</time>
-        </p>
-      <% end %>
+<%# Every link inside advances the address bar. The horizon and the positions are
+    links now, and a link inside a frame swaps the frame without touching the URL
+    unless it is told to: without this, choosing Rest of Season showed the season
+    but left you standing at the gameweek's address. %>
+<%= turbo_frame_tag "rankings_container", data: { turbo_action: "advance" } do %>
+    <%# The horizon comes out of the filter bar below and into the heading, so it is
+        the same control in the same place as every other page reads its forecast at. %>
+    <div class="mb-6" data-controller="page-title" data-page-title-text-value="<%= document_title %>">
+      <%= render PageHeadingComponent.new(
+            title: @page_title,
+            subtitle: "Check the forecast before you pick your team.",
+            updated_at: @forecast_at,
+            share: "Share these rankings",
+            back: back_home,
+            horizons: forecast_horizons(gameweek: @gameweek, season: season?,
+                                        gameweek_url: horizon_url(:gameweek),
+                                        season_url: horizon_url(:season))) %>
     </div>
 
-    <div class="flex flex-wrap items-center gap-4 mb-6">
-      <%= form_with url: root_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance", controller: "filter-navigation", action: "submit->filter-navigation#submit" }, id: "filters-form", class: "contents" do |f| %>
-        <!-- Horizon Selector -->
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-zinc-500">Show</span>
-          <%= render DropdownComponent.new(
-            label: "Horizon",
-            name: "gameweek",
-            options: @horizon_options,
-            selected: horizon_param
-          ) %>
-        </div>
+    <%# Each filter on its own line on a phone, one row from sm up: position first,
+        because it is the one that changes what you are looking at, then the team,
+        then the price pushed to the far end where a range belongs. %>
+    <%# Each filter on its own line on a phone. From sm up they share a row with the
+        space divided between them: position at one end, price at the other, team
+        standing in the middle rather than crowding the positions. %>
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <%# The positions are the same control as the horizon above, and links for the
+          same reason: /gameweeks/1/goalkeepers is a page people arrive on from a
+          search, so it deserves an href rather than a radio button. %>
+      <%= render SegmentedControlComponent.new(label: "Position", options: position_options) %>
 
-        <!-- Team Selector -->
+      <%= form_with url: rankings_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance", controller: "filter-navigation", action: "submit->filter-navigation#submit" }, id: "filters-form", class: "contents" do |f| %>
+        <%# The horizon and the position are links now, so the form carries them as
+            hidden fields instead. Without them the filters submit no gameweek at all
+            and ask for /gameweeks/null/goalkeepers. %>
+        <%= hidden_field_tag :gameweek, horizon_param, id: nil %>
+        <%= hidden_field_tag :position, @position_filter, id: nil %>
+
         <div class="flex items-center gap-2">
-          <span class="text-sm text-zinc-500">Team</span>
+          <span class="shrink-0 text-sm text-zinc-500">Team</span>
           <%= render DropdownComponent.new(
             label: "Team",
             name: "team_id",
@@ -46,25 +54,8 @@
           ) %>
         </div>
 
-        <!-- Position Filter -->
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-zinc-500">Position</span>
-          <div class="flex items-center gap-1" role="radiogroup">
-            <% @available_positions.each do |position| %>
-              <% position_config = FantasyForecast::POSITION_CONFIG[position] %>
-              <% is_active = @position_filter == position %>
-              <label class="px-3 py-1.5 text-sm font-medium rounded-lg cursor-pointer transition-colors <%= is_active ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900' %>">
-                <%= radio_button_tag :position, position, is_active,
-                    class: "sr-only",
-                    data: { action: "change->filter-navigation#positionChanged" } %><%= position_config[:display_name] %>
-              </label>
-            <% end %>
-          </div>
-        </div>
-
         <%= render "players/price_filter" %>
       <% end %>
-
     </div>
 
     <!-- Rankings Table -->

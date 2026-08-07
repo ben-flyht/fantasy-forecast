@@ -1,0 +1,18 @@
+<%#
+  One player: a slash of his club's colour, cut at the angle the logo is cut at, his
+  name, and under it his club and what he costs.
+
+  The club is its three-letter code. Set as a full name it cannot be made large enough
+  to read on a phone in a column this wide, and a line nobody can read is worse than an
+  abbreviation everybody already knows.
+%>
+<% geometry = ShareCard::TeamSheet %>
+<% cap = (size * 0.76).round %>
+<% run = (cap * 0.2691).round(1) %>
+<% top = block.y - cap %>
+<polygon points="<%= block.x + run %>,<%= top %> <%= block.x + run + 14 %>,<%= top %> <%= block.x + 14 %>,<%= block.y %> <%= block.x %>,<%= block.y %>"
+         fill="<%= card_colour(player&.team) %>"/>
+<text x="<%= block.x + geometry::SLANT_X %>" y="<%= block.y %>" fill="<%= ink %>"
+      font-size="<%= size %>" font-weight="800" letter-spacing="<%= (size * -0.02).round(2) %>"><%= name %></text>
+<text x="<%= block.x + geometry::SLANT_X %>" y="<%= block.y + geometry::META_OFFSET %>" fill="<%= meta_ink %>"
+      font-size="<%= geometry::META_SIZE %>" font-weight="600"><%= player&.team&.short_name %> · <%= player_price(block.pick["cost"]) %></text>

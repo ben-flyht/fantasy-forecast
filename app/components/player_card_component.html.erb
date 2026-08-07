@@ -2,7 +2,7 @@
      onclick="Turbo.visit('<%= helpers.player_path(player) %>')"
      role="link" tabindex="0"
      onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
-  <div class="w-[54px] shrink-0 flex items-center justify-center text-[32px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><span class="relative left-[5px]"><%= rank %></span></div>
+  <div class="w-[54px] shrink-0 flex items-center justify-center text-[32px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><span class="relative left-[5px]"><%= leading %></span></div>
 
   <div class="relative flex-1 overflow-hidden">
     <%# 26px over the card's 96px is 15.06 degrees, the same lean as the row and the logo. %>
@@ -24,7 +24,7 @@
       <% if player.given_name.present? %>
         <div class="text-[10px] font-bold tracking-[-0.02em] uppercase opacity-80 leading-none mb-[3px] whitespace-nowrap"><%= player.given_name %></div>
       <% end %>
-      <div class="text-[21px] font-extrabold tracking-[-0.02em] uppercase leading-none whitespace-nowrap"><%= player.display_name %></div>
+      <div class="text-[21px] font-extrabold tracking-[-0.02em] uppercase leading-none whitespace-nowrap"><%= player.display_name %><% if captain? %><span class="ml-[6px] text-[13px] align-top opacity-90">(C)</span><% end %></div>
       <div class="text-[10.5px] font-bold opacity-95 leading-none mt-[5px] whitespace-nowrap flex items-center gap-1.5">
         <span><%= team&.short_name %></span>
         <% if cost %>

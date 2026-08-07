@@ -1,24 +1,29 @@
-<% document_title = "Best FPL Team #{@horizon == 'season' ? 'for the Rest of Season' : "GW#{@gameweek&.fpl_id}"} | Fantasy Forecast" %>
+<% document_title = "Best FPL Squad #{@horizon == 'season' ? 'for the Rest of Season' : "GW#{@gameweek&.fpl_id}"} | Fantasy Forecast" %>
 <% content_for :meta_title, document_title %>
 <% content_for :meta_description, "The best Fantasy Premier League squad £100.0m can buy for #{horizon_label.downcase}, picked from our own forecasts. Eleven starters, four substitutes, and the captain to take." %>
+<% content_for :meta_url, "#{ApplicationHelper::BASE_URL}#{squad_url}" %>
+<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{squad_url(format: :png)}" if @squad %>
+<% content_for :meta_image_height, ShareCard::SQUARE if @squad %>
 
-<div class="mb-6 flex items-start justify-between gap-4">
-  <div>
-    <h1 class="text-xl sm:text-2xl font-semibold text-zinc-900">The Best £100.0m Squad, <%= horizon_label %></h1>
-    <p class="mt-1 text-sm text-zinc-500">Check the forecast before you pick your team.</p>
-  </div>
-  <div class="flex shrink-0 items-center gap-1">
-    <%= link_to "Next Gameweek", squad_path,
-          class: "px-3 py-1.5 text-sm font-medium rounded-lg #{@horizon == 'gameweek' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900'}" %>
-    <%= link_to "Rest of Season", season_squad_path,
-          class: "px-3 py-1.5 text-sm font-medium rounded-lg #{@horizon == 'season' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900'}" %>
-  </div>
+<div class="mb-6">
+  <%= render PageHeadingComponent.new(
+        title: "The Best £100.0m Squad, #{horizon_label}",
+        subtitle: "The squad to build from scratch, if you were starting today.",
+        updated_at: @forecast_at,
+        share: ("Share this squad" if @squad),
+        back: back_home,
+        horizons: forecast_horizons(gameweek: @gameweek&.fpl_id, season: season?,
+                                    gameweek_url: squad_path, season_url: season_squad_path)) %>
 </div>
+
+<% if @squad %>
+  <p class="mb-6 text-xs text-zinc-500">Sharing sends the whole team as a picture, not just a link.</p>
+<% end %>
 
 <% if @squad %>
   <div class="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-zinc-200 bg-zinc-50 px-5 py-4">
     <% [ [ "Formation", @squad.formation ],
-         [ "Expected points", format("%.1f", @squad.expected_points) ],
+         [ "Expected points", @squad.expected_points.round ],
          [ "Spent", player_price(@squad.cost) ],
          [ "In the bank", player_price(@squad.banked) ] ].each do |label, value| %>
       <div>
@@ -28,24 +33,31 @@
     <% end %>
   </div>
 
-  <h2 class="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Starting XI</h2>
-  <div class="flex flex-col gap-2">
-    <% %w[goalkeeper defender midfielder forward].each do |position| %>
-      <% @squad.starters_in(position).each do |pick| %>
-        <%= render SquadPickComponent.new(pick: pick, player: @players[pick["player_id"]],
-                                          captain: pick == @squad.captain) %>
-      <% end %>
-    <% end %>
-  </div>
+  <%# The armband was already drawn as a (C) beside a name, which is an answer only
+      if you were looking at the picture. It is the question most people arrive with,
+      so it is worth a sentence of its own. %>
+  <% if (captain_pick = @squad.captain) && (captain_player = @players[captain_pick["player_id"]]) %>
+    <section class="mb-8 rounded-xl bg-zinc-100 p-5">
+      <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+        Who to captain, <%= horizon_label.downcase %>
+      </h2>
+      <p class="mt-1.5 text-2xl font-extrabold leading-none tracking-[-0.03em] text-zinc-950">
+        <%= link_to captain_player.display_name, player_path(captain_player), class: "hover:underline underline-offset-4" %>
+      </p>
+      <p class="mt-3 max-w-2xl text-sm/6 text-zinc-700">
+        <%= captain_player.team&.name %>, and the highest forecast in the squad on
+        <%= format("%.1f", captain_pick["expected_points"].to_f) %> expected points. The armband doubles
+        whatever he scores, so it belongs on the player expected to score most.
+        <%= link_to "See every captain option in the game", captain_path, class: "font-medium text-zinc-950 underline underline-offset-2" %>.
+      </p>
+    </section>
+  <% end %>
 
-  <h2 class="mt-8 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-    Bench, in the order they come on
-  </h2>
-  <div class="flex flex-col gap-2">
-    <% @squad.bench.each_with_index do |pick, index| %>
-      <%= render SquadPickComponent.new(pick: pick, player: @players[pick["player_id"]],
-                                        order: index + 1) %>
-    <% end %>
+  <%= render "picks", title: "Starting XI",
+             picks: %w[goalkeeper defender midfielder forward].flat_map { |position| @squad.starters_in(position) } %>
+
+  <div class="mt-8">
+    <%= render "picks", title: "Bench", picks: @squad.bench %>
   </div>
 
   <div class="mt-8 space-y-2 text-xs/6 text-zinc-500">
@@ -60,10 +72,29 @@
       as anything other than fully available are left out.
     </p>
     <p>
-      This is the squad to build from scratch, so it is a wildcard answer rather than a
-      transfer one. It knows nothing about the team you already own.
+      Expected points count the captain twice, as FPL scores him, so the number is what the
+      team would be expected to return rather than what its players are forecast on their own.
+    </p>
+    <p>
+      This is the squad to build from scratch rather than a set of transfers: it knows
+      nothing about the team you already own.
     </p>
   </div>
+
+  <%= render "shared/faq", title: "FPL Squad FAQ", pairs: [
+        [ "What is the best FPL squad right now?",
+          "A #{@squad.formation} on #{@squad.expected_points.round} expected points for #{horizon_label.downcase}, counting the captain twice as FPL does, spending #{player_price(@squad.cost)} of the #{player_price(SquadOptimiser::BUDGET)} budget and leaving #{player_price(@squad.banked)} in the bank. The fifteen are listed above, with the starting eleven and the bench in the order FPL itself uses." ],
+        [ "How is the squad picked?",
+          "By searching for the fifteen players with the highest total forecast that FPL's own rules allow: two goalkeepers, five defenders, five midfielders, three forwards, no more than three from any one club, and #{player_price(SquadOptimiser::BUDGET)} to spend. A substitute only scores when a starter does not play, so the eleven are weighed in full and the bench by how often each place is actually used." ],
+        [ "Is this the squad I should own?",
+          "That is a question about the team you already own, and this squad knows nothing about it. What it tells you is what a perfect #{player_price(SquadOptimiser::BUDGET)} team looks like #{horizon_label.downcase}: the further your own team is from it, the more there is to gain by moving towards it." ],
+        [ "Who should I captain?",
+          @squad.captain && @players[@squad.captain["player_id"]] ?
+            "#{@players[@squad.captain['player_id']].display_name}, the highest forecast in the squad on #{format('%.1f', @squad.captain['expected_points'].to_f)} expected points. The armband doubles whatever he scores, so it belongs on the player expected to score most." :
+            "The armband belongs on the highest forecast in your starting eleven, because it doubles whatever he scores." ],
+        [ "Is this squad picked for one week or to keep?",
+          "To keep: it is the squad worth owning for #{horizon_label.downcase}. A team picked for one gameweek and thrown away would chase that week's fixtures much harder than this does." ]
+      ] %>
 <% else %>
   <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center">
     <h2 class="text-sm font-medium text-zinc-900">No squad yet</h2>

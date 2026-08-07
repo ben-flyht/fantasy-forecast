@@ -26,7 +26,8 @@ class PlayersController < ApplicationController
 
   before_action :set_filters, only: [ :index ]
 
-  helper_method :season?, :horizon_label, :horizon_short, :horizon_param, :rankings_path
+  helper_method :season?, :horizon_label, :horizon_short, :horizon_param, :position_rankings_path,
+                :horizon_url, :position_options
 
   def index
     return if redirect_to_clean_url
@@ -205,20 +206,20 @@ class PlayersController < ApplicationController
 
   def redirect_to_clean_url
     return false if turbo_frame_request?
-    return false unless request.path == "/" && params[:gameweek].present?
+    return false unless request.path == rankings_path && params[:gameweek].present?
 
     redirect_to build_clean_url, status: :moved_permanently
     true
   end
 
   def build_clean_url
-    rankings_path(params[:gameweek], resolve_position(params[:position]),
+    position_rankings_path(params[:gameweek], resolve_position(params[:position]),
                   **params.permit(:team_id, :min_price, :max_price).to_h.compact_blank.symbolize_keys)
   end
 
   # Where a horizon lives. The season has a page of its own; a week is named by
   # its number.
-  def rankings_path(horizon, position, **extra)
+  def position_rankings_path(horizon, position, **extra)
     if horizon == SEASON
       season_position_path(position: "#{position}s", **extra)
     else
@@ -269,8 +270,8 @@ class PlayersController < ApplicationController
   def validate_gameweek
     return true if Gameweek.exists?(fpl_id: @gameweek)
 
-    redirect_to root_path(gameweek: next_gameweek&.fpl_id || 1, position: @position_filter, team_id: @team_filter,
-                          min_price: params[:min_price], max_price: params[:max_price]),
+    redirect_to rankings_path(gameweek: next_gameweek&.fpl_id || 1, position: @position_filter, team_id: @team_filter,
+                             min_price: params[:min_price], max_price: params[:max_price]),
                 alert: "Gameweek #{@gameweek} not found"
     false
   end
@@ -296,16 +297,7 @@ class PlayersController < ApplicationController
 
   def load_gameweek_data
     @gameweek_record = Gameweek.find_by(fpl_id: @gameweek)
-    @matches_by_team = @gameweek_record ? build_matches_by_team : {}
-  end
-
-  def build_matches_by_team
-    matches = Hash.new { |h, k| h[k] = [] }
-    Match.includes(:home_team, :away_team).where(gameweek: @gameweek_record).each do |match|
-      matches[match.home_team_id] << match
-      matches[match.away_team_id] << match
-    end
-    matches
+    @matches_by_team = @gameweek_record ? Match.by_team(@gameweek_record) : {}
   end
 
   # Shown beside a player's name but never scored: what he costs, and how many
@@ -418,6 +410,33 @@ class PlayersController < ApplicationController
     season? ? SEASON : @gameweek
   end
 
+  # This same page read at the other horizon. Changing horizon is not a reason to
+  # forget the team and the prices you already chose, so those travel with it.
+  def horizon_url(which)
+    position_rankings_path(which == :season ? SEASON : @gameweek, @position_filter, **retained_filters)
+  end
+
+  def retained_filters
+    { team_id: @team_filter, min_price: params[:min_price], max_price: params[:max_price] }.compact_blank
+  end
+
+  # The four positions, as the same control the horizon uses. The team survives a
+  # change of position but the price does not: what a keeper costs and what a
+  # forward costs are different ranges, so carrying one over hides half the list.
+  # Named in full where there is room, because "Goalkeepers" is the word people
+  # search for and the word the page itself is titled with. GK on a phone, where
+  # four full names across a row would wrap to three lines.
+  def position_options
+    @available_positions.map do |position|
+      SegmentedControlComponent::Option.new(
+        label: position.pluralize.capitalize,
+        short_label: FantasyForecast::POSITION_CONFIG.dig(position, :display_name),
+        url: position_rankings_path(horizon_param, position, **{ team_id: @team_filter }.compact_blank),
+        current: @position_filter == position
+      )
+    end
+  end
+
   def horizon_label
     season? ? "Rest of Season" : "Gameweek #{@gameweek}"
   end
@@ -426,12 +445,14 @@ class PlayersController < ApplicationController
     season? ? "Rest of Season" : "GW#{@gameweek}"
   end
 
+  # The heading and the title tag say the same thing, in the words somebody would
+  # have typed to arrive here. They used to disagree: "Best FPL Defenders GW1" in the
+  # tab, "Player Rankings - Gameweek 1 Defenders" on the page.
   def build_page_title
-    @page_title = "Player Rankings - #{horizon_label}"
-    @page_title += " #{@position_filter.capitalize}s" if @position_filter.present?
-    @page_title += " - #{Team.find_by(id: @team_filter)&.name}" if @team_filter
+    @page_title = "Best FPL #{@position_filter.to_s.capitalize}s, #{horizon_label}"
+    @page_title += " · #{Team.find_by(id: @team_filter)&.name}" if @team_filter
     @canonical_path = canonical_path
-    @card_path = rankings_path(horizon_param, @position_filter, format: :png)
+    @card_path = position_rankings_path(horizon_param, @position_filter, format: :png)
   end
 
   # A card is drawn from the forecast and nothing else, so the reading it was
@@ -444,19 +465,19 @@ class PlayersController < ApplicationController
     [ "player_card", @player.to_param, @horizon, @forecast_at&.to_i ].join("/")
   end
 
-  # The front page stands for itself.
+  # The rankings page stands for itself.
   #
-  # It used to name the coming gameweek's page as its canonical, which handed the
-  # site's strongest address to one that goes stale the week it is played: every
-  # week the front page pointed somewhere new, and every page it had pointed at
-  # was left behind. A filtered view of the front page still answers to the front
-  # page, which is what a canonical is for.
+  # It used to name the coming gameweek's page as its canonical, which handed a
+  # strong address to one that goes stale the week it is played: every week it
+  # pointed somewhere new, and every page it had pointed at was left behind. A
+  # filtered view of the rankings still answers to the rankings, which is what a
+  # canonical is for.
   def canonical_path
-    front_page? ? root_path : rankings_path(horizon_param, @position_filter)
+    rankings_home? ? rankings_path : position_rankings_path(horizon_param, @position_filter)
   end
 
-  def front_page?
-    request.path == root_path && @position_filter == "forward"
+  def rankings_home?
+    request.path == rankings_path && @position_filter == "forward"
   end
 
   def next_gameweek

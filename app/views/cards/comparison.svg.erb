@@ -46,6 +46,10 @@
              note: @head_to_head.season? ? "Rest of season" : "Gameweek #{@gameweek&.fpl_id}" %>
 
   <%# The answer, which is the whole reason the card exists. %>
-  <%= render "cards/footer", label: "Our pick", headline: verdict_name(@head_to_head).upcase,
-             size: @head_to_head.winner ? 44 : 34 %>
+  <%# A name now, always, so the card that lands in a chat answers the question it
+      was sent to answer. The size only drops when there is no forecast to name one
+      from and the footer has to say so instead. %>
+  <%= render "cards/footer", label: @head_to_head.close? ? "Our pick, just" : "Our pick",
+             headline: verdict_name(@head_to_head).upcase,
+             size: @head_to_head.forecast? ? 44 : 34 %>
 </svg>

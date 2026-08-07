@@ -23,10 +23,15 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Our pick"
   end
 
+  # The cards carry the answer: both players, the points we expect from each, and a
+  # badge on the one we would have. No panel of prose repeating them.
   test "the verdict is in the markup, not fetched afterwards" do
     get comparison_path(pair: pair)
 
-    assert_select "p", text: /Expected points this gameweek/
+    assert_select "[data-comparison-card]", count: 2
+    assert_select "[data-comparison-card][data-pick=true]", count: 1
+    assert_select "[data-comparison-card][data-pick=true]", text: /Salah/
+    assert_select "[data-comparison-card][data-pick=true]", text: /5\.4/
   end
 
   test "both orders are the same argument, and one of them is the page" do
@@ -77,8 +82,8 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     get comparison_path(pair: pair, horizon: "season")
 
     assert_response :success
-    assert_select "p", text: /rest of the season/
-    assert_includes response.body, "Palmer"
+    assert_select "[aria-label='Forecast horizon'] a[aria-current=page]", text: "Rest of Season"
+    assert_select "[data-comparison-card][data-pick=true]", text: /Palmer/
   end
 
   test "the hub offers the arguments worth having" do
@@ -86,5 +91,60 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href=?]", comparison_path(pair: pair)
+  end
+
+  # "Him or him?" is the better line, but nobody types it into a search box, so it
+  # keeps its place underneath a heading that says what the page is.
+  # Every pair in the game has an address; the listed ones are never the pair
+  # somebody actually arrived holding.
+  test "the hub offers a way to build any pair" do
+    get comparisons_path
+
+    assert_select "[data-controller=comparison-builder]"
+    assert_select "input[data-comparison-builder-target=input]", count: 2
+    assert_select "button[data-comparison-builder-target=submit][disabled]"
+  end
+
+  test "the search says who you might mean" do
+    get comparison_search_path(q: "salah")
+
+    assert_response :success
+    assert_equal "application/json", response.media_type
+
+    found = JSON.parse(response.body)
+    assert_includes found.map { |p| p["param"] }, @salah.to_param
+    assert_equal @salah.full_name, found.first["full_name"]
+  end
+
+  test "the search leaves out a player already picked" do
+    get comparison_search_path(q: "salah", exclude: [ @salah.to_param ])
+
+    assert_not_includes JSON.parse(response.body).map { |p| p["param"] }, @salah.to_param
+  end
+
+  test "the search with nothing typed says nobody rather than everybody" do
+    get comparison_search_path(q: "")
+
+    assert_empty JSON.parse(response.body)
+  end
+
+  # "search" has no "-vs-" in it, so the pair route refuses it and it reaches the
+  # action it was meant for.
+  test "the search address is not mistaken for a pair" do
+    assert_routing "/compare/search", controller: "comparisons", action: "search"
+  end
+
+  test "the hub says what it is above the line worth reading" do
+    get comparisons_path
+
+    assert_select "h1", /FPL Player Comparisons/
+    assert_select "p", text: "Him or him?"
+  end
+
+  test "the questions the hub answers are printed and declared alike" do
+    get comparisons_path
+
+    assert_select "script[type='application/ld+json']", /FAQPage/
+    assert_select "dt", /Which FPL player should I pick\?/
   end
 end

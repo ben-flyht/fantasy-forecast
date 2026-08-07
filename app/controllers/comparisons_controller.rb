@@ -9,6 +9,18 @@ class ComparisonsController < ApplicationController
     @pairs = PopularComparisons.call(gameweek: @gameweek, horizon: @horizon)
   end
 
+  # Who you might mean, for the two boxes on the hub. Names, and enough beside each
+  # to tell two Gabriels apart.
+  def search
+    players = PlayerSearch.call(term: params[:q], exclude: params[:exclude])
+
+    render json: players.map { |player|
+      { param: player.to_param, name: player.display_name, full_name: player.full_name,
+        team: player.team&.short_name, position: FantasyForecast::POSITION_CONFIG.dig(player.position, :display_name),
+        photo: player.photo_url }
+    }
+  end
+
   def show
     @comparison = Comparison.parse(params[:pair])
     return if redirect_to_one_player
@@ -35,6 +47,8 @@ class ComparisonsController < ApplicationController
       left: @comparison.left, right: @comparison.right,
       gameweek: @gameweek, horizon: @horizon
     )
+    @forecast_at = Forecast.where(gameweek: @gameweek, horizon: @horizon).maximum(:updated_at)
+    @stats = ComparisonStats.call(left: @comparison.left, right: @comparison.right)
   end
 
   # A player against himself is not a question, so it is answered by his own page.

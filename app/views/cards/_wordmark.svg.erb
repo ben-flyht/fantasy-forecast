@@ -1,0 +1,10 @@
+<%#
+  Whose forecast this is, drawn as outlines rather than set as text.
+
+  librsvg ignores font-family, so a mark set as text is a mark drawn in whatever face
+  that renderer happens to hold. See ShareCard::Wordmark.
+%>
+<% mark = ShareCard::Wordmark.new(size: size, right: right, middle: middle) %>
+<path d="<%= ShareCard::Wordmark::INK_PATH %>" transform="<%= mark.ink_transform %>" fill="<%= ink %>"/>
+<polygon points="<%= mark.points %>" fill="<%= field %>"/>
+<path d="<%= ShareCard::Wordmark::FIELD_PATH %>" transform="<%= mark.field_transform %>" fill="<%= reversed %>"/>

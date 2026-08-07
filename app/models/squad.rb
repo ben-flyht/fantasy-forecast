@@ -7,6 +7,8 @@ class Squad < ApplicationRecord
   belongs_to :gameweek
 
   HORIZONS = %w[gameweek season].freeze
+  SEASON = "season".freeze
+  GOALKEEPER = "goalkeeper".freeze
 
   validates :horizon, inclusion: { in: HORIZONS }
   validates :formation, presence: true
@@ -16,11 +18,26 @@ class Squad < ApplicationRecord
   def starters = picks.select { |pick| pick["starting"] }
   def substitutes = picks.reject { |pick| pick["starting"] }
 
-  # Bench order is the order they would come on, and the reserve keeper comes on for
-  # nobody but our own keeper, so he sits at the end however good he is.
+  # The bench as FPL itself lists it: the reserve keeper first, then the three
+  # outfield in the order they would come on.
   def bench
-    outfield, keeper = substitutes.partition { |pick| pick["position"] != "goalkeeper" }
-    outfield.sort_by { |pick| -pick["expected_points"].to_f } + keeper
+    keeper, outfield = substitutes.partition { |pick| pick["position"] == GOALKEEPER }
+    keeper + outfield.sort_by { |pick| -pick["expected_points"].to_f }
+  end
+
+  # A pick as the rankings would describe him, so the rankings' own row can draw him
+  # and the two pages cannot drift apart.
+  #
+  # A season score spans many gameweeks, so it is averaged back to one before it
+  # meets the grade bands: a season grade then means what a weekly grade means.
+  def ranking_for(pick)
+    weekly = pick["expected_points"].to_f / points_divisor
+
+    ConsensusRanking::Ranking.new(
+      player_id: pick["player_id"], team_id: pick["team_id"], position: pick["position"],
+      score: pick["expected_points"], tier: TierCalculator.tier_from_points(weekly),
+      grade: TierCalculator.grade_from_points(weekly)
+    )
   end
 
   def starters_in(position)
@@ -34,4 +51,10 @@ class Squad < ApplicationRecord
 
   def spent_on_starters = starters.sum { |pick| pick["cost"].to_i }
   def banked = SquadOptimiser::BUDGET - cost
+
+  def season? = horizon == SEASON
+
+  private
+
+  def points_divisor = season? ? Gameweek.remaining_count : 1
 end

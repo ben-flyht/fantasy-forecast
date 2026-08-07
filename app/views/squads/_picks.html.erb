@@ -1,0 +1,30 @@
+<%#
+  One block of the squad, drawn by the rankings' own rows: a table where there is
+  room for one and cards where there is not, exactly as the rankings are drawn. The
+  only thing that differs is the left-hand column, which holds the position he fills
+  rather than a place in a list the squad does not have.
+%>
+<h2 class="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= title %></h2>
+
+<div class="hidden md:block overflow-x-auto">
+  <table class="w-full min-w-[720px] table-fixed border-separate border-spacing-y-2 text-zinc-950">
+    <thead>
+      <tr class="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
+        <th class="w-[104px] pb-2 text-center">Pos</th>
+        <th class="pb-2 pl-10 text-left">Player</th>
+        <th class="w-[104px] pb-2 text-center">Grade</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% picks.each do |pick| %>
+        <%= render PlayerRowComponent.new(**pick_arguments(@squad, pick, @players)) %>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<div class="md:hidden flex flex-col gap-2">
+  <% picks.each do |pick| %>
+    <%= render PlayerCardComponent.new(**pick_arguments(@squad, pick, @players)) %>
+  <% end %>
+</div>

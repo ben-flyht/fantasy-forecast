@@ -1,15 +1,27 @@
 # frozen_string_literal: true
 
 class PlayerRowComponent < ViewComponent::Base
-  def initialize(ranking:, player:, facts:)
+  def initialize(ranking:, player:, facts:, leading: nil, captain: false)
     @ranking = ranking
     @player = player
     @facts = facts || {}
+    @leading = leading
+    @captain = captain
   end
 
   private
 
-  attr_reader :ranking, :player, :facts
+  attr_reader :ranking, :player, :facts, :captain
+
+  # What stands to the left of the name. A ranking counts, so there it is his place
+  # in it; a squad does not count, so there it is the position he fills.
+  def leading
+    @leading || rank
+  end
+
+  def captain?
+    captain
+  end
 
   def rank
     ranking.bot_rank || "-"

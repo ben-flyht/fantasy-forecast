@@ -1,19 +1,28 @@
 module ComparisonsHelper
   # The answer in one word, for the top of the page and the middle of the card.
   #
-  # It is a name or it is nothing: saying "too close to call" is a real answer to
-  # a manager deciding whether a transfer is worth a hit, and it is a good deal
-  # more honest than separating two players by a twentieth of a point.
+  # Always a name where there is a forecast to name one from. A manager holding two
+  # players and one transfer has to pick one of them, so declining to answer just
+  # sends him away to guess. How close it was is said by the badge on the card.
   def verdict_name(head_to_head)
-    head_to_head.winner&.player&.display_name || "Too close to call"
+    head_to_head.pick&.player&.display_name || "No forecast"
   end
 
-  # Why, in a sentence: the two numbers, and the horizon they belong to.
+  # Why, in a sentence: the two numbers and the horizon they belong to.
   def verdict_line(head_to_head)
-    left, right = head_to_head.sides
-    return unforecast_line(head_to_head) unless left.forecast? && right.forecast?
+    return unforecast_line(head_to_head) unless head_to_head.forecast?
 
     "#{scores_line(head_to_head)} #{horizon_line(head_to_head)}"
+  end
+
+  # The one thing the cards cannot say for themselves: that there is no forecast
+  # behind them, and so nothing to pick from.
+  #
+  # How close a pick was is not said here. The badge on the card already says it,
+  # and the paragraph under the pair explains it; a third telling was a sentence
+  # under two cards that had just made the same point.
+  def comparison_note(head_to_head)
+    unforecast_line(head_to_head) unless head_to_head.forecast?
   end
 
   def comparison_title(comparison)
@@ -32,6 +41,28 @@ module ComparisonsHelper
     format("%.1f", side.score / (head_to_head.season? ? Gameweek.remaining_count : 1))
   end
 
+  # A side of a comparison in the terms the compact card asks for, so the pair are
+  # drawn by the component the rankings are drawn by and cannot look like a
+  # different site. The headline is the points, because a place in a position table
+  # is not what these two are being weighed on.
+  def comparison_card_arguments(head_to_head, side)
+    {
+      ranking: ConsensusRanking::Ranking.new(
+        player_id: side.player.id, team_id: side.player.team_id, position: side.player.position,
+        bot_rank: side.rank, score: side.score, tier: side.tier, grade: side.grade
+      ),
+      player: side.player,
+      facts: { "now_cost" => side.cost, "selected_by_percent" => side.ownership },
+      leading: weekly_points(head_to_head, side) || "—"
+    }
+  end
+
+  # A figure that favours a player is set in ink; the other is set quietly. Both
+  # lit says less than neither.
+  def comparison_value_class(leading)
+    leading ? "font-bold text-zinc-950" : "text-zinc-500"
+  end
+
   def comparison_fixture(side)
     return "No fixture" unless side.match
 
@@ -44,7 +75,7 @@ module ComparisonsHelper
     named = head_to_head.sides.sort_by { |side| -side.score }
                         .map { |side| "#{side.player.display_name} #{format('%.1f', side.score)}" }
                         .join(", ")
-    head_to_head.tie? ? "Nothing in it: #{named}." : "#{named}."
+    "#{named}."
   end
 
   def horizon_line(head_to_head)
