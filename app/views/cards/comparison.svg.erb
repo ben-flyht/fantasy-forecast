@@ -34,7 +34,7 @@
       <text x="<%= x %>" y="200" text-anchor="<%= anchor %>" fill="<%= ink[side] %>"
             font-size="19" font-weight="700" opacity="0.75"><%= side.player.team&.name %></text>
       <text x="<%= x %>" y="330" text-anchor="<%= anchor %>" fill="<%= ink[side] %>"
-            font-size="112" font-weight="800" letter-spacing="-4"><%= weekly_points(@head_to_head, side) || "—" %></text>
+            font-size="112" font-weight="800" letter-spacing="-4"><%= headline_points(side) || "—" %></text>
       <text x="<%= x %>" y="366" text-anchor="<%= anchor %>" fill="<%= ink[side] %>"
             font-size="17" font-weight="700" opacity="0.75">
         <%= side.grade ? "GRADE #{side.grade}" : "NO FORECAST" %>

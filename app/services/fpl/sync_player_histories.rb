@@ -11,22 +11,39 @@ module Fpl
   # costs almost nothing and an interrupted run picks up where it stopped.
   class SyncPlayerHistories < ApplicationService
     # Statistic type => the key to read from FPL's past-season entry.
+    # Assists are a total rather than a rate, like the bonus beside them, because
+    # that is how the forecast reads them and because a season's assists survive a
+    # column of two decimal places where a rate of 0.08 a game does not.
     STAT_TYPES = {
       "last_season_points" => "total_points",
       "last_season_minutes" => "minutes",
-      "last_season_bonus" => "bonus"
+      "last_season_bonus" => "bonus",
+      "last_season_assists" => "assists"
     }.freeze
 
     # The same per-90 rates bootstrap publishes for the current season, worked out
     # from the season's totals so a forecast can read either interchangeably.
     # Without these, a player's minutes come from last season while his scoring
     # rate comes from a season he may not have played in.
+    # What actually happened sits alongside what was expected to, because the two
+    # disagree and we have no way of knowing by how much without holding both.
+    #
+    # The forecast prices a goal from expected goals and an assist from expected
+    # assists, then reads a clean sheet, a save and a bonus point straight off what
+    # a player really did. Mixing the two is only safe if expected and actual come
+    # out level, and on assists they do not come close: FPL pays for winning a
+    # penalty, for a deflection and for a rebound, none of which the expected figure
+    # counts. Nothing here changes what the forecast reads. It stores the other half
+    # of each pair so the gap can be measured rather than argued about.
     RATE_TYPES = {
       "last_season_expected_goals_per_90" => "expected_goals",
       "last_season_expected_goal_involvements_per_90" => "expected_goal_involvements",
+      "last_season_expected_assists_per_90" => "expected_assists",
+      "last_season_goals_per_90" => "goals_scored",
       "last_season_clean_sheets_per_90" => "clean_sheets",
       "last_season_saves_per_90" => "saves",
       "last_season_expected_goals_conceded_per_90" => "expected_goals_conceded",
+      "last_season_goals_conceded_per_90" => "goals_conceded",
       "last_season_defensive_contribution_per_90" => "defensive_contribution"
     }.freeze
 
@@ -50,7 +67,7 @@ module Fpl
     # What we currently record from a past season. Bump it when that set changes
     # and every player is asked again on the next run, rather than being left with
     # a partial history that nothing notices.
-    RECORD_VERSION = 4.0
+    RECORD_VERSION = 6.0
 
     REQUEST_DELAY = 0.5 # seconds between requests, to stay a polite guest
 

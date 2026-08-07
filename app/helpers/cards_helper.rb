@@ -65,15 +65,21 @@ module CardsHelper
     team&.color || Team::DEFAULT_COLOR
   end
 
-  # A score as the week it describes, which is the scale the grades are read on. A
-  # total shown raw would be forty points beside somebody else's four.
+  # Past this, the decimal goes. A tenth of a point separates two players over one
+  # gameweek and means nothing over thirty-eight, and a long number set at 112 point
+  # runs into the artwork beside it.
+  WHOLE_POINTS = 100
+
+  # What a card is expected to score over the horizon it is drawn for, as it stands.
   #
-  # Given the horizon rather than told whether it is the season, because "not the
-  # season" stopped meaning "one week" the moment there were three of them: a
-  # five-gameweek total divided by one was printed as though it were a single week's.
-  def card_points(score, horizon)
+  # It used to be divided back to the week it averages, so that every distance read
+  # on the scale the grades are struck on. That answered a question nobody asks: a
+  # manager looking at five gameweeks wants to know what five gameweeks are worth.
+  # The grade beside it still comes from the week, because a grade is a mark out of
+  # ten and has to mean the same thing at every distance.
+  def card_points(score)
     return "—" if score.nil?
 
-    format("%.1f", score / Horizon.find(horizon).divisor)
+    score >= WHOLE_POINTS ? score.round.to_s : format("%.1f", score)
   end
 end

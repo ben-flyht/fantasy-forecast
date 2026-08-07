@@ -25,7 +25,11 @@ class Forecaster < ApplicationService
   # 2: a fitness flag is read from the gameweek being forecast and no earlier one.
   # 3: a club has one goalkeeper's place to share out, and being a bargain is a
   #    matter of degree measured in money rather than a bracket you are in or out of.
-  MODEL = 3
+  # 4: what a player is paid for is read from what FPL actually pays. An assist is
+  #    counted rather than expected, a clean sheet is the chance of one rather than
+  #    the share he happened to keep, saves are paid in whole threes, and a full
+  #    season of evidence stops being shrunk for doubt it has already answered.
+  MODEL = 4
 
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek

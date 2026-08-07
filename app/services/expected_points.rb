@@ -20,6 +20,7 @@ class ExpectedPoints < ApplicationService
     expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90 saves_per_90
     expected_goals_conceded_per_90 defensive_contribution_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
+    expected_assists_per_90
     last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
     last_season_clean_sheets_per_90 last_season_saves_per_90 last_season_bonus
     last_season_expected_goals_conceded_per_90 last_season_defensive_contribution_per_90
@@ -37,6 +38,7 @@ class ExpectedPoints < ApplicationService
   LAST_SEASON = {
     "season_minutes" => "last_season_minutes",
     "season_bonus" => "last_season_bonus",
+    "expected_assists_per_90" => "last_season_expected_assists_per_90",
     "expected_goals_per_90" => "last_season_expected_goals_per_90",
     "expected_goal_involvements_per_90" => "last_season_expected_goal_involvements_per_90",
     "clean_sheets_per_90" => "last_season_clean_sheets_per_90",
@@ -58,6 +60,11 @@ class ExpectedPoints < ApplicationService
   # Five matches of doubt, carried until the minutes outgrow it, so a rate built
   # from one lucky cameo cannot top the table.
   UNPROVEN_MINUTES = 450.0
+
+  # A regular's season, which is what a record has to reach before the doubt lifts
+  # from it entirely. A fixed quantity of football rather than however much has
+  # been played so far. See #credibility.
+  PROVEN_MINUTES = GAMEWEEKS_IN_SEASON * FULL_MATCH * REGULAR_SHARE
 
   # A player who has just changed clubs has a minutes record belonging to somebody
   # else's team sheet. Three thousand minutes at Newcastle says nothing about
@@ -112,7 +119,34 @@ class ExpectedPoints < ApplicationService
   CLUB_EVIDENCE = 3
 
   ASSIST = 3
-  SAVES_PER_POINT = 3.0
+
+  # What FPL awards against what an expected assist measures.
+  #
+  # An expected assist is the chance the pass created. FPL also pays the man who
+  # won the penalty, the man whose cross went in off a defender, and the man whose
+  # saved shot fell to a team-mate. None of that is in the expected figure, and
+  # last season the league was awarded 738 assists against 542 expected.
+  #
+  # Read per position because the gap is not one thing. A forward is paid more
+  # than twice his expected figure, being the man fouled for the penalty and the
+  # man whose rebound somebody else tucks away; further back it is about a third
+  # again. Measured on last season's league totals.
+  #
+  # Calibrated on the league and not on the player, deliberately. Read a man's own
+  # assists straight and the model buys whoever happened to have a freakish season:
+  # Bruno Fernandes was credited with 24 against an expected 12, and taking that at
+  # face value made him the best midfielder in the game by a margin he has never
+  # actually held. The league ratio corrects what the expected figure does not
+  # count without banking what one player got lucky on.
+  ASSIST_AWARDED = { "goalkeeper" => 1.3, "defender" => 1.3,
+                     "midfielder" => 1.3, "forward" => 2.25 }.freeze
+
+  # Saves to the point, counted rather than divided by. See #save_points.
+  SAVES_PER_POINT = 3
+
+  # Where to stop asking. Twenty-four saves in a match is past anything on record,
+  # and the terms beyond it are worth nothing to any total.
+  MOST_SAVE_POINTS = 8
 
   # Two points for turning up and playing the hour, which almost every starter
   # does. It is the same for everyone, so it cannot separate two players who both
@@ -782,14 +816,46 @@ class ExpectedPoints < ApplicationService
     GOAL.fetch(ranking.position, 4) * goals(ranking)
   end
 
-  # Involvements less the goals themselves, never negative however FPL rounds.
+  # What his creating is worth, priced at what the league is actually paid for it.
+  #
+  # Goals need no such correction and are still read from what was expected,
+  # because over a season a man scores about what his chances were worth. The
+  # difference is that goals are scored and assists are awarded, and FPL awards
+  # them on a broader definition than the expected figure measures.
+  #
+  # See ASSIST_AWARDED for the size of that gap, why the correction is taken from
+  # the league rather than from the player's own assists, and why it differs by
+  # position.
   def assist_points(ranking)
-    created = [ record(ranking, "expected_goal_involvements_per_90") - goals(ranking), 0.0 ].max
-    ASSIST * created
+    ASSIST * ASSIST_AWARDED.fetch(ranking.position, 1.3) *
+      record(ranking, "expected_assists_per_90")
   end
 
+  # A clean sheet is worth the chance of keeping one, which is not the same as the
+  # share of his matches that happened to finish nought.
+  #
+  # Read from what a side actually kept, a defence that shut out more teams than
+  # its football deserved banks the luck and carries it forward as though it were
+  # a skill. Arsenal kept 0.59 a game against an expected 0.49, and that tenth of
+  # a clean sheet, worth four points every time it lands, was most of what stood a
+  # centre back above the best forward in the game. Across the league the two
+  # figures agree to within a few per cent, which is exactly what luck looks like:
+  # it cancels between clubs and it does not cancel inside one.
+  #
+  # So it is read from the goals a side is expected to concede, the same figure
+  # #conceded_points already works from, and the two halves of a defence finally
+  # answer to the same evidence. A sheet stays clean when nothing goes past, and
+  # for goals arriving independently that is exp(-expected).
+  # Nobody we cannot measure is credited with a shut-out. A side with no conceding
+  # record reads as nought expected against, and nought expected against is a
+  # certainty of keeping it, which would hand every unknown defence in the game the
+  # best clean sheet rate there is. Silence is no opinion, not a perfect one.
   def clean_sheet_points(ranking)
-    CLEAN_SHEET.fetch(ranking.position, 0) * record(ranking, "clean_sheets_per_90")
+    conceded = club_figure(ranking, "expected_goals_conceded_per_90",
+                           if_promoted: :the_worst_in_the_league)
+    return 0.0 unless conceded.positive?
+
+    CLEAN_SHEET.fetch(ranking.position, 0) * Math.exp(-conceded)
   end
 
   # What the goals that go past him cost, which until now was nothing at all: a
@@ -913,8 +979,21 @@ class ExpectedPoints < ApplicationService
   end
 
   # Only ever anything for a keeper, so this needs no position of its own.
+  #
+  # A point for every third save, which is a threshold and not a rate. FPL counts
+  # the saves in a match, pays for each whole three of them, and throws the
+  # remainder away at full time: five saves are one point, not one and two
+  # thirds. Divided straight through, the two thirds are paid every week, and
+  # across a season that handed every goalkeeper in the game about a third of a
+  # point a match he never earned.
+  #
+  # So it is counted the way the defensive actions are, and for the same reason:
+  # how often he reaches three, then six, then nine. See #chance_of_clearing.
   def save_points(ranking)
-    record(ranking, "saves_per_90") / SAVES_PER_POINT
+    expected = record(ranking, "saves_per_90")
+    return 0.0 unless expected.positive?
+
+    (1..MOST_SAVE_POINTS).sum { |point| chance_of_clearing(expected, point * SAVES_PER_POINT) }
   end
 
   def goals(ranking)
@@ -923,9 +1002,29 @@ class ExpectedPoints < ApplicationService
 
   # A rate over a handful of minutes is mostly luck, so it is pulled towards
   # nothing until the minutes back it up.
+  #
+  # And once they have backed it up, the doubt lifts. Read as a bare share this
+  # never reached one however much football it was given: a man who played every
+  # minute of last season still had a seventh of his scoring shaved off for a
+  # doubt his record had long since answered. Because it is a share of what he
+  # scores, it took most from whoever scored most, which is how a permanent
+  # haircut came to read as a bias against attackers. It was the largest single
+  # error in the model at every position.
+  #
+  # So the curve is measured against a regular's season. That much football earns
+  # full credit and only a record short of it is shrunk, which is all the doubt
+  # was ever for.
+  # Measured against a whole season and not against the football played so far.
+  # Those are the same number in August and nothing alike in September: read
+  # against the season to date, a man who played the only gameweek there has been
+  # has played all of it, and one match would buy the full credit that a career is
+  # meant to. One match is precisely the evidence UNPROVEN_MINUTES exists to
+  # distrust.
   def credibility(ranking)
     played = minutes_played(ranking).to_f
-    played / (played + UNPROVEN_MINUTES)
+    ceiling = PROVEN_MINUTES / (PROVEN_MINUTES + UNPROVEN_MINUTES)
+
+    ((played / (played + UNPROVEN_MINUTES)) / ceiling).clamp(0.0, 1.0)
   end
 
   # THE THIRD TERM: the games in front of him, each counted for what it is worth
