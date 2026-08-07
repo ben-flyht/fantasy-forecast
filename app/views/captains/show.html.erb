@@ -1,0 +1,119 @@
+<%# "Gameweek 3" when we know which one, and "This Week" when the season has not told
+    us yet, so every sentence below reads either way. %>
+<% week = @gameweek ? "Gameweek #{@gameweek.fpl_id}" : "This Week" %>
+<% pick_player = @pick && @players[@pick.player_id] %>
+
+<% content_for :meta_title, "Who to Captain in FPL #{week} | Fantasy Forecast" %>
+<% content_for :meta_description,
+     pick_player ?
+       "The FPL captain pick for #{week}: #{pick_player.display_name} of #{pick_player.team&.name}, #{format('%.1f', @pick.score.to_f)} expected points before the armband doubles them. Five alternatives and a differential captain too." :
+       "The FPL captain pick for #{week}, from forecasts rewritten every hour. Every Premier League player graded A to F on what he is expected to return." %>
+<% content_for :meta_url, "#{ApplicationHelper::BASE_URL}#{captain_path}" %>
+<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{player_path(pick_player, format: :png)}" if pick_player %>
+
+<%# No horizon: there is no rest-of-season armband, so the timestamp takes the
+    toggle's place rather than the heading leaving a gap where one would be. %>
+<%= render PageHeadingComponent.new(
+      title: "Who to Captain in FPL #{week}",
+      subtitle: "The armband doubles his score, so it belongs on the highest forecast in the game.",
+      updated_at: @forecast_at,
+      share: ("Share this captain pick" if pick_player),
+      back: back_home) %>
+
+<% if @pick && pick_player %>
+  <section class="mt-6 rounded-xl bg-zinc-100 p-5 sm:p-7">
+    <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Our captain pick, <%= week.downcase %></p>
+    <p class="mt-1.5 text-3xl sm:text-4xl font-extrabold leading-none tracking-[-0.03em] text-zinc-950">
+      <%= link_to pick_player.display_name, player_path(pick_player), class: "hover:underline underline-offset-4" %>
+    </p>
+    <p class="mt-3 text-sm text-zinc-700">
+      <%= pick_player.team&.name %>, <%= captain_fixture(pick_player, @matches_by_team[pick_player.team_id]) %>.
+      We forecast <strong class="font-semibold text-zinc-950"><%= format("%.1f", @pick.score.to_f) %> points</strong>
+      before the armband, so around <strong class="font-semibold text-zinc-950"><%= format("%.1f", @pick.score.to_f * 2) %></strong> with it.
+      <%= TierCalculator::TIERS.dig(@pick.tier, :description) %>.
+    </p>
+  </section>
+
+  <% if @differential %>
+    <% differential_player = @players[@differential.player_id] %>
+    <% if differential_player %>
+      <section class="mt-4 rounded-xl border border-zinc-200 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Differential captain</p>
+        <p class="mt-1.5 text-lg font-semibold text-zinc-950">
+          <%= link_to differential_player.display_name, player_path(differential_player), class: "hover:underline underline-offset-4" %>
+        </p>
+        <p class="mt-2 max-w-2xl text-sm/6 text-zinc-600">
+          <%= format("%.1f%% of managers own him", ownership_of(@differential).to_f) %>,
+          which is few enough that captaining him gains rank on the field rather than keeping pace with it.
+          <%= differential_player.team&.name %>, <%= captain_fixture(differential_player, @matches_by_team[differential_player.team_id]) %>,
+          <%= format("%.1f", @differential.score.to_f) %> expected points.
+        </p>
+      </section>
+    <% end %>
+  <% end %>
+
+  <section class="mt-10">
+    <h2 class="text-lg font-semibold text-zinc-900">FPL Captain Options for <%= week %></h2>
+    <p class="mt-1 text-sm text-zinc-500">The <%= CaptainsController::SHORTLIST %> highest forecasts in the game, whatever they play.</p>
+
+    <div class="mt-4 hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[720px] table-fixed border-separate border-spacing-y-2 text-zinc-950">
+        <thead>
+          <tr class="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
+            <th class="w-[104px] pb-2 text-center">Rank</th>
+            <th class="pb-2 pl-10 text-left">Player</th>
+            <th class="w-[104px] pb-2 text-center">Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @candidates.each do |candidate| %>
+            <%= render PlayerRowComponent.new(ranking: candidate, player: @players[candidate.player_id],
+                                              facts: @facts[candidate.player_id], captain: candidate == @pick) %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-4 md:hidden flex flex-col gap-2">
+      <% @candidates.each do |candidate| %>
+        <%= render PlayerCardComponent.new(ranking: candidate, player: @players[candidate.player_id],
+                                           facts: @facts[candidate.player_id], captain: candidate == @pick) %>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-lg font-semibold text-zinc-900">How the FPL Captain Pick Is Chosen</h2>
+    <p class="mt-2 max-w-2xl text-sm/6 text-zinc-600">
+      Captaincy needs no separate model. The armband doubles whatever a player scores, so the best
+      captain is simply the player we expect to score most, and that is a number this site already
+      keeps for every player in the league. Price and ownership lead, weighed against minutes, recent
+      form, expected goals and assists, and who he is playing. The forecast is rewritten every hour,
+      so a price rise, a transfer swing or a Friday press conference is in this answer by the time
+      you read it.
+    </p>
+    <p class="mt-3 max-w-2xl text-sm/6 text-zinc-600">
+      Ordered by the score itself rather than by a place in a position table: a rank is a player's
+      standing among his own kind, so the first six of those would be four number ones and nobody
+      you were actually choosing between.
+      <%= link_to "See every player, by position", rankings_path, class: "font-medium text-zinc-900 underline underline-offset-2" %>.
+    </p>
+  </section>
+
+  <%= render "shared/faq", title: "FPL Captain FAQ", pairs: [
+        [ "Who should I captain this week in FPL?",
+          "Our pick for #{week} is #{pick_player.display_name} of #{pick_player.team&.name}, #{captain_fixture(pick_player, @matches_by_team[pick_player.team_id])}. We forecast #{format('%.1f', @pick.score.to_f)} points before the armband doubles them, which is the highest of any player in the game this week." ],
+        [ "Who is the best differential captain in FPL?",
+          @differential && @players[@differential.player_id] ?
+            "#{@players[@differential.player_id].display_name} is the highest forecast among captain options owned by fewer than #{CaptainsController::DIFFERENTIAL_OWNERSHIP.to_i}% of managers, so captaining him gains rank on the field rather than keeping pace with it." :
+            "Every one of our top captain options is already widely owned this week, so there is no differential worth naming. Captaining the outright pick keeps pace with the field, which is the honest answer when the field is right." ],
+        [ "How often does the captain pick change?",
+          "The forecast behind it is rewritten every hour, so the pick can move right up to the deadline as prices, ownership, fixtures and team news change." ],
+        [ "Should I always captain the highest expected points?",
+          "Over a season, yes. The armband doubles the score, so the player expected to score most is the player expected to gain most, and picking anyone else is a bet that our forecast is wrong about a specific week. A differential is that bet made deliberately, to gain rank rather than points." ],
+        [ "Can I captain a player on my bench?",
+          "No. FPL only doubles the score of a captain in your starting eleven. If your captain does not play, the armband passes to your vice-captain instead, which is why the vice is worth as much thought as the captain." ]
+      ] %>
+<% else %>
+  <p class="mt-8 text-sm text-zinc-500">No forecast yet for the coming gameweek, so there is no captain to name.</p>
+<% end %>

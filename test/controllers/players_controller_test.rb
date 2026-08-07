@@ -45,7 +45,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "players index should be accessible" do
-    get root_path
+    get rankings_path
     assert_response :success
   end
 
@@ -97,14 +97,90 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "a player page offers the arguments he is part of" do
+    rival = Player.create!(first_name: "Test", last_name: "Keeper", team: @test_team,
+                           position: @player.position, fpl_id: 998)
+    Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 4.2)
+    Forecast.create!(player: rival, gameweek: @gameweek2, rank: 2, score: 4.0)
+
+    get player_path(@player)
+
+    assert_select "a[href=?]", comparison_path(pair: Comparison.new(@player, rival).slug)
+  end
+
+  test "a ranking page has a share card of its own" do
+    Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1, score: 4.2)
+
+    get gameweek_position_path(gameweek: 5, position: "#{@player.position}s", format: :png)
+
+    assert_response :success
+    assert_equal "image/png", response.media_type
+    assert_equal [ ShareCard::WIDTH, ShareCard::HEIGHT ], png_size(response.body)
+  end
+
+  test "a player has a share card of his own" do
+    Forecast.create!(player: @player, gameweek: @gameweek2, rank: 1, score: 4.2)
+
+    get player_path(@player, format: :png)
+
+    assert_response :success
+    assert_equal [ ShareCard::WIDTH, ShareCard::HEIGHT ], png_size(response.body)
+  end
+
+  test "a player with no forecast still has a card" do
+    get player_path(@player2, format: :png)
+
+    assert_response :success
+    assert_equal [ ShareCard::WIDTH, ShareCard::HEIGHT ], png_size(response.body)
+  end
+
+  test "an old address for a card is sent to the card, not the page" do
+    get "/players/wrong-slug-#{@player.fpl_id}.png"
+
+    assert_redirected_to player_path(@player, format: :png)
+  end
+
+  test "a ranking page tells a preview where to find its card" do
+    get season_position_path(position: "midfielders")
+
+    assert_select "meta[property='og:image'][content=?]",
+                  "#{ApplicationHelper::BASE_URL}/season/midfielders.png"
+    assert_select "meta[property='og:image:width'][content=?]", ShareCard::WIDTH.to_s
+  end
+
+  test "a player page tells a preview where to find its card" do
+    get player_path(@player)
+
+    assert_select "meta[property='og:image'][content=?]",
+                  "#{ApplicationHelper::BASE_URL}#{player_path(@player)}.png"
+  end
+
+  test "the rankings page is its own canonical, not the coming gameweek's" do
+    get rankings_path
+
+    assert_select "link[rel=canonical][href=?]", "#{ApplicationHelper::BASE_URL}/rankings"
+  end
+
+  test "a filtered ranking still answers to the rankings page" do
+    get rankings_path, params: { team_id: @test_team.id }
+
+    assert_select "link[rel=canonical][href=?]", "#{ApplicationHelper::BASE_URL}/rankings"
+  end
+
+  test "a ranking page is its own canonical" do
+    get season_position_path(position: "midfielders")
+
+    assert_select "link[rel=canonical][href=?]", "#{ApplicationHelper::BASE_URL}/season/midfielders"
+  end
+
   test "should redirect old query-param URLs to clean URLs" do
-    get root_path, params: { gameweek: 5, position: "midfielder" }
+    get rankings_path, params: { gameweek: 5, position: "midfielder" }
     assert_response :moved_permanently
     assert_redirected_to gameweek_position_path(gameweek: 5, position: "midfielders")
   end
 
   test "should default to next gameweek" do
-    get root_path
+    get rankings_path
     assert_response :success
 
     # Should see gameweek 2 (next gameweek) in page title or content
@@ -120,15 +196,15 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     Forecast.create!(player: @player, gameweek: @gameweek1, rank: 1)
     Forecast.create!(player: @player, gameweek: @gameweek5, rank: 1)
 
-    get root_path
+    get rankings_path
     assert_response :success
 
     # Still defaults to the latest gameweek that has forecasts (5) for display
     assert_includes response.body, "Gameweek 5"
-    # The horizon selector no longer enumerates individual weeks
-    assert_select "select[name=gameweek] option", text: "Rest of Season"
-    assert_select "select[name=gameweek] option", text: "1", count: 0
-    assert_select "select[name=gameweek] option", text: "5", count: 0
+    # The horizon toggle offers two horizons, never a list of every week played
+    assert_select "[aria-label='Forecast horizon'] a", text: "Rest of Season"
+    assert_select "[aria-label='Forecast horizon'] a", text: "Gameweek 1", count: 0
+    assert_select "[aria-label='Forecast horizon'] a", count: 2
   end
 
   test "the season route shows season forecasts" do
@@ -138,11 +214,11 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, @player.short_name
     assert_includes response.body, "Rest of Season"
-    assert_select "select[name=gameweek] option[selected]", text: "Rest of Season"
+    assert_select "[aria-label='Forecast horizon'] a[aria-current=page]", text: "Rest of Season"
   end
 
   test "the season page the horizon dropdown asks for is the season page" do
-    get root_path(gameweek: "season", position: "#{@player.position}s")
+    get rankings_path(gameweek: "season", position: "#{@player.position}s")
 
     assert_redirected_to season_position_path(position: "#{@player.position}s")
   end
@@ -155,15 +231,76 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a team filter survives the trip to the season page" do
-    get root_path(gameweek: "season", position: "#{@player.position}s", team_id: @test_team.id)
+    get rankings_path(gameweek: "season", position: "#{@player.position}s", team_id: @test_team.id)
 
     assert_redirected_to season_position_path(position: "#{@player.position}s", team_id: @test_team.id)
   end
 
-  test "the horizon selector offers next gameweek and rest of season" do
-    get root_path
-    assert_select "select[name=gameweek] option", text: "Next Gameweek"
-    assert_select "select[name=gameweek] option", text: "Rest of Season"
+  # Named by the week rather than by "next": the title beside it already says which
+  # gameweek this is, and "next" only means something if you know where you are.
+  test "the horizon toggle names the gameweek and the season, as links" do
+    get rankings_path
+
+    assert_select "[aria-label='Forecast horizon'] a", text: "Gameweek 2"
+    assert_select "[aria-label='Forecast horizon'] a", text: "Rest of Season"
+    assert_select "[aria-label='Forecast horizon'] a[aria-current=page]", text: "Gameweek 2"
+  end
+
+  # The positions are the same control as the horizon, and links for the same
+  # reason: those four pages are ones people arrive on from a search.
+  test "the positions are links, and keep the team you filtered by" do
+    get gameweek_position_path(gameweek: @gameweek2.fpl_id, position: "#{@player.position}s",
+                               team_id: @test_team.id)
+
+    assert_select "[aria-label=Position] a", count: 4
+    assert_select "[aria-label=Position] a[href=?]",
+                  gameweek_position_path(gameweek: @gameweek2.fpl_id, position: "goalkeepers",
+                                         team_id: @test_team.id)
+  end
+
+  # A keeper's prices and a forward's are different ranges, so carrying a price
+  # across a change of position would hide half the list.
+  test "a price filter does not survive a change of position" do
+    get gameweek_position_path(gameweek: @gameweek2.fpl_id, position: "#{@player.position}s",
+                               max_price: "6.0")
+
+    assert_select "[aria-label=Position] a[href*=?]", "max_price", count: 0
+  end
+
+  test "the positions follow the horizon you are reading at" do
+    get season_position_path(position: "#{@player.position}s")
+
+    assert_select "[aria-label=Position] a[href=?]", season_position_path(position: "goalkeepers")
+  end
+
+  # A link inside a turbo frame swaps the frame without touching the address bar
+  # unless the frame is told to advance it.
+  test "choosing a horizon changes the address, not just the table" do
+    get rankings_path
+
+    assert_select "turbo-frame#rankings_container[data-turbo-action=advance]"
+  end
+
+  # The filters submit the horizon along with everything else. Without it the form
+  # asks for /gameweeks/null/goalkeepers the moment you change team or position.
+  test "changing a filter keeps the horizon you are reading at" do
+    get rankings_path
+
+    assert_select "#filters-form input[type=hidden][name=gameweek][value=?]", @gameweek2.fpl_id.to_s
+  end
+
+  test "the season horizon travels with the filters too" do
+    get season_position_path(position: "#{@player.position}s")
+
+    assert_select "#filters-form input[type=hidden][name=gameweek][value=season]"
+  end
+
+  # A crawler follows links, not form posts, so both horizons are addresses.
+  test "the horizon toggle sends you to the season page, filters and all" do
+    get rankings_path(position: "#{@player.position}s", team_id: @test_team.id)
+
+    assert_select "[aria-label='Forecast horizon'] a[href=?]",
+                  season_position_path(position: "#{@player.position}s", team_id: @test_team.id)
   end
 
   test "a weekly forecast is not shown under the season horizon" do
@@ -227,7 +364,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a price band survives the trip to the clean URL" do
-    get root_path(gameweek: 5, position: "forward", min_price: "6.0", max_price: "10.0")
+    get rankings_path(gameweek: 5, position: "forward", min_price: "6.0", max_price: "10.0")
 
     assert_redirected_to gameweek_position_path(gameweek: 5, position: "forwards",
                                                 min_price: "6.0", max_price: "10.0")

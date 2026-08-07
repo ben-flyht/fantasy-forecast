@@ -32,4 +32,11 @@ class Gameweek < ApplicationRecord
 
     where("fpl_id >= ?", anchor.fpl_id).ordered
   end
+
+  # How many weeks a rest-of-season score is spread over, and so what to divide it
+  # by to read it as a single week. Never nought, because a season with no football
+  # left in it still has to be safe to divide by.
+  def self.remaining_count
+    [ remaining.count, 1 ].max
+  end
 end

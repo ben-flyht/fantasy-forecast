@@ -52,6 +52,25 @@ class Player < ApplicationRecord
     "#{slug}-#{fpl_id}"
   end
 
+  # Every name he might be looked up by: what he is called, what FPL calls him, and
+  # each half of it on its own. A manager types the name he knows, and that is a last
+  # name for Haaland, a first name for Gabriel, and neither for Hato.
+  def searchable_names
+    [ display_name, full_name, first_name, last_name, read_attribute(:short_name) ].compact_blank.uniq
+  end
+
+  # The player an address names. The name in front of it is there to be read, so
+  # it can change with a transfer or a spelling correction without breaking the
+  # link: the number on the end is the one that identifies him.
+  #
+  # A bare number is an address from before the names were added, and still works.
+  def self.from_param(param)
+    param = param.to_s
+    return find(param) if param.match?(/\A\d+\z/)
+
+    find_by!(fpl_id: param.split("-").last)
+  end
+
   def photo_url(size: "40x40")
     return nil unless code.present?
     "https://resources.premierleague.com/premierleague25/photos/players/#{size}/#{code}.png"

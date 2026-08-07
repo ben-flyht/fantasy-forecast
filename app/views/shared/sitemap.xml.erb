@@ -7,6 +7,32 @@
     <priority>1.0</priority>
   </url>
 
+  <!-- The rankings in full, every position at once -->
+  <url>
+    <loc><%= @base_url %><%= rankings_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- The armband: one decision, one address, answered every week -->
+  <url>
+    <loc><%= @base_url %><%= captain_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- The best fifteen the budget buys, both horizons -->
+  <url>
+    <loc><%= @base_url %><%= squad_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc><%= @base_url %><%= season_squad_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
   <!-- Season Rankings Pages: the one ranking URL that is good all year -->
   <% %w[forwards midfielders defenders goalkeepers].each do |position| %>
   <url>
@@ -16,15 +42,36 @@
   </url>
   <% end %>
 
-  <!-- Gameweek + Position Rankings Pages -->
-  <% @gameweeks_with_forecasts.each do |gw| %>
+  <!-- The coming gameweek, and only that one: a week already played is history
+       rather than a page anyone is searching for, and offering all thirty-eight
+       spends the crawler on near-copies of each other instead of on the season
+       pages and the players. -->
+  <% if @next_gameweek %>
     <% %w[forwards midfielders defenders goalkeepers].each do |position| %>
   <url>
-    <loc><%= @base_url %><%= gameweek_position_path(gameweek: gw, position: position) %></loc>
+    <loc><%= @base_url %><%= gameweek_position_path(gameweek: @next_gameweek, position: position) %></loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
     <% end %>
+  <% end %>
+
+  <!-- Comparisons. Every pair of players has an address and every one of them is
+       a page, which is far more addresses than a sitemap may carry, so what is
+       offered here is the arguments worth having: players our own forecast puts
+       next to each other. The rest are found the way a reader finds them, by
+       following the links on these. -->
+  <url>
+    <loc><%= @base_url %><%= comparisons_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <% @comparisons.each do |pair| %>
+  <url>
+    <loc><%= @base_url %><%= comparison_path(pair: pair.slug) %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
   <% end %>
 
   <!-- Player Pages (grouped by position) -->

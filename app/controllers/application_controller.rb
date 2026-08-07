@@ -11,7 +11,9 @@ class ApplicationController < ActionController::Base
   def sitemap
     @base_url = "https://#{ENV.fetch('APP_HOST', 'www.fantasyforecast.co.uk')}"
     @players_by_position = Player.select(:id, :position, :first_name, :last_name, :fpl_id).order(:position, :id).group_by(&:position)
-    @gameweeks_with_forecasts = Gameweek.joins(:forecasts).distinct.order(:fpl_id).pluck(:fpl_id)
+    gameweek = Gameweek.next_gameweek
+    @next_gameweek = gameweek&.fpl_id
+    @comparisons = PopularComparisons.call(gameweek: gameweek).values.flatten
     render "shared/sitemap", formats: [ :xml ]
   end
 end

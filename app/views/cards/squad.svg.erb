@@ -1,0 +1,79 @@
+<%#
+  The picture the squad turns into: what it is expected to score, and the fifteen
+  who score it.
+
+  Square, and on the site's own paper. See ShareCard::TeamSheet for why it is shaped
+  the way it is: the names are sized first, against what survives being scaled to a
+  quarter on a phone, and everything else takes what is left. The photograph in
+  particular is drawn to a right edge the sheet owns, because a photograph running
+  under the names is the one thing this card must never do.
+%>
+<% theme = card_theme(:light) %>
+<% sheet_geometry = ShareCard::TeamSheet %>
+<% captain = @squad.captain %>
+<% starters = %w[goalkeeper defender midfielder forward].flat_map { |position| @squad.starters_in(position) } %>
+<% names = (starters + @squad.bench).index_with { |pick| card_pick_name(@players[pick["player_id"]], captain: pick == captain) } %>
+<% sheet = ShareCard::TeamSheet.new(starters: starters, bench: @squad.bench, names: names) %>
+<% total = @squad.expected_points.round %>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="<%= ShareCard::WIDTH %>" height="<%= ShareCard::SQUARE %>"
+     viewBox="0 0 <%= ShareCard::WIDTH %> <%= ShareCard::SQUARE %>"
+     font-family="Inter, Helvetica Neue, Liberation Sans, DejaVu Sans, sans-serif">
+  <rect width="1200" height="1200" fill="<%= theme[:paper] %>"/>
+
+  <%# The panel, cut at 15.06 degrees, which is the angle of the logo and of every
+      block on the site. It was drawn at four degrees before, which is a slope rather
+      than the mark.
+
+      The angle costs what it costs: over the full height of a square card it eats 323
+      pixels of width, so a panel flush with the first column at the top has almost
+      nothing left at the bottom. That is the shape, not a mistake. %>
+  <% run = (ShareCard::SQUARE * ShareCard::Wordmark::TAN).round %>
+  <polygon points="0,0 <%= sheet_geometry::LEFT %>,0 <%= sheet_geometry::LEFT - run %>,1200 0,1200"
+           fill="<%= theme[:panel] %>"/>
+
+  <%# Two lines, because the mark beside it is 578 wide and one line of this at the
+      floor is 662. %>
+  <text x="48" y="66" fill="<%= theme[:ink] %>" font-size="<%= sheet_geometry::LABEL_SIZE %>"
+        font-weight="800" letter-spacing="1">THE BEST SQUAD</text>
+  <text x="48" y="110" fill="<%= theme[:faint] %>" font-size="<%= sheet_geometry::LABEL_SIZE %>"
+        font-weight="800" letter-spacing="1"><%= horizon_label.upcase %></text>
+
+  <%= render "cards/wordmark", size: sheet_geometry::LOGO_SIZE, right: sheet.right_edge, middle: 86,
+             ink: theme[:ink], field: theme[:ink], reversed: theme[:reversed] %>
+
+  <% figure = 150 %>
+  <text x="48" y="300" fill="<%= theme[:ink] %>" font-size="<%= figure %>" font-weight="800"
+        letter-spacing="-6"><%= total %></text>
+  <%# Under the figure rather than beside it. Two lines, because at the floor the words
+      are 414 wide and the column beside the photograph is 292. %>
+  <text x="48" y="352" fill="<%= theme[:ink] %>" font-size="<%= sheet_geometry::FLOOR %>"
+        font-weight="800" letter-spacing="1">EXPECTED</text>
+  <text x="48" y="396" fill="<%= theme[:ink] %>" font-size="<%= sheet_geometry::FLOOR %>"
+        font-weight="800" letter-spacing="1">POINTS</text>
+
+  <% if (hero = card_photo(@players[captain&.dig("player_id")])) %>
+    <image xlink:href="<%= hero %>" x="-44" y="450"
+           width="<%= sheet_geometry::PHOTO_RIGHT + 44 %>" height="750"
+           preserveAspectRatio="xMidYMax slice"/>
+  <% end %>
+
+  <text x="<%= sheet_geometry::LEFT %>" y="<%= sheet_geometry::STARTERS_LABEL %>"
+        fill="<%= theme[:faint] %>" font-size="<%= sheet_geometry::LABEL_SIZE %>" font-weight="800" letter-spacing="2">STARTING XI</text>
+
+  <% sheet.starters.each do |block| %>
+    <%= render "cards/squad_pick", block: block, player: @players[block.pick["player_id"]],
+               name: names[block.pick], size: sheet.name_size,
+               ink: theme[:ink], meta_ink: theme[:quiet] %>
+  <% end %>
+
+  <text x="<%= sheet_geometry::LEFT %>" y="<%= sheet_geometry::BENCH_LABEL %>"
+        fill="<%= theme[:faint] %>" font-size="<%= sheet_geometry::LABEL_SIZE %>" font-weight="800" letter-spacing="2">BENCH</text>
+
+  <% sheet.bench.each do |block| %>
+    <%= render "cards/squad_pick", block: block, player: @players[block.pick["player_id"]],
+               name: names[block.pick], size: sheet.name_size,
+               ink: "#52525b", meta_ink: theme[:quiet] %>
+  <% end %>
+
+</svg>

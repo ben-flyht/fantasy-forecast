@@ -1,0 +1,42 @@
+<% if utility_row? %>
+  <div class="mb-3.5 flex items-center gap-3 <%= utility_alignment %>">
+    <% if back %>
+      <%# Out of whatever frame it finds itself in. On the rankings this heading is
+          drawn inside the frame the table lives in, and a link there swaps the frame
+          rather than the page: the front page has no rankings frame in it, so going
+          back did nothing at all. %>
+      <%= link_to back.url, data: { turbo_frame: "_top" },
+            class: "inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-950" do %>
+        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg><%= back.label %>
+      <% end %>
+    <% end %>
+
+    <%# No label: the button says "Share" on every page. What is being shared is
+        said to a screen reader and to the share sheet instead. %>
+    <%= render "shared/share", aria_label: share, title: share if share %>
+  </div>
+<% end %>
+
+<div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-5 sm:items-center">
+  <div class="<%= title_placement %>">
+    <h1 class="text-xl sm:text-2xl font-semibold tracking-[-0.015em] text-balance text-zinc-900"><%= title %></h1>
+    <% if subtitle %>
+      <p class="mt-1 text-sm text-zinc-500"><%= subtitle %></p>
+    <% end %>
+  </div>
+
+  <% if horizons %>
+    <div class="sm:col-start-1 sm:row-start-2 sm:justify-self-start">
+      <%= render SegmentedControlComponent.new(label: "Forecast horizon", options: horizons) %>
+    </div>
+  <% end %>
+
+  <% if updated_at %>
+    <p class="whitespace-nowrap text-xs text-zinc-400 <%= updated_placement %>">
+      Updated
+      <time datetime="<%= updated_at.iso8601 %>" title="<%= l updated_at, format: :long %>"><%= time_ago_in_words(updated_at) %> ago</time>
+    </p>
+  <% end %>
+</div>

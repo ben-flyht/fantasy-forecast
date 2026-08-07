@@ -1,5 +1,11 @@
 Rails.application.routes.draw do
-  root "players#index"
+  # The front page introduces the three things this site does and shows a little of
+  # each, so somebody arriving from a search meets answers rather than a menu.
+  root "home#show"
+
+  # The rankings in full, with every filter. They used to be the front page, which
+  # left nowhere to say what the site was for.
+  get "rankings", to: "players#index", as: :rankings
 
   POSITIONS = /goalkeepers|defenders|midfielders|forwards/
 
@@ -15,11 +21,39 @@ Rails.application.routes.draw do
   get "gameweeks/ros/:position", to: redirect("/season/%{position}", status: 301),
       constraints: { position: POSITIONS }
 
+  # The armband, which is the one decision every manager makes every single week.
+  # No horizon: you captain a player for a gameweek or you do not captain him.
+  get "captain", to: "captains#show", as: :captain
+
+  # Him or him: the question a manager asks when he has already narrowed it to
+  # two, with an address of its own so it can be found by asking it.
+  # Two player addresses and a separator, and no dots: a card asked for as .png
+  # stays a card rather than becoming a third player.
+  PAIR = /[a-z0-9\-]+-vs-[a-z0-9\-]+/
+
+  get "compare", to: "comparisons#index", as: :comparisons
+
+  # Who you might mean, from the few letters you have typed. Declared before the pair
+  # so it is never mistaken for one, though the constraint below would refuse it
+  # anyway: a pair has "-vs-" in it and this does not.
+  get "compare/search", to: "comparisons#search", as: :comparison_search
+
+  get "compare/:pair", to: "comparisons#show", as: :comparison, constraints: { pair: PAIR }
+
   # Redirect old /players path to root
   get "players", to: redirect("/", status: 301)
 
   # Player detail page
   resources :players, only: [ :show ]
+
+  # The best fifteen £100.0m buys. Two horizons, the same as the rankings.
+  #
+  # The squad, because that is what it is: fifteen players, not eleven, and not a
+  # recommendation to play a chip. It was called the wildcard, which told managers to
+  # spend something we were not advising them to spend, and it was called the best XI,
+  # which is not what fifteen players are.
+  get "squad", to: "squads#show", as: :squad, defaults: { horizon: "gameweek" }
+  get "squad/season", to: "squads#show", as: :season_squad, defaults: { horizon: "season" }
 
   # Dynamic robots.txt based on environment
   get "robots.txt", to: "application#robots", defaults: { format: "text" }

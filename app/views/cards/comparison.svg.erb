@@ -1,0 +1,55 @@
+<%#
+  The picture this comparison turns into when somebody pastes the link.
+
+  Drawn rather than screenshotted: a card has to say one thing at the size of a
+  thumbnail in a group chat, which is a different design from the page it came
+  from. The two shirts split the middle, the question is along the top, and the
+  answer is the largest thing on it.
+%>
+<% left, right = @head_to_head.sides %>
+<% ink = { left => card_ink(left.player.team), right => card_ink(right.player.team) } %>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="<%= ShareCard::WIDTH %>" height="<%= ShareCard::HEIGHT %>"
+     viewBox="0 0 <%= ShareCard::WIDTH %> <%= ShareCard::HEIGHT %>"
+     font-family="Inter, Helvetica Neue, Liberation Sans, DejaVu Sans, sans-serif">
+  <rect width="1200" height="630" fill="#09090b"/>
+
+  <%# The two shirts, split down the middle on the diagonal the site's rows use. %>
+  <clipPath id="board"><rect x="0" y="88" width="1200" height="404"/></clipPath>
+  <g clip-path="url(#board)">
+    <polygon points="0,88 660,88 560,492 0,492" fill="<%= card_colour(left.player.team) %>"/>
+    <polygon points="676,88 1200,88 1200,492 576,492" fill="<%= card_colour(right.player.team) %>"/>
+
+    <%# Text on the outer edge, photographs facing each other across the split, so
+        neither lands on top of the other. The photograph stops short of the
+        diagonal: the panel is narrower at the bottom than at the top. %>
+    <% [ [ left, :start, 56, 286 ], [ right, :end, 1144, 610 ] ].each do |side, anchor, x, photo_x| %>
+      <% if (photo = card_photo(side.player)) %>
+        <image xlink:href="<%= photo %>" x="<%= photo_x %>" y="196" width="270" height="296"
+               preserveAspectRatio="xMidYMax meet"/>
+      <% end %>
+      <text x="<%= x %>" y="168" text-anchor="<%= anchor %>" fill="<%= ink[side] %>"
+            font-size="<%= card_name_size(side.player.display_name) %>" font-weight="800"
+            letter-spacing="-1"><%= side.player.display_name.upcase %></text>
+      <text x="<%= x %>" y="200" text-anchor="<%= anchor %>" fill="<%= ink[side] %>"
+            font-size="19" font-weight="700" opacity="0.75"><%= side.player.team&.name %></text>
+      <text x="<%= x %>" y="330" text-anchor="<%= anchor %>" fill="<%= ink[side] %>"
+            font-size="112" font-weight="800" letter-spacing="-4"><%= weekly_points(@head_to_head, side) || "—" %></text>
+      <text x="<%= x %>" y="366" text-anchor="<%= anchor %>" fill="<%= ink[side] %>"
+            font-size="17" font-weight="700" opacity="0.75">
+        <%= side.grade ? "GRADE #{side.grade}" : "NO FORECAST" %>
+      </text>
+    <% end %>
+  </g>
+
+  <%= render "cards/header", title: comparison_question(@comparison),
+             note: @head_to_head.season? ? "Rest of season" : "Gameweek #{@gameweek&.fpl_id}" %>
+
+  <%# The answer, which is the whole reason the card exists. %>
+  <%# A name now, always, so the card that lands in a chat answers the question it
+      was sent to answer. The size only drops when there is no forecast to name one
+      from and the footer has to say so instead. %>
+  <%= render "cards/footer", label: @head_to_head.close? ? "Our pick, just" : "Our pick",
+             headline: verdict_name(@head_to_head).upcase,
+             size: @head_to_head.forecast? ? 44 : 34 %>
+</svg>

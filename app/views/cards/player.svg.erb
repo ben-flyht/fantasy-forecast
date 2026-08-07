@@ -1,0 +1,45 @@
+<%#
+  One player, at the size of a thumbnail: his shirt, his face, and the grade we
+  have given him. The numbers behind it are on the page the card links to.
+%>
+<% team = @player.team %>
+<% ink = card_ink(team) %>
+<% season = @horizon == "season" %>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="<%= ShareCard::WIDTH %>" height="<%= ShareCard::HEIGHT %>"
+     viewBox="0 0 <%= ShareCard::WIDTH %> <%= ShareCard::HEIGHT %>"
+     font-family="Inter, Helvetica Neue, Liberation Sans, DejaVu Sans, sans-serif">
+  <rect width="1200" height="630" fill="#09090b"/>
+
+  <%= render "cards/header", title: @player.full_name,
+             note: season ? "Rest of season" : "Gameweek #{@next_gameweek&.fpl_id}" %>
+
+  <%# His shirt, cut on the same diagonal the rankings rows use. %>
+  <clipPath id="board"><rect x="0" y="88" width="1200" height="404"/></clipPath>
+  <g clip-path="url(#board)">
+    <polygon points="0,88 1200,88 1200,492 0,492" fill="<%= card_colour(team) %>"/>
+
+    <% if (photo = card_photo(@player)) %>
+      <image xlink:href="<%= photo %>" x="820" y="180" width="320" height="312"
+             preserveAspectRatio="xMidYMax meet"/>
+    <% end %>
+
+    <text x="56" y="210" fill="<%= ink %>" font-size="<%= card_name_size(@player.display_name) + 12 %>"
+          font-weight="800" letter-spacing="-2"><%= @player.display_name.upcase %></text>
+    <text x="56" y="250" fill="<%= ink %>" font-size="22" font-weight="700" opacity="0.75">
+      <%= [ team&.name, @player.position.capitalize ].compact.join(" · ") %>
+    </text>
+
+    <% [ [ "Grade", @forecast&.dig(:grade) || "—", 56 ],
+         [ season ? "XP rest of season" : "XP this week", card_points(@forecast&.dig(:score), season), 300 ],
+         [ "Rank", @forecast&.dig(:rank) ? "##{@forecast[:rank]}" : "—", 560 ] ].each do |label, value, x| %>
+      <text x="<%= x %>" y="360" fill="<%= ink %>" font-size="15" font-weight="700"
+            letter-spacing="1.5" opacity="0.7"><%= label.upcase %></text>
+      <text x="<%= x %>" y="430" fill="<%= ink %>" font-size="64" font-weight="800"
+            letter-spacing="-2"><%= value %></text>
+    <% end %>
+  </g>
+
+  <%= render "cards/footer", label: "What we make of him", size: 34,
+             headline: (@forecast&.dig(:tier) ? TierCalculator::TIERS.dig(@forecast[:tier], :description).upcase : "NO FORECAST THIS WEEK") %>
+</svg>

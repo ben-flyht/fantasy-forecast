@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_04_210100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_06_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -113,6 +113,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_210100) do
     t.index ["team_id"], name: "index_players_on_team_id"
   end
 
+  create_table "squads", force: :cascade do |t|
+    t.integer "cost", null: false
+    t.datetime "created_at", null: false
+    t.decimal "expected_points", precision: 10, scale: 4, null: false
+    t.string "formation", null: false
+    t.bigint "gameweek_id", null: false
+    t.string "horizon", default: "gameweek", null: false
+    t.jsonb "picks", default: [], null: false
+    t.datetime "updated_at", null: false
+    t.index ["gameweek_id", "horizon"], name: "index_squads_on_gameweek_id_and_horizon", unique: true
+    t.index ["gameweek_id"], name: "index_squads_on_gameweek_id"
+  end
+
   create_table "statistics", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "gameweek_id", null: false
@@ -167,6 +180,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_210100) do
   add_foreign_key "performances", "players"
   add_foreign_key "performances", "teams"
   add_foreign_key "players", "teams"
+  add_foreign_key "squads", "gameweeks"
   add_foreign_key "statistics", "gameweeks"
   add_foreign_key "statistics", "players"
 end

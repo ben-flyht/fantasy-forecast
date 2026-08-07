@@ -1,0 +1,4 @@
+<%# What the card is about, along the top, so a thumbnail still says what it is. %>
+<% ink = local_assigns.fetch(:theme, card_theme) %>
+<text x="56" y="56" fill="<%= ink[:ink] %>" font-size="26" font-weight="700" letter-spacing="-0.5"><%= title %></text>
+<text x="1144" y="56" text-anchor="end" fill="<%= ink[:quiet] %>" font-size="19" font-weight="600"><%= note %></text>

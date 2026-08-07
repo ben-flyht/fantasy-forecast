@@ -1,0 +1,42 @@
+<%#
+  The picture a shared ranking turns into: the top five of a position, in the
+  order they are in, with the grades that put them there. Five rather than the
+  hundred on the page, because a card is read at the size of a thumbnail.
+%>
+<% shortlist = @consensus_rankings.first(5) %>
+<% best = shortlist.first %>
+<svg xmlns="http://www.w3.org/2000/svg" width="<%= ShareCard::WIDTH %>" height="<%= ShareCard::HEIGHT %>"
+     viewBox="0 0 <%= ShareCard::WIDTH %> <%= ShareCard::HEIGHT %>"
+     font-family="Inter, Helvetica Neue, Liberation Sans, DejaVu Sans, sans-serif">
+  <rect width="1200" height="630" fill="#09090b"/>
+
+  <%= render "cards/header", title: "Best FPL #{@position_filter.capitalize}s", note: horizon_label %>
+
+  <% shortlist.each_with_index do |ranking, index| %>
+    <% player = @players_by_id[ranking.player_id] %>
+    <% next unless player %>
+    <% y = 150 + (index * 76) %>
+    <line x1="56" y1="<%= y + 22 %>" x2="1144" y2="<%= y + 22 %>" stroke="#27272a" stroke-width="1"/>
+    <text x="56" y="<%= y %>" fill="#52525b" font-size="34" font-weight="800" letter-spacing="-1"><%= index + 1 %></text>
+    <text x="120" y="<%= y %>" fill="#fafafa" font-size="34" font-weight="800" letter-spacing="-1">
+      <%= player.display_name.upcase %>
+    </text>
+    <text x="900" y="<%= y %>" text-anchor="end" fill="#a1a1aa" font-size="22" font-weight="600">
+      <%= player.team&.short_name %>
+    </text>
+    <text x="1010" y="<%= y %>" text-anchor="end" fill="#a1a1aa" font-size="26" font-weight="700">
+      <%= card_points(ranking.score, season?) %>
+    </text>
+    <text x="1144" y="<%= y %>" text-anchor="end" fill="#fafafa" font-size="34" font-weight="800">
+      <%= ranking.grade %>
+    </text>
+  <% end %>
+
+  <% if best && (player = @players_by_id[best.player_id]) %>
+    <%= render "cards/footer", label: "Our top pick", size: 44,
+               headline: "#{player.display_name.upcase} · #{card_points(best.score, season?)} XP" %>
+  <% else %>
+    <%= render "cards/footer", label: "Fantasy Forecast", size: 40,
+               headline: "EVERY PLAYER GRADED A TO F" %>
+  <% end %>
+</svg>

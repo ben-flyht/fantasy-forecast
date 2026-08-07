@@ -15,25 +15,27 @@ class PlayerPageTest < ApplicationSystemTestCase
     Forecast.create!(player: @player, gameweek: @gameweek, rank: 3, score: 180.0, horizon: "season")
   end
 
-  test "switching the horizon rewrites the forecast panel without reloading the page" do
+  test "switching the horizon rewrites the forecast without reloading the page" do
     visit player_path(@player)
     assert_text "5.0"
 
-    # Survives a frame navigation; a full page load would wipe it. This, not a
-    # scroll assertion, is what the reader actually feels: the document is never
-    # replaced, so the scroll position is never reset.
-    page.execute_script("document.body.dataset.marker = 'kept'")
+    # The toggle lives in the heading now, above the panel it changes, so the whole
+    # page navigates rather than one frame. What still has to hold is that Turbo
+    # drives it: a window survives a Turbo visit and does not survive a browser
+    # reload, so this is the difference the reader actually feels.
+    page.execute_script("window.marker = 'kept'")
 
-    find("label", text: "Rest of Season").click
+    click_link "Rest of Season"
 
     assert_text "180.0"
     assert_no_text "Content missing"
-    assert_equal "kept", page.evaluate_script("document.body.dataset.marker")
+    assert_equal "kept", page.evaluate_script("window.marker"),
+                 "the browser reloaded rather than Turbo swapping the body"
   end
 
   test "the horizon is in the URL, so the panel survives a refresh" do
     visit player_path(@player)
-    find("label", text: "Rest of Season").click
+    click_link "Rest of Season"
     assert_text "180.0"
 
     visit current_url

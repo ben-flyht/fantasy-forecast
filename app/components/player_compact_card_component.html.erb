@@ -1,0 +1,75 @@
+<%#
+  A player in a column, so two of them stand side by side on a phone.
+
+  Same devices as the row: his club's colour, the badge behind him, and the grade on
+  the card's own white with the colour cut away from it at the lean the logo is cut
+  at. What differs is the axis — the row cuts a vertical edge, this cuts a horizontal
+  one — and where he stands: beside his name where there is room, under it where
+  there is not.
+%>
+<div class="flex h-[200px] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm sm:h-[168px]">
+  <%# 20px across the card's width is the logo's lean, read the other way round. %>
+  <%# From sm he stands beside his name, so the name is set against him rather than
+      pinned to the top: centred on the block, less the slant the block loses at the
+      bottom, so it reads as centred on what you can actually see. %>
+  <div class="relative flex-1 overflow-hidden [clip-path:polygon(0_0,100%_0,100%_calc(100%_-_20px),0_100%)] sm:flex sm:items-center sm:pb-3 <%= text_class %>"
+       style="background-color: <%= color %>">
+
+    <%# The badge is centred on the cutout's box, not the card's, so it reads as
+        something he is standing in front of. The outer span traces that box: same
+        corner, same height, and the ratio the Premier League serves its photos at,
+        so the centring holds even when there is no cutout to stand there.
+
+        He stands on the slant: his feet are the region's own bottom edge, so the cut
+        runs across him and there is no band of bare colour left underneath. The clip
+        on the region is what stops him spilling onto the white below it.
+
+        Below sm he stands under his name; from sm up he stands beside it. %>
+    <span class="pointer-events-none absolute bottom-0 left-1/2 z-0 aspect-[219/280] h-[92px] -translate-x-1/2 sm:left-auto sm:right-0 sm:h-[104px] sm:translate-x-0">
+      <% if team&.badge_url %>
+        <span class="absolute left-1/2 top-1/2 h-[104px] w-[104px] -translate-x-1/2 -translate-y-1/2 sm:h-[118px] sm:w-[118px]">
+          <%= image_tag team.badge_url, alt: "", class: "h-full w-full object-contain opacity-20 #{badge_silhouette}" %>
+        </span>
+        <span class="absolute left-1/2 top-1/2 h-[104px] w-[104px] -translate-x-1/2 -translate-y-1/2 sm:h-[118px] sm:w-[118px]">
+          <%= image_tag team.badge_url, alt: "", class: "h-full w-full object-contain opacity-[.22]" %>
+        </span>
+      <% end %>
+
+      <% if player.cutout_url %>
+        <%= image_tag player.cutout_url, alt: "",
+              class: "absolute bottom-0 left-1/2 block h-full w-auto -translate-x-1/2 object-bottom drop-shadow-[0_5px_9px_rgba(0,0,0,0.24)]",
+              onerror: "this.remove()" %>
+      <% end %>
+    </span>
+
+    <%# His name sits over the colour beside him, as it does on the row and the hero.
+        The right padding only exists from sm, because below it he is not there. %>
+    <div class="relative z-[1] min-w-0 px-2.5 pt-2.5 sm:w-full sm:pt-0 sm:pr-[84px]">
+      <% if player.given_name.present? %>
+        <p class="truncate text-[9.5px] font-bold uppercase leading-none tracking-[-0.02em] opacity-80"><%= player.given_name %></p>
+      <% end %>
+      <p class="mt-[3px] truncate text-[17px] font-extrabold uppercase leading-none tracking-[-0.02em] sm:text-[19px]">
+        <%= player.display_name %><% if captain? %><span class="ml-[5px] align-top text-[11px] opacity-90">(C)</span><% end %>
+      </p>
+      <p class="mt-[5px] flex items-center gap-x-1 truncate text-[10px] font-bold leading-none opacity-95">
+        <span><%= team&.short_name %></span>
+        <% if cost %>
+          <span class="font-normal opacity-50">/</span><span class="tabular-nums"><%= cost %></span>
+        <% end %>
+        <% if ownership %>
+          <span class="font-normal opacity-50">/</span><span class="tabular-nums"><%= ownership %></span>
+        <% end %>
+      </p>
+    </div>
+  </div>
+
+  <%# The white the colour was cut away from. The grade stands on it, as it does at
+      the end of a row. %>
+  <%# The slant leaves a wedge of white deepest at the right, which is where the
+      grade stands, so it is set to the height of that wedge rather than to the
+      points beside it. %>
+  <div class="flex shrink-0 items-baseline justify-between px-2.5 pb-1.5 text-zinc-900">
+    <p class="text-[20px] font-extrabold leading-none tracking-[-0.03em] tabular-nums"><%= headline if headline? %></p>
+    <p class="text-[38px] font-extrabold leading-none tracking-[-0.04em] sm:text-[42px]"><%= grade %></p>
+  </div>
+</div>

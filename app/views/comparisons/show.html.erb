@@ -1,0 +1,108 @@
+<% horizon_words = @head_to_head.season? ? "Rest of Season" : "Gameweek #{@gameweek&.fpl_id}" %>
+<% content_for :meta_title, "#{comparison_title(@comparison)} FPL #{horizon_words} | Fantasy Forecast" %>
+<% content_for :meta_description, "#{comparison_question(@comparison)} #{verdict_line(@head_to_head)} Both graded A to F from price, ownership, form and fixtures." %>
+<% content_for :meta_url, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug)}" %>
+<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug, format: :png)}" %>
+
+<%= render PageHeadingComponent.new(
+      title: comparison_question(@comparison),
+      subtitle: "Both forecast the same way, from the same stored numbers the rankings are read from.",
+      updated_at: @forecast_at,
+      share: "Share this answer",
+      back: back_to("Comparisons", comparisons_path),
+      horizons: forecast_horizons(gameweek: @gameweek&.fpl_id, season: @head_to_head.season?,
+                                  gameweek_url: comparison_path(pair: @comparison.slug),
+                                  season_url: comparison_path(pair: @comparison.slug, horizon: "season"))) %>
+
+<%# Two columns at every width, phone included. A comparison with one player above
+    the other is a list, and you cannot read a list across. %>
+<div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4">
+  <% @head_to_head.sides.each do |side| %>
+    <% picked = @head_to_head.pick == side %>
+    <div data-comparison-card data-pick="<%= picked %>">
+      <%# The badge has a row of its own rather than hanging over the card. On a
+          phone a card is about 165px wide and the name starts in that same corner,
+          so an overhanging badge sat on top of it. An empty row on the other side
+          keeps the two cards level. %>
+      <div class="mb-1.5 flex h-[18px] items-center">
+        <% if picked %>
+          <span class="rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wider text-white">
+            Our pick<%= ", just" if @head_to_head.close? %>
+          </span>
+        <% end %>
+      </div>
+
+      <div class="<%= "rounded-xl ring-2 ring-zinc-900" if picked %>">
+        <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(@head_to_head, side)) %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<%# The cards say who and by how much. The only thing left to say is what they
+    cannot: that a pick is marginal, or that there is no forecast behind it. %>
+<% if (note = comparison_note(@head_to_head)) %>
+  <p class="mt-3 text-sm text-zinc-600"><%= note %></p>
+<% end %>
+
+<%# The working underneath the answer: every figure we hold on the two of them, so a
+    manager who disagrees with the pick can see what it was made from. %>
+<% if @stats.any? %>
+  <section class="mt-10">
+    <h2 class="text-lg font-semibold text-zinc-900">Every number we hold on the two of them</h2>
+    <p class="mt-1 text-sm text-zinc-500">
+      The figure that favours a player is the one in black. Where a figure is a fact
+      rather than a merit, neither is marked.
+    </p>
+
+    <% @stats.each do |group| %>
+      <div class="mt-6">
+        <h3 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= group.title %></h3>
+        <dl class="mt-2 divide-y divide-zinc-100">
+          <% group.rows.each do |row| %>
+            <%# Each figure stands at its own edge, under the card it belongs to,
+                rather than both crowding the label in the middle. %>
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-2.5 sm:gap-6">
+              <dd class="text-left text-sm tabular-nums <%= comparison_value_class(row.leader == :left) %>"><%= row.left %></dd>
+              <dt class="text-center text-[11px] leading-tight text-zinc-500 sm:text-xs"><%= row.label %></dt>
+              <dd class="text-right text-sm tabular-nums <%= comparison_value_class(row.leader == :right) %>"><%= row.right %></dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    <% end %>
+  </section>
+<% end %>
+
+<section class="mt-10">
+  <h2 class="text-lg font-semibold text-zinc-900">
+    How we read <%= comparison_title(@comparison).delete_suffix("?") %>
+  </h2>
+  <p class="mt-2 text-sm text-zinc-600">
+    Both players are forecast the same way: their price and how many managers own them lead, weighed
+    against minutes, recent form, expected goals and assists, and who they are playing.
+    <%= @head_to_head.season? ?
+        "Rest-of-season scores are totals, so they are read as the week they average to before they are graded." :
+        "The score is the points we expect from the coming gameweek alone." %>
+    <% if @head_to_head.close? %>
+      The gap here is under <%= HeadToHead::CLOSE %> of a point a week, which is smaller than the
+      difference our forecast can honestly claim to see. We still name one, because a manager
+      with two players and one transfer has to pick one of them, but it is a lean rather than
+      a verdict.
+    <% end %>
+  </p>
+</section>
+
+<% if @related.any? %>
+  <section class="mt-8">
+    <h2 class="text-lg font-semibold text-zinc-900">Other players worth weighing against these two</h2>
+    <ul class="mt-3 flex flex-wrap gap-2">
+      <% @related.each do |pair| %>
+        <li>
+          <%= link_to comparison_title(pair), comparison_path(pair: pair.slug),
+              class: "inline-block rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>

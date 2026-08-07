@@ -55,7 +55,29 @@ module Fpl
       gameweek = Gameweek.next_gameweek
       return nothing_to_forecast unless gameweek
 
-      [ WeeklyForecast.call(gameweek: gameweek), SeasonForecast.call(gameweek: gameweek) ].all?
+      forecast = [ WeeklyForecast.call(gameweek: gameweek), SeasonForecast.call(gameweek: gameweek) ].all?
+      optimise_squads(gameweek)
+      forecast
+    end
+
+    # Searching for the best fifteen takes seconds, not milliseconds, so it happens here
+    # rather than while somebody watches a page. It is skipped outright when no forecast
+    # has moved since the last search: the answer would be the same one, and this runs
+    # every hour whether or not football has happened.
+    def optimise_squads(gameweek)
+      Squad::HORIZONS.each do |horizon|
+        next if squad_current?(gameweek, horizon)
+
+        SquadOptimiser.call(gameweek: gameweek, horizon: horizon)
+      end
+    end
+
+    def squad_current?(gameweek, horizon)
+      squad = Squad.find_by(gameweek: gameweek, horizon: horizon)
+      return false if squad.nil?
+
+      newest = Forecast.where(gameweek: gameweek, horizon: horizon).maximum(:updated_at)
+      newest.present? && squad.updated_at > newest
     end
 
     # Pre-season FPL names no next gameweek. Having nothing to forecast is a quiet
