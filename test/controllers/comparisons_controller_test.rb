@@ -82,7 +82,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     get comparison_path(pair: pair, horizon: "season")
 
     assert_response :success
-    assert_select "[aria-label='Forecast horizon'] a[aria-current=page]", text: "Rest of Season"
+    assert_select "[aria-label='Forecast horizon'] a[aria-current=page][aria-label='Rest of Season']"
     assert_select "[data-comparison-card][data-pick=true]", text: /Palmer/
   end
 

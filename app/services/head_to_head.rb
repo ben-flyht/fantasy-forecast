@@ -158,13 +158,13 @@ class HeadToHead < ApplicationService
       tier: TierCalculator.tier_from_points(weekly(score)) }
   end
 
-  # A rest-of-season score is dozens of points where a week's is two to four, so
-  # it is read as the week it averages to before it is graded or compared. Both
-  # horizons then answer on the same scale.
+  # A rest-of-season score is dozens of points where a week's is two to four, so it is
+  # read as the week it averages to before it is graded or compared. Every horizon then
+  # answers on the same scale, whichever distance it was worked out over.
   def weekly(score)
     return 0.0 if score.nil?
 
-    score / (season? ? Gameweek.remaining_count : 1)
+    score / Horizon.find(@horizon).divisor
   end
 
   def forecasts

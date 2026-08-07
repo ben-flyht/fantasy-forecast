@@ -39,15 +39,21 @@ class SquadsController < ApplicationController
     [ "squad_card", @horizon, @gameweek&.id, @squad.updated_at.to_i ].join("/")
   end
 
-  def season? = @horizon == SEASON
+  def horizon = @horizon_read ||= Horizon.find(@horizon)
+
+  def season? = horizon.season?
   helper_method :season?
 
-  def horizon_label = season? ? "Rest of Season" : "Gameweek #{@gameweek&.fpl_id}"
+  def horizon_label = horizon.label(gameweek: @gameweek&.fpl_id)
   helper_method :horizon_label
 
   # The address this squad is at, and the address its card is at.
-  def squad_url(format: nil)
-    season? ? season_squad_path(format: format) : squad_path(format: format)
+  def squad_url(format: nil, reach: horizon)
+    case reach.to_s
+    when Horizon::SEASON then season_squad_path(format: format)
+    when Horizon::UPCOMING then upcoming_squad_path(format: format)
+    else squad_path(format: format)
+    end
   end
   helper_method :squad_url
 end

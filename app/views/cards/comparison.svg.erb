@@ -43,7 +43,7 @@
   </g>
 
   <%= render "cards/header", title: comparison_question(@comparison),
-             note: @head_to_head.season? ? "Rest of season" : "Gameweek #{@gameweek&.fpl_id}" %>
+             note: Horizon.find(@head_to_head.horizon).label(gameweek: @gameweek&.fpl_id) %>
 
   <%# The answer, which is the whole reason the card exists. %>
   <%# A name now, always, so the card that lands in a chat answers the question it

@@ -1,4 +1,5 @@
-<% horizon_words = @head_to_head.season? ? "Rest of Season" : "Gameweek #{@gameweek&.fpl_id}" %>
+<% reach = Horizon.find(@head_to_head.horizon) %>
+<% horizon_words = reach.label(gameweek: @gameweek&.fpl_id) %>
 <% content_for :meta_title, "#{comparison_title(@comparison)} FPL #{horizon_words} | Fantasy Forecast" %>
 <% content_for :meta_description, "#{comparison_question(@comparison)} #{verdict_line(@head_to_head)} Both graded A to F from price, ownership, form and fixtures." %>
 <% content_for :meta_url, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug)}" %>
@@ -10,9 +11,10 @@
       updated_at: @forecast_at,
       share: "Share this answer",
       back: back_to("Comparisons", comparisons_path),
-      horizons: forecast_horizons(gameweek: @gameweek&.fpl_id, season: @head_to_head.season?,
-                                  gameweek_url: comparison_path(pair: @comparison.slug),
-                                  season_url: comparison_path(pair: @comparison.slug, horizon: "season"))) %>
+      horizons: forecast_horizons(gameweek: @gameweek&.fpl_id, current: @horizon,
+                                  urls: { gameweek: comparison_path(pair: @comparison.slug),
+                                          upcoming: comparison_path(pair: @comparison.slug, horizon: "upcoming"),
+                                          season: comparison_path(pair: @comparison.slug, horizon: "season") })) %>
 
 <%# Two columns at every width, phone included. A comparison with one player above
     the other is a list, and you cannot read a list across. %>
@@ -81,8 +83,8 @@
   <p class="mt-2 text-sm text-zinc-600">
     Both players are forecast the same way: their price and how many managers own them lead, weighed
     against minutes, recent form, expected goals and assists, and who they are playing.
-    <%= @head_to_head.season? ?
-        "Rest-of-season scores are totals, so they are read as the week they average to before they are graded." :
+    <%= reach.total? ?
+        "Scores over more than one gameweek are totals, so they are read as the week they average to before they are graded." :
         "The score is the points we expect from the coming gameweek alone." %>
     <% if @head_to_head.close? %>
       The gap here is under <%= HeadToHead::CLOSE %> of a point a week, which is smaller than the

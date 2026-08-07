@@ -65,11 +65,15 @@ module CardsHelper
     team&.color || Team::DEFAULT_COLOR
   end
 
-  # A score as the week it describes, which is the scale the grades are read on.
-  # A season total shown raw would be forty points beside somebody else's four.
-  def card_points(score, season)
+  # A score as the week it describes, which is the scale the grades are read on. A
+  # total shown raw would be forty points beside somebody else's four.
+  #
+  # Given the horizon rather than told whether it is the season, because "not the
+  # season" stopped meaning "one week" the moment there were three of them: a
+  # five-gameweek total divided by one was printed as though it were a single week's.
+  def card_points(score, horizon)
     return "—" if score.nil?
 
-    format("%.1f", score / (season ? Gameweek.remaining_count : 1))
+    format("%.1f", score / Horizon.find(horizon).divisor)
   end
 end

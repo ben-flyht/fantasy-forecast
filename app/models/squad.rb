@@ -6,7 +6,7 @@
 class Squad < ApplicationRecord
   belongs_to :gameweek
 
-  HORIZONS = %w[gameweek season].freeze
+  HORIZONS = Horizon::KEYS
   SEASON = "season".freeze
   GOALKEEPER = "goalkeeper".freeze
 
@@ -52,9 +52,13 @@ class Squad < ApplicationRecord
   def spent_on_starters = starters.sum { |pick| pick["cost"].to_i }
   def banked = SquadOptimiser::BUDGET - cost
 
-  def season? = horizon == SEASON
+  def season? = reach.season?
+
+  # The distance this squad was picked over, which knows both how far it looks and
+  # what to divide its score by to read as a single week.
+  def reach = Horizon.find(horizon)
 
   private
 
-  def points_divisor = season? ? Gameweek.remaining_count : 1
+  def points_divisor = reach.divisor
 end

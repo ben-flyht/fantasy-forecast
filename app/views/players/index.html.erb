@@ -20,9 +20,10 @@
             updated_at: @forecast_at,
             share: "Share these rankings",
             back: back_home,
-            horizons: forecast_horizons(gameweek: @gameweek, season: season?,
-                                        gameweek_url: horizon_url(:gameweek),
-                                        season_url: horizon_url(:season))) %>
+            horizons: forecast_horizons(gameweek: @gameweek, current: @horizon,
+                                        urls: { gameweek: horizon_url(:gameweek),
+                                                upcoming: horizon_url(:upcoming),
+                                                season: horizon_url(:season) })) %>
     </div>
 
     <%# Each filter on its own line on a phone, one row from sm up: position first,

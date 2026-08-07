@@ -39,16 +39,24 @@ module ApplicationHelper
   #
   # Links rather than a form, so both horizons are addresses a crawler can follow and
   # the toggle needs no JavaScript to work.
-  def forecast_horizons(gameweek:, season:, gameweek_url:, season_url:)
-    [
+  # A page offers a horizon only if it has an address for it. The comparison and the
+  # squad are worked out for a week and for a season and not for the run between, so
+  # they hand over two addresses and get two choices; the rankings hand over three.
+  #
+  # Both names come from the Horizon itself rather than being written here, so the
+  # middle one cannot come to disagree with the football it actually covers.
+  def forecast_horizons(current:, urls:, gameweek: nil)
+    Horizon.all.filter_map do |horizon|
+      url = urls[horizon.key.to_sym]
+      next if url.blank?
+
       PageHeadingComponent::Horizon.new(
-        label: gameweek ? "Gameweek #{gameweek}" : "Next Gameweek",
-        url: gameweek_url, current: !season
-      ),
-      PageHeadingComponent::Horizon.new(
-        label: "Rest of Season", url: season_url, current: season
+        label: horizon.label(gameweek: gameweek),
+        short_label: horizon.short_label(gameweek: gameweek),
+        url: url,
+        current: horizon.key == current.to_s
       )
-    ]
+    end
   end
 
   def meta_title

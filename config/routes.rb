@@ -17,6 +17,12 @@ Rails.application.routes.draw do
   get "gameweeks/:gameweek/:position", to: "players#index", as: :gameweek_position,
       constraints: { gameweek: /\d+/, position: POSITIONS }
 
+  # The run of fixtures a transfer is actually made over. No number in the address:
+  # how far it looks is Horizon::WINDOW's business, and moving it should not move the
+  # page.
+  get "upcoming/:position", to: "players#index", as: :upcoming_position,
+      defaults: { horizon: "upcoming" }, constraints: { position: POSITIONS }
+
   # The season used to be spelled as though it were a gameweek.
   get "gameweeks/ros/:position", to: redirect("/season/%{position}", status: 301),
       constraints: { position: POSITIONS }
@@ -53,6 +59,7 @@ Rails.application.routes.draw do
   # spend something we were not advising them to spend, and it was called the best XI,
   # which is not what fifteen players are.
   get "squad", to: "squads#show", as: :squad, defaults: { horizon: "gameweek" }
+  get "squad/upcoming", to: "squads#show", as: :upcoming_squad, defaults: { horizon: "upcoming" }
   get "squad/season", to: "squads#show", as: :season_squad, defaults: { horizon: "season" }
 
   # Dynamic robots.txt based on environment

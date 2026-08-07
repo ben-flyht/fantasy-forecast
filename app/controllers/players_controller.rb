@@ -77,7 +77,7 @@ class PlayersController < ApplicationController
 
   def load_player
     @next_gameweek = Gameweek.next_gameweek
-    @horizon = params[:horizon] == SEASON ? SEASON : "gameweek"
+    @horizon = Horizon.find(params[:horizon]).key
     @card_path = player_path(@player, format: :png)
     load_player_forecast
   end
@@ -131,7 +131,7 @@ class PlayersController < ApplicationController
   end
 
   def season_divisor
-    @horizon == SEASON ? Gameweek.remaining_count : 1
+    Horizon.find(@horizon).divisor
   end
 
   def load_player_performances
@@ -219,11 +219,11 @@ class PlayersController < ApplicationController
 
   # Where a horizon lives. The season has a page of its own; a week is named by
   # its number.
-  def position_rankings_path(horizon, position, **extra)
-    if horizon == SEASON
-      season_position_path(position: "#{position}s", **extra)
-    else
-      gameweek_position_path(gameweek: horizon, position: "#{position}s", **extra)
+  def position_rankings_path(segment, position, **extra)
+    case segment.to_s
+    when Horizon::SEASON then season_position_path(position: "#{position}s", **extra)
+    when Horizon::UPCOMING then upcoming_position_path(position: "#{position}s", **extra)
+    else gameweek_position_path(gameweek: segment, position: "#{position}s", **extra)
     end
   end
 
@@ -241,26 +241,26 @@ class PlayersController < ApplicationController
     (value.to_f * TENTHS_PER_MILLION).round
   end
 
-  # The season horizon is anchored to the next gameweek: its rows are stored
-  # against that week, and validation and titling resolve a real gameweek from it.
+  # Every horizon but the coming week is anchored to the next gameweek: their rows
+  # are stored against it, and validation and titling resolve a real gameweek from it.
   def set_horizon
-    if season_requested?
-      @horizon = SEASON
-      @gameweek = next_gameweek&.fpl_id
-    else
-      @horizon = "gameweek"
-      @gameweek = params[:gameweek].present? ? params[:gameweek].to_i : current_gameweek
-    end
+    @horizon = horizon.key
+    @gameweek = horizon.gameweek? ? requested_gameweek : next_gameweek&.fpl_id
   end
 
-  # The season page says so in its route; the horizon dropdown says so in the
-  # parameter it submits, on its way to that page.
-  def season_requested?
-    params[:horizon] == SEASON || params[:gameweek] == SEASON
+  # A route says which horizon it is in the parameter it defaults; the toggle says it
+  # in the one it submits. Anything else is a gameweek number, or a stranger's guess
+  # at a horizon, and both resolve to the coming week.
+  def horizon
+    @horizon_read ||= Horizon.find(params[:horizon].presence || params[:gameweek])
+  end
+
+  def requested_gameweek
+    params[:gameweek].present? ? params[:gameweek].to_i : current_gameweek
   end
 
   def season?
-    @horizon == SEASON
+    horizon.season?
   end
 
   def resolve_position(param)
@@ -285,7 +285,7 @@ class PlayersController < ApplicationController
   # A season total is read as its per-gameweek average, so it meets the same tier
   # bands a single week does.
   def tier_divisor
-    season? ? Gameweek.remaining_count : 1
+    horizon.divisor
   end
 
   # When the numbers on the page were worked out. They are rewritten on the hour
@@ -406,14 +406,17 @@ class PlayersController < ApplicationController
     options
   end
 
+  # What this horizon is called in an address: a gameweek by its number, the rest by
+  # their own name.
   def horizon_param
-    season? ? SEASON : @gameweek
+    horizon.gameweek? ? @gameweek : horizon.key
   end
 
   # This same page read at the other horizon. Changing horizon is not a reason to
   # forget the team and the prices you already chose, so those travel with it.
   def horizon_url(which)
-    position_rankings_path(which == :season ? SEASON : @gameweek, @position_filter, **retained_filters)
+    segment = which.to_s == Horizon::GAMEWEEK ? @gameweek : which.to_s
+    position_rankings_path(segment, @position_filter, **retained_filters)
   end
 
   def retained_filters
@@ -438,11 +441,14 @@ class PlayersController < ApplicationController
   end
 
   def horizon_label
-    season? ? "Rest of Season" : "Gameweek #{@gameweek}"
+    horizon.label(gameweek: @gameweek)
   end
 
+  # A title tag wants the week as GW1 and the others in full: there is room for "Rest
+  # of Season" in a title and none for it in a toggle, which is why the short name the
+  # control uses is not the short name a title wants.
   def horizon_short
-    season? ? "Rest of Season" : "GW#{@gameweek}"
+    horizon.gameweek? ? horizon.short_label(gameweek: @gameweek) : horizon.label
   end
 
   # The heading and the title tag say the same thing, in the words somebody would
