@@ -29,7 +29,7 @@ class RelatedComparisons < ApplicationService
   private
 
   def pairs_for(player)
-    neighbours(player).map { |other| Comparison.new(player, other) }
+    neighbours(player).map { |other| Matchup.new(player, other) }
   end
 
   # Everyone ranked beside him, less the ones already on the page: offering the

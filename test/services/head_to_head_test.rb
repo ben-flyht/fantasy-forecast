@@ -103,4 +103,85 @@ class HeadToHeadTest < ActiveSupport::TestCase
     assert_equal teams(:chelsea), comparison.left.opponent
     assert_equal teams(:liverpool), comparison.right.opponent
   end
+
+  # Two free transfers is a choice between two moves, and a move is worth what
+  # everybody in it is worth.
+  test "a side of two is worth what both of them are worth" do
+    forecast(@salah, 5.4)
+    forecast(@palmer, 3.9, rank: 2)
+    forecast(players(:goalkeeper), 4.0, rank: 3)
+
+    pair = HeadToHead.call(left: [ @salah, @palmer ], right: players(:goalkeeper),
+                           gameweek: @gameweek, horizon: "gameweek")
+
+    assert_in_delta 9.3, pair.left.score, 0.001
+    assert_in_delta 4.0, pair.right.score, 0.001
+    assert_equal [ @salah, @palmer ], pair.left.players
+  end
+
+  # A pair that quietly drops a man and still shows a number is worse than a pair
+  # with no number at all.
+  test "a side is unforecast when anybody on it is" do
+    forecast(@salah, 5.4)
+    forecast(players(:goalkeeper), 4.0, rank: 3)
+
+    pair = HeadToHead.call(left: [ @salah, @palmer ], right: players(:goalkeeper),
+                           gameweek: @gameweek, horizon: "gameweek")
+
+    assert_not pair.left.forecast?
+    assert_nil pair.left.score
+    assert_nil pair.pick
+  end
+
+  # A grade is a mark out of ten for one player over one week. Two players' points
+  # added together would earn any pair an A.
+  test "a side of two is not graded, and a side of one still is" do
+    forecast(@salah, 5.4)
+    forecast(@palmer, 3.9, rank: 2)
+    forecast(players(:goalkeeper), 4.0, rank: 3)
+
+    pair = HeadToHead.call(left: [ @salah, @palmer ], right: players(:goalkeeper),
+                           gameweek: @gameweek, horizon: "gameweek")
+
+    assert_nil pair.left.grade
+    assert_nil pair.left.rank
+    assert_not_nil pair.right.grade
+  end
+
+  # Two players carry two players' worth of error, so the gap they have to clear
+  # before we will argue for one of them is wider.
+  test "two sides of two have to be further apart before we back one" do
+    forecast(@salah, 4.10)
+    forecast(@palmer, 4.00, rank: 2)
+    forecast(players(:goalkeeper), 4.05, rank: 3)
+    forecast(players(:injured_player), 4.02, rank: 4)
+
+    pair = HeadToHead.call(left: [ @salah, @palmer ], right: [ players(:goalkeeper), players(:injured_player) ],
+                           gameweek: @gameweek, horizon: "gameweek")
+
+    assert_in_delta 0.03, pair.margin, 0.001
+    assert_in_delta HeadToHead::CLOSE * Math.sqrt(2), pair.close_enough, 0.001
+    assert pair.close?
+  end
+
+  test "a side costs what everybody on it costs" do
+    forecast(@salah, 5.4)
+    forecast(@palmer, 3.9, rank: 2)
+    Statistic.create!(player: @salah, gameweek: @gameweek, type: "now_cost", value: 145)
+    Statistic.create!(player: @palmer, gameweek: @gameweek, type: "now_cost", value: 105)
+
+    pair = HeadToHead.call(left: [ @salah, @palmer ], right: players(:goalkeeper),
+                           gameweek: @gameweek, horizon: "gameweek")
+
+    assert_equal 250, pair.left.cost
+  end
+
+  test "sides of different sizes are not a like-for-like question" do
+    forecast(@salah, 5.4)
+    forecast(@palmer, 3.9, rank: 2)
+
+    assert_not HeadToHead.call(left: [ @salah, @palmer ], right: players(:goalkeeper),
+                               gameweek: @gameweek, horizon: "gameweek").level?
+    assert compare.level?
+  end
 end

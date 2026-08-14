@@ -1,39 +1,21 @@
-# The two players a /compare address names.
+# A count of how often a comparison has been asked for in a gameweek, kept against its
+# canonical slug so the hub can offer the arguments people actually have — a fresh set
+# each week.
 #
-# Salah or Palmer and Palmer or Salah are the same question, so the pair has one
-# spelling and the other order is sent to it. Otherwise the two halves of the same
-# argument would be two pages, each knowing half of what the one page would have
-# known.
-#
-# The order is by FPL's own id: arbitrary, but it never moves, where a name can
-# change with a transfer and a price changes every week.
-class Comparison
-  SEPARATOR = "-vs-".freeze
+# Matchup is the plain object that parses an address into its two sides; this is the
+# record of one having been asked for. Every ask is counted, trades and pairs alike,
+# but the hub surfaces pairs only, so each row records whether it is a pair and
+# MostRequestedComparisons reads only those — the surfaced set is found without ever
+# resolving a group slug, which a side of up to fifteen players makes deliberately
+# expensive.
+class Comparison < ApplicationRecord
+  belongs_to :gameweek
 
-  attr_reader :left, :right
-
-  def initialize(left, right)
-    @left, @right = [ left, right ].sort_by(&:fpl_id)
-  end
-
-  # The pair an address names, whichever order it named them in.
-  def self.parse(slug)
-    left, right = slug.to_s.split(SEPARATOR, 2)
-    raise ActiveRecord::RecordNotFound, "Not a pair: #{slug}" if right.blank?
-
-    new(Player.includes(:team).from_param(left), Player.includes(:team).from_param(right))
-  end
-
-  def slug
-    [ left.to_param, right.to_param ].join(SEPARATOR)
-  end
-
-  # Comparing a player with himself is not a question.
-  def valid?
-    left.id != right.id
-  end
-
-  def players
-    [ left, right ]
+  # create_or_find_by, not find_or_create_by: two people opening the same fresh
+  # comparison at once both miss the find, and one of the creates loses the race on the
+  # unique index. create_or_find_by expects that and re-finds rather than raising.
+  def self.record(matchup, gameweek)
+    create_or_find_by(gameweek: gameweek, slug: matchup.slug) { |row| row.pair = !matchup.group? }
+      .increment!(:hits)
   end
 end

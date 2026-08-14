@@ -1,168 +1,148 @@
-# Everything we hold on two players, laid out so the two can be read across.
+# The record underneath the answer: everything we hold on a player that a manager
+# weighs a trade on, laid out so two sides can be read across.
 #
-# The cards above answer the question. This is the working underneath it: the same
-# figures FPL publishes and the same ones our forecast reads, so a manager who
-# disagrees with the pick can see exactly what it was made from.
+# Not a forecast — the cards above are the forecast. This is what has actually
+# happened: rates per 90, season totals, current form, and FPL's own indices, each
+# row labelled with what it is so a per-90 rate is never mistaken for a total.
 #
-# A row is only drawn when at least one of the pair has the figure. A keeper's saves
-# and a forward's goals are both here, and neither leaves an empty line on the other
-# man's page.
+# Where this season has not filled a figure in yet the record is last season's, and
+# a row FPL kept only for this season simply waits until the season provides it. A
+# side is worth what its players do between them, so the numbers are summed.
 class ComparisonStats < ApplicationService
-  # What a figure is worth reading as. `better` says which way is good: :high for a
-  # figure you want more of, :low for one you want less of, nil where it is a fact
-  # about a player rather than a mark out of ten.
-  Stat = Struct.new(:key, :label, :format, :better, keyword_init: true)
+  # `this`/`last` are the stored figures for each season; `last` is nil where there is
+  # no last-season equivalent. `better` says which way is good. `format` is how the
+  # figure reads — a rate to two places, a total whole, an index to one.
+  Stat = Struct.new(:this, :last, :label, :better, :format, keyword_init: true)
+
+  Reading = Struct.new(:value, :text, keyword_init: true)
 
   Row = Struct.new(:label, :left, :right, :leader, keyword_init: true)
 
   Group = Struct.new(:title, :rows, keyword_init: true)
 
-  # What we expect of them, which is the only part of this table about the season
-  # being forecast. Everything below it is a record of football already played, and
-  # until a ball is kicked that record is last season's however it is labelled.
-  #
-  # It leads the table because it is the answer. The rows underneath are the working.
-  EXPECTED = "What we expect".freeze
+  # Everything we hold, each row labelled with what it is — a total plainly, a rate as
+  # "per 90" — and read down in the order a manager weighs it: form and minutes first,
+  # then attacking output, then defence, then the market's own numbers, then the
+  # discipline that only matters when there is any. A row nobody has, or that is nought
+  # on both sides, is not drawn, so a forward's saves and a keeper's goals stay off the
+  # page.
+  UNDERLYING = [
+    Stat.new(this: "form", last: nil, label: "Form", better: :high, format: :one),
+    Stat.new(this: "season_points", last: "last_season_points", label: "Points", better: :high, format: :whole),
+    Stat.new(this: "season_minutes", last: "last_season_minutes", label: "Minutes", better: :high, format: :whole),
+    Stat.new(this: "season_starts", last: nil, label: "Starts", better: :high, format: :whole),
+    Stat.new(this: "starts_per_90", last: nil, label: "Starts, per 90", better: :high, format: :two),
 
-  EXPECTED_POINTS = [
-    Stat.new(key: Horizon::GAMEWEEK, label: "This gameweek", format: :one, better: :high),
-    Stat.new(key: Horizon::UPCOMING, label: "Next #{Horizon::WINDOW} gameweeks", format: :one, better: :high),
-    Stat.new(key: Horizon::SEASON, label: "Rest of season", format: :whole, better: :high)
+    Stat.new(this: "season_goals", last: nil, label: "Goals", better: :high, format: :whole),
+    Stat.new(this: "season_expected_goals", last: nil, label: "Expected goals", better: :high, format: :one),
+    Stat.new(this: "expected_goals_per_90", last: "last_season_expected_goals_per_90",
+             label: "Expected goals, per 90", better: :high, format: :two),
+    Stat.new(this: "season_assists", last: nil, label: "Assists", better: :high, format: :whole),
+    Stat.new(this: "season_expected_assists", last: nil, label: "Expected assists", better: :high, format: :one),
+    Stat.new(this: "season_expected_goal_involvements", last: nil,
+             label: "Expected goals and assists", better: :high, format: :one),
+    Stat.new(this: "expected_goal_involvements_per_90", last: "last_season_expected_goal_involvements_per_90",
+             label: "Expected goals and assists, per 90", better: :high, format: :two),
+
+    Stat.new(this: "season_goals_conceded", last: nil, label: "Goals conceded", better: :low, format: :whole),
+    Stat.new(this: "season_expected_goals_conceded", last: nil,
+             label: "Expected goals conceded", better: :low, format: :one),
+    Stat.new(this: "expected_goals_conceded_per_90", last: nil,
+             label: "Expected goals conceded, per 90", better: :low, format: :two),
+    Stat.new(this: "season_clean_sheets", last: nil, label: "Clean sheets", better: :high, format: :whole),
+    Stat.new(this: "clean_sheets_per_90", last: "last_season_clean_sheets_per_90",
+             label: "Clean sheets, per 90", better: :high, format: :two),
+    Stat.new(this: "season_saves", last: nil, label: "Saves", better: :high, format: :whole),
+    Stat.new(this: "saves_per_90", last: "last_season_saves_per_90",
+             label: "Saves, per 90", better: :high, format: :two),
+    Stat.new(this: "season_defensive_contribution", last: nil,
+             label: "Defensive contributions", better: :high, format: :whole),
+    Stat.new(this: "defensive_contribution_per_90", last: nil,
+             label: "Defensive contributions, per 90", better: :high, format: :two),
+
+    Stat.new(this: "season_bonus", last: "last_season_bonus", label: "Bonus points", better: :high, format: :whole),
+    Stat.new(this: "bps", last: nil, label: "Bonus points system (BPS)", better: :high, format: :whole),
+    Stat.new(this: "ict_index", last: nil, label: "ICT index", better: :high, format: :one),
+    Stat.new(this: "threat", last: nil, label: "Threat", better: :high, format: :one),
+    Stat.new(this: "creativity", last: nil, label: "Creativity", better: :high, format: :one),
+    Stat.new(this: "influence", last: nil, label: "Influence", better: :high, format: :one),
+
+    Stat.new(this: "season_penalties_saved", last: nil, label: "Penalties saved", better: :high, format: :whole),
+    Stat.new(this: "season_penalties_missed", last: nil, label: "Penalties missed", better: :low, format: :whole),
+    Stat.new(this: "season_own_goals", last: nil, label: "Own goals", better: :low, format: :whole),
+    Stat.new(this: "season_yellow_cards", last: nil, label: "Yellow cards", better: :low, format: :whole),
+    Stat.new(this: "season_red_cards", last: nil, label: "Red cards", better: :low, format: :whole)
   ].freeze
 
-  # Drawn only once there is a season to describe. FPL leaves last season's totals
-  # in the current-season fields all summer, so before the first gameweek this group
-  # is last season's record wearing this season's name, which is exactly the reading
-  # that makes the page argue with itself.
-  THIS_SEASON = "This season".freeze
-
-  GROUPS = {
-    THIS_SEASON => [
-      Stat.new(key: "season_points", label: "Total points", format: :whole, better: :high),
-      Stat.new(key: "points_per_game", label: "Points per game", format: :one, better: :high),
-      Stat.new(key: "form", label: "Form", format: :one, better: :high),
-      Stat.new(key: "season_minutes", label: "Minutes", format: :whole, better: :high),
-      Stat.new(key: "starts_per_90", label: "Starts per 90", format: :two, better: :high),
-      Stat.new(key: "season_bonus", label: "Bonus points", format: :whole, better: :high)
-    ],
-    "Underlying numbers, per 90" => [
-      Stat.new(key: "expected_goals_per_90", label: "Expected goals", format: :two, better: :high),
-      Stat.new(key: "expected_assists_per_90", label: "Expected assists", format: :two, better: :high),
-      Stat.new(key: "expected_goals_conceded_per_90", label: "Expected goals conceded", format: :two, better: :low),
-      Stat.new(key: "clean_sheets_per_90", label: "Clean sheets", format: :two, better: :high),
-      Stat.new(key: "saves_per_90", label: "Saves", format: :two, better: :high),
-      Stat.new(key: "defensive_contribution_per_90", label: "Defensive contributions", format: :two, better: :high)
-    ],
-    "What the market says" => [
-      Stat.new(key: "now_cost", label: "Price", format: :price, better: :low),
-      Stat.new(key: "selected_by_percent", label: "Owned by", format: :percent, better: nil),
-      Stat.new(key: "transfers_in", label: "Transfers in this week", format: :whole, better: nil),
-      Stat.new(key: "transfers_out", label: "Transfers out this week", format: :whole, better: nil)
-    ],
-    "Set pieces" => [
-      Stat.new(key: "penalties_order", label: "Penalties", format: :order, better: :low),
-      Stat.new(key: "direct_freekicks_order", label: "Direct free kicks", format: :order, better: :low),
-      Stat.new(key: "corners_freekicks_order", label: "Corners and indirect free kicks", format: :order, better: :low)
-    ],
-    "Last season" => [
-      Stat.new(key: "last_season_points", label: "Total points", format: :whole, better: :high),
-      Stat.new(key: "last_season_minutes", label: "Minutes", format: :whole, better: :high),
-      Stat.new(key: "last_season_expected_goals_per_90", label: "Expected goals per 90", format: :two, better: :high),
-      Stat.new(key: "last_season_expected_goal_involvements_per_90", label: "Expected goals and assists per 90", format: :two, better: :high),
-      Stat.new(key: "last_season_clean_sheets_per_90", label: "Clean sheets per 90", format: :two, better: :high),
-      Stat.new(key: "last_season_saves_per_90", label: "Saves per 90", format: :two, better: :high),
-      Stat.new(key: "last_season_bonus", label: "Bonus points", format: :whole, better: :high)
-    ]
-  }.freeze
-
-  TENTHS_PER_MILLION = 10.0
-
   def initialize(left:, right:)
-    @left = left
-    @right = right
+    @left = Matchup::Side.wrap(left)
+    @right = Matchup::Side.wrap(right)
   end
 
   def call
-    [ expected_group, *recorded_groups ].compact
+    rows = UNDERLYING.filter_map { |stat| row_for(stat) }
+    return [] if rows.empty?
+
+    [ Group.new(title: "Underlying numbers", rows: rows) ]
   end
 
   private
 
   attr_reader :left, :right
 
-  def expected_group
-    group_of(EXPECTED, EXPECTED_POINTS, forecasts)
+  def row_for(stat)
+    key = season_started? ? stat.this : stat.last
+    return if key.nil?
+
+    side_readings = sides.map { |side| reading_for(side, key, stat.format) }
+    present = side_readings.filter_map(&:value)
+    return if present.empty? || present.all?(&:zero?)
+
+    row_of(stat, *side_readings)
   end
 
-  def recorded_groups
-    GROUPS.filter_map do |title, stats|
-      next if title == THIS_SEASON && !season_started?
-
-      group_of(title, stats, readings)
-    end
+  def row_of(stat, left_reading, right_reading)
+    Row.new(label: stat.label, leader: leader(stat, left_reading.value, right_reading.value),
+            left: left_reading.text, right: right_reading.text)
   end
 
-  def group_of(title, stats, source)
-    rows = stats.filter_map { |stat| row_for(stat, source) }
-    Group.new(title: title, rows: rows) if rows.any?
+  def sides = [ left, right ]
+
+  # A side is worth what everybody on it does between them, so the figures are summed.
+  # A total is only a total when we have all of it: a side missing one man's figure is
+  # left blank rather than reported as the rest of the side without him.
+  def reading_for(side, key, format)
+    values = side.players.map { |player| readings.dig(player.id, key) }
+    total = values.sum if values.all?
+    Reading.new(value: total, text: display(total, format))
   end
 
-  def row_for(stat, source)
-    values = readings_for(stat, source)
-    return if values.compact.empty?
-
-    Row.new(label: stat.label, leader: leader(stat, *values),
-            left: display(stat, values.first), right: display(stat, values.last))
-  end
-
-  def readings_for(stat, source)
-    [ source.dig(left.id, stat.key), source.dig(right.id, stat.key) ]
-  end
-
-  def season_started?
-    Gameweek.finished.any?
-  end
-
-  # What we expect of each of them at each distance, keyed the way the readings are
-  # so that one row builder draws both.
-  def forecasts
-    @forecasts ||= Forecast.where(gameweek: Gameweek.next_gameweek, player_id: [ left.id, right.id ])
-                           .each_with_object({}) do |forecast, by_player|
-      (by_player[forecast.player_id] ||= {})[forecast.horizon] = forecast.score.to_f
-    end
-  end
-
-  # Which of the two the figure favours, where the figure favours anybody. Equal is
-  # nobody: lighting both sides of a row says less than lighting neither.
+  # Which side the figure favours, where it favours anybody. Equal is nobody: lighting
+  # both sides of a row says less than lighting neither.
   def leader(stat, left_value, right_value)
-    return unless stat.better
-    return if left_value.nil? || right_value.nil? || left_value == right_value
+    return if stat.better.nil? || left_value.nil? || right_value.nil? || left_value == right_value
 
     higher = left_value > right_value
-    wanted_high = stat.better == :high
-    higher == wanted_high ? :left : :right
+    higher == (stat.better == :high) ? :left : :right
   end
 
-  def display(stat, value)
+  def display(value, style)
     return "—" if value.nil?
 
-    case stat.format
+    case style
     when :whole then value.round.to_s
     when :one then format("%.1f", value)
     when :two then format("%.2f", value)
-    when :price then format("£%.1fm", value / TENTHS_PER_MILLION)
-    when :percent then format("%.1f%%", value)
-    when :order then ordinal(value)
-    else value.to_s
     end
   end
 
-  # FPL numbers set-piece takers 1, 2, 3 from the front, so first is best.
-  def ordinal(value)
-    { 1 => "1st", 2 => "2nd", 3 => "3rd" }.fetch(value.round, "#{value.round}th")
+  def season_started?
+    return @season_started unless @season_started.nil?
+
+    @season_started = Gameweek.finished.any?
   end
 
   def readings
-    @readings ||= Statistic.where(player_id: [ left.id, right.id ]).latest_by_player
+    @readings ||= Statistic.where(player_id: (left.players + right.players).map(&:id)).latest_by_player
   end
 end

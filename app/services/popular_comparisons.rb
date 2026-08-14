@@ -29,7 +29,7 @@ class PopularComparisons < ApplicationService
   private
 
   def pairs_for(position)
-    ranked.fetch(position, []).each_cons(2).map { |left, right| Comparison.new(left, right) }
+    ranked.fetch(position, []).each_cons(2).map { |left, right| Matchup.new(left, right) }
   end
 
   # The best of each position for the week on show, best first. Ranks are counted

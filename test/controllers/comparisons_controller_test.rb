@@ -4,6 +4,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @salah = players(:midfielder)
     @palmer = players(:midfielder_two)
+    @raya = players(:goalkeeper)
     @gameweek = gameweeks(:next_gw)
     Forecast.delete_all
     Forecast.create!(player: @salah, gameweek: @gameweek, score: 5.4, rank: 1)
@@ -11,7 +12,16 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   end
 
   def pair
-    Comparison.new(@salah, @palmer).slug
+    Matchup.new(@salah, @palmer).slug
+  end
+
+  # Two free transfers: these two, or him?
+  def group
+    Matchup.new([ @salah, @palmer ], @raya).slug
+  end
+
+  def forecast_raya
+    Forecast.create!(player: @raya, gameweek: @gameweek, score: 4.0, rank: 1)
   end
 
   test "the page answers the question it is named after" do
@@ -101,8 +111,58 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     get comparisons_path
 
     assert_select "[data-controller=comparison-builder]"
+
+    # Two sides, a box you can always type into on each, and nobody on either yet.
+    assert_select "[data-comparison-builder-target=side]", count: 2
     assert_select "input[data-comparison-builder-target=input]", count: 2
-    assert_select "button[data-comparison-builder-target=submit][disabled]"
+    assert_select "[data-comparison-builder-target=chip]", count: 0
+  end
+
+  # A manager editing his way to a comparison, or coming back to it, is one person
+  # asking, not fifty, so it is counted once a session however many times it is seen.
+  test "asking a comparison is counted once a session" do
+    get comparison_path(pair: pair)
+    get comparison_path(pair: pair)
+
+    assert_equal 1, Comparison.find_by(slug: pair).hits
+  end
+
+  test "a fresh session is a fresh ask" do
+    get comparison_path(pair: pair)
+
+    session = open_session
+    session.get comparison_path(pair: pair)
+
+    assert_equal 2, Comparison.find_by(slug: pair).hits
+  end
+
+  # The picture a link turns into is fetched by a crawler, not read by a manager, so
+  # it is not a request worth counting.
+  test "fetching the card does not count as asking" do
+    get comparison_path(pair: pair, format: :png)
+
+    assert_nil Comparison.find_by(slug: pair)
+  end
+
+  # A side still being filled is not a question yet, so it is not counted.
+  test "a comparison still being built is not counted as asked" do
+    building = "#{@salah.comparison_param}-vs-"
+
+    get comparison_path(pair: building)
+
+    assert_response :success
+    assert_nil Comparison.find_by(slug: building)
+  end
+
+  test "the hub offers the comparisons people have asked for" do
+    5.times { Comparison.record(Matchup.new(@salah, @palmer), @gameweek) }
+
+    get comparisons_path
+
+    assert_select "h2", text: "Most compared this week"
+    assert_select "section", text: /Most compared/ do
+      assert_select "a[href=?]", comparison_path(pair: pair)
+    end
   end
 
   test "the search says who you might mean" do
@@ -112,14 +172,14 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "application/json", response.media_type
 
     found = JSON.parse(response.body)
-    assert_includes found.map { |p| p["param"] }, @salah.to_param
+    assert_includes found.map { |p| p["param"] }, @salah.comparison_param
     assert_equal @salah.full_name, found.first["full_name"]
   end
 
   test "the search leaves out a player already picked" do
-    get comparison_search_path(q: "salah", exclude: [ @salah.to_param ])
+    get comparison_search_path(q: "salah", exclude: [ @salah.comparison_param ])
 
-    assert_not_includes JSON.parse(response.body).map { |p| p["param"] }, @salah.to_param
+    assert_not_includes JSON.parse(response.body).map { |p| p["param"] }, @salah.comparison_param
   end
 
   test "the search with nothing typed says nobody rather than everybody" do
@@ -139,6 +199,93 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "h1", /FPL Player Comparisons/
     assert_select "p", text: "Him or him?"
+  end
+
+  # Two free transfers is a choice between two moves, and the page adds them up so a
+  # manager does not have to open two pages and do it himself.
+  test "a side can hold the players you would buy together" do
+    forecast_raya
+
+    get comparison_path(pair: group)
+
+    assert_response :success
+    assert_select "h1", text: "Mohamed Salah and Cole Palmer, or David Raya?"
+    assert_select "[data-comparison-card]", count: 2
+    assert_select "[data-comparison-card][data-pick=true]", text: /Salah/
+    assert_select "[data-comparison-card][data-pick=true]", text: /9\.3/
+  end
+
+  # Within a side the order does not matter and is tidied to one spelling. The sides
+  # themselves are left where they were put, so a trade does not swap its columns.
+  test "a group tidies each side but keeps the sides where they are" do
+    forecast_raya
+    tidy = "#{@raya.comparison_param}-vs-#{@salah.comparison_param}-and-#{@palmer.comparison_param}"
+
+    get comparison_path(pair: "#{@raya.comparison_param}-vs-#{@palmer.comparison_param}-and-#{@salah.comparison_param}")
+    assert_redirected_to comparison_path(pair: tidy)
+
+    get comparison_path(pair: tidy)
+    assert_response :success
+  end
+
+  # The address keeps up with the builder a player at a time, so a half-built
+  # comparison can be shared or reloaded and picked back up.
+  test "a comparison still being built shows the builder, not an answer" do
+    get comparison_path(pair: "#{@salah.comparison_param}-vs-")
+
+    assert_response :success
+    assert_select "[data-controller=comparison-builder]"
+    assert_select "[data-comparison-builder-target=chip][data-param='#{@salah.comparison_param}']"
+    assert_select "[data-comparison-card]", count: 0
+  end
+
+  test "the empty builder address is just the hub" do
+    get comparison_path(pair: "-vs-")
+
+    assert_redirected_to comparisons_path
+  end
+
+  test "a side can hold as many players as a move needs" do
+    slug = Matchup.new([ @salah, @palmer, @raya ], players(:injured_player)).slug
+
+    get comparison_path(pair: slug)
+
+    assert_response :success
+  end
+
+  test "buying the same player twice is not answered by anybody's page" do
+    get comparison_path(pair: "#{@salah.to_param}-and-#{@palmer.to_param}-vs-#{@salah.to_param}")
+
+    assert_response :not_found
+  end
+
+  # Every pair has an address worth crawling. Every group of them has one too, and
+  # there are billions of those.
+  test "a group is kept out of the index and a pair is not" do
+    original = ENV["APP_HOST"]
+    ENV["APP_HOST"] = "www.fantasyforecast.co.uk"
+    forecast_raya
+
+    get comparison_path(pair: group)
+    assert_select "meta[name=robots][content=?]", "noindex, follow"
+
+    get comparison_path(pair: pair)
+    assert_select "meta[name=robots]", count: 0
+  ensure
+    ENV["APP_HOST"] = original
+  end
+
+  # The card is drawn for two players and only two, so a group has no picture of its
+  # own rather than a picture of half of it.
+  test "a group has no card yet, and does not claim one" do
+    forecast_raya
+
+    get comparison_path(pair: group)
+    assert_select "meta[property='og:image'][content=?]",
+                  "#{ApplicationHelper::BASE_URL}/compare/#{group}.png", count: 0
+
+    get comparison_path(pair: group, format: :png)
+    assert_response :not_found
   end
 
   test "the questions the hub answers are printed and declared alike" do

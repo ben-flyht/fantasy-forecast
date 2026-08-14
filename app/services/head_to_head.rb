@@ -1,15 +1,14 @@
-# Two players, and the question every manager actually types into a search box:
-# him or him?
+# Two sides, and the question every manager actually types into a search box: him or
+# him? Or, once he has two free transfers in hand: these two, or those two?
 #
 # The rankings answer it a hundred rows at a time, which is the wrong shape for
-# somebody who has already narrowed it to two. This puts the pair side by side and
-# says which one, out loud, from the same stored forecast the rankings are read
-# from, so the two can never disagree.
+# somebody who has already narrowed it down. This puts the sides beside each other and
+# says which one, out loud, from the same stored forecast the rankings are read from,
+# so the two can never disagree.
 #
-# It will decline to answer. Our forecast is a number with a margin of error we
-# have not measured yet, and a tenth of a point between two players is not a
-# reason to make a transfer. Below CLOSE the honest answer is that there is
-# nothing to choose between them.
+# A side is a player or the players you would buy together. One of each is the pair
+# this started as, and everything a page or a card asks of a side of one is answered
+# the way it always was.
 class HeadToHead < ApplicationService
   # How much better one player has to look, in a single week's points, before the
   # difference is worth acting on rather than an artefact of the arithmetic.
@@ -20,8 +19,9 @@ class HeadToHead < ApplicationService
 
   SEASON = "season".freeze
 
-  Side = Struct.new(:player, :score, :rank, :grade, :tier, :cost, :ownership, :match,
-                    keyword_init: true) do
+  # What we hold on one player on one side.
+  Member = Struct.new(:player, :score, :rank, :grade, :tier, :cost, :ownership, :match,
+                      keyword_init: true) do
     def forecast?
       !score.nil?
     end
@@ -37,9 +37,69 @@ class HeadToHead < ApplicationService
     end
   end
 
+  # One half of the argument, scored.
+  #
+  # A side of one answers for its player, because a page and a card written for a pair
+  # should not have to ask how many players a side holds before it can draw one. A side
+  # of two answers for neither: a rank is a place in a position table and a grade is a
+  # mark out of ten for a single week, and neither means anything about two men at once.
+  class Side
+    attr_reader :members
+
+    def initialize(members)
+      @members = members
+    end
+
+    def single? = members.one?
+
+    def size = members.size
+
+    def players = members.map(&:player)
+
+    def player = only&.player
+
+    def rank = only&.rank
+
+    def grade = only&.grade
+
+    def tier = only&.tier
+
+    def match = only&.match
+
+    def ownership = only&.ownership
+
+    def home? = only&.home?
+
+    def opponent = only&.opponent
+
+    # A side is worth what everybody on it is worth.
+    #
+    # A player we cannot forecast leaves the whole side unforecast rather than counting
+    # as nought. A pair that quietly drops a man and still shows a number is worse than
+    # a pair with no number at all.
+    def forecast?
+      members.all?(&:forecast?)
+    end
+
+    def score
+      members.sum(&:score) if forecast?
+    end
+
+    def cost
+      prices = members.map(&:cost)
+      prices.sum if prices.all?
+    end
+
+    private
+
+    def only
+      members.first if single?
+    end
+  end
+
   def initialize(left:, right:, gameweek:, horizon: "gameweek")
-    @left_player = left
-    @right_player = right
+    @left_side = Matchup::Side.wrap(left)
+    @right_side = Matchup::Side.wrap(right)
     @gameweek = gameweek
     @horizon = horizon
   end
@@ -51,11 +111,11 @@ class HeadToHead < ApplicationService
   attr_reader :gameweek, :horizon
 
   def left
-    @left ||= side_for(@left_player)
+    @left ||= side_for(@left_side)
   end
 
   def right
-    @right ||= side_for(@right_player)
+    @right ||= side_for(@right_side)
   end
 
   def sides
@@ -95,7 +155,7 @@ class HeadToHead < ApplicationService
     ranked.last
   end
 
-  # Both have a forecast, so there is something to compare at all.
+  # Both sides have a forecast, so there is something to compare at all.
   def forecast?
     left.forecast? && right.forecast?
   end
@@ -113,14 +173,31 @@ class HeadToHead < ApplicationService
   def close?
     return false unless forecast?
 
-    margin < CLOSE
+    margin < close_enough
   end
 
   # How far apart they are, in the points of a single week.
   def margin
-    return 0.0 unless left.forecast? && right.forecast?
+    return 0.0 unless forecast?
 
     ((weekly(left.score) - weekly(right.score)).abs).round(2)
+  end
+
+  # The gap two sides have to clear before we will argue for one of them.
+  #
+  # CLOSE is the smallest difference we can see between two players. Two players carry
+  # two players' worth of error, and errors that are independent add in quadrature, so
+  # the threshold grows with the root of the side rather than with the side: two pairs
+  # have to be about a third of a point apart, not half of one.
+  def close_enough
+    CLOSE * Math.sqrt(sides.map(&:size).max)
+  end
+
+  # Both sides hold the same number of players, so the comparison is like for like.
+  # Three players score more than two, and a page must not let the bigger side win on
+  # that alone.
+  def level?
+    left.size == right.size
   end
 
   def season?
@@ -139,8 +216,12 @@ class HeadToHead < ApplicationService
     [ left, right ].sort_by { |side| -(side.score || -1) }
   end
 
-  def side_for(player)
-    Side.new(
+  def side_for(side)
+    Side.new(side.players.map { |player| member_for(player) })
+  end
+
+  def member_for(player)
+    Member.new(
       player: player, match: matches[player.team_id],
       cost: facts.dig(player.id, COST), ownership: facts.dig(player.id, OWNERSHIP),
       **scored(forecasts[player.id])
@@ -193,6 +274,6 @@ class HeadToHead < ApplicationService
   end
 
   def players
-    [ @left_player, @right_player ]
+    @left_side.players + @right_side.players
   end
 end

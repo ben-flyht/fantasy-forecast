@@ -10,10 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
+
+  create_table "comparisons", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "gameweek_id", null: false
+    t.integer "hits", default: 0, null: false
+    t.boolean "pair", default: false, null: false
+    t.string "slug", null: false
+    t.datetime "updated_at", null: false
+    t.index ["gameweek_id", "pair", "hits"], name: "index_comparisons_on_gameweek_id_and_pair_and_hits"
+    t.index ["gameweek_id", "slug"], name: "index_comparisons_on_gameweek_id_and_slug", unique: true
+    t.index ["gameweek_id"], name: "index_comparisons_on_gameweek_id"
+  end
 
   create_table "forecasts", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -169,6 +181,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_06_220000) do
     t.index ["fpl_id"], name: "index_teams_on_fpl_id", unique: true
   end
 
+  add_foreign_key "comparisons", "gameweeks"
   add_foreign_key "forecasts", "gameweeks"
   add_foreign_key "forecasts", "players"
   add_foreign_key "forecasts", "strategies"

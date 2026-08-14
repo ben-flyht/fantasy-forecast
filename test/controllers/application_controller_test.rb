@@ -23,7 +23,7 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes response.body, comparisons_path
     assert_includes response.body,
-                    comparison_path(pair: Comparison.new(players(:midfielder), players(:midfielder_two)).slug)
+                    comparison_path(pair: Matchup.new(players(:midfielder), players(:midfielder_two)).slug)
   end
 
   test "the sitemap offers the armband" do
@@ -65,7 +65,7 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
     get player_path(players(:midfielder))
     assert_select "main a", text: "Back to Rankings"
 
-    get comparison_path(pair: Comparison.new(players(:midfielder), players(:midfielder_two)).slug)
+    get comparison_path(pair: Matchup.new(players(:midfielder), players(:midfielder_two)).slug)
     assert_select "main a", text: "Back to Comparisons"
   end
 
@@ -80,7 +80,7 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
   # was a button nothing on the page said so: the card only existed for whoever
   # happened to paste the link.
   test "a page with a card of its own offers to share it" do
-    pair = Comparison.new(players(:midfielder), players(:midfielder_two))
+    pair = Matchup.new(players(:midfielder), players(:midfielder_two))
 
     [ rankings_path, player_path(players(:midfielder)), comparison_path(pair: pair.slug) ].each do |path|
       get path

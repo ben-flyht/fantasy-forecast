@@ -1,9 +1,27 @@
+<%# A comparison is edited in place, so its address changes under it as players come
+    and go. Turbo must re-render rather than restore a cached snapshot on back or
+    forward, or the cards would show the players from a moment that has passed. %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+
+<% if @comparison.answerable? %>
 <% reach = Horizon.find(@head_to_head.horizon) %>
 <% horizon_words = reach.label(gameweek: @gameweek&.fpl_id) %>
 <% content_for :meta_title, "#{comparison_title(@comparison)} FPL #{horizon_words} | Fantasy Forecast" %>
 <% content_for :meta_description, "#{comparison_question(@comparison)} #{verdict_line(@head_to_head)} Both graded A to F from price, ownership, form and fixtures." %>
 <% content_for :meta_url, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug)}" %>
-<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug, format: :png)}" %>
+
+<%# Every pair of players has an address and the pairs are worth crawling. Every group
+    of them has an address too, and there are billions: nobody searches for one, and a
+    crawler spending its time here is a crawler not reading the pages that do rank.
+    Followed, though, because the players and the pairs beside them are worth reaching.
+    The card is drawn for two players, so a group has no picture of its own yet. %>
+<% if @comparison.group? %>
+  <% content_for :meta_robots, "noindex, follow" %>
+<% else %>
+  <% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug, format: :png)}" %>
+<% end %>
 
 <%= render PageHeadingComponent.new(
       title: comparison_question(@comparison),
@@ -16,63 +34,128 @@
                                           upcoming: comparison_path(pair: @comparison.slug, horizon: "upcoming"),
                                           season: comparison_path(pair: @comparison.slug, horizon: "season") })) %>
 
-<%# Two columns at every width, phone included. A comparison with one player above
-    the other is a list, and you cannot read a list across. %>
-<div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4">
-  <% @head_to_head.sides.each do |side| %>
+<%# The editor is the same two columns as the answer: a side is its cards and a box
+    beneath them to add another, a card leaves by the cross on it, and both sides filled
+    is a page. Every change goes to the page for the sides you have now. %>
+<div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4"
+     data-controller="comparison-builder"
+     data-comparison-builder-url-value="<%= comparison_search_path %>">
+  <% @head_to_head.sides.each_with_index do |side, index| %>
     <% picked = @head_to_head.pick == side %>
-    <div data-comparison-card data-pick="<%= picked %>">
+    <div data-comparison-card data-pick="<%= picked %>"
+         data-comparison-builder-target="side" data-side="<%= index %>">
       <%# The badge has a row of its own rather than hanging over the card. On a
           phone a card is about 165px wide and the name starts in that same corner,
           so an overhanging badge sat on top of it. An empty row on the other side
           keeps the two cards level. %>
       <div class="mb-1.5 flex h-[18px] items-center">
         <% if picked %>
-          <span class="rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wider text-white">
-            Our pick<%= ", just" if @head_to_head.close? %>
+          <span data-pick-badge class="rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wider text-white">
+            Our pick
           </span>
         <% end %>
       </div>
 
-      <div class="<%= "rounded-xl ring-2 ring-zinc-900" if picked %>">
-        <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(@head_to_head, side)) %>
+      <%# Both sides carry the same ring and padding, the loser's ring merely
+          transparent, so the two columns stay aligned to the pixel. %>
+      <% ring = "rounded-xl ring-2 #{picked ? 'ring-zinc-900' : 'ring-transparent'}" %>
+      <% ring += " p-1.5" if @comparison.group? %>
+
+      <div class="<%= ring %>" data-pick-ring>
+        <%# What the side is worth altogether, above the players it is made of. Drawn on
+            both sides of a trade, a single player included, so one against two reads as a
+            total against a total rather than a card beside a stack. %>
+        <% if @comparison.group? %>
+          <div class="mb-2 flex items-start justify-between gap-2 rounded-lg bg-zinc-100 px-3 py-2">
+            <div class="min-w-0">
+              <p class="whitespace-nowrap text-lg font-extrabold leading-none tabular-nums tracking-[-0.03em] text-zinc-950 sm:text-2xl">
+                <%= headline_points(side) || "—" %>
+              </p>
+              <p class="mt-1 text-[11px] leading-tight text-zinc-500">expected points</p>
+            </div>
+            <% if side.cost %>
+              <div class="min-w-0 text-right">
+                <p class="whitespace-nowrap text-lg font-extrabold leading-none tabular-nums tracking-[-0.03em] text-zinc-950 sm:text-2xl">
+                  <%= player_price(side.cost) %>
+                </p>
+                <p class="mt-1 text-[11px] leading-tight text-zinc-500">cost</p>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <div class="space-y-2">
+          <% side.members.each do |member| %>
+            <div class="relative" data-comparison-builder-target="chip"
+                 data-side="<%= index %>" data-param="<%= member.player.comparison_param %>">
+              <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(member)) %>
+              <%# A cross on every card, a side of one included: taking the last player off
+                  a side empties it to its box so somebody else can take his place. %>
+              <button type="button" data-action="comparison-builder#remove"
+                      aria-label="Remove <%= member.player.display_name %>"
+                      style="<%= remove_button_style(member.player.team) %>"
+                      class="absolute right-2 top-2 z-10 cursor-pointer rounded-full p-1 shadow ring-1 ring-black/10 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-black/30">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+                </svg>
+              </button>
+            </div>
+          <% end %>
+
+          <%# Always a box at the foot of a side to put another player on it, drawn as a
+              plain add control so it reads as the way to build the comparison. %>
+          <div class="relative">
+            <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" d="M12 5v14M5 12h14"/>
+            </svg>
+            <input type="text"
+                   data-comparison-builder-target="input" data-side="<%= index %>"
+                   data-action="input->comparison-builder#search keydown->comparison-builder#keydown"
+                   autocomplete="off" placeholder="Add a player"
+                   aria-label="Add a player to <%= index.zero? ? "the first" : "the second" %> side"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false"
+                   aria-controls="comparison-results-<%= index %>"
+                   class="w-full rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 py-3 pl-9 pr-3 text-sm font-medium text-zinc-700 placeholder:text-zinc-500 hover:border-zinc-400 focus:border-solid focus:border-zinc-900/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+            <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
+                 id="comparison-results-<%= index %>"
+                 data-comparison-builder-target="results" data-side="<%= index %>" role="listbox" hidden></div>
+          </div>
+        </div>
       </div>
     </div>
   <% end %>
 </div>
 
-<%# The cards say who and by how much. The only thing left to say is what they
-    cannot: that a pick is marginal, or that there is no forecast behind it. %>
-<% if (note = comparison_note(@head_to_head)) %>
+<%# The cards say who and by how much. The only things left to say are what they
+    cannot: that a pick is marginal, that there is no forecast behind it, or that the
+    two sides were never a fair question in the first place. %>
+<% notes = [ comparison_note(@head_to_head), uneven_note(@head_to_head) ].compact %>
+<% notes.each do |note| %>
   <p class="mt-3 text-sm text-zinc-600"><%= note %></p>
 <% end %>
 
-<%# The working underneath the answer: every figure we hold on the two of them, so a
-    manager who disagrees with the pick can see what it was made from. %>
+<%# The performance underneath the answer, so a manager weighing a trade can see the
+    numbers people actually compare on. Last season's until this one is under way. %>
 <% if @stats.any? %>
+  <% group = @stats.first %>
   <section class="mt-10">
-    <h2 class="text-lg font-semibold text-zinc-900">Every number we hold on the two of them</h2>
+    <h2 class="text-lg font-semibold text-zinc-900"><%= group.title %></h2>
     <p class="mt-1 text-sm text-zinc-500">
-      The figure that favours a player is the one in black. Where a figure is a fact
-      rather than a merit, neither is marked.
+      The record itself, never a forecast — last season's where this one has not filled it
+      in yet. The stronger number in each row is in black.
     </p>
 
-    <% @stats.each do |group| %>
-      <div class="mt-6">
-        <h3 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= group.title %></h3>
-        <dl class="mt-2 divide-y divide-zinc-100">
-          <% group.rows.each do |row| %>
-            <%# Each figure stands at its own edge, under the card it belongs to,
-                rather than both crowding the label in the middle. %>
-            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-2.5 sm:gap-6">
-              <dd class="text-left text-sm tabular-nums <%= comparison_value_class(row.leader == :left) %>"><%= row.left %></dd>
-              <dt class="text-center text-[11px] leading-tight text-zinc-500 sm:text-xs"><%= row.label %></dt>
-              <dd class="text-right text-sm tabular-nums <%= comparison_value_class(row.leader == :right) %>"><%= row.right %></dd>
-            </div>
-          <% end %>
-        </dl>
-      </div>
-    <% end %>
+    <dl class="mt-4 divide-y divide-zinc-100">
+      <% group.rows.each do |row| %>
+        <%# Each figure stands at its own edge, under the card it belongs to, rather
+            than both crowding the label in the middle. %>
+        <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-2.5 sm:gap-6">
+          <dd class="text-left text-sm tabular-nums <%= comparison_value_class(row.leader == :left) %>"><%= row.left %></dd>
+          <dt class="text-center text-[11px] leading-tight text-zinc-500 sm:text-xs"><%= row.label %></dt>
+          <dd class="text-right text-sm tabular-nums <%= comparison_value_class(row.leader == :right) %>"><%= row.right %></dd>
+        </div>
+      <% end %>
+    </dl>
   </section>
 <% end %>
 
@@ -81,23 +164,26 @@
     How we read <%= comparison_title(@comparison).delete_suffix("?") %>
   </h2>
   <p class="mt-2 text-sm text-zinc-600">
-    Both players are forecast the same way: their price and how many managers own them lead, weighed
-    against minutes, recent form, expected goals and assists, and who they are playing.
+    Every player here is forecast the same way: their price and how many managers own them lead,
+    weighed against minutes, recent form, expected goals and assists, and who they are playing.
     <%= reach.total? ?
         "Scores over more than one gameweek are totals, so they are read as the week they average to before they are graded." :
         "The score is the points we expect from the coming gameweek alone." %>
     <% if @head_to_head.close? %>
-      The gap here is under <%= HeadToHead::CLOSE %> of a point a week, which is smaller than the
-      difference our forecast can honestly claim to see. We still name one, because a manager
-      with two players and one transfer has to pick one of them, but it is a lean rather than
-      a verdict.
+      The gap here is under <%= number_with_precision(@head_to_head.close_enough, precision: 2) %> of a
+      point a week, which is smaller than the difference our forecast can honestly claim to see.
+      <%= "Two players carry two players' worth of error, so a side of two has to be further ahead than one man would." if @comparison.group? %>
+      We still name one, because a manager with two players and one transfer has to pick one of
+      them, but it is a lean rather than a verdict.
     <% end %>
   </p>
 </section>
 
 <% if @related.any? %>
   <section class="mt-8">
-    <h2 class="text-lg font-semibold text-zinc-900">Other players worth weighing against these two</h2>
+    <h2 class="text-lg font-semibold text-zinc-900">
+      Other players worth weighing against <%= @comparison.group? ? "these" : "these two" %>
+    </h2>
     <ul class="mt-3 flex flex-wrap gap-2">
       <% @related.each do |pair| %>
         <li>
@@ -107,4 +193,21 @@
       <% end %>
     </ul>
   </section>
+<% end %>
+
+<% else %>
+  <%# A comparison still being built: the same two columns, filled with what there is,
+      and no answer yet. Reached by keeping the address in step with the builder, so a
+      half-built comparison reloads where it was left. %>
+  <% content_for :meta_title, "Compare FPL Players | Fantasy Forecast" %>
+  <% content_for :meta_robots, "noindex, follow" %>
+
+  <%= render PageHeadingComponent.new(
+        title: "Compare players, or weigh a trade",
+        subtitle: "Add a player to each side and the answer opens itself.",
+        back: back_to("Comparisons", comparisons_path)) %>
+
+  <div class="mt-6">
+    <%= render "comparisons/builder", sides: @comparison.sides.map(&:players) %>
+  </div>
 <% end %>

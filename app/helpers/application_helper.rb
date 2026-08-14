@@ -5,9 +5,9 @@ module ApplicationHelper
   # so it belongs in the footer rather than here.
   NAVIGATION = [
     [ "Rankings", :rankings_path, "players" ],
-    [ "Captain", :captain_path, "captains" ],
+    [ "Compare", :comparisons_path, "comparisons" ],
     [ "Squad", :squad_path, "squads" ],
-    [ "Compare", :comparisons_path, "comparisons" ]
+    [ "Captain", :captain_path, "captains" ]
   ].freeze
 
   # Which one you are on is decided by the controller answering, not by the address,
@@ -80,6 +80,17 @@ module ApplicationHelper
 
   def meta_url
     content_for?(:meta_url) ? content_for(:meta_url) : request.original_url
+  end
+
+  # Whether a page is for the index at all, and nothing at all when it is.
+  #
+  # Anywhere but the live host, nothing is: a copy of the site should never compete
+  # with the site. On it, a page speaks for itself, and almost none of them need to.
+  # The ones that do are the ones there are too many of to be worth a crawler's time.
+  def meta_robots
+    return "noindex, nofollow" unless ENV.fetch("APP_HOST", "").include?("www.fantasyforecast.co.uk")
+
+    content_for(:meta_robots).presence
   end
 
   def structured_data

@@ -230,6 +230,39 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     assert_equal 2.0, stats["corners_freekicks_order"]
   end
 
+  # The fuller performance record the comparison table draws on: a typo in the mapping
+  # would silently leave these blank, so the mapping itself is asserted.
+  test "persists the season totals and indices the comparison table reads" do
+    gameweek = Gameweek.find_or_create_by!(fpl_id: 8802) do |g|
+      g.name = "Gameweek 8802"
+      g.start_time = 1.day.ago
+      g.is_current = true
+    end
+
+    element = {
+      "id" => 8802, "element_type" => 3, "team" => 90, "code" => 8802,
+      "first_name" => "Perf", "second_name" => "Record", "web_name" => "Record",
+      "goals_scored" => 9, "expected_goals" => 7.6, "own_goals" => 1,
+      "bps" => 540, "ict_index" => 145.2, "threat" => 88.0
+    }
+    stub_request(:get, Fpl::Api::BOOTSTRAP_URL).to_return(
+      status: 200, headers: {},
+      body: { "teams" => [ { "id" => 90, "name" => "Snap FC", "short_name" => "SNP", "code" => 8890 } ],
+              "elements" => [ element ] }.to_json
+    )
+
+    Fpl::SyncPlayers.call
+
+    player = Player.find_by(fpl_id: 8802)
+    stats = Statistic.where(player: player, gameweek: gameweek).pluck(:type, :value).to_h
+    assert_equal 9.0, stats["season_goals"]
+    assert_in_delta 7.6, stats["season_expected_goals"], 0.001
+    assert_equal 1.0, stats["season_own_goals"]
+    assert_equal 540.0, stats["bps"]
+    assert_in_delta 145.2, stats["ict_index"], 0.001
+    assert_in_delta 88.0, stats["threat"], 0.001
+  end
+
   test "attaches snapshot statistics to the next gameweek pre-season" do
     # Fresh slate: no current gameweek, a single upcoming gameweek is next.
     Gameweek.update_all(is_current: false, is_next: false)

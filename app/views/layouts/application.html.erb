@@ -8,8 +8,8 @@
 
     <!-- SEO Meta Tags -->
     <meta name="description" content="<%= meta_description %>">
-    <% unless ENV.fetch("APP_HOST", "").include?("www.fantasyforecast.co.uk") %>
-      <meta name="robots" content="noindex, nofollow">
+    <% if (robots = meta_robots) %>
+      <meta name="robots" content="<%= robots %>">
     <% end %>
     <meta name="keywords" content="FPL, Fantasy Premier League, FPL rankings, FPL predictions, FPL player rankings, fantasy football, FPL forecasting, FPL captain picks">
     <link rel="canonical" href="<%= meta_url %>">

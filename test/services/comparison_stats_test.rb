@@ -4,70 +4,124 @@ class ComparisonStatsTest < ActiveSupport::TestCase
   setup do
     @salah = players(:midfielder)
     @palmer = players(:midfielder_two)
+    @raya = players(:goalkeeper)
     @gameweek = gameweeks(:next_gw)
-    # Both halves of the table are cleared, so a test that says a figure is missing
-    # is describing an empty page rather than a page full of fixtures.
     Statistic.delete_all
-    Forecast.delete_all
-  end
-
-  def expectation(player, horizon, score)
-    Forecast.create!(player: player, gameweek: @gameweek, horizon: horizon, score: score, rank: 1)
   end
 
   def reading(player, type, value)
     Statistic.create!(player: player, gameweek: @gameweek, type: type, value: value)
   end
 
-  def stats = ComparisonStats.call(left: @salah, right: @palmer)
+  def stats
+    ComparisonStats.call(left: @salah, right: @palmer)
+  end
 
   def row(label)
     stats.flat_map(&:rows).find { |r| r.label == label }
   end
 
-  # A keeper's saves and a forward's goals are both in the table, and neither
-  # leaves an empty line on the other man's page.
-  test "a figure neither of them has is not a row" do
+  test "nothing recorded means nothing to compare" do
+    assert_empty stats
+  end
+
+  test "the record is grouped under one heading" do
+    reading(@salah, "expected_goals_per_90", 0.5)
+
+    assert_equal "Underlying numbers", stats.first.title
+  end
+
+  # Rates, totals, form and indices sit together, each row labelled with what it is so
+  # a per-90 rate is never mistaken for a total.
+  test "per-90 rates, totals, form and indices sit side by side, each labelled" do
+    reading(@salah, "form", 5.2)
     reading(@salah, "season_points", 120)
+    reading(@salah, "season_goals", 9)
+    reading(@salah, "expected_goals_per_90", 0.55)
+    reading(@salah, "ict_index", 145.3)
 
-    assert_equal [ "Total points" ], stats.flat_map(&:rows).map(&:label)
+    labels = stats.flat_map(&:rows).map(&:label)
+    assert_includes labels, "Form"
+    assert_includes labels, "Points"
+    assert_includes labels, "Goals"
+    assert_includes labels, "Expected goals, per 90"
+    assert_includes labels, "ICT index"
   end
 
-  test "a figure only one of them has is still worth a row" do
-    reading(@salah, "saves_per_90", 3.2)
-
-    assert_equal "3.20", row("Saves").left
-    assert_equal "—", row("Saves").right
-  end
-
-  test "more is better, so the bigger number leads" do
+  # A total reads whole, a rate to two places, form to one.
+  test "each figure reads in its own shape" do
     reading(@salah, "season_points", 120)
-    reading(@palmer, "season_points", 90)
+    reading(@salah, "expected_goals_per_90", 0.55)
+    reading(@salah, "form", 5.2)
 
-    assert_equal :left, row("Total points").leader
+    assert_equal "120", row("Points").left
+    assert_equal "0.55", row("Expected goals, per 90").left
+    assert_equal "5.2", row("Form").left
   end
 
-  # Conceding fewer expected goals is the good end of that figure, and so is
-  # costing less.
-  test "for some figures less is better" do
+  test "the stronger number leads, and for goals conceded fewer is better" do
+    reading(@salah, "season_goals", 9)
+    reading(@palmer, "season_goals", 4)
     reading(@salah, "expected_goals_conceded_per_90", 1.4)
-    reading(@palmer, "expected_goals_conceded_per_90", 0.8)
-    reading(@salah, "now_cost", 145)
-    reading(@palmer, "now_cost", 60)
+    reading(@palmer, "expected_goals_conceded_per_90", 0.9)
 
-    assert_equal :right, row("Expected goals conceded").leader
-    assert_equal :right, row("Price").leader
-    assert_equal "£14.5m", row("Price").left
+    assert_equal :left, row("Goals").leader
+    assert_equal :right, row("Expected goals conceded, per 90").leader
   end
 
-  # Ownership is a fact about a player, not a mark out of ten, so neither side of
-  # it is lit.
-  test "a figure that is a fact rather than a merit favours nobody" do
-    reading(@salah, "selected_by_percent", 55.0)
-    reading(@palmer, "selected_by_percent", 12.0)
+  # Before a ball is kicked this season the record is last season's.
+  test "until the season starts, the numbers are last season's" do
+    Gameweek.update_all(is_finished: false)
+    reading(@salah, "last_season_points", 200)
+    reading(@salah, "season_points", 0)
 
-    assert_nil row("Owned by").leader
-    assert_equal "55.0%", row("Owned by").left
+    assert_equal "200", row("Points").left
+  end
+
+  test "a figure with no last-season record waits until the season starts" do
+    Gameweek.update_all(is_finished: false)
+    reading(@salah, "ict_index", 100)
+
+    assert_nil row("ICT index")
+  end
+
+  # You own both, so between them they do the sum.
+  test "a side's figure is its players' summed" do
+    reading(@salah, "season_goals", 9)
+    reading(@palmer, "season_goals", 4)
+    reading(@raya, "season_goals", 0)
+
+    row = ComparisonStats.call(left: [ @salah, @palmer ], right: @raya)
+                         .flat_map(&:rows).find { |r| r.label == "Goals" }
+
+    assert_equal "13", row.left
+    assert_equal "0", row.right
+    assert_equal :left, row.leader
+  end
+
+  test "a side missing one man's figure is blank rather than half of one" do
+    reading(@salah, "season_goals", 9)
+    reading(@raya, "season_goals", 2)
+
+    row = ComparisonStats.call(left: [ @salah, @palmer ], right: @raya)
+                         .flat_map(&:rows).find { |r| r.label == "Goals" }
+
+    assert_equal "—", row.left
+    assert_equal "2", row.right
+  end
+
+  test "a figure neither side has is not a row" do
+    reading(@salah, "form", 5.0)
+
+    assert_equal [ "Form" ], stats.flat_map(&:rows).map(&:label)
+  end
+
+  # Nought on both sides says nothing, so it is not drawn.
+  test "a row that is nought on both sides is not drawn" do
+    reading(@salah, "season_goals", 0)
+    reading(@palmer, "season_goals", 0)
+
+    assert_nil row("Goals")
   end
 
   test "two equal figures light neither side" do
@@ -75,62 +129,5 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     reading(@palmer, "form", 4.0)
 
     assert_nil row("Form").leader
-  end
-
-  # FPL numbers set-piece takers from the front, so first is best.
-  test "a set piece order reads as a place, and first is best" do
-    reading(@salah, "penalties_order", 1)
-    reading(@palmer, "penalties_order", 3)
-
-    assert_equal "1st", row("Penalties").left
-    assert_equal "3rd", row("Penalties").right
-    assert_equal :left, row("Penalties").leader
-  end
-
-  test "the figures come grouped, and an empty group is not drawn" do
-    reading(@salah, "season_points", 120)
-    reading(@salah, "now_cost", 130)
-
-    assert_equal [ "This season", "What the market says" ], stats.map(&:title)
-  end
-
-  test "nothing recorded means nothing to compare" do
-    assert_empty stats
-  end
-
-  # The answer leads and the working follows. A manager who disagrees with the pick
-  # reads down from it; he should not have to read up to find it.
-  test "what we expect comes first, at all three distances" do
-    expectation(@salah, Horizon::GAMEWEEK, 6.4)
-    expectation(@salah, Horizon::UPCOMING, 30.9)
-    expectation(@salah, Horizon::SEASON, 244.6)
-
-    assert_equal "What we expect", stats.first.title
-    assert_equal [ "This gameweek", "Next 5 gameweeks", "Rest of season" ],
-                 stats.first.rows.map(&:label)
-    assert_equal "6.4", row("This gameweek").left
-    assert_equal "245", row("Rest of season").left,
-                 "a tenth of a point over a season is a precision we do not have"
-  end
-
-  test "the man we expect more of leads the row" do
-    expectation(@salah, Horizon::SEASON, 244.6)
-    expectation(@palmer, Horizon::SEASON, 190.2)
-
-    assert_equal :left, row("Rest of season").leader
-  end
-
-  # FPL leaves last season's totals in the current-season fields all summer, so
-  # before a ball is kicked this group is last season's record under this season's
-  # name. That is the reading that had the page arguing with its own answer.
-  test "there is no this season until a gameweek has been played" do
-    reading(@salah, "season_points", 120)
-    Gameweek.update_all(is_finished: false)
-
-    assert_not_includes stats.map(&:title), "This season"
-
-    gameweeks(:finished).update!(is_finished: true)
-
-    assert_includes stats.map(&:title), "This season"
   end
 end
