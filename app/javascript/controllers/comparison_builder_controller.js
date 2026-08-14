@@ -123,18 +123,30 @@ export default class extends Controller {
   remove(event) {
     const chip = event.currentTarget.closest("[data-comparison-builder-target=chip]")
     const side = this.sideOf(chip)
-    chip.remove()
 
     const sides = this.sidesParams()
+    sides[side] = sides[side].filter((param) => param !== chip.dataset.param)
 
-    // Still a player on each side: there is a smaller comparison, so go to it. Take the
-    // last one off a side and it empties to its box, waiting for whoever replaces him;
-    // an empty side is not a page, so we stay until it is filled again.
+    // Still a player on each side: there is a smaller comparison, so go to it — without
+    // taking the card out first, so the page Turbo leaves behind still shows what it
+    // showed. Take the last one off a side and it empties to its box instead, waiting
+    // for whoever replaces him, because an empty side is not a page.
     if (this.bothFilled(sides)) return this.visit(sides)
 
+    chip.remove()
+    this.clearPick()
     this.render()
     this.reflect(sides)
     this.inputFor(side).focus()
+  }
+
+  // Once a side is being rebuilt there is no pick to show, so the badge and the ring
+  // come off until a whole comparison is settled again and the next page draws them.
+  clearPick() {
+    this.element.querySelectorAll("[data-pick-badge]").forEach((badge) => badge.remove())
+    this.element.querySelectorAll("[data-pick-ring]").forEach((ring) =>
+      ring.classList.replace("ring-zinc-900", "ring-transparent"))
+    this.element.querySelectorAll("[data-comparison-card]").forEach((card) => (card.dataset.pick = "false"))
   }
 
   // Walk the names under the box with the arrow keys, take the highlighted one with
