@@ -39,15 +39,13 @@ module ComparisonsHelper
     question(comparison) { |side| and_list(side.players.map(&:full_name)) }
   end
 
-  # What separates the two sides in money, said out loud rather than left in the table.
-  #
-  # Two transfers are made against a budget, so a pair that costs less is not simply
-  # worse: it leaves something in the bank. Only worth saying where a side is more than
-  # one player, since a pair of cards already prints two prices.
-  def price_gap_line(head_to_head)
-    return unless (dearer = head_to_head.dearer)
-
-    "#{side_name(dearer)} cost #{player_price(head_to_head.price_gap)} more."
+  # The cross for taking a player off a side, in a tone of his own club's colour so it
+  # belongs to the card rather than sitting on it as a foreign white dot. The colour is
+  # pushed further the way its own ink already runs — darker on a dark shirt, paler on a
+  # pale one — so the ink stays readable on it.
+  def remove_button_style(team)
+    toward = team&.on_light? ? "#ffffff" : "#000000"
+    "background-color: color-mix(in srgb, #{card_colour(team)} 72%, #{toward}); color: #{card_ink(team)};"
   end
 
   # Three players score more than two. Where the sides are not the same size the page

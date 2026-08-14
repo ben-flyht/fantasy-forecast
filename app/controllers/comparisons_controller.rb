@@ -6,6 +6,7 @@ class ComparisonsController < ApplicationController
   def index
     @gameweek = Gameweek.next_gameweek
     @horizon = horizon
+    @most_requested = MostRequestedComparisons.call
     @pairs = PopularComparisons.call(gameweek: @gameweek, horizon: @horizon)
   end
 
@@ -29,12 +30,24 @@ class ComparisonsController < ApplicationController
     load_head_to_head
 
     respond_to do |format|
-      format.html { @related = related_comparisons }
+      format.html { render_comparison }
       format.png { send_comparison_card }
     end
   end
 
   private
+
+  def render_comparison
+    record_request
+    @related = related_comparisons
+  end
+
+  # Every argument that reaches the page is counted against its canonical slug, so the
+  # hub and the sitemap can offer the ones people actually ask. See
+  # MostRequestedComparisons for what is then surfaced, which is pairs only.
+  def record_request
+    ComparisonRequest.record(@comparison.slug)
+  end
 
   def horizon
     Horizon.find(params[:horizon]).key

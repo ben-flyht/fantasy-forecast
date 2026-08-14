@@ -14,9 +14,9 @@ Two sides. A side is one player, or the two or three you would buy in one move.
 /compare/viktor-gyokeres-25-and-igor-thiago-nascimento-rodrigues-106-vs-joao-pedro-junqueira-de-jesus-165-and-erling-haaland-411
 ```
 
-`-vs-` separates the sides, `-and-` joins the players on one. Up to three a side:
-three is a move worth weighing and the most that stands in a column on a phone. Past
-that the page is a squad rather than a question, and `Comparison.parse` refuses it.
+`-vs-` separates the sides, `-and-` joins the players on one. There is no limit on how
+many a side holds: a move is usually one or two, but the page adds up however many you
+give it, so nothing about the arithmetic caps the question.
 
 Every ordering of the same argument is one page. Players sort within a side by FPL's
 own id, then the sides sort by the lowest id on each, and any other spelling is 301'd
@@ -57,10 +57,40 @@ player, so the page and the card written for a pair did not have to change.
 A `:sum` with a missing reading is blank, for the same reason a side with an unforecast
 player is.
 
-**The page says what the cards cannot.** The price difference, out loud, because two
-transfers are made against a budget and the cheaper side leaves something in the bank.
-And, where the sides hold different numbers of players, that this was never a
-like-for-like question: three players score more than two for that reason alone.
+**The page says what the cards cannot.** Where the sides hold different numbers of
+players, that this was never a like-for-like question: three players score more than
+two for that reason alone (`ComparisonsHelper#uneven_note`). The price difference is
+left to the players' own prices on their cards; a line spelling it out ("Saka and
+Haaland cost £4.0m more") was tried and removed as noise.
+
+## Building and changing an argument
+
+The builder is one component, used two ways. Each side has a box you can always type
+into and the players you have chosen stand as chips above it; a chip carries the
+player's `to_param`, and the chips in the DOM are the state, so nothing is held in step
+with them (`comparison_builder_controller.js`).
+
+On the hub it starts empty and a button takes you to the address it has assembled. On
+a comparison it starts as that comparison's own sides, and there is no button: adding,
+removing or replacing a player `Turbo.visit`s straight to the page for the sides you
+have now, so the address and the answer follow your edits. A side always keeps at
+least one player there, because a side of nobody is not a question — the last chip on a
+live side will not remove until something stands beside it. There is no cap on how many
+a side holds.
+
+## What people ask, and what we offer back
+
+Every comparison that reaches the page is counted against its canonical slug
+(`ComparisonRequest.record`, called from `ComparisonsController#show`). The picture a
+link turns into is not — that is a crawler, not a manager — so only the HTML view is
+counted.
+
+`MostRequestedComparisons` reads the top of that tally back: onto the hub as "Most
+compared this week", and into the sitemap alongside the forecast-picked pairs, the
+asked-for ones leading. **Pairs only.** A group is counted the same as a pair, because
+knowing a group was asked is worth having, but the hub is a page to scan and a sitemap
+is an index of pages worth crawling, and neither is served by two-a-side groups. A
+manager builds the group he has in mind; we offer back the straight choices.
 
 ## Indexing
 
@@ -84,8 +114,10 @@ which a page can answer for itself.
 | `app/services/comparison_stats.rb` | the working underneath, and the aggregation rules |
 | `app/services/popular_comparisons.rb` | the pairs worth putting on a page (pairs only) |
 | `app/services/related_comparisons.rb` | the next argument (pairs only) |
-| `app/views/comparisons/show.html.erb` | the answer |
-| `app/views/comparisons/_builder.html.erb` + `comparison_builder_controller.js` | building any argument you like |
+| `app/models/comparison_request.rb` | the tally, one row a canonical slug |
+| `app/services/most_requested_comparisons.rb` | the asked-for pairs read back for the hub and sitemap (pairs only) |
+| `app/views/comparisons/show.html.erb` | the answer, with the builder filled in beneath it |
+| `app/views/comparisons/_builder.html.erb` + `comparison_builder_controller.js` | building an argument on the hub, or changing one on its own page |
 | `app/views/cards/comparison.svg.erb` | the picture a pair turns into in a group chat |
 
 ---
@@ -108,8 +140,10 @@ and a price under each, and one big number down the left. A group card is a colu
 side: the side's total as the headline, the names beneath it, the team colour as an
 accent on each name rather than half the canvas.
 
-Cap it at three a side. Remember `ShareCard::SQUARE` exists for cards that cannot be a
-letterbox, and that `meta_image_height` has to be told about it.
+A side has no limit now, so the card has to choose its own: three names read well in a
+column, and past that a "+2 more" line beats a wall of them. Remember `ShareCard::SQUARE`
+exists for cards that cannot be a letterbox, and that `meta_image_height` has to be told
+about it.
 
 This is the smallest of the five and the feature is half-delivered without it.
 
@@ -125,8 +159,9 @@ that two sides is the whole question.
 
 ## 3. Credit the cheaper side with what its spare money buys
 
-Today the page reports the price gap and leaves the manager to weigh it. The honest
-next step is to price it: £1.5m spare is worth whatever upgrading the worst player in a
+Today the page leaves the price difference to the two sides' own prices and says
+nothing about it (the line that spelled it out was removed as noise). The honest next
+step is to price the gap: £1.5m spare is worth whatever upgrading the worst player in a
 typical squad by £1.5m is worth. That turns the page from "which scores more" into a
 proper transfer answer, and it is the single thing that would make bundle comparisons
 better than doing the sum yourself.

@@ -10,10 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_06_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
+
+  create_table "comparison_requests", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "hits", default: 0, null: false
+    t.string "slug", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hits"], name: "index_comparison_requests_on_hits"
+    t.index ["slug"], name: "index_comparison_requests_on_slug", unique: true
+  end
 
   create_table "forecasts", force: :cascade do |t|
     t.datetime "created_at", null: false

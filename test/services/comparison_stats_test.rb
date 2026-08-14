@@ -174,16 +174,26 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     assert_equal "0.50", paired_row("Expected goals").left
   end
 
-  # A share of the game's managers belongs to one man, and so does a place in a
-  # penalty queue. Neither adds up, so each is written out and the row favours nobody.
-  test "a figure that belongs to one man is written out for each of them" do
+  # A place in a penalty queue belongs to one man and says nothing about a side of
+  # them ("1st and 3rd and —" is noise), so it is not drawn for a group at all.
+  test "a figure that belongs to one man is left off a group" do
     reading(@salah, "penalties_order", 1)
     reading(@palmer, "penalties_order", 3)
     reading(players(:goalkeeper), "penalties_order", 2)
 
-    assert_equal "1st and 3rd", paired_row("Penalties").left
-    assert_equal "2nd", paired_row("Penalties").right
-    assert_nil paired_row("Penalties").leader
+    assert_nil paired_row("Penalties")
+  end
+
+  # Ownership is the share of managers holding each man, and a side of them is held by
+  # that share on average.
+  test "a side is owned by its players on average" do
+    reading(@salah, "selected_by_percent", 50.0)
+    reading(@palmer, "selected_by_percent", 30.0)
+    reading(players(:goalkeeper), "selected_by_percent", 10.0)
+
+    assert_equal "40.0%", paired_row("Owned by").left
+    assert_equal "10.0%", paired_row("Owned by").right
+    assert_nil paired_row("Owned by").leader
   end
 
   test "what we expect of a side is what we expect of everybody on it" do

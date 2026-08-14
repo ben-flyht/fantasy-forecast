@@ -26,12 +26,18 @@
                                           upcoming: comparison_path(pair: @comparison.slug, horizon: "upcoming"),
                                           season: comparison_path(pair: @comparison.slug, horizon: "season") })) %>
 
-<%# Two columns at every width, phone included. A comparison with one player above
-    the other is a list, and you cannot read a list across. %>
-<div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4">
-  <% @head_to_head.sides.each do |side| %>
+<%# Two columns at every width, phone included, and the editor in the same layout as
+    the answer. A side is its cards and a box beneath them to add another; a card leaves
+    by the cross on it. Both sides filled is a page, so every change goes to the page for
+    the sides you have now. %>
+<div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4"
+     data-controller="comparison-builder"
+     data-comparison-builder-url-value="<%= comparison_search_path %>"
+     data-comparison-builder-committed-value="true">
+  <% @head_to_head.sides.each_with_index do |side, index| %>
     <% picked = @head_to_head.pick == side %>
-    <div data-comparison-card data-pick="<%= picked %>">
+    <div data-comparison-card data-pick="<%= picked %>"
+         data-comparison-builder-target="side" data-side="<%= index %>">
       <%# The badge has a row of its own rather than hanging over the card. On a
           phone a card is about 165px wide and the name starts in that same corner,
           so an overhanging badge sat on top of it. An empty row on the other side
@@ -44,27 +50,62 @@
         <% end %>
       </div>
 
-      <% ring = picked ? "rounded-xl ring-2 ring-zinc-900" : "" %>
-      <% ring += " p-1.5" if picked && !side.single? %>
+      <%# Both sides carry the same ring and padding, the loser's ring merely
+          transparent, so the two columns stay aligned to the pixel. %>
+      <% ring = "rounded-xl ring-2 #{picked ? 'ring-zinc-900' : 'ring-transparent'}" %>
+      <% ring += " p-1.5" unless side.single? %>
 
       <div class="<%= ring %>">
         <%# What the side is worth altogether, above the players it is made of. A column
             of two cards with no total is two answers where the reader wanted one. %>
         <% unless side.single? %>
-          <div class="mb-2 rounded-lg bg-zinc-100 px-3 py-2">
-            <p class="text-2xl font-extrabold leading-none tabular-nums tracking-[-0.03em] text-zinc-950">
-              <%= headline_points(side) || "—" %>
-            </p>
-            <p class="mt-1 text-[11px] leading-tight text-zinc-500">
-              expected points<%= " · #{player_price(side.cost)}" if side.cost %>
-            </p>
+          <div class="mb-2 flex items-start justify-between gap-3 rounded-lg bg-zinc-100 px-3 py-2">
+            <div>
+              <p class="text-2xl font-extrabold leading-none tabular-nums tracking-[-0.03em] text-zinc-950">
+                <%= headline_points(side) || "—" %>
+              </p>
+              <p class="mt-1 text-[11px] leading-tight text-zinc-500">expected points</p>
+            </div>
+            <% if side.cost %>
+              <div class="text-right">
+                <p class="text-2xl font-extrabold leading-none tabular-nums tracking-[-0.03em] text-zinc-950">
+                  <%= player_price(side.cost) %>
+                </p>
+                <p class="mt-1 text-[11px] leading-tight text-zinc-500">cost</p>
+              </div>
+            <% end %>
           </div>
         <% end %>
 
         <div class="space-y-2">
           <% side.members.each do |member| %>
-            <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(member)) %>
+            <div class="relative" data-comparison-builder-target="chip"
+                 data-side="<%= index %>" data-param="<%= member.player.to_param %>">
+              <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(member)) %>
+              <% if side.size > 1 %>
+                <button type="button" data-action="comparison-builder#remove"
+                        aria-label="Remove <%= member.player.display_name %>"
+                        style="<%= remove_button_style(member.player.team) %>"
+                        class="absolute right-2 top-2 z-10 rounded-full p-1 shadow ring-1 ring-black/10 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-black/30">
+                  <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+                  </svg>
+                </button>
+              <% end %>
+            </div>
           <% end %>
+
+          <%# Always a box at the foot of a side to put another player on it. %>
+          <div class="relative">
+            <input type="text"
+                   data-comparison-builder-target="input" data-side="<%= index %>"
+                   data-action="input->comparison-builder#search keydown->comparison-builder#keydown"
+                   autocomplete="off" placeholder="Add a player"
+                   aria-label="Add a player to <%= index.zero? ? "the first" : "the second" %> side"
+                   class="w-full rounded-xl border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm text-zinc-600 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+            <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
+                 data-comparison-builder-target="results" data-side="<%= index %>" role="listbox" hidden></div>
+          </div>
         </div>
       </div>
     </div>
@@ -72,10 +113,9 @@
 </div>
 
 <%# The cards say who and by how much. The only things left to say are what they
-    cannot: that a pick is marginal, that there is no forecast behind it, that one side
-    costs more, or that the two sides were never a fair question in the first place. %>
-<% notes = [ comparison_note(@head_to_head), uneven_note(@head_to_head),
-             (price_gap_line(@head_to_head) if @comparison.group?) ].compact %>
+    cannot: that a pick is marginal, that there is no forecast behind it, or that the
+    two sides were never a fair question in the first place. %>
+<% notes = [ comparison_note(@head_to_head), uneven_note(@head_to_head) ].compact %>
 <% notes.each do |note| %>
   <p class="mt-3 text-sm text-zinc-600"><%= note %></p>
 <% end %>

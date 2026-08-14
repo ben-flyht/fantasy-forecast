@@ -43,10 +43,13 @@ class ComparisonTest < ActiveSupport::TestCase
     assert_nil comparison.right.player
   end
 
-  test "more players on a side than a side holds is not an address" do
-    too_many = [ @salah, @palmer, @injured, @raya ].map(&:to_param).join("-and-")
+  test "a side can hold as many players as a move needs" do
+    many = [ @salah, @palmer, @injured, @raya ].map(&:to_param).join("-and-")
 
-    assert_raises(ActiveRecord::RecordNotFound) { Comparison.parse("#{too_many}-vs-#{@raya.to_param}") }
+    comparison = Comparison.parse("#{many}-vs-#{players(:brazilian).to_param}")
+
+    assert_equal 4, comparison.left.size
+    assert_equal 1, comparison.right.size
   end
 
   test "one name and no argument is not an address" do

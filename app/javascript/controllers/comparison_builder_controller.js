@@ -1,28 +1,26 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Two sides, a box or three on each, a list of names under whichever one you are
-// typing in, and a button that takes you to the argument.
+// The two sides, laid out the same whether you are building an argument or reading
+// one. A side is its players and a box at the foot of it you can always type into;
+// a player joins as a card and leaves by the cross on it.
 //
-// A side is one player, or the players you would buy in one move: a manager with two
-// free transfers is choosing between two pairs rather than two players. Only the first
-// box of each side is offered, and the next one appears when the one before it is
-// filled, so the common question still looks like two boxes and a button.
+// The moment both sides hold a player there is a page for them, so we go to it. On the
+// hub that turns a first pick on each side into the comparison; on the comparison it
+// turns every add, remove or swap into the page for the sides you have now. The chips
+// in the DOM are the state, so nothing is held in step with them.
 //
-// The address is assembled here from both sides in whatever order they were picked:
-// /compare answers the same question every way round and redirects to its own
-// spelling of it.
+// `committed` is set on a comparison, where a side may not drop below the one player it
+// needs to stay a question. On the hub it is unset, and a side empties freely while you
+// are still deciding who goes on it.
 export default class extends Controller {
-  static targets = ["slot", "input", "results", "chosen", "clear", "submit", "hint", "add"]
-  static values = { url: String }
+  static targets = ["side", "chips", "chip", "input", "results", "hint"]
+  static values = { url: String, committed: Boolean }
 
   // How long to wait after the last keystroke before asking. Short enough to feel
   // immediate, long enough that typing a name is one request rather than eight.
   static DEBOUNCE = 180
 
   connect() {
-    // Keyed by the box itself rather than by a number, so nothing has to agree with
-    // anything else about which box is which.
-    this.picks = new Map()
     this.timers = new Map()
     this.render()
   }
@@ -32,31 +30,31 @@ export default class extends Controller {
   }
 
   search(event) {
-    const slot = this.slotOf(event.target)
-    clearTimeout(this.timers.get(slot))
+    const side = this.sideOf(event.target)
+    clearTimeout(this.timers.get(side))
 
     const term = event.target.value.trim()
-    if (term.length < 2) return this.showResults(slot, [])
+    if (term.length < 2) return this.showResults(side, [])
 
-    this.timers.set(slot, setTimeout(() => this.fetchFor(slot, term), this.constructor.DEBOUNCE))
+    this.timers.set(side, setTimeout(() => this.fetchFor(side, term), this.constructor.DEBOUNCE))
   }
 
-  async fetchFor(slot, term) {
+  async fetchFor(side, term) {
     const url = new URL(this.urlValue, window.location.origin)
     url.searchParams.set("q", term)
-    this.chosen.forEach((player) => url.searchParams.append("exclude[]", player.param))
+    this.chosenParams.forEach((param) => url.searchParams.append("exclude[]", param))
 
     try {
       const response = await fetch(url, { headers: { Accept: "application/json" } })
-      if (!response.ok) return this.showResults(slot, [])
-      this.showResults(slot, await response.json())
+      if (!response.ok) return this.showResults(side, [])
+      this.showResults(side, await response.json())
     } catch {
-      this.showResults(slot, [])
+      this.showResults(side, [])
     }
   }
 
-  showResults(slot, players) {
-    const list = this.within(slot, "results")
+  showResults(side, players) {
+    const list = this.resultsFor(side)
     list.innerHTML = ""
 
     if (players.length === 0) {
@@ -68,6 +66,7 @@ export default class extends Controller {
       const option = document.createElement("button")
       option.type = "button"
       option.dataset.action = "click->comparison-builder#choose"
+      option.dataset.side = side
       option.dataset.player = JSON.stringify(player)
       option.className =
         "flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none"
@@ -83,94 +82,127 @@ export default class extends Controller {
   }
 
   choose(event) {
-    const slot = this.slotOf(event.currentTarget)
-    this.picks.set(slot, JSON.parse(event.currentTarget.dataset.player))
-    this.showResults(slot, [])
+    const side = this.sideOf(event.currentTarget)
+    const player = JSON.parse(event.currentTarget.dataset.player)
+
+    const sides = this.sidesParams()
+    if (!sides.flat().includes(player.param)) sides[side].push(player.param)
+
+    const input = this.inputFor(side)
+    input.value = ""
+    this.showResults(side, [])
+
+    // Both sides filled: there is a page for them, and it is drawn with the real
+    // cards. Otherwise keep the pick here as a chip and let the other side catch up.
+    if (this.bothFilled(sides)) return this.visit(sides)
+
+    this.chipsFor(side).appendChild(this.chip(side, player))
+    this.render()
+    input.focus()
+  }
+
+  remove(event) {
+    const chip = event.currentTarget.closest("[data-comparison-builder-target=chip]")
+    const side = this.sideOf(chip)
+
+    const sides = this.sidesParams()
+    sides[side] = sides[side].filter((param) => param !== chip.dataset.param)
+
+    if (this.bothFilled(sides)) return this.visit(sides)
+
+    // A comparison keeps a player a side; on the hub a side may empty while building.
+    if (this.committedValue) return
+
+    chip.remove()
     this.render()
   }
 
-  clear(event) {
-    const slot = this.slotOf(event.currentTarget)
-    this.picks.delete(slot)
-    this.render()
-    this.within(slot, "input").focus()
-  }
-
-  // The next box on this side, which is only offered once the ones before it are full.
-  add(event) {
-    const next = this.slotsFor(event.currentTarget.dataset.side).find((slot) => slot.hidden)
-    if (!next) return
-
-    next.hidden = false
-    this.render()
-    this.within(next, "input").focus()
-  }
-
-  // Enter on a box takes the first name under it, which is what a list of names
-  // under a box is for.
+  // Enter on a box takes the first name under it, which is what a list of names under
+  // a box is for.
   keydown(event) {
     if (event.key !== "Enter") return
     event.preventDefault()
 
-    const first = this.within(this.slotOf(event.target), "results").querySelector("button")
+    const first = this.resultsFor(this.sideOf(event.target)).querySelector("button")
     if (first) first.click()
   }
 
-  compare() {
-    if (!this.complete) return
-
-    Turbo.visit(`/compare/${this.slugFor(0)}-vs-${this.slugFor(1)}`)
+  visit(sides) {
+    const address = sides.map((players) => players.join("-and-")).join("-vs-")
+    Turbo.visit(`/compare/${address}`, { action: "advance" })
   }
 
-  slugFor(side) {
-    return this.playersOn(side).map((player) => player.param).join("-and-")
+  bothFilled(sides) {
+    return sides[0].length > 0 && sides[1].length > 0
   }
 
-  playersOn(side) {
-    return this.slotsFor(side).map((slot) => this.picks.get(slot)).filter(Boolean)
+  sidesParams() {
+    return [ this.paramsOn(0), this.paramsOn(1) ]
   }
 
-  slotsFor(side) {
-    return this.slotTargets.filter((slot) => slot.dataset.side === String(side))
+  paramsOn(side) {
+    return this.chipTargets
+      .filter((chip) => this.sideOf(chip) === side)
+      .map((chip) => chip.dataset.param)
   }
 
-  slotOf(element) {
-    return element.closest("[data-comparison-builder-target=slot]")
-  }
-
-  within(slot, target) {
-    return slot.querySelector(`[data-comparison-builder-target=${target}]`)
-  }
-
-  get chosen() {
-    return [...this.picks.values()]
-  }
-
-  get complete() {
-    return this.playersOn(0).length > 0 && this.playersOn(1).length > 0
+  get chosenParams() {
+    return this.chipTargets.map((chip) => chip.dataset.param)
   }
 
   render() {
-    this.slotTargets.forEach((slot) => {
-      const pick = this.picks.get(slot)
-      const input = this.within(slot, "input")
+    if (this.hasHintTarget) this.hintTarget.hidden = this.bothFilled(this.sidesParams())
+  }
 
-      this.within(slot, "chosen").textContent = pick ? pick.full_name : ""
-      this.within(slot, "chosen").hidden = !pick
-      this.within(slot, "clear").hidden = !pick
-      input.hidden = Boolean(pick)
-      input.value = ""
-    })
+  // A card-shaped tile for a player picked while a side is still being built, before
+  // there is a page with his real card on it.
+  chip(side, player) {
+    const chip = document.createElement("div")
+    chip.className = "relative rounded-xl border border-zinc-200 bg-white px-3 py-2 pr-8"
+    chip.dataset.comparisonBuilderTarget = "chip"
+    chip.dataset.side = side
+    chip.dataset.param = player.param
 
-    // Another box is offered where there is one left and every box already open on
-    // that side has somebody in it.
-    this.addTargets.forEach((button) => {
-      const slots = this.slotsFor(button.dataset.side)
-      const open = slots.filter((slot) => !slot.hidden)
-      button.hidden = open.length === slots.length || !open.every((slot) => this.picks.has(slot))
-    })
+    const name = document.createElement("p")
+    name.className = "text-sm font-medium text-zinc-900"
+    name.textContent = player.full_name
 
-    this.submitTarget.disabled = !this.complete
-    this.hintTarget.hidden = this.complete
+    const meta = document.createElement("p")
+    meta.className = "text-xs text-zinc-500"
+    meta.textContent = [player.team, player.position].filter(Boolean).join(" · ")
+
+    chip.appendChild(name)
+    chip.appendChild(meta)
+    chip.appendChild(this.removeButton(player.full_name))
+    return chip
+  }
+
+  removeButton(name) {
+    const remove = document.createElement("button")
+    remove.type = "button"
+    remove.dataset.action = "comparison-builder#remove"
+    remove.setAttribute("aria-label", `Remove ${name}`)
+    remove.className =
+      "absolute right-2 top-2 rounded p-0.5 text-zinc-400 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+    remove.innerHTML =
+      `<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">` +
+      `<path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>`
+    return remove
+  }
+
+  chipsFor(side) {
+    return this.chipsTargets[side]
+  }
+
+  inputFor(side) {
+    return this.inputTargets.find((input) => this.sideOf(input) === side)
+  }
+
+  resultsFor(side) {
+    return this.resultsTargets.find((results) => this.sideOf(results) === side)
+  }
+
+  sideOf(element) {
+    return Number(element.dataset.side)
   }
 }

@@ -1,92 +1,49 @@
 <%#
-  Pick the players and go and read the argument.
+  The same two columns a comparison is read in, empty and waiting to be filled. A box
+  on each side you can always type into; a player picked stands as a card, and the
+  moment both sides hold one there is a comparison, so the page becomes it. Building
+  and reading are the one layout, so moving between them is not a jump.
 
-  Two sides, and a side is one player or the two or three you would buy in one move:
-  a manager with two free transfers is choosing between two pairs, not two players.
-
-  The pairs listed below this are the ones our own forecast puts closest together,
-  which is a good list and is never the pair somebody actually arrived holding. Every
-  pair in the game has an address; this is how you reach the one you want.
+  The lists below are the pairs our forecast puts closest together, a good list and
+  never the pair somebody arrived holding. This is how you reach the one you want.
 %>
-<% sides = %w[First Second] %>
-<% ordinals = %w[first second third] %>
-
-<section class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5"
-         data-controller="comparison-builder"
-         data-comparison-builder-url-value="<%= comparison_search_path %>">
+<section data-controller="comparison-builder"
+         data-comparison-builder-url-value="<%= comparison_search_path %>"
+         data-comparison-builder-committed-value="false">
   <h2 class="text-base font-semibold text-zinc-900">Compare any two players, or any two moves</h2>
   <p class="mt-1 text-sm text-zinc-500">
-    Start typing a name. Every pair in the game has a page, and you can put up to
-    <%= Comparison::MAX %> players on a side to weigh one move against another.
+    Start typing a name on each side. A side can hold one player or the several you would
+    buy in one move, and once both sides have somebody the comparison opens itself.
   </p>
 
-  <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-start">
+  <div class="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
     <% 2.times do |side| %>
-      <% if side == 1 %>
-        <div class="hidden self-center pt-2 text-sm font-semibold text-zinc-400 sm:block">or</div>
-      <% end %>
+      <div data-comparison-builder-target="side" data-side="<%= side %>">
+        <div class="space-y-2">
+          <div class="flex flex-col gap-2 empty:hidden" data-comparison-builder-target="chips"></div>
 
-      <div class="space-y-2">
-        <% Comparison::MAX.times do |slot| %>
-          <%# Only the first box of each side is offered. The rest are here, waiting,
-              because a page that asks for six names is a form and not a question. %>
-          <div class="relative" data-comparison-builder-target="slot"
-               data-side="<%= side %>" data-slot="<%= slot %>" <%= "hidden" if slot.positive? %>>
-            <label class="sr-only" for="comparison-player-<%= side %>-<%= slot %>">
-              <%= sides[side] %> side, <%= ordinals[slot] %> player
+          <div class="relative">
+            <label class="sr-only" for="comparison-add-<%= side %>">
+              Add a player to <%= side.zero? ? "the first" : "the second" %> side
             </label>
-
-            <input type="text" id="comparison-player-<%= side %>-<%= slot %>"
-                   data-comparison-builder-target="input"
+            <input type="text" id="comparison-add-<%= side %>"
+                   data-comparison-builder-target="input" data-side="<%= side %>"
                    data-action="input->comparison-builder#search keydown->comparison-builder#keydown"
-                   autocomplete="off"
-                   placeholder="<%= slot.zero? ? "#{sides[side]} player" : "And also" %>"
-                   class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
-
-            <%# What you picked, standing where the box was. %>
-            <div class="flex items-center justify-between gap-2 rounded-lg border border-zinc-900 bg-white px-3 py-2"
-                 data-comparison-builder-target="chosen" hidden></div>
-
-            <button type="button" hidden
-                    data-comparison-builder-target="clear"
-                    data-action="comparison-builder#clear"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-400 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
-                    aria-label="Choose a different <%= ordinals[slot] %> player on the <%= sides[side].downcase %> side">
-              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
-              </svg>
-            </button>
-
+                   autocomplete="off" placeholder="Add a player"
+                   class="w-full rounded-xl border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm text-zinc-600 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
             <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
-                 data-comparison-builder-target="results" role="listbox" hidden></div>
+                 data-comparison-builder-target="results" data-side="<%= side %>" role="listbox" hidden></div>
           </div>
-        <% end %>
-
-        <button type="button" hidden
-                data-comparison-builder-target="add"
-                data-side="<%= side %>"
-                data-action="comparison-builder#add"
-                class="text-xs font-medium text-zinc-500 underline underline-offset-4 hover:text-zinc-900">
-          and another player
-        </button>
+        </div>
       </div>
     <% end %>
   </div>
 
-  <div class="mt-4 flex flex-wrap items-center gap-3">
-    <button type="button"
-            data-comparison-builder-target="submit"
-            data-action="comparison-builder#compare"
-            class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
-            disabled>
-      Compare them
-    </button>
-    <p class="text-xs text-zinc-500" data-comparison-builder-target="hint">Pick a player on each side.</p>
-  </div>
+  <p class="mt-3 text-xs text-zinc-500" data-comparison-builder-target="hint">Add a player to each side.</p>
 
   <noscript>
     <p class="mt-3 text-xs text-zinc-500">
-      Searching needs JavaScript. The pairs below all work without it, and so does every
+      Searching needs JavaScript. The lists below work without it, and so does every
       /compare address once you have one.
     </p>
   </noscript>

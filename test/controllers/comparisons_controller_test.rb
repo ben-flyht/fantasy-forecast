@@ -111,12 +111,39 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     get comparisons_path
 
     assert_select "[data-controller=comparison-builder]"
-    assert_select "button[data-comparison-builder-target=submit][disabled]"
 
-    # A box for every player a side can hold, but only the first of each side is
-    # offered: the rest are waiting behind "and another player".
-    assert_select "[data-comparison-builder-target=slot]", count: 2 * Comparison::MAX
-    assert_select "[data-comparison-builder-target=slot]:not([hidden])", count: 2
+    # Two sides, a box you can always type into on each, and nobody on either yet.
+    assert_select "[data-comparison-builder-target=side]", count: 2
+    assert_select "input[data-comparison-builder-target=input]", count: 2
+    assert_select "[data-comparison-builder-target=chip]", count: 0
+  end
+
+  test "asking a comparison is counted" do
+    assert_equal 0, ComparisonRequest.where(slug: pair).sum(:hits)
+
+    get comparison_path(pair: pair)
+    get comparison_path(pair: pair)
+
+    assert_equal 2, ComparisonRequest.find_by(slug: pair).hits
+  end
+
+  # The picture a link turns into is fetched by a crawler, not read by a manager, so
+  # it is not a request worth counting.
+  test "fetching the card does not count as asking" do
+    get comparison_path(pair: pair, format: :png)
+
+    assert_nil ComparisonRequest.find_by(slug: pair)
+  end
+
+  test "the hub offers the comparisons people have asked for" do
+    5.times { ComparisonRequest.record(pair) }
+
+    get comparisons_path
+
+    assert_select "h2", text: "Most compared this week"
+    assert_select "section", text: /Most compared/ do
+      assert_select "a[href=?]", comparison_path(pair: pair)
+    end
   end
 
   test "the search says who you might mean" do
@@ -178,12 +205,12 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to comparison_path(pair: group)
   end
 
-  test "an address naming half the league is not a question" do
-    too_many = [ @salah, @palmer, @raya, players(:injured_player) ].map(&:to_param).join("-and-")
+  test "a side can hold as many players as a move needs" do
+    slug = Comparison.new([ @salah, @palmer, @raya ], players(:injured_player)).slug
 
-    get comparison_path(pair: "#{too_many}-vs-#{@raya.to_param}")
+    get comparison_path(pair: slug)
 
-    assert_response :not_found
+    assert_response :success
   end
 
   test "buying the same player twice is not answered by anybody's page" do

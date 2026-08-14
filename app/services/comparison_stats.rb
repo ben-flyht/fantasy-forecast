@@ -24,9 +24,12 @@ class ComparisonStats < ApplicationService
   #   :per_90_mean        a rate over ninety minutes, which cannot be added. It is
   #                       what the pair did between them, so each man's rate counts
   #                       for as much football as `weight` says he played.
-  #   :each               neither. A share of the game's managers and a place in a
-  #                       penalty queue belong to one man, so each is written out and
-  #                       the row favours nobody.
+  #   :mean               a plain average across the side. Ownership is the share of
+  #                       managers holding each man, and a side of them is held by that
+  #                       share on average.
+  #   :each               a figure that belongs to one man, not a side: a place in a
+  #                       penalty queue. It is a straight comparison between two players
+  #                       and nonsense between two groups, so it is drawn for pairs only.
   Stat = Struct.new(:key, :label, :format, :better, :aggregate, :weight, keyword_init: true)
 
   # What a side reads as for one figure: the number the sides are ranked on, and the
@@ -85,7 +88,7 @@ class ComparisonStats < ApplicationService
     ],
     "What the market says" => [
       Stat.new(key: "now_cost", label: "Price", format: :price, better: :low),
-      Stat.new(key: "selected_by_percent", label: "Owned by", format: :percent, better: nil, aggregate: :each),
+      Stat.new(key: "selected_by_percent", label: "Owned by", format: :percent, better: nil, aggregate: :mean),
       Stat.new(key: "transfers_in", label: "Transfers in this week", format: :whole, better: nil),
       Stat.new(key: "transfers_out", label: "Transfers out this week", format: :whole, better: nil)
     ],
@@ -145,10 +148,19 @@ class ComparisonStats < ApplicationService
 
   def row_for(stat, source)
     return unless recorded?(stat, source)
+    return if stat.aggregate == :each && !both_single?
 
     left_reading, right_reading = sides.map { |side| reading_for(stat, side, source) }
     Row.new(label: stat.label, leader: leader(stat, left_reading.value, right_reading.value),
             left: left_reading.text, right: right_reading.text)
+  end
+
+  # A figure that belongs to one man rather than to a side — his place in a penalty
+  # queue — is a straight comparison between two players and nonsense between two
+  # groups ("1st and 3rd and —" against "2nd and — and —" says nothing). So it is
+  # drawn only where both sides are a single player.
+  def both_single?
+    sides.all?(&:single?)
   end
 
   # Somebody has the figure. A keeper's saves and a forward's goals are both in the
@@ -166,7 +178,7 @@ class ComparisonStats < ApplicationService
     return Reading.new(value: values.first, text: display(stat, values.first)) if side.single?
 
     case stat.aggregate
-    when :each then Reading.new(value: nil, text: values.map { |value| display(stat, value) }.join(" and "))
+    when :mean then reading_of(stat, averaged(values))
     when :per_90_mean then reading_of(stat, weighted(stat, side, values, source))
     else reading_of(stat, summed(values))
     end
@@ -184,6 +196,13 @@ class ComparisonStats < ApplicationService
   # left blank rather than reported as the other man's, which would read as the pair's.
   def summed(values)
     values.sum if values.all?
+  end
+
+  # A plain average across the side, for a figure that is neither earned nor a rate:
+  # ownership is what share of managers hold each man, and a side of them is held by
+  # that share on average. Blank unless we have it for everyone, the same as a total.
+  def averaged(values)
+    values.sum / values.size if values.all?
   end
 
   # A rate per ninety minutes is not two rates added together. It is what the side did

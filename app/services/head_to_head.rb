@@ -200,20 +200,6 @@ class HeadToHead < ApplicationService
     left.size == right.size
   end
 
-  # What the sides differ by in price, in FPL's tenths of a million, from the point of
-  # view of the pick. A comparison is only a fair question when the money is level.
-  def price_gap
-    return unless left.cost && right.cost
-
-    (left.cost - right.cost).abs
-  end
-
-  def dearer
-    return unless left.cost && right.cost && left.cost != right.cost
-
-    left.cost > right.cost ? left : right
-  end
-
   def season?
     @horizon == SEASON
   end

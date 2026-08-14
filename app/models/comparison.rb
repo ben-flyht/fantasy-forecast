@@ -19,10 +19,6 @@ class Comparison
   # an address here is read as often as it is clicked.
   JOINER = "-and-".freeze
 
-  # How many players a side can hold. Three is a move worth weighing and the most that
-  # will stand in a column on a phone; past that the page is a squad, not a question.
-  MAX = 3
-
   # One half of the argument: a player, or the players you would buy together.
   class Side
     attr_reader :players
@@ -78,7 +74,7 @@ class Comparison
   # rather than quietly finding somebody else.
   def self.side_from(half)
     params = half.split(JOINER)
-    raise ActiveRecord::RecordNotFound, "Not a side: #{half}" unless params.size.between?(1, MAX)
+    raise ActiveRecord::RecordNotFound, "Not a side: #{half}" if params.empty?
 
     Side.new(params.map { |param| Player.includes(:team).from_param(param) })
   end
