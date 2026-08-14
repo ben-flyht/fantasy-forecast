@@ -10,19 +10,24 @@ This is the reasoning behind that page, and what is still missing from it.
 Two sides. A side is one player, or the two or three you would buy in one move.
 
 ```
-/compare/viktor-gyokeres-25-vs-erling-haaland-411
-/compare/viktor-gyokeres-25-and-igor-thiago-nascimento-rodrigues-106-vs-joao-pedro-junqueira-de-jesus-165-and-erling-haaland-411
+/compare/gyokeres-25-vs-haaland-411
+/compare/gyokeres-25-and-thiago-106-vs-j.pedro-165-and-haaland-411
 ```
 
-`-vs-` separates the sides, `-and-` joins the players on one. There is no limit on how
-many a side holds: a move is usually one or two, but the page adds up however many you
-give it, so nothing about the arithmetic caps the question.
+`-vs-` separates the sides, `-and-` joins the players on one. A player is spelled by his
+short name and id (`Player#comparison_param`), shorter than his own page's full-name
+address, since a full name on both sides of a trade runs the URL long — a 15-a-side is
+700-odd characters as it is. `from_param` reads the id either way, so an older
+first-and-surname comparison link still resolves and is 301'd to the short spelling.
+
+A side holds up to fifteen (`Matchup::MAX_PER_SIDE`) — a squad's worth, far more than
+any real move. Not a limit on the question, a rail against an address hand-typed to name
+half the league, counted from the raw string before a single player is looked up so a
+pathological request is refused rather than run.
 
 Players sort within a side by FPL's own id, so who is on a side has one spelling. A
 one-against-one is symmetric — Salah or Palmer is Palmer or Salah — so its two sides are
-ordered by id as well, and any other spelling is 301'd to it; a pair comes out
-byte-identical to the address it had before groups existed, so nothing crawled or shared
-has moved.
+ordered by id as well, and any other spelling is 301'd to it.
 
 A trade keeps its sides in the order they were written. It is a tool you edit in place,
 and columns that swapped left-for-right as you added or dropped a player would be
@@ -54,18 +59,21 @@ player over one week, and two players' points added together would earn any pair
 Each man keeps his own grade on his own card. A side of one still answers for its
 player, so the page and the card written for a pair did not have to change.
 
-**The table knows what adds up.** `ComparisonStats::Stat#aggregate`:
+**The table is the record, not the forecast.** The cards above say what we expect;
+`ComparisonStats` is what has actually happened — per-90 rates, season totals, current
+form, and FPL's own indices (goals, xG, saves, ICT, threat, and the rest), in one
+group, each row labelled with what it is (a total plainly, a rate as "per 90") so a
+rate is never read as a total. Before a ball is kicked this season it reads last
+season's figures where it has them, then this season's once they exist.
 
-| Rule | Applies to | Why |
-|---|---|---|
-| `:sum` (default) | totals, and anything earned per gameweek: points, minutes, bonus, form, points per game, expected points | you own both, so you collect both |
-| `:per_90_mean` | every `_per_90` rate, weighted by `season_minutes` or `last_season_minutes` | two rates are not one rate when added; this is what the side did between them |
-| `:each` | ownership, set-piece order | a share of the game's managers and a place in a penalty queue belong to one man, so each is written out ("1st and 3rd") and the row favours nobody |
+**A side is its players summed — everything, rates included.** Not a weighted mean: for
+a trade a manager wants the side's combined output a game (two attackers threatening
+1.0 xG a game between them), not an average that describes no player who exists. A sum
+is only a sum when we have all of it, so a side missing one man's figure is blank rather
+than the rest of the side without him, and a row nobody has — or that is nought on both
+sides, like a forward's saves — is not drawn.
 
-A `:sum` with a missing reading is blank, for the same reason a side with an unforecast
-player is.
-
-**The page says what the cards cannot.** Where the sides hold different numbers of
+**The page still says what the cards cannot.** Where the sides hold different numbers of
 players, that this was never a like-for-like question: three players score more than
 two for that reason alone (`ComparisonsHelper#uneven_note`). The price difference is
 left to the players' own prices on their cards; a line spelling it out ("Saka and
@@ -74,31 +82,39 @@ Haaland cost £4.0m more") was tried and removed as noise.
 ## Building and changing an argument
 
 The builder is one component, used two ways. Each side has a box you can always type
-into and the players you have chosen stand as chips above it; a chip carries the
-player's `to_param`, and the chips in the DOM are the state, so nothing is held in step
+into — a proper combobox, so a screen reader announces the option the arrow keys land on
+— and the players you have chosen stand as chips above it; a chip carries the player's
+`comparison_param`, and the chips in the DOM are the state, so nothing is held in step
 with them (`comparison_builder_controller.js`).
 
-On the hub it starts empty and a button takes you to the address it has assembled. On
-a comparison it starts as that comparison's own sides, and there is no button: adding,
-removing or replacing a player `Turbo.visit`s straight to the page for the sides you
-have now, so the address and the answer follow your edits. A side always keeps at
-least one player there, because a side of nobody is not a question — the last chip on a
-live side will not remove until something stands beside it. There is no cap on how many
-a side holds.
+On the hub it starts empty. On a comparison it starts as that comparison's own sides,
+its cards doubling as the chips, each with a cross to drop it. Either way there is no
+button: the moment both sides hold a player, adding, removing or replacing one
+`Turbo.visit`s straight to the page for the sides you have now, so the address and the
+answer follow your edits. A half-built side keeps the address in step through
+`history.replaceState`, so it can be shared or reloaded and picked back up. A side of
+nobody is not a page, so the last chip on a live side empties to its box and waits for a
+replacement rather than leaving. The page is `turbo-cache no-cache`, so back and forward
+re-render rather than restore a snapshot of a moment that has passed.
 
 ## What people ask, and what we offer back
 
-Every comparison that reaches the page is counted against its canonical slug
-(`ComparisonRequest.record`, called from `ComparisonsController#show`). The picture a
-link turns into is not — that is a crawler, not a manager — so only the HTML view is
-counted.
+Every comparison that reaches the page is counted, once a session, against its canonical
+slug for the gameweek (`Comparison.record`, called from `ComparisonsController#show`).
+Once a session, because a manager editing his way to a comparison, or coming back to it,
+is one person asking, not the fifty hits the live editor would otherwise record (the
+slugs he has counted are held as short digests in the cookie). Per gameweek, so a fresh
+set of arguments surfaces each week rather than an all-time list. The picture a link
+turns into is not counted — that is a crawler, not a manager.
 
-`MostRequestedComparisons` reads the top of that tally back: onto the hub as "Most
-compared this week", and into the sitemap alongside the forecast-picked pairs, the
-asked-for ones leading. **Pairs only.** A group is counted the same as a pair, because
-knowing a group was asked is worth having, but the hub is a page to scan and a sitemap
-is an index of pages worth crawling, and neither is served by two-a-side groups. A
-manager builds the group he has in mind; we offer back the straight choices.
+`MostRequestedComparisons` reads the top of that week's tally back: onto the hub as "Most
+compared this week", and into the sitemap alongside the forecast-picked pairs. When the
+week's tally is thin it is topped up with the forecast's closest highly-ranked pairs, so
+the hub always offers something worth reading. **Pairs only.** A group is counted the
+same as a pair — knowing a group was asked is worth having — but the hub is a page to
+scan and the sitemap an index worth crawling, and neither is served by two-a-side groups;
+a `pair` flag on each row lets both read the top pairs without ever resolving (and so
+paying for) a group slug someone may have crafted to be expensive.
 
 ## Indexing
 
@@ -120,11 +136,10 @@ which a page can answer for itself.
 | `app/models/matchup.rb` | the sides an address names, the canonical spelling, what is not a question |
 | `app/models/comparison.rb` | the per-gameweek tally of comparisons asked for (the `comparisons` table) |
 | `app/services/head_to_head.rb` | the sides scored, the pick, the margin, the threshold |
-| `app/services/comparison_stats.rb` | the working underneath, and the aggregation rules |
+| `app/services/comparison_stats.rb` | the underlying record read across two sides, summed and labelled |
 | `app/services/popular_comparisons.rb` | the pairs worth putting on a page (pairs only) |
 | `app/services/related_comparisons.rb` | the next argument (pairs only) |
-| `app/models/comparison_request.rb` | the tally, one row a canonical slug |
-| `app/services/most_requested_comparisons.rb` | the asked-for pairs read back for the hub and sitemap (pairs only) |
+| `app/services/most_requested_comparisons.rb` | the week's asked-for pairs, topped up with close ones, for the hub and sitemap (pairs only) |
 | `app/views/comparisons/show.html.erb` | the answer, with the builder filled in beneath it |
 | `app/views/comparisons/_builder.html.erb` + `comparison_builder_controller.js` | building an argument on the hub, or changing one on its own page |
 | `app/views/cards/comparison.svg.erb` | the picture a pair turns into in a group chat |

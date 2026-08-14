@@ -20,31 +20,58 @@ class ComparisonStats < ApplicationService
 
   Group = Struct.new(:title, :rows, keyword_init: true)
 
+  # Everything we hold, each row labelled with what it is — a total plainly, a rate as
+  # "per 90" — and read down in the order a manager weighs it: form and minutes first,
+  # then attacking output, then defence, then the market's own numbers, then the
+  # discipline that only matters when there is any. A row nobody has, or that is nought
+  # on both sides, is not drawn, so a forward's saves and a keeper's goals stay off the
+  # page.
   UNDERLYING = [
     Stat.new(this: "form", last: nil, label: "Form", better: :high, format: :one),
     Stat.new(this: "season_points", last: "last_season_points", label: "Points", better: :high, format: :whole),
     Stat.new(this: "season_minutes", last: "last_season_minutes", label: "Minutes", better: :high, format: :whole),
+    Stat.new(this: "season_starts", last: nil, label: "Starts", better: :high, format: :whole),
     Stat.new(this: "starts_per_90", last: nil, label: "Starts, per 90", better: :high, format: :two),
+
     Stat.new(this: "season_goals", last: nil, label: "Goals", better: :high, format: :whole),
-    Stat.new(this: "season_assists", last: nil, label: "Assists", better: :high, format: :whole),
+    Stat.new(this: "season_expected_goals", last: nil, label: "Expected goals", better: :high, format: :one),
     Stat.new(this: "expected_goals_per_90", last: "last_season_expected_goals_per_90",
              label: "Expected goals, per 90", better: :high, format: :two),
+    Stat.new(this: "season_assists", last: nil, label: "Assists", better: :high, format: :whole),
+    Stat.new(this: "season_expected_assists", last: nil, label: "Expected assists", better: :high, format: :one),
+    Stat.new(this: "season_expected_goal_involvements", last: nil,
+             label: "Expected goals and assists", better: :high, format: :one),
     Stat.new(this: "expected_goal_involvements_per_90", last: "last_season_expected_goal_involvements_per_90",
              label: "Expected goals and assists, per 90", better: :high, format: :two),
+
+    Stat.new(this: "season_goals_conceded", last: nil, label: "Goals conceded", better: :low, format: :whole),
+    Stat.new(this: "season_expected_goals_conceded", last: nil,
+             label: "Expected goals conceded", better: :low, format: :one),
     Stat.new(this: "expected_goals_conceded_per_90", last: nil,
              label: "Expected goals conceded, per 90", better: :low, format: :two),
+    Stat.new(this: "season_clean_sheets", last: nil, label: "Clean sheets", better: :high, format: :whole),
     Stat.new(this: "clean_sheets_per_90", last: "last_season_clean_sheets_per_90",
              label: "Clean sheets, per 90", better: :high, format: :two),
+    Stat.new(this: "season_saves", last: nil, label: "Saves", better: :high, format: :whole),
     Stat.new(this: "saves_per_90", last: "last_season_saves_per_90",
              label: "Saves, per 90", better: :high, format: :two),
+    Stat.new(this: "season_defensive_contribution", last: nil,
+             label: "Defensive contributions", better: :high, format: :whole),
     Stat.new(this: "defensive_contribution_per_90", last: nil,
              label: "Defensive contributions, per 90", better: :high, format: :two),
+
     Stat.new(this: "season_bonus", last: "last_season_bonus", label: "Bonus points", better: :high, format: :whole),
     Stat.new(this: "bps", last: nil, label: "Bonus points system (BPS)", better: :high, format: :whole),
     Stat.new(this: "ict_index", last: nil, label: "ICT index", better: :high, format: :one),
     Stat.new(this: "threat", last: nil, label: "Threat", better: :high, format: :one),
     Stat.new(this: "creativity", last: nil, label: "Creativity", better: :high, format: :one),
-    Stat.new(this: "influence", last: nil, label: "Influence", better: :high, format: :one)
+    Stat.new(this: "influence", last: nil, label: "Influence", better: :high, format: :one),
+
+    Stat.new(this: "season_penalties_saved", last: nil, label: "Penalties saved", better: :high, format: :whole),
+    Stat.new(this: "season_penalties_missed", last: nil, label: "Penalties missed", better: :low, format: :whole),
+    Stat.new(this: "season_own_goals", last: nil, label: "Own goals", better: :low, format: :whole),
+    Stat.new(this: "season_yellow_cards", last: nil, label: "Yellow cards", better: :low, format: :whole),
+    Stat.new(this: "season_red_cards", last: nil, label: "Red cards", better: :low, format: :whole)
   ].freeze
 
   def initialize(left:, right:)
