@@ -67,11 +67,11 @@ class ComparisonStats < ApplicationService
     key = season_started? ? stat.this : stat.last
     return if key.nil?
 
-    readings = sides.map { |side| reading_for(side, key, stat.format) }
-    present = readings.filter_map(&:value)
+    side_readings = sides.map { |side| reading_for(side, key, stat.format) }
+    present = side_readings.filter_map(&:value)
     return if present.empty? || present.all?(&:zero?)
 
-    row_of(stat, *readings)
+    row_of(stat, *side_readings)
   end
 
   def row_of(stat, left_reading, right_reading)
@@ -93,7 +93,7 @@ class ComparisonStats < ApplicationService
   # Which side the figure favours, where it favours anybody. Equal is nobody: lighting
   # both sides of a row says less than lighting neither.
   def leader(stat, left_value, right_value)
-    return if left_value.nil? || right_value.nil? || left_value == right_value
+    return if stat.better.nil? || left_value.nil? || right_value.nil? || left_value == right_value
 
     higher = left_value > right_value
     higher == (stat.better == :high) ? :left : :right
@@ -110,7 +110,9 @@ class ComparisonStats < ApplicationService
   end
 
   def season_started?
-    Gameweek.finished.any?
+    return @season_started unless @season_started.nil?
+
+    @season_started = Gameweek.finished.any?
   end
 
   def readings

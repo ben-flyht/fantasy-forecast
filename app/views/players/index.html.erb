@@ -26,13 +26,11 @@
                                                 season: horizon_url(:season) })) %>
     </div>
 
-    <%# Each filter on its own line on a phone, one row from sm up: position first,
-        because it is the one that changes what you are looking at, then the team,
-        then the price pushed to the far end where a range belongs. %>
-    <%# Each filter on its own line until there is room for all three across. Position,
-        team and a 160px price slider with its label need the best part of eight hundred
-        pixels between them, so they share a row only from lg up — below that they would
-        crowd and clip rather than sit side by side. %>
+    <%# Each filter on its own line until there is room for all three across. Position
+        (the control that changes what you are looking at) first, then the team, then the
+        price pushed to the far end where a range belongs. Position, team and a 160px
+        slider with its label need the best part of eight hundred pixels between them, so
+        they share a row only from lg up — below that they would crowd and clip. %>
     <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
       <%# The positions are the same control as the horizon above, and links for the
           same reason: /gameweeks/1/goalkeepers is a page people arrive on from a

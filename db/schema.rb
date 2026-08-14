@@ -18,9 +18,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
   create_table "comparison_requests", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "hits", default: 0, null: false
+    t.boolean "pair", default: false, null: false
     t.string "slug", null: false
     t.datetime "updated_at", null: false
-    t.index ["hits"], name: "index_comparison_requests_on_hits"
+    t.index ["pair", "hits"], name: "index_comparison_requests_on_pair_and_hits"
     t.index ["slug"], name: "index_comparison_requests_on_slug", unique: true
   end
 

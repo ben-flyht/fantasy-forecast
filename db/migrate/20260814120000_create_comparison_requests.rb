@@ -9,10 +9,14 @@ class CreateComparisonRequests < ActiveRecord::Migration[8.1]
     create_table :comparison_requests do |t|
       t.string :slug, null: false
       t.integer :hits, null: false, default: 0
+      # Whether the address is a straight pair. The hub and the sitemap surface pairs
+      # only, so the column lets them read the top pairs without parsing — and so
+      # never resolving — a group slug somebody may have crafted to be expensive.
+      t.boolean :pair, null: false, default: false
       t.timestamps
     end
 
     add_index :comparison_requests, :slug, unique: true
-    add_index :comparison_requests, :hits
+    add_index :comparison_requests, [ :pair, :hits ]
   end
 end

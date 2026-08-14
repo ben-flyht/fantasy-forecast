@@ -58,6 +58,27 @@ class ComparisonTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotFound) { Comparison.parse(@salah.to_param) }
   end
 
+  # A rail against an address hand-typed to name half the league: the count is refused
+  # from the raw string, before a single player is looked up.
+  test "a side naming more than the cap is refused before any lookup" do
+    too_many = (1..(Comparison::MAX_PER_SIDE + 1)).map { |i| "player-#{i}" }.join("-and-")
+
+    assert_raises(ActiveRecord::RecordNotFound) { Comparison.parse("#{too_many}-vs-#{@salah.to_param}") }
+  end
+
+  test "an empty address is empty, and a half-built one is not answerable" do
+    assert Comparison.parse("-vs-").empty?
+
+    building = Comparison.parse("#{@salah.to_param}-vs-")
+    assert_not building.empty?
+    assert_not building.answerable?
+  end
+
+  test "a distinct player each side is answerable, a duplicate across sides is not" do
+    assert Comparison.new(@salah, @palmer).answerable?
+    assert_not Comparison.new([ @salah, @palmer ], [ @salah, @raya ]).answerable?
+  end
+
   test "a name we do not know is not found rather than guessed at" do
     assert_raises(ActiveRecord::RecordNotFound) { Comparison.parse("nobody-99999-vs-#{@salah.to_param}") }
   end

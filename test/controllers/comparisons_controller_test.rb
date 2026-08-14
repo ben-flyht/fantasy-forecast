@@ -135,8 +135,18 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     assert_nil ComparisonRequest.find_by(slug: pair)
   end
 
+  # A side still being filled is not a question yet, so it is not counted.
+  test "a comparison still being built is not counted as asked" do
+    building = "#{@salah.to_param}-vs-"
+
+    get comparison_path(pair: building)
+
+    assert_response :success
+    assert_nil ComparisonRequest.find_by(slug: building)
+  end
+
   test "the hub offers the comparisons people have asked for" do
-    5.times { ComparisonRequest.record(pair) }
+    5.times { ComparisonRequest.record(Comparison.new(@salah, @palmer)) }
 
     get comparisons_path
 

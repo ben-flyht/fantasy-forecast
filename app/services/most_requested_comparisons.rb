@@ -15,10 +15,12 @@ class MostRequestedComparisons < ApplicationService
     @limit = limit
   end
 
-  # More rows are read than are shown, so groups and players since transferred out do
-  # not leave the list short.
+  # Pairs only, and more rows read than shown, so players since transferred out do not
+  # leave the list short. Reading `pair: true` means no group slug is ever parsed here,
+  # so a crafted one cannot make this query expensive.
   def call
-    ComparisonRequest.order(hits: :desc, updated_at: :desc)
+    ComparisonRequest.where(pair: true)
+                     .order(hits: :desc, updated_at: :desc)
                      .limit(@limit * 4)
                      .filter_map { |request| pair_for(request.slug) }
                      .first(@limit)

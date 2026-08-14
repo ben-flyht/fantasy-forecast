@@ -19,6 +19,12 @@ class Comparison
   # an address here is read as often as it is clicked.
   JOINER = "-and-".freeze
 
+  # How many players a side can name. Not a limit on the question — a whole squad is
+  # more than anyone weighs in one move — but a rail against an address hand-typed to
+  # name half the league, counted from the raw string before a single player is looked
+  # up so a pathological request is refused rather than run.
+  MAX_PER_SIDE = 15
+
   # One half of the argument: a player, or the players you would buy together.
   class Side
     attr_reader :players
@@ -80,7 +86,10 @@ class Comparison
   # id and is not found, rather than quietly finding somebody else. An empty half is a
   # side nobody has been put on yet.
   def self.side_from(half)
-    Side.new(half.split(JOINER).map { |param| Player.includes(:team).from_param(param) })
+    params = half.split(JOINER)
+    raise ActiveRecord::RecordNotFound, "Too many on a side: #{half}" if params.size > MAX_PER_SIDE
+
+    Side.new(params.map { |param| Player.includes(:team).from_param(param) })
   end
   private_class_method :side_from
 

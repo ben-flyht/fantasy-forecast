@@ -48,7 +48,6 @@ class ComparisonsController < ApplicationController
   # what there is so far. It is reached by keeping the address in step with the builder,
   # so a half-built comparison can be shared, bookmarked or reloaded and picked back up.
   def render_building
-    @building = true
     respond_to do |format|
       format.html { render :show }
       format.png { head :not_found }
@@ -59,7 +58,7 @@ class ComparisonsController < ApplicationController
   # hub and the sitemap can offer the ones people actually ask. See
   # MostRequestedComparisons for what is then surfaced, which is pairs only.
   def record_request
-    ComparisonRequest.record(@comparison.slug)
+    ComparisonRequest.record(@comparison)
   end
 
   def horizon

@@ -115,4 +115,19 @@ class ComparisonStatsTest < ActiveSupport::TestCase
 
     assert_equal [ "Form" ], stats.flat_map(&:rows).map(&:label)
   end
+
+  # Nought on both sides says nothing, so it is not drawn.
+  test "a row that is nought on both sides is not drawn" do
+    reading(@salah, "season_goals", 0)
+    reading(@palmer, "season_goals", 0)
+
+    assert_nil row("Goals")
+  end
+
+  test "two equal figures light neither side" do
+    reading(@salah, "form", 4.0)
+    reading(@palmer, "form", 4.0)
+
+    assert_nil row("Form").leader
+  end
 end
