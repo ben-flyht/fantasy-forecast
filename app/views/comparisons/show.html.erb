@@ -1,3 +1,4 @@
+<% if @comparison.answerable? %>
 <% reach = Horizon.find(@head_to_head.horizon) %>
 <% horizon_words = reach.label(gameweek: @gameweek&.fpl_id) %>
 <% content_for :meta_title, "#{comparison_title(@comparison)} FPL #{horizon_words} | Fantasy Forecast" %>
@@ -32,8 +33,7 @@
     the sides you have now. %>
 <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4"
      data-controller="comparison-builder"
-     data-comparison-builder-url-value="<%= comparison_search_path %>"
-     data-comparison-builder-committed-value="true">
+     data-comparison-builder-url-value="<%= comparison_search_path %>">
   <% @head_to_head.sides.each_with_index do |side, index| %>
     <% picked = @head_to_head.pick == side %>
     <div data-comparison-card data-pick="<%= picked %>"
@@ -45,7 +45,7 @@
       <div class="mb-1.5 flex h-[18px] items-center">
         <% if picked %>
           <span class="rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wider text-white">
-            Our pick<%= ", just" if @head_to_head.close? %>
+            Our pick
           </span>
         <% end %>
       </div>
@@ -53,12 +53,13 @@
       <%# Both sides carry the same ring and padding, the loser's ring merely
           transparent, so the two columns stay aligned to the pixel. %>
       <% ring = "rounded-xl ring-2 #{picked ? 'ring-zinc-900' : 'ring-transparent'}" %>
-      <% ring += " p-1.5" unless side.single? %>
+      <% ring += " p-1.5" if @comparison.group? %>
 
       <div class="<%= ring %>">
-        <%# What the side is worth altogether, above the players it is made of. A column
-            of two cards with no total is two answers where the reader wanted one. %>
-        <% unless side.single? %>
+        <%# What the side is worth altogether, above the players it is made of. Drawn on
+            both sides of a trade, a single player included, so one against two reads as a
+            total against a total rather than a card beside a stack. %>
+        <% if @comparison.group? %>
           <div class="mb-2 flex items-start justify-between gap-3 rounded-lg bg-zinc-100 px-3 py-2">
             <div>
               <p class="text-2xl font-extrabold leading-none tabular-nums tracking-[-0.03em] text-zinc-950">
@@ -82,16 +83,16 @@
             <div class="relative" data-comparison-builder-target="chip"
                  data-side="<%= index %>" data-param="<%= member.player.to_param %>">
               <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(member)) %>
-              <% if side.size > 1 %>
-                <button type="button" data-action="comparison-builder#remove"
-                        aria-label="Remove <%= member.player.display_name %>"
-                        style="<%= remove_button_style(member.player.team) %>"
-                        class="absolute right-2 top-2 z-10 rounded-full p-1 shadow ring-1 ring-black/10 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-black/30">
-                  <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
-                  </svg>
-                </button>
-              <% end %>
+              <%# A cross on every card, a side of one included: taking the last player off
+                  a side empties it to its box so somebody else can take his place. %>
+              <button type="button" data-action="comparison-builder#remove"
+                      aria-label="Remove <%= member.player.display_name %>"
+                      style="<%= remove_button_style(member.player.team) %>"
+                      class="absolute right-2 top-2 z-10 cursor-pointer rounded-full p-1 shadow ring-1 ring-black/10 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-black/30">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+                </svg>
+              </button>
             </div>
           <% end %>
 
@@ -186,4 +187,21 @@
       <% end %>
     </ul>
   </section>
+<% end %>
+
+<% else %>
+  <%# A comparison still being built: the same two columns, filled with what there is,
+      and no answer yet. Reached by keeping the address in step with the builder, so a
+      half-built comparison reloads where it was left. %>
+  <% content_for :meta_title, "Compare FPL Players | Fantasy Forecast" %>
+  <% content_for :meta_robots, "noindex, follow" %>
+
+  <%= render PageHeadingComponent.new(
+        title: "Compare players, or weigh a trade",
+        subtitle: "Add a player to each side and the answer opens itself.",
+        back: back_to("Comparisons", comparisons_path)) %>
+
+  <div class="mt-6">
+    <%= render "comparisons/builder", sides: @comparison.sides.map(&:players) %>
+  </div>
 <% end %>

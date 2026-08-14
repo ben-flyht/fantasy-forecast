@@ -25,6 +25,9 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
     visit comparisons_path
 
     add(0, "salah", @salah.full_name)
+    # The address keeps up before the comparison is whole.
+    assert_current_path comparison_path(pair: "#{@salah.to_param}-vs-")
+
     add(1, "palmer", @palmer.full_name)
 
     assert_current_path comparison_path(pair: Comparison.new(@salah, @palmer).slug)
@@ -51,6 +54,23 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
     end
   end
 
+  # The names under the box are walked with the arrow keys and taken with Enter, no
+  # reach for the mouse.
+  test "a player can be chosen with the keyboard" do
+    visit comparisons_path
+
+    within "[data-comparison-builder-target=side][data-side='0']" do
+      input = find("input[data-comparison-builder-target=input]")
+      input.set("salah")
+      assert_button @salah.full_name
+      input.send_keys(:arrow_down, :enter)
+    end
+
+    add(1, "palmer", @palmer.full_name)
+
+    assert_current_path comparison_path(pair: Comparison.new(@salah, @palmer).slug)
+  end
+
   # The comparison is edited in the same two columns it is read in. Adding a player to
   # a side takes you to the page for the sides you have now, address and all.
   test "adding a player on a comparison follows to the new sides" do
@@ -61,8 +81,23 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
     assert_current_path comparison_path(pair: Comparison.new([ @salah, @raya ], @palmer).slug)
   end
 
-  # A card carries a cross once its side holds more than one, and taking it off drops
-  # back to the smaller comparison.
+  # Taking the last player off a side empties it to its box rather than blocking, so a
+  # lone player can be swapped for another.
+  test "removing a lone player leaves the side open for a replacement" do
+    visit comparison_path(pair: Comparison.new(@salah, @palmer).slug)
+
+    within "[data-comparison-builder-target=chip][data-param='#{@salah.to_param}']" do
+      find("button[data-action='comparison-builder#remove']").click
+    end
+    assert_no_selector "[data-comparison-builder-target=chip][data-param='#{@salah.to_param}']"
+
+    add(0, "raya", @raya.full_name)
+
+    assert_current_path comparison_path(pair: Comparison.new(@raya, @palmer).slug)
+  end
+
+  # A card carries a cross, a side of one included, and taking it off drops back to the
+  # smaller comparison.
   test "removing a player from a side follows to the smaller comparison" do
     visit comparison_path(pair: Comparison.new([ @salah, @raya ], @palmer).slug)
 

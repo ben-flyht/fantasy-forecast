@@ -18,10 +18,18 @@ Two sides. A side is one player, or the two or three you would buy in one move.
 many a side holds: a move is usually one or two, but the page adds up however many you
 give it, so nothing about the arithmetic caps the question.
 
-Every ordering of the same argument is one page. Players sort within a side by FPL's
-own id, then the sides sort by the lowest id on each, and any other spelling is 301'd
-to that one. A side of one comes out byte-identical to the address it had before groups
-existed, so nothing that was crawled or shared has moved.
+Players sort within a side by FPL's own id, so who is on a side has one spelling. A
+one-against-one is symmetric — Salah or Palmer is Palmer or Salah — so its two sides are
+ordered by id as well, and any other spelling is 301'd to it; a pair comes out
+byte-identical to the address it had before groups existed, so nothing crawled or shared
+has moved.
+
+A trade keeps its sides in the order they were written. It is a tool you edit in place,
+and columns that swapped left-for-right as you added or dropped a player would be
+unreadable, so the two orderings of a trade's *sides* are two addresses. Everything else
+is still tidied to one: reorder the players within a side and you are 301'd to the
+spelling that sorts them. Groups are `noindex` regardless (see below), so the pair of
+side-orderings costs nothing a crawler would spend.
 
 **Why groups at all.** A manager with two free transfers is not choosing between two
 players. He was opening two pair pages and doing the addition himself, and that

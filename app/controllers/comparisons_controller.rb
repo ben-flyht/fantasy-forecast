@@ -24,8 +24,10 @@ class ComparisonsController < ApplicationController
 
   def show
     @comparison = Comparison.parse(params[:pair])
+    return redirect_to comparisons_path if @comparison.empty?
     return if redirect_to_one_player
     return if redirect_to_canonical_order
+    return render_building unless @comparison.answerable?
 
     load_head_to_head
 
@@ -40,6 +42,17 @@ class ComparisonsController < ApplicationController
   def render_comparison
     record_request
     @related = related_comparisons
+  end
+
+  # A side still being filled has no answer to draw, so the page is the builder with
+  # what there is so far. It is reached by keeping the address in step with the builder,
+  # so a half-built comparison can be shared, bookmarked or reloaded and picked back up.
+  def render_building
+    @building = true
+    respond_to do |format|
+      format.html { render :show }
+      format.png { head :not_found }
+    end
   end
 
   # Every argument that reaches the page is counted against its canonical slug, so the

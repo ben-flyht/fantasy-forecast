@@ -190,19 +190,40 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     get comparison_path(pair: group)
 
     assert_response :success
-    assert_select "h1", text: "David Raya, or Mohamed Salah and Cole Palmer?"
+    assert_select "h1", text: "Mohamed Salah and Cole Palmer, or David Raya?"
     assert_select "[data-comparison-card]", count: 2
     assert_select "[data-comparison-card][data-pick=true]", text: /Salah/
     assert_select "[data-comparison-card][data-pick=true]", text: /9\.3/
   end
 
-  test "every order of a group is the same argument, and one of them is the page" do
+  # Within a side the order does not matter and is tidied to one spelling. The sides
+  # themselves are left where they were put, so a trade does not swap its columns.
+  test "a group tidies each side but keeps the sides where they are" do
     forecast_raya
+    tidy = "#{@raya.to_param}-vs-#{@salah.to_param}-and-#{@palmer.to_param}"
 
     get comparison_path(pair: "#{@raya.to_param}-vs-#{@palmer.to_param}-and-#{@salah.to_param}")
+    assert_redirected_to comparison_path(pair: tidy)
 
-    assert_response :moved_permanently
-    assert_redirected_to comparison_path(pair: group)
+    get comparison_path(pair: tidy)
+    assert_response :success
+  end
+
+  # The address keeps up with the builder a player at a time, so a half-built
+  # comparison can be shared or reloaded and picked back up.
+  test "a comparison still being built shows the builder, not an answer" do
+    get comparison_path(pair: "#{@salah.to_param}-vs-")
+
+    assert_response :success
+    assert_select "[data-controller=comparison-builder]"
+    assert_select "[data-comparison-builder-target=chip][data-param='#{@salah.to_param}']"
+    assert_select "[data-comparison-card]", count: 0
+  end
+
+  test "the empty builder address is just the hub" do
+    get comparison_path(pair: "-vs-")
+
+    assert_redirected_to comparisons_path
   end
 
   test "a side can hold as many players as a move needs" do

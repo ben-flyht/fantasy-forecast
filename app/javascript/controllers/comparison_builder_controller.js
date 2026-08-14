@@ -6,15 +6,13 @@ import { Controller } from "@hotwired/stimulus"
 //
 // The moment both sides hold a player there is a page for them, so we go to it. On the
 // hub that turns a first pick on each side into the comparison; on the comparison it
-// turns every add, remove or swap into the page for the sides you have now. The chips
-// in the DOM are the state, so nothing is held in step with them.
-//
-// `committed` is set on a comparison, where a side may not drop below the one player it
-// needs to stay a question. On the hub it is unset, and a side empties freely while you
-// are still deciding who goes on it.
+// turns every add, remove or swap into the page for the sides you have now. Take the
+// last player off a side and it empties to its box, waiting for whoever replaces him,
+// because an empty side is not yet a question. The chips in the DOM are the state, so
+// nothing is held in step with them.
 export default class extends Controller {
   static targets = ["side", "chips", "chip", "input", "results", "hint"]
-  static values = { url: String, committed: Boolean }
+  static values = { url: String }
 
   // How long to wait after the last keystroke before asking. Short enough to feel
   // immediate, long enough that typing a name is one request rather than eight.
@@ -22,6 +20,7 @@ export default class extends Controller {
 
   connect() {
     this.timers = new Map()
+    this.active = new Map()
     this.render()
   }
 
@@ -59,17 +58,19 @@ export default class extends Controller {
 
     if (players.length === 0) {
       list.hidden = true
+      this.active.delete(side)
       return
     }
 
     players.forEach((player) => {
       const option = document.createElement("button")
       option.type = "button"
+      option.role = "option"
       option.dataset.action = "click->comparison-builder#choose"
       option.dataset.side = side
       option.dataset.player = JSON.stringify(player)
       option.className =
-        "flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none"
+        "flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none aria-selected:bg-zinc-100"
       option.innerHTML =
         `<span class="font-medium text-zinc-900"></span>` +
         `<span class="text-xs text-zinc-500"></span>`
@@ -79,6 +80,22 @@ export default class extends Controller {
     })
 
     list.hidden = false
+    this.active.set(side, 0)
+    this.paintHighlight(side)
+  }
+
+  paintHighlight(side) {
+    const options = this.optionsFor(side)
+    const index = this.active.get(side)
+    options.forEach((option, position) => {
+      const on = position === index
+      option.setAttribute("aria-selected", on)
+      if (on) option.scrollIntoView({ block: "nearest" })
+    })
+  }
+
+  optionsFor(side) {
+    return Array.from(this.resultsFor(side).querySelectorAll("button"))
   }
 
   choose(event) {
@@ -93,43 +110,77 @@ export default class extends Controller {
     this.showResults(side, [])
 
     // Both sides filled: there is a page for them, and it is drawn with the real
-    // cards. Otherwise keep the pick here as a chip and let the other side catch up.
+    // cards. Otherwise keep the pick here as a chip, and let the address keep up so a
+    // half-built comparison can be shared or reloaded where it was left.
     if (this.bothFilled(sides)) return this.visit(sides)
 
-    this.chipsFor(side).appendChild(this.chip(side, player))
+    this.chipsFor(side)?.appendChild(this.chip(side, player))
     this.render()
+    this.reflect(sides)
     input.focus()
   }
 
   remove(event) {
     const chip = event.currentTarget.closest("[data-comparison-builder-target=chip]")
     const side = this.sideOf(chip)
+    chip.remove()
 
     const sides = this.sidesParams()
-    sides[side] = sides[side].filter((param) => param !== chip.dataset.param)
 
+    // Still a player on each side: there is a smaller comparison, so go to it. Take the
+    // last one off a side and it empties to its box, waiting for whoever replaces him;
+    // an empty side is not a page, so we stay until it is filled again.
     if (this.bothFilled(sides)) return this.visit(sides)
 
-    // A comparison keeps a player a side; on the hub a side may empty while building.
-    if (this.committedValue) return
-
-    chip.remove()
     this.render()
+    this.reflect(sides)
+    this.inputFor(side).focus()
   }
 
-  // Enter on a box takes the first name under it, which is what a list of names under
-  // a box is for.
+  // Walk the names under the box with the arrow keys, take the highlighted one with
+  // Enter, and dismiss the list with Escape. The first name is highlighted the moment
+  // the list opens, so Enter still takes it without a keystroke in between.
   keydown(event) {
-    if (event.key !== "Enter") return
-    event.preventDefault()
+    const side = this.sideOf(event.target)
+    const options = this.optionsFor(side)
+    if (options.length === 0) return
 
-    const first = this.resultsFor(this.sideOf(event.target)).querySelector("button")
-    if (first) first.click()
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault()
+        this.active.set(side, Math.min((this.active.get(side) ?? -1) + 1, options.length - 1))
+        this.paintHighlight(side)
+        break
+      case "ArrowUp":
+        event.preventDefault()
+        this.active.set(side, Math.max((this.active.get(side) ?? 0) - 1, 0))
+        this.paintHighlight(side)
+        break
+      case "Enter": {
+        event.preventDefault()
+        const chosen = options[this.active.get(side) ?? 0]
+        if (chosen) chosen.click()
+        break
+      }
+      case "Escape":
+        this.showResults(side, [])
+        break
+    }
   }
 
   visit(sides) {
-    const address = sides.map((players) => players.join("-and-")).join("-vs-")
-    Turbo.visit(`/compare/${address}`, { action: "advance" })
+    Turbo.visit(`/compare/${this.address(sides)}`, { action: "advance" })
+  }
+
+  // Keep the address in step with a half-built comparison, without loading anything:
+  // the sides so far are in the bar, so it can be shared or reloaded and picked up.
+  reflect(sides) {
+    const url = sides.flat().length ? `/compare/${this.address(sides)}` : "/compare"
+    history.replaceState(history.state, "", url)
+  }
+
+  address(sides) {
+    return sides.map((players) => players.join("-and-")).join("-vs-")
   }
 
   bothFilled(sides) {

@@ -7,9 +7,10 @@
   The lists below are the pairs our forecast puts closest together, a good list and
   never the pair somebody arrived holding. This is how you reach the one you want.
 %>
+<% sides = local_assigns.fetch(:sides, [ [], [] ]) %>
+
 <section data-controller="comparison-builder"
-         data-comparison-builder-url-value="<%= comparison_search_path %>"
-         data-comparison-builder-committed-value="false">
+         data-comparison-builder-url-value="<%= comparison_search_path %>">
   <h2 class="text-base font-semibold text-zinc-900">Compare any two players, or any two moves</h2>
   <p class="mt-1 text-sm text-zinc-500">
     Start typing a name on each side. A side can hold one player or the several you would
@@ -20,7 +21,22 @@
     <% 2.times do |side| %>
       <div data-comparison-builder-target="side" data-side="<%= side %>">
         <div class="space-y-2">
-          <div class="flex flex-col gap-2 empty:hidden" data-comparison-builder-target="chips"></div>
+          <div class="flex flex-col gap-2 empty:hidden" data-comparison-builder-target="chips">
+            <% sides[side].each do |player| %>
+              <div class="relative rounded-xl border border-zinc-200 bg-white px-3 py-2 pr-8"
+                   data-comparison-builder-target="chip" data-side="<%= side %>" data-param="<%= player.to_param %>">
+                <p class="text-sm font-medium text-zinc-900"><%= player.full_name %></p>
+                <p class="text-xs text-zinc-500"><%= [ player.team&.short_name, FantasyForecast::POSITION_CONFIG.dig(player.position, :display_name) ].compact.join(" · ") %></p>
+                <button type="button" data-action="comparison-builder#remove"
+                        aria-label="Remove <%= player.display_name %>"
+                        class="absolute right-2 top-2 cursor-pointer rounded p-0.5 text-zinc-400 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20">
+                  <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+                  </svg>
+                </button>
+              </div>
+            <% end %>
+          </div>
 
           <div class="relative">
             <label class="sr-only" for="comparison-add-<%= side %>">
@@ -38,8 +54,6 @@
       </div>
     <% end %>
   </div>
-
-  <p class="mt-3 text-xs text-zinc-500" data-comparison-builder-target="hint">Add a player to each side.</p>
 
   <noscript>
     <p class="mt-3 text-xs text-zinc-500">

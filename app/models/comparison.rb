@@ -47,36 +47,40 @@ class Comparison
       players.first if single?
     end
 
-    # What the side sorts by, which is the lowest id on it.
-    def fpl_id = players.first.fpl_id
+    # What the side sorts by, which is the lowest id on it. A side still being filled
+    # has nobody to sort by yet.
+    def fpl_id = players.first&.fpl_id
   end
 
   attr_reader :left, :right
 
+  # A one-against-one is symmetric — Salah or Palmer is Palmer or Salah — so its two
+  # sides are ordered by FPL id and the other spelling redirects to it. A trade is read
+  # in the order it is written and its sides stay where they were put, so adding or
+  # dropping a player never makes the two columns swap places. The players within a
+  # side are always ordered, so only the sides themselves are left alone.
   def initialize(left, right)
-    @left, @right = [ Side.wrap(left), Side.wrap(right) ].sort_by(&:fpl_id)
+    sides = [ Side.wrap(left), Side.wrap(right) ]
+    @left, @right = sides.all?(&:single?) ? sides.sort_by(&:fpl_id) : sides
   end
 
-  # The sides an address names, whichever order it named them in.
+  # The sides an address names, whichever order it named them in. A side may be empty
+  # — "salah-200-vs-" — because a comparison is built a player at a time and the address
+  # keeps up with it; that address has no answer yet, only a side still being filled.
   def self.parse(slug)
     left, right = slug.to_s.split(SEPARATOR, 2)
-    raise ActiveRecord::RecordNotFound, "Not a pair: #{slug}" if right.blank?
+    raise ActiveRecord::RecordNotFound, "Not a comparison: #{slug}" if right.nil?
 
     new(side_from(left), side_from(right))
   end
 
-  # One side of an address, counted before it is fetched, so a hand-typed address
-  # naming a dozen players is refused rather than looked up.
-  #
-  # The split is on " and " as an address spells it, which a player's own name cannot
-  # contain: names are parameterized and the id on the end of each is the part that
-  # identifies him. A split in the wrong place therefore loses an id and is not found,
-  # rather than quietly finding somebody else.
+  # One side of an address. The split is on " and " as an address spells it, which a
+  # player's own name cannot contain: names are parameterized and the id on the end of
+  # each is the part that identifies him. A split in the wrong place therefore loses an
+  # id and is not found, rather than quietly finding somebody else. An empty half is a
+  # side nobody has been put on yet.
   def self.side_from(half)
-    params = half.split(JOINER)
-    raise ActiveRecord::RecordNotFound, "Not a side: #{half}" if params.empty?
-
-    Side.new(params.map { |param| Player.includes(:team).from_param(param) })
+    Side.new(half.split(JOINER).map { |param| Player.includes(:team).from_param(param) })
   end
   private_class_method :side_from
 
@@ -94,6 +98,17 @@ class Comparison
   # page nobody arrives at from a search, so it is kept out of the index.
   def group?
     sides.any? { |side| !side.single? }
+  end
+
+  # No player on either side: the empty builder, not a comparison.
+  def empty?
+    players.empty?
+  end
+
+  # A player on each side, and nobody named twice, so there is an answer to draw. A
+  # side still being filled has no answer yet, only a builder.
+  def answerable?
+    left.players.any? && right.players.any? && valid?
   end
 
   # Comparing a player with himself is not a question, and neither is buying one of

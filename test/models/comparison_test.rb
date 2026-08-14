@@ -19,21 +19,23 @@ class ComparisonTest < ActiveSupport::TestCase
   test "a side of two is joined by the word somebody would say" do
     comparison = Comparison.new([ @palmer, @salah ], @raya)
 
-    assert_equal "#{@raya.to_param}-vs-#{@salah.to_param}-and-#{@palmer.to_param}", comparison.slug
+    assert_equal "#{@salah.to_param}-and-#{@palmer.to_param}-vs-#{@raya.to_param}", comparison.slug
   end
 
-  test "every order of the same argument is sent to one spelling of it" do
+  # Within a side the order does not matter; the sides themselves are kept as written,
+  # so a trade never swaps its columns.
+  test "within a side the order does not matter, but the sides are kept" do
     canonical = Comparison.new([ @salah, @palmer ], [ @raya, @injured ]).slug
 
     assert_equal canonical, Comparison.new([ @palmer, @salah ], [ @injured, @raya ]).slug
-    assert_equal canonical, Comparison.new([ @injured, @raya ], [ @palmer, @salah ]).slug
+    assert_not_equal canonical, Comparison.new([ @injured, @raya ], [ @palmer, @salah ]).slug
   end
 
   test "an address is read back as the sides it names" do
     comparison = Comparison.parse("#{@salah.to_param}-and-#{@palmer.to_param}-vs-#{@raya.to_param}")
 
-    assert_equal [ @raya ], comparison.left.players
-    assert_equal [ @salah, @palmer ], comparison.right.players
+    assert_equal [ @salah, @palmer ], comparison.left.players
+    assert_equal [ @raya ], comparison.right.players
   end
 
   test "a side of one is a player, and a side of two is nobody in particular" do
@@ -79,6 +81,6 @@ class ComparisonTest < ActiveSupport::TestCase
   test "the players are everybody named, whichever side they are on" do
     comparison = Comparison.new([ @salah, @palmer ], @raya)
 
-    assert_equal [ @raya, @salah, @palmer ], comparison.players
+    assert_equal [ @salah, @palmer, @raya ], comparison.players
   end
 end
