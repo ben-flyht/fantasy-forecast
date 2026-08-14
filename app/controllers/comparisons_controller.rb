@@ -23,7 +23,7 @@ class ComparisonsController < ApplicationController
   end
 
   def show
-    @comparison = Comparison.parse(params[:pair])
+    @comparison = Matchup.parse(params[:pair])
     return redirect_to comparisons_path if @comparison.empty?
     return if redirect_to_one_player
     return if redirect_to_canonical_order
@@ -64,7 +64,7 @@ class ComparisonsController < ApplicationController
   def record_request
     return unless @gameweek && first_in_session?
 
-    ComparisonRequest.record(@comparison, @gameweek)
+    Comparison.record(@comparison, @gameweek)
   end
 
   # Held once, not requested one at a time.

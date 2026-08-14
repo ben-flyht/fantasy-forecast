@@ -117,7 +117,8 @@ which a page can answer for itself.
 
 | File | What it holds |
 |---|---|
-| `app/models/comparison.rb` | the sides an address names, the canonical spelling, what is not a question |
+| `app/models/matchup.rb` | the sides an address names, the canonical spelling, what is not a question |
+| `app/models/comparison.rb` | the per-gameweek tally of comparisons asked for (the `comparisons` table) |
 | `app/services/head_to_head.rb` | the sides scored, the pick, the margin, the threshold |
 | `app/services/comparison_stats.rb` | the working underneath, and the aggregation rules |
 | `app/services/popular_comparisons.rb` | the pairs worth putting on a page (pairs only) |

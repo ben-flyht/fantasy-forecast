@@ -48,8 +48,8 @@ class ComparisonStats < ApplicationService
   ].freeze
 
   def initialize(left:, right:)
-    @left = Comparison::Side.wrap(left)
-    @right = Comparison::Side.wrap(right)
+    @left = Matchup::Side.wrap(left)
+    @right = Matchup::Side.wrap(right)
   end
 
   def call

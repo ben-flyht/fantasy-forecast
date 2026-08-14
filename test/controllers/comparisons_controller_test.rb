@@ -12,12 +12,12 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   end
 
   def pair
-    Comparison.new(@salah, @palmer).slug
+    Matchup.new(@salah, @palmer).slug
   end
 
   # Two free transfers: these two, or him?
   def group
-    Comparison.new([ @salah, @palmer ], @raya).slug
+    Matchup.new([ @salah, @palmer ], @raya).slug
   end
 
   def forecast_raya
@@ -124,7 +124,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     get comparison_path(pair: pair)
     get comparison_path(pair: pair)
 
-    assert_equal 1, ComparisonRequest.find_by(slug: pair).hits
+    assert_equal 1, Comparison.find_by(slug: pair).hits
   end
 
   test "a fresh session is a fresh ask" do
@@ -133,7 +133,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     session = open_session
     session.get comparison_path(pair: pair)
 
-    assert_equal 2, ComparisonRequest.find_by(slug: pair).hits
+    assert_equal 2, Comparison.find_by(slug: pair).hits
   end
 
   # The picture a link turns into is fetched by a crawler, not read by a manager, so
@@ -141,7 +141,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   test "fetching the card does not count as asking" do
     get comparison_path(pair: pair, format: :png)
 
-    assert_nil ComparisonRequest.find_by(slug: pair)
+    assert_nil Comparison.find_by(slug: pair)
   end
 
   # A side still being filled is not a question yet, so it is not counted.
@@ -151,11 +151,11 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     get comparison_path(pair: building)
 
     assert_response :success
-    assert_nil ComparisonRequest.find_by(slug: building)
+    assert_nil Comparison.find_by(slug: building)
   end
 
   test "the hub offers the comparisons people have asked for" do
-    5.times { ComparisonRequest.record(Comparison.new(@salah, @palmer), @gameweek) }
+    5.times { Comparison.record(Matchup.new(@salah, @palmer), @gameweek) }
 
     get comparisons_path
 
@@ -246,7 +246,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a side can hold as many players as a move needs" do
-    slug = Comparison.new([ @salah, @palmer, @raya ], players(:injured_player)).slug
+    slug = Matchup.new([ @salah, @palmer, @raya ], players(:injured_player)).slug
 
     get comparison_path(pair: slug)
 

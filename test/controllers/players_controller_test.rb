@@ -105,7 +105,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
 
     get player_path(@player)
 
-    assert_select "a[href=?]", comparison_path(pair: Comparison.new(@player, rival).slug)
+    assert_select "a[href=?]", comparison_path(pair: Matchup.new(@player, rival).slug)
   end
 
   test "a ranking page has a share card of its own" do

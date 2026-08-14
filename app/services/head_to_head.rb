@@ -98,8 +98,8 @@ class HeadToHead < ApplicationService
   end
 
   def initialize(left:, right:, gameweek:, horizon: "gameweek")
-    @left_side = Comparison::Side.wrap(left)
-    @right_side = Comparison::Side.wrap(right)
+    @left_side = Matchup::Side.wrap(left)
+    @right_side = Matchup::Side.wrap(right)
     @gameweek = gameweek
     @horizon = horizon
   end

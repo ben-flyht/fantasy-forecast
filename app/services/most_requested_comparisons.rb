@@ -34,7 +34,7 @@ class MostRequestedComparisons < ApplicationService
 
   # More rows read than shown, so players since transferred out do not leave it short.
   def asked_pairs
-    ComparisonRequest.where(gameweek: @gameweek, pair: true)
+    Comparison.where(gameweek: @gameweek, pair: true)
                      .order(hits: :desc, updated_at: :desc)
                      .limit(@limit * 4)
                      .filter_map { |request| pair_for(request.slug) }
@@ -48,7 +48,7 @@ class MostRequestedComparisons < ApplicationService
   end
 
   def pair_for(slug)
-    comparison = Comparison.parse(slug)
+    comparison = Matchup.parse(slug)
     comparison if comparison.valid? && !comparison.group?
   rescue ActiveRecord::RecordNotFound
     nil

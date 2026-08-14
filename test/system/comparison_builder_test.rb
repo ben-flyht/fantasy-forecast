@@ -30,7 +30,7 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
 
     add(1, "palmer", @palmer.full_name)
 
-    assert_current_path comparison_path(pair: Comparison.new(@salah, @palmer).slug)
+    assert_current_path comparison_path(pair: Matchup.new(@salah, @palmer).slug)
   end
 
   test "a side can hold the players you would buy together" do
@@ -40,7 +40,7 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
     add(0, "palmer", @palmer.full_name)
     add(1, "raya", @raya.full_name)
 
-    assert_current_path comparison_path(pair: Comparison.new([ @salah, @palmer ], @raya).slug)
+    assert_current_path comparison_path(pair: Matchup.new([ @salah, @palmer ], @raya).slug)
   end
 
   test "a player already picked is not offered for the other side" do
@@ -68,23 +68,23 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
 
     add(1, "palmer", @palmer.full_name)
 
-    assert_current_path comparison_path(pair: Comparison.new(@salah, @palmer).slug)
+    assert_current_path comparison_path(pair: Matchup.new(@salah, @palmer).slug)
   end
 
   # The comparison is edited in the same two columns it is read in. Adding a player to
   # a side takes you to the page for the sides you have now, address and all.
   test "adding a player on a comparison follows to the new sides" do
-    visit comparison_path(pair: Comparison.new(@salah, @palmer).slug)
+    visit comparison_path(pair: Matchup.new(@salah, @palmer).slug)
 
     add(0, "raya", @raya.full_name)
 
-    assert_current_path comparison_path(pair: Comparison.new([ @salah, @raya ], @palmer).slug)
+    assert_current_path comparison_path(pair: Matchup.new([ @salah, @raya ], @palmer).slug)
   end
 
   # Taking the last player off a side empties it to its box rather than blocking, so a
   # lone player can be swapped for another.
   test "removing a lone player leaves the side open for a replacement" do
-    visit comparison_path(pair: Comparison.new(@salah, @palmer).slug)
+    visit comparison_path(pair: Matchup.new(@salah, @palmer).slug)
 
     within "[data-comparison-builder-target=chip][data-param='#{@salah.comparison_param}']" do
       find("button[data-action='comparison-builder#remove']").click
@@ -93,18 +93,18 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
 
     add(0, "raya", @raya.full_name)
 
-    assert_current_path comparison_path(pair: Comparison.new(@raya, @palmer).slug)
+    assert_current_path comparison_path(pair: Matchup.new(@raya, @palmer).slug)
   end
 
   # A card carries a cross, a side of one included, and taking it off drops back to the
   # smaller comparison.
   test "removing a player from a side follows to the smaller comparison" do
-    visit comparison_path(pair: Comparison.new([ @salah, @raya ], @palmer).slug)
+    visit comparison_path(pair: Matchup.new([ @salah, @raya ], @palmer).slug)
 
     within "[data-comparison-builder-target=chip][data-param='#{@raya.comparison_param}']" do
       find("button[data-action='comparison-builder#remove']").click
     end
 
-    assert_current_path comparison_path(pair: Comparison.new(@salah, @palmer).slug)
+    assert_current_path comparison_path(pair: Matchup.new(@salah, @palmer).slug)
   end
 end
