@@ -1,23 +1,26 @@
 <%#
-  The same two columns a comparison is read in, empty and waiting to be filled. A box
-  on each side you can always type into; a player picked stands as a card, and the
-  moment both sides hold one there is a comparison, so the page becomes it. Building
-  and reading are the one layout, so moving between them is not a jump.
+  The same two columns a comparison is read in, empty and waiting to be filled, but set
+  off from the page in a bordered panel because on the hub it is the point of the page,
+  not a footnote to it. A box on each side you can always type into; a player picked
+  stands as a card, and the moment both sides hold one there is a comparison, so the
+  page becomes it. Building and reading are the one layout, so moving between them is not
+  a jump.
 
   The lists below are the pairs our forecast puts closest together, a good list and
   never the pair somebody arrived holding. This is how you reach the one you want.
 %>
 <% sides = local_assigns.fetch(:sides, [ [], [] ]) %>
 
-<section data-controller="comparison-builder"
+<section class="rounded-xl bg-white p-4 ring-2 ring-zinc-900 sm:p-5"
+         data-controller="comparison-builder"
          data-comparison-builder-url-value="<%= comparison_search_path %>">
-  <h2 class="text-base font-semibold text-zinc-900">Compare any two players, or any two moves</h2>
+  <h2 class="text-lg font-semibold text-zinc-900">Compare any two players, or any two moves</h2>
   <p class="mt-1 text-sm text-zinc-500">
     Start typing a name on each side. A side can hold one player or the several you would
     buy in one move, and once both sides have somebody the comparison opens itself.
   </p>
 
-  <div class="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
+  <div class="relative mt-5 grid grid-cols-2 gap-4">
     <% 2.times do |side| %>
       <div data-comparison-builder-target="side" data-side="<%= side %>">
         <div class="space-y-2">
@@ -48,7 +51,7 @@
                    autocomplete="off" placeholder="Add a player"
                    role="combobox" aria-autocomplete="list" aria-expanded="false"
                    aria-controls="comparison-results-<%= side %>"
-                   class="w-full rounded-xl border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm text-zinc-600 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+                   class="w-full rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm font-medium text-zinc-700 placeholder:text-zinc-500 hover:border-zinc-400 focus:border-solid focus:border-zinc-900/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 sm:px-4 sm:py-3.5 sm:text-base">
             <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
                  id="comparison-results-<%= side %>"
                  data-comparison-builder-target="results" data-side="<%= side %>" role="listbox" hidden></div>
@@ -56,6 +59,11 @@
         </div>
       </div>
     <% end %>
+
+    <%# A badge on the seam, overlapping both boxes, so the two sides read as one
+        question rather than two fields. It aligns with the empty boxes; once a side
+        has cards it sits by the newest, which is close enough. %>
+    <div class="pointer-events-none absolute left-1/2 top-1/2 z-10 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-zinc-900 bg-white text-sm font-bold text-zinc-900 shadow-sm">vs</div>
   </div>
 
   <noscript>
