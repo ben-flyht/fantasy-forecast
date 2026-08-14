@@ -34,11 +34,15 @@
                                           upcoming: comparison_path(pair: @comparison.slug, horizon: "upcoming"),
                                           season: comparison_path(pair: @comparison.slug, horizon: "season") })) %>
 
-<%# Two columns at every width, phone included, and the editor in the same layout as
-    the answer. A side is its cards and a box beneath them to add another; a card leaves
-    by the cross on it. Both sides filled is a page, so every change goes to the page for
-    the sides you have now. %>
-<div class="mt-6 grid grid-cols-2 gap-3 sm:gap-4"
+<%# The editor is the same two columns as the answer, and it is the point of the page,
+    so it says so: a side is its cards and a box beneath them to add another, a card
+    leaves by the cross on it, and both sides filled is a page. Every change goes to the
+    page for the sides you have now. %>
+<div class="mt-6 flex items-baseline justify-between gap-3">
+  <h2 class="text-sm font-semibold text-zinc-700">Add or swap players on either side</h2>
+  <span class="hidden text-xs text-zinc-400 sm:block">One player, or a whole trade</span>
+</div>
+<div class="mt-3 grid grid-cols-2 gap-3 sm:gap-4"
      data-controller="comparison-builder"
      data-comparison-builder-url-value="<%= comparison_search_path %>">
   <% @head_to_head.sides.each_with_index do |side, index| %>
@@ -103,14 +107,18 @@
             </div>
           <% end %>
 
-          <%# Always a box at the foot of a side to put another player on it. %>
+          <%# Always a box at the foot of a side to put another player on it, drawn as a
+              plain add control so it reads as the way to build the comparison. %>
           <div class="relative">
+            <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" d="M12 5v14M5 12h14"/>
+            </svg>
             <input type="text"
                    data-comparison-builder-target="input" data-side="<%= index %>"
                    data-action="input->comparison-builder#search keydown->comparison-builder#keydown"
                    autocomplete="off" placeholder="Add a player"
                    aria-label="Add a player to <%= index.zero? ? "the first" : "the second" %> side"
-                   class="w-full rounded-xl border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm text-zinc-600 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+                   class="w-full rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 py-3 pl-9 pr-3 text-sm font-medium text-zinc-700 placeholder:text-zinc-500 hover:border-zinc-400 focus:border-solid focus:border-zinc-900/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
             <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
                  data-comparison-builder-target="results" data-side="<%= index %>" role="listbox" hidden></div>
           </div>
