@@ -217,6 +217,32 @@ module Fpl
       # actually credited with instead of what his passing was expected to earn.
       # A total, like the bonus above it. See ExpectedPoints#assist_points.
       "assists" => "season_assists",
+      # The rest of the season's performance record, for the comparison table rather
+      # than the forecast: everything FPL publishes on a player that a manager weighs a
+      # trade on. Season totals, read against the per-90 rates above — a rate over a
+      # full campaign is a different player from the same rate over ninety minutes.
+      "goals_scored" => "season_goals",
+      "expected_goals" => "season_expected_goals",
+      "expected_assists" => "season_expected_assists",
+      "expected_goal_involvements" => "season_expected_goal_involvements",
+      "expected_goals_conceded" => "season_expected_goals_conceded",
+      "goals_conceded" => "season_goals_conceded",
+      "clean_sheets" => "season_clean_sheets",
+      "saves" => "season_saves",
+      "starts" => "season_starts",
+      "defensive_contribution" => "season_defensive_contribution",
+      "own_goals" => "season_own_goals",
+      "penalties_saved" => "season_penalties_saved",
+      "penalties_missed" => "season_penalties_missed",
+      "yellow_cards" => "season_yellow_cards",
+      "red_cards" => "season_red_cards",
+      # FPL's own indices and its bonus-points system: the numbers pundits quote and
+      # managers argue over, published per player as running season figures.
+      "bps" => "bps",
+      "influence" => "influence",
+      "creativity" => "creativity",
+      "threat" => "threat",
+      "ict_index" => "ict_index",
       # Set-piece duty feeds underlying quality (1 = first choice). Nil when not on duty.
       "penalties_order" => "penalties_order",
       "corners_and_indirect_freekicks_order" => "corners_freekicks_order",

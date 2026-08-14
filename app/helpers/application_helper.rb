@@ -5,9 +5,9 @@ module ApplicationHelper
   # so it belongs in the footer rather than here.
   NAVIGATION = [
     [ "Rankings", :rankings_path, "players" ],
-    [ "Captain", :captain_path, "captains" ],
+    [ "Compare", :comparisons_path, "comparisons" ],
     [ "Squad", :squad_path, "squads" ],
-    [ "Compare", :comparisons_path, "comparisons" ]
+    [ "Captain", :captain_path, "captains" ]
   ].freeze
 
   # Which one you are on is decided by the controller answering, not by the address,
