@@ -133,4 +133,65 @@ class ComparisonStatsTest < ActiveSupport::TestCase
 
     assert_includes stats.map(&:title), "This season"
   end
+
+  # A side is a player or the players you would buy together, and a figure for two
+  # men is not always the two figures added up.
+
+  def paired_stats
+    ComparisonStats.call(left: [ @salah, @palmer ], right: players(:goalkeeper))
+  end
+
+  def paired_row(label)
+    paired_stats.flat_map(&:rows).find { |r| r.label == label }
+  end
+
+  # You own both, so you collect both.
+  test "a total is what the side scored between them" do
+    reading(@salah, "season_points", 120)
+    reading(@palmer, "season_points", 90)
+    reading(players(:goalkeeper), "season_points", 150)
+
+    assert_equal "210", paired_row("Total points").left
+    assert_equal :left, paired_row("Total points").leader
+  end
+
+  test "a side missing one man's figure is blank rather than half of one" do
+    reading(@salah, "season_points", 120)
+    reading(players(:goalkeeper), "season_points", 150)
+
+    assert_equal "—", paired_row("Total points").left
+  end
+
+  # Two rates per ninety minutes are not one rate when added. This is what the pair
+  # did between them, so the man who played more counts for more.
+  test "a rate per 90 is weighed by the football each of them played" do
+    reading(@salah, "expected_goals_per_90", 0.60)
+    reading(@salah, "season_minutes", 900)
+    reading(@palmer, "expected_goals_per_90", 0.20)
+    reading(@palmer, "season_minutes", 300)
+    reading(players(:goalkeeper), "expected_goals_per_90", 0.10)
+
+    assert_equal "0.50", paired_row("Expected goals").left
+  end
+
+  # A share of the game's managers belongs to one man, and so does a place in a
+  # penalty queue. Neither adds up, so each is written out and the row favours nobody.
+  test "a figure that belongs to one man is written out for each of them" do
+    reading(@salah, "penalties_order", 1)
+    reading(@palmer, "penalties_order", 3)
+    reading(players(:goalkeeper), "penalties_order", 2)
+
+    assert_equal "1st and 3rd", paired_row("Penalties").left
+    assert_equal "2nd", paired_row("Penalties").right
+    assert_nil paired_row("Penalties").leader
+  end
+
+  test "what we expect of a side is what we expect of everybody on it" do
+    expectation(@salah, "gameweek", 5.4)
+    expectation(@palmer, "gameweek", 3.9)
+    expectation(players(:goalkeeper), "gameweek", 4.0)
+
+    assert_equal "9.3", paired_row("This gameweek").left
+    assert_equal "4.0", paired_row("This gameweek").right
+  end
 end

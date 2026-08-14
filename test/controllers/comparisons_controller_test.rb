@@ -4,6 +4,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @salah = players(:midfielder)
     @palmer = players(:midfielder_two)
+    @raya = players(:goalkeeper)
     @gameweek = gameweeks(:next_gw)
     Forecast.delete_all
     Forecast.create!(player: @salah, gameweek: @gameweek, score: 5.4, rank: 1)
@@ -12,6 +13,15 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
 
   def pair
     Comparison.new(@salah, @palmer).slug
+  end
+
+  # Two free transfers: these two, or him?
+  def group
+    Comparison.new([ @salah, @palmer ], @raya).slug
+  end
+
+  def forecast_raya
+    Forecast.create!(player: @raya, gameweek: @gameweek, score: 4.0, rank: 1)
   end
 
   test "the page answers the question it is named after" do
@@ -101,8 +111,12 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     get comparisons_path
 
     assert_select "[data-controller=comparison-builder]"
-    assert_select "input[data-comparison-builder-target=input]", count: 2
     assert_select "button[data-comparison-builder-target=submit][disabled]"
+
+    # A box for every player a side can hold, but only the first of each side is
+    # offered: the rest are waiting behind "and another player".
+    assert_select "[data-comparison-builder-target=slot]", count: 2 * Comparison::MAX
+    assert_select "[data-comparison-builder-target=slot]:not([hidden])", count: 2
   end
 
   test "the search says who you might mean" do
@@ -139,6 +153,72 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "h1", /FPL Player Comparisons/
     assert_select "p", text: "Him or him?"
+  end
+
+  # Two free transfers is a choice between two moves, and the page adds them up so a
+  # manager does not have to open two pages and do it himself.
+  test "a side can hold the players you would buy together" do
+    forecast_raya
+
+    get comparison_path(pair: group)
+
+    assert_response :success
+    assert_select "h1", text: "David Raya, or Mohamed Salah and Cole Palmer?"
+    assert_select "[data-comparison-card]", count: 2
+    assert_select "[data-comparison-card][data-pick=true]", text: /Salah/
+    assert_select "[data-comparison-card][data-pick=true]", text: /9\.3/
+  end
+
+  test "every order of a group is the same argument, and one of them is the page" do
+    forecast_raya
+
+    get comparison_path(pair: "#{@raya.to_param}-vs-#{@palmer.to_param}-and-#{@salah.to_param}")
+
+    assert_response :moved_permanently
+    assert_redirected_to comparison_path(pair: group)
+  end
+
+  test "an address naming half the league is not a question" do
+    too_many = [ @salah, @palmer, @raya, players(:injured_player) ].map(&:to_param).join("-and-")
+
+    get comparison_path(pair: "#{too_many}-vs-#{@raya.to_param}")
+
+    assert_response :not_found
+  end
+
+  test "buying the same player twice is not answered by anybody's page" do
+    get comparison_path(pair: "#{@salah.to_param}-and-#{@palmer.to_param}-vs-#{@salah.to_param}")
+
+    assert_response :not_found
+  end
+
+  # Every pair has an address worth crawling. Every group of them has one too, and
+  # there are billions of those.
+  test "a group is kept out of the index and a pair is not" do
+    original = ENV["APP_HOST"]
+    ENV["APP_HOST"] = "www.fantasyforecast.co.uk"
+    forecast_raya
+
+    get comparison_path(pair: group)
+    assert_select "meta[name=robots][content=?]", "noindex, follow"
+
+    get comparison_path(pair: pair)
+    assert_select "meta[name=robots]", count: 0
+  ensure
+    ENV["APP_HOST"] = original
+  end
+
+  # The card is drawn for two players and only two, so a group has no picture of its
+  # own rather than a picture of half of it.
+  test "a group has no card yet, and does not claim one" do
+    forecast_raya
+
+    get comparison_path(pair: group)
+    assert_select "meta[property='og:image'][content=?]",
+                  "#{ApplicationHelper::BASE_URL}/compare/#{group}.png", count: 0
+
+    get comparison_path(pair: group, format: :png)
+    assert_response :not_found
   end
 
   test "the questions the hub answers are printed and declared alike" do

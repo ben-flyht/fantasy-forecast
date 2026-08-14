@@ -33,8 +33,13 @@ Rails.application.routes.draw do
 
   # Him or him: the question a manager asks when he has already narrowed it to
   # two, with an address of its own so it can be found by asking it.
-  # Two player addresses and a separator, and no dots: a card asked for as .png
-  # stays a card rather than becoming a third player.
+  #
+  # Also these two or those two, spelled "a-and-b-vs-c-and-d", for the manager with two
+  # free transfers who is choosing between two moves rather than two players. The shape
+  # below already allows it, since a side is only ever letters, digits and hyphens;
+  # Comparison is what refuses an address naming half the league.
+  #
+  # No dots: a card asked for as .png stays a card rather than becoming another player.
   PAIR = /[a-z0-9\-]+-vs-[a-z0-9\-]+/
 
   get "compare", to: "comparisons#index", as: :comparisons

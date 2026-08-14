@@ -30,7 +30,7 @@ class ComparisonsController < ApplicationController
 
     respond_to do |format|
       format.html { @related = related_comparisons }
-      format.png { send_card("cards/comparison", card_key) }
+      format.png { send_comparison_card }
     end
   end
 
@@ -51,11 +51,25 @@ class ComparisonsController < ApplicationController
     @stats = ComparisonStats.call(left: @comparison.left, right: @comparison.right)
   end
 
+  # The card is drawn for two players and only two, so a comparison of groups has no
+  # picture yet rather than a picture of half of it. The page says so by not offering
+  # one; this is here for the address somebody types anyway.
+  def send_comparison_card
+    raise ActiveRecord::RecordNotFound, "No card for a group yet" if @comparison.group?
+
+    send_card("cards/comparison", card_key)
+  end
+
   # A player against himself is not a question, so it is answered by his own page.
+  # Naming him twice in a bigger argument is not a question either, and there is no
+  # page that answers that one.
   def redirect_to_one_player
     return false if @comparison.valid?
 
-    redirect_to player_path(@comparison.left), status: :moved_permanently
+    player = @comparison.one_player
+    raise ActiveRecord::RecordNotFound, "Not a question: #{params[:pair]}" unless player
+
+    redirect_to player_path(player), status: :moved_permanently
     true
   end
 

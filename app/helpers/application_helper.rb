@@ -82,6 +82,17 @@ module ApplicationHelper
     content_for?(:meta_url) ? content_for(:meta_url) : request.original_url
   end
 
+  # Whether a page is for the index at all, and nothing at all when it is.
+  #
+  # Anywhere but the live host, nothing is: a copy of the site should never compete
+  # with the site. On it, a page speaks for itself, and almost none of them need to.
+  # The ones that do are the ones there are too many of to be worth a crawler's time.
+  def meta_robots
+    return "noindex, nofollow" unless ENV.fetch("APP_HOST", "").include?("www.fantasyforecast.co.uk")
+
+    content_for(:meta_robots).presence
+  end
+
   def structured_data
     tag.script(structured_data_schema.to_json.html_safe, type: "application/ld+json")
   end

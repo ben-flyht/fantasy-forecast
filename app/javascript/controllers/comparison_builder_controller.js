@@ -1,13 +1,18 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Two boxes, a list of names under whichever one you are typing in, and a button
-// that takes you to the argument.
+// Two sides, a box or three on each, a list of names under whichever one you are
+// typing in, and a button that takes you to the argument.
 //
-// The pair is assembled here and the address is built from the two chosen players,
-// in whatever order they were picked: /compare answers the same question either way
-// round and redirects to its own spelling of it.
+// A side is one player, or the players you would buy in one move: a manager with two
+// free transfers is choosing between two pairs rather than two players. Only the first
+// box of each side is offered, and the next one appears when the one before it is
+// filled, so the common question still looks like two boxes and a button.
+//
+// The address is assembled here from both sides in whatever order they were picked:
+// /compare answers the same question every way round and redirects to its own
+// spelling of it.
 export default class extends Controller {
-  static targets = ["input", "results", "chosen", "clear", "submit", "hint"]
+  static targets = ["slot", "input", "results", "chosen", "clear", "submit", "hint", "add"]
   static values = { url: String }
 
   // How long to wait after the last keystroke before asking. Short enough to feel
@@ -15,8 +20,10 @@ export default class extends Controller {
   static DEBOUNCE = 180
 
   connect() {
-    this.picks = [null, null]
-    this.timers = [null, null]
+    // Keyed by the box itself rather than by a number, so nothing has to agree with
+    // anything else about which box is which.
+    this.picks = new Map()
+    this.timers = new Map()
     this.render()
   }
 
@@ -25,20 +32,19 @@ export default class extends Controller {
   }
 
   search(event) {
-    const slot = this.inputTargets.indexOf(event.target)
-    clearTimeout(this.timers[slot])
+    const slot = this.slotOf(event.target)
+    clearTimeout(this.timers.get(slot))
 
     const term = event.target.value.trim()
     if (term.length < 2) return this.showResults(slot, [])
 
-    this.timers[slot] = setTimeout(() => this.fetchFor(slot, term), this.constructor.DEBOUNCE)
+    this.timers.set(slot, setTimeout(() => this.fetchFor(slot, term), this.constructor.DEBOUNCE))
   }
 
   async fetchFor(slot, term) {
-    const exclude = this.picks.filter(Boolean).map((pick) => pick.param)
     const url = new URL(this.urlValue, window.location.origin)
     url.searchParams.set("q", term)
-    exclude.forEach((param) => url.searchParams.append("exclude[]", param))
+    this.chosen.forEach((player) => url.searchParams.append("exclude[]", player.param))
 
     try {
       const response = await fetch(url, { headers: { Accept: "application/json" } })
@@ -50,7 +56,7 @@ export default class extends Controller {
   }
 
   showResults(slot, players) {
-    const list = this.resultsTargets[slot]
+    const list = this.within(slot, "results")
     list.innerHTML = ""
 
     if (players.length === 0) {
@@ -62,7 +68,6 @@ export default class extends Controller {
       const option = document.createElement("button")
       option.type = "button"
       option.dataset.action = "click->comparison-builder#choose"
-      option.dataset.slot = slot
       option.dataset.player = JSON.stringify(player)
       option.className =
         "flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none"
@@ -78,18 +83,27 @@ export default class extends Controller {
   }
 
   choose(event) {
-    const slot = Number(event.currentTarget.dataset.slot)
-    this.picks[slot] = JSON.parse(event.currentTarget.dataset.player)
-    this.inputTargets[slot].value = ""
+    const slot = this.slotOf(event.currentTarget)
+    this.picks.set(slot, JSON.parse(event.currentTarget.dataset.player))
     this.showResults(slot, [])
     this.render()
   }
 
   clear(event) {
-    const slot = Number(event.currentTarget.dataset.slot)
-    this.picks[slot] = null
+    const slot = this.slotOf(event.currentTarget)
+    this.picks.delete(slot)
     this.render()
-    this.inputTargets[slot].focus()
+    this.within(slot, "input").focus()
+  }
+
+  // The next box on this side, which is only offered once the ones before it are full.
+  add(event) {
+    const next = this.slotsFor(event.currentTarget.dataset.side).find((slot) => slot.hidden)
+    if (!next) return
+
+    next.hidden = false
+    this.render()
+    this.within(next, "input").focus()
   }
 
   // Enter on a box takes the first name under it, which is what a list of names
@@ -98,29 +112,62 @@ export default class extends Controller {
     if (event.key !== "Enter") return
     event.preventDefault()
 
-    const slot = this.inputTargets.indexOf(event.target)
-    const first = this.resultsTargets[slot].querySelector("button")
+    const first = this.within(this.slotOf(event.target), "results").querySelector("button")
     if (first) first.click()
   }
 
   compare() {
     if (!this.complete) return
 
-    const [left, right] = this.picks
-    Turbo.visit(`/compare/${left.param}-vs-${right.param}`)
+    Turbo.visit(`/compare/${this.slugFor(0)}-vs-${this.slugFor(1)}`)
+  }
+
+  slugFor(side) {
+    return this.playersOn(side).map((player) => player.param).join("-and-")
+  }
+
+  playersOn(side) {
+    return this.slotsFor(side).map((slot) => this.picks.get(slot)).filter(Boolean)
+  }
+
+  slotsFor(side) {
+    return this.slotTargets.filter((slot) => slot.dataset.side === String(side))
+  }
+
+  slotOf(element) {
+    return element.closest("[data-comparison-builder-target=slot]")
+  }
+
+  within(slot, target) {
+    return slot.querySelector(`[data-comparison-builder-target=${target}]`)
+  }
+
+  get chosen() {
+    return [...this.picks.values()]
   }
 
   get complete() {
-    return this.picks.every(Boolean)
+    return this.playersOn(0).length > 0 && this.playersOn(1).length > 0
   }
 
   render() {
-    this.picks.forEach((pick, slot) => {
-      this.chosenTargets[slot].textContent = pick ? pick.full_name : ""
-      this.chosenTargets[slot].hidden = !pick
-      this.clearTargets[slot].hidden = !pick
-      this.inputTargets[slot].hidden = Boolean(pick)
-      this.inputTargets[slot].value = ""
+    this.slotTargets.forEach((slot) => {
+      const pick = this.picks.get(slot)
+      const input = this.within(slot, "input")
+
+      this.within(slot, "chosen").textContent = pick ? pick.full_name : ""
+      this.within(slot, "chosen").hidden = !pick
+      this.within(slot, "clear").hidden = !pick
+      input.hidden = Boolean(pick)
+      input.value = ""
+    })
+
+    // Another box is offered where there is one left and every box already open on
+    // that side has somebody in it.
+    this.addTargets.forEach((button) => {
+      const slots = this.slotsFor(button.dataset.side)
+      const open = slots.filter((slot) => !slot.hidden)
+      button.hidden = open.length === slots.length || !open.every((slot) => this.picks.has(slot))
     })
 
     this.submitTarget.disabled = !this.complete

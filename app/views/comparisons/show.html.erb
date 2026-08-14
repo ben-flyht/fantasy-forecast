@@ -3,7 +3,17 @@
 <% content_for :meta_title, "#{comparison_title(@comparison)} FPL #{horizon_words} | Fantasy Forecast" %>
 <% content_for :meta_description, "#{comparison_question(@comparison)} #{verdict_line(@head_to_head)} Both graded A to F from price, ownership, form and fixtures." %>
 <% content_for :meta_url, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug)}" %>
-<% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug, format: :png)}" %>
+
+<%# Every pair of players has an address and the pairs are worth crawling. Every group
+    of them has an address too, and there are billions: nobody searches for one, and a
+    crawler spending its time here is a crawler not reading the pages that do rank.
+    Followed, though, because the players and the pairs beside them are worth reaching.
+    The card is drawn for two players, so a group has no picture of its own yet. %>
+<% if @comparison.group? %>
+  <% content_for :meta_robots, "noindex, follow" %>
+<% else %>
+  <% content_for :meta_image, "#{ApplicationHelper::BASE_URL}#{comparison_path(pair: @comparison.slug, format: :png)}" %>
+<% end %>
 
 <%= render PageHeadingComponent.new(
       title: comparison_question(@comparison),
@@ -34,27 +44,53 @@
         <% end %>
       </div>
 
-      <div class="<%= "rounded-xl ring-2 ring-zinc-900" if picked %>">
-        <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(@head_to_head, side)) %>
+      <% ring = picked ? "rounded-xl ring-2 ring-zinc-900" : "" %>
+      <% ring += " p-1.5" if picked && !side.single? %>
+
+      <div class="<%= ring %>">
+        <%# What the side is worth altogether, above the players it is made of. A column
+            of two cards with no total is two answers where the reader wanted one. %>
+        <% unless side.single? %>
+          <div class="mb-2 rounded-lg bg-zinc-100 px-3 py-2">
+            <p class="text-2xl font-extrabold leading-none tabular-nums tracking-[-0.03em] text-zinc-950">
+              <%= headline_points(side) || "—" %>
+            </p>
+            <p class="mt-1 text-[11px] leading-tight text-zinc-500">
+              expected points<%= " · #{player_price(side.cost)}" if side.cost %>
+            </p>
+          </div>
+        <% end %>
+
+        <div class="space-y-2">
+          <% side.members.each do |member| %>
+            <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(member)) %>
+          <% end %>
+        </div>
       </div>
     </div>
   <% end %>
 </div>
 
-<%# The cards say who and by how much. The only thing left to say is what they
-    cannot: that a pick is marginal, or that there is no forecast behind it. %>
-<% if (note = comparison_note(@head_to_head)) %>
+<%# The cards say who and by how much. The only things left to say are what they
+    cannot: that a pick is marginal, that there is no forecast behind it, that one side
+    costs more, or that the two sides were never a fair question in the first place. %>
+<% notes = [ comparison_note(@head_to_head), uneven_note(@head_to_head),
+             (price_gap_line(@head_to_head) if @comparison.group?) ].compact %>
+<% notes.each do |note| %>
   <p class="mt-3 text-sm text-zinc-600"><%= note %></p>
 <% end %>
 
-<%# The working underneath the answer: every figure we hold on the two of them, so a
-    manager who disagrees with the pick can see what it was made from. %>
+<%# The working underneath the answer: every figure we hold on them, so a manager who
+    disagrees with the pick can see what it was made from. %>
 <% if @stats.any? %>
   <section class="mt-10">
-    <h2 class="text-lg font-semibold text-zinc-900">Every number we hold on the two of them</h2>
+    <h2 class="text-lg font-semibold text-zinc-900">
+      Every number we hold on <%= @comparison.group? ? "the two sides" : "the two of them" %>
+    </h2>
     <p class="mt-1 text-sm text-zinc-500">
-      The figure that favours a player is the one in black. Where a figure is a fact
+      The figure that favours a side is the one in black. Where a figure is a fact
       rather than a merit, neither is marked.
+      <%= "A figure that belongs to one man rather than to a side is written out for each of them, and favours nobody." if @comparison.group? %>
     </p>
 
     <% @stats.each do |group| %>
@@ -81,23 +117,26 @@
     How we read <%= comparison_title(@comparison).delete_suffix("?") %>
   </h2>
   <p class="mt-2 text-sm text-zinc-600">
-    Both players are forecast the same way: their price and how many managers own them lead, weighed
-    against minutes, recent form, expected goals and assists, and who they are playing.
+    Every player here is forecast the same way: their price and how many managers own them lead,
+    weighed against minutes, recent form, expected goals and assists, and who they are playing.
     <%= reach.total? ?
         "Scores over more than one gameweek are totals, so they are read as the week they average to before they are graded." :
         "The score is the points we expect from the coming gameweek alone." %>
     <% if @head_to_head.close? %>
-      The gap here is under <%= HeadToHead::CLOSE %> of a point a week, which is smaller than the
-      difference our forecast can honestly claim to see. We still name one, because a manager
-      with two players and one transfer has to pick one of them, but it is a lean rather than
-      a verdict.
+      The gap here is under <%= number_with_precision(@head_to_head.close_enough, precision: 2) %> of a
+      point a week, which is smaller than the difference our forecast can honestly claim to see.
+      <%= "Two players carry two players' worth of error, so a side of two has to be further ahead than one man would." if @comparison.group? %>
+      We still name one, because a manager with two players and one transfer has to pick one of
+      them, but it is a lean rather than a verdict.
     <% end %>
   </p>
 </section>
 
 <% if @related.any? %>
   <section class="mt-8">
-    <h2 class="text-lg font-semibold text-zinc-900">Other players worth weighing against these two</h2>
+    <h2 class="text-lg font-semibold text-zinc-900">
+      Other players worth weighing against <%= @comparison.group? ? "these" : "these two" %>
+    </h2>
     <ul class="mt-3 flex flex-wrap gap-2">
       <% @related.each do |pair| %>
         <li>
