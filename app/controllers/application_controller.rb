@@ -25,6 +25,6 @@ class ApplicationController < ActionController::Base
   # the same as they are on the page, which marks itself noindex.
   def sitemap_comparisons(gameweek)
     popular = PopularComparisons.call(gameweek: gameweek).values.flatten
-    (MostRequestedComparisons.call(limit: 100) + popular).uniq(&:slug)
+    (MostRequestedComparisons.call(gameweek: gameweek, limit: 100) + popular).uniq(&:slug)
   end
 end

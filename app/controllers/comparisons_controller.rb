@@ -6,7 +6,7 @@ class ComparisonsController < ApplicationController
   def index
     @gameweek = Gameweek.next_gameweek
     @horizon = horizon
-    @most_requested = MostRequestedComparisons.call
+    @most_requested = MostRequestedComparisons.call(gameweek: @gameweek, horizon: @horizon)
     @pairs = PopularComparisons.call(gameweek: @gameweek, horizon: @horizon)
   end
 
@@ -16,7 +16,7 @@ class ComparisonsController < ApplicationController
     players = PlayerSearch.call(term: params[:q], exclude: params[:exclude])
 
     render json: players.map { |player|
-      { param: player.to_param, name: player.display_name, full_name: player.full_name,
+      { param: player.comparison_param, name: player.display_name, full_name: player.full_name,
         team: player.team&.short_name, position: FantasyForecast::POSITION_CONFIG.dig(player.position, :display_name),
         photo: player.photo_url }
     }
@@ -57,8 +57,29 @@ class ComparisonsController < ApplicationController
   # Every argument that reaches the page is counted against its canonical slug, so the
   # hub and the sitemap can offer the ones people actually ask. See
   # MostRequestedComparisons for what is then surfaced, which is pairs only.
+  #
+  # Once a session, though: a manager editing his way to a comparison, or coming back
+  # to it, is one person asking, not fifty, and the live editor would otherwise count
+  # a hit for every keystroke that lands on a page.
   def record_request
-    ComparisonRequest.record(@comparison)
+    return unless @gameweek && first_in_session?
+
+    ComparisonRequest.record(@comparison, @gameweek)
+  end
+
+  # Held once, not requested one at a time.
+  SESSION_MEMORY = 50
+
+  # Which comparisons this session has already counted, keyed by the gameweek as well
+  # as the slug so a new week counts afresh, and kept as short digests so the slugs — a
+  # side of fifteen is a long one — do not fill the cookie, capped so it cannot grow.
+  def first_in_session?
+    key = Digest::SHA1.hexdigest("#{@gameweek.id}:#{@comparison.slug}").first(12)
+    seen = session[:compared] || []
+    return false if seen.include?(key)
+
+    session[:compared] = ([ key ] + seen).first(SESSION_MEMORY)
+    true
   end
 
   def horizon

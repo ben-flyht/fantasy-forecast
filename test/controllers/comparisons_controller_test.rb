@@ -118,11 +118,20 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-comparison-builder-target=chip]", count: 0
   end
 
-  test "asking a comparison is counted" do
-    assert_equal 0, ComparisonRequest.where(slug: pair).sum(:hits)
+  # A manager editing his way to a comparison, or coming back to it, is one person
+  # asking, not fifty, so it is counted once a session however many times it is seen.
+  test "asking a comparison is counted once a session" do
+    get comparison_path(pair: pair)
+    get comparison_path(pair: pair)
 
+    assert_equal 1, ComparisonRequest.find_by(slug: pair).hits
+  end
+
+  test "a fresh session is a fresh ask" do
     get comparison_path(pair: pair)
-    get comparison_path(pair: pair)
+
+    session = open_session
+    session.get comparison_path(pair: pair)
 
     assert_equal 2, ComparisonRequest.find_by(slug: pair).hits
   end
@@ -137,7 +146,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
 
   # A side still being filled is not a question yet, so it is not counted.
   test "a comparison still being built is not counted as asked" do
-    building = "#{@salah.to_param}-vs-"
+    building = "#{@salah.comparison_param}-vs-"
 
     get comparison_path(pair: building)
 
@@ -146,7 +155,7 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the hub offers the comparisons people have asked for" do
-    5.times { ComparisonRequest.record(Comparison.new(@salah, @palmer)) }
+    5.times { ComparisonRequest.record(Comparison.new(@salah, @palmer), @gameweek) }
 
     get comparisons_path
 
@@ -163,14 +172,14 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "application/json", response.media_type
 
     found = JSON.parse(response.body)
-    assert_includes found.map { |p| p["param"] }, @salah.to_param
+    assert_includes found.map { |p| p["param"] }, @salah.comparison_param
     assert_equal @salah.full_name, found.first["full_name"]
   end
 
   test "the search leaves out a player already picked" do
-    get comparison_search_path(q: "salah", exclude: [ @salah.to_param ])
+    get comparison_search_path(q: "salah", exclude: [ @salah.comparison_param ])
 
-    assert_not_includes JSON.parse(response.body).map { |p| p["param"] }, @salah.to_param
+    assert_not_includes JSON.parse(response.body).map { |p| p["param"] }, @salah.comparison_param
   end
 
   test "the search with nothing typed says nobody rather than everybody" do
@@ -210,9 +219,9 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   # themselves are left where they were put, so a trade does not swap its columns.
   test "a group tidies each side but keeps the sides where they are" do
     forecast_raya
-    tidy = "#{@raya.to_param}-vs-#{@salah.to_param}-and-#{@palmer.to_param}"
+    tidy = "#{@raya.comparison_param}-vs-#{@salah.comparison_param}-and-#{@palmer.comparison_param}"
 
-    get comparison_path(pair: "#{@raya.to_param}-vs-#{@palmer.to_param}-and-#{@salah.to_param}")
+    get comparison_path(pair: "#{@raya.comparison_param}-vs-#{@palmer.comparison_param}-and-#{@salah.comparison_param}")
     assert_redirected_to comparison_path(pair: tidy)
 
     get comparison_path(pair: tidy)
@@ -222,11 +231,11 @@ class ComparisonsControllerTest < ActionDispatch::IntegrationTest
   # The address keeps up with the builder a player at a time, so a half-built
   # comparison can be shared or reloaded and picked back up.
   test "a comparison still being built shows the builder, not an answer" do
-    get comparison_path(pair: "#{@salah.to_param}-vs-")
+    get comparison_path(pair: "#{@salah.comparison_param}-vs-")
 
     assert_response :success
     assert_select "[data-controller=comparison-builder]"
-    assert_select "[data-comparison-builder-target=chip][data-param='#{@salah.to_param}']"
+    assert_select "[data-comparison-builder-target=chip][data-param='#{@salah.comparison_param}']"
     assert_select "[data-comparison-card]", count: 0
   end
 

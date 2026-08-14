@@ -26,7 +26,7 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
 
     add(0, "salah", @salah.full_name)
     # The address keeps up before the comparison is whole.
-    assert_current_path comparison_path(pair: "#{@salah.to_param}-vs-")
+    assert_current_path comparison_path(pair: "#{@salah.comparison_param}-vs-")
 
     add(1, "palmer", @palmer.full_name)
 
@@ -86,10 +86,10 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
   test "removing a lone player leaves the side open for a replacement" do
     visit comparison_path(pair: Comparison.new(@salah, @palmer).slug)
 
-    within "[data-comparison-builder-target=chip][data-param='#{@salah.to_param}']" do
+    within "[data-comparison-builder-target=chip][data-param='#{@salah.comparison_param}']" do
       find("button[data-action='comparison-builder#remove']").click
     end
-    assert_no_selector "[data-comparison-builder-target=chip][data-param='#{@salah.to_param}']"
+    assert_no_selector "[data-comparison-builder-target=chip][data-param='#{@salah.comparison_param}']"
 
     add(0, "raya", @raya.full_name)
 
@@ -101,7 +101,7 @@ class ComparisonBuilderTest < ApplicationSystemTestCase
   test "removing a player from a side follows to the smaller comparison" do
     visit comparison_path(pair: Comparison.new([ @salah, @raya ], @palmer).slug)
 
-    within "[data-comparison-builder-target=chip][data-param='#{@raya.to_param}']" do
+    within "[data-comparison-builder-target=chip][data-param='#{@raya.comparison_param}']" do
       find("button[data-action='comparison-builder#remove']").click
     end
 

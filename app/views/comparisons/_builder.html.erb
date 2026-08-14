@@ -24,7 +24,7 @@
           <div class="flex flex-col gap-2 empty:hidden" data-comparison-builder-target="chips">
             <% sides[side].each do |player| %>
               <div class="relative rounded-xl border border-zinc-200 bg-white px-3 py-2 pr-8"
-                   data-comparison-builder-target="chip" data-side="<%= side %>" data-param="<%= player.to_param %>">
+                   data-comparison-builder-target="chip" data-side="<%= side %>" data-param="<%= player.comparison_param %>">
                 <p class="text-sm font-medium text-zinc-900"><%= player.full_name %></p>
                 <p class="text-xs text-zinc-500"><%= [ player.team&.short_name, FantasyForecast::POSITION_CONFIG.dig(player.position, :display_name) ].compact.join(" · ") %></p>
                 <button type="button" data-action="comparison-builder#remove"
@@ -46,8 +46,11 @@
                    data-comparison-builder-target="input" data-side="<%= side %>"
                    data-action="input->comparison-builder#search keydown->comparison-builder#keydown"
                    autocomplete="off" placeholder="Add a player"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false"
+                   aria-controls="comparison-results-<%= side %>"
                    class="w-full rounded-xl border border-dashed border-zinc-300 bg-white px-3 py-3 text-sm text-zinc-600 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
             <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
+                 id="comparison-results-<%= side %>"
                  data-comparison-builder-target="results" data-side="<%= side %>" role="listbox" hidden></div>
           </div>
         </div>

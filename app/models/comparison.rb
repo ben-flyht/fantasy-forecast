@@ -40,7 +40,7 @@ class Comparison
     end
 
     def slug
-      players.map(&:to_param).join(JOINER)
+      players.map(&:comparison_param).join(JOINER)
     end
 
     def size = players.size

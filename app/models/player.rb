@@ -52,6 +52,14 @@ class Player < ApplicationRecord
     "#{slug}-#{fpl_id}"
   end
 
+  # A shorter address for a comparison, where his short name and the id that identifies
+  # him are enough — a full name on both sides of every trade runs the URL long. His own
+  # page keeps the full name; here `from_param` reads the id either way, so an older
+  # first-and-surname comparison link still resolves and is sent on to this spelling.
+  def comparison_param
+    "#{short_name.parameterize}-#{fpl_id}"
+  end
+
   # Every name he might be looked up by: what he is called, what FPL calls him, and
   # each half of it on its own. A manager types the name he knows, and that is a last
   # name for Haaland, a first name for Gabriel, and neither for Hato.

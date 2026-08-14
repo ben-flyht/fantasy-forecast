@@ -56,16 +56,21 @@ export default class extends Controller {
     const list = this.resultsFor(side)
     list.innerHTML = ""
 
+    const input = this.inputFor(side)
+
     if (players.length === 0) {
       list.hidden = true
       this.active.delete(side)
+      input.setAttribute("aria-expanded", "false")
+      input.removeAttribute("aria-activedescendant")
       return
     }
 
-    players.forEach((player) => {
+    players.forEach((player, index) => {
       const option = document.createElement("button")
       option.type = "button"
       option.role = "option"
+      option.id = `comparison-option-${side}-${index}`
       option.dataset.action = "click->comparison-builder#choose"
       option.dataset.side = side
       option.dataset.player = JSON.stringify(player)
@@ -80,6 +85,7 @@ export default class extends Controller {
     })
 
     list.hidden = false
+    input.setAttribute("aria-expanded", "true")
     this.active.set(side, 0)
     this.paintHighlight(side)
   }
@@ -90,7 +96,10 @@ export default class extends Controller {
     options.forEach((option, position) => {
       const on = position === index
       option.setAttribute("aria-selected", on)
-      if (on) option.scrollIntoView({ block: "nearest" })
+      if (on) {
+        option.scrollIntoView({ block: "nearest" })
+        this.inputFor(side).setAttribute("aria-activedescendant", option.id)
+      }
     })
   }
 

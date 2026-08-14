@@ -87,7 +87,7 @@
         <div class="space-y-2">
           <% side.members.each do |member| %>
             <div class="relative" data-comparison-builder-target="chip"
-                 data-side="<%= index %>" data-param="<%= member.player.to_param %>">
+                 data-side="<%= index %>" data-param="<%= member.player.comparison_param %>">
               <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(member)) %>
               <%# A cross on every card, a side of one included: taking the last player off
                   a side empties it to its box so somebody else can take his place. %>
@@ -113,8 +113,11 @@
                    data-action="input->comparison-builder#search keydown->comparison-builder#keydown"
                    autocomplete="off" placeholder="Add a player"
                    aria-label="Add a player to <%= index.zero? ? "the first" : "the second" %> side"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false"
+                   aria-controls="comparison-results-<%= index %>"
                    class="w-full rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 py-3 pl-9 pr-3 text-sm font-medium text-zinc-700 placeholder:text-zinc-500 hover:border-zinc-400 focus:border-solid focus:border-zinc-900/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
             <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
+                 id="comparison-results-<%= index %>"
                  data-comparison-builder-target="results" data-side="<%= index %>" role="listbox" hidden></div>
           </div>
         </div>

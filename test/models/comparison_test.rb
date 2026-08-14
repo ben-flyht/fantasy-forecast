@@ -12,14 +12,24 @@ class ComparisonTest < ActiveSupport::TestCase
     assert_equal Comparison.new(@salah, @palmer).slug, Comparison.new(@palmer, @salah).slug
   end
 
-  test "the pair a pair used to be is the pair it still is" do
-    assert_equal "#{@salah.to_param}-vs-#{@palmer.to_param}", Comparison.new(@salah, @palmer).slug
+  # A comparison spells a player as a surname and his id, shorter than his own page's
+  # first-and-surname address, since a full name on both sides of a trade runs long.
+  test "a comparison spells a player as a surname and his id" do
+    assert_equal "#{@salah.comparison_param}-vs-#{@palmer.comparison_param}", Comparison.new(@salah, @palmer).slug
+  end
+
+  # An older first-and-surname comparison link still resolves, by its id, to the same
+  # comparison — and to its shorter spelling.
+  test "an older full-name comparison link still resolves" do
+    old = "#{@salah.to_param}-vs-#{@palmer.to_param}"
+
+    assert_equal Comparison.new(@salah, @palmer).slug, Comparison.parse(old).slug
   end
 
   test "a side of two is joined by the word somebody would say" do
     comparison = Comparison.new([ @palmer, @salah ], @raya)
 
-    assert_equal "#{@salah.to_param}-and-#{@palmer.to_param}-vs-#{@raya.to_param}", comparison.slug
+    assert_equal "#{@salah.comparison_param}-and-#{@palmer.comparison_param}-vs-#{@raya.comparison_param}", comparison.slug
   end
 
   # Within a side the order does not matter; the sides themselves are kept as written,

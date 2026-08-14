@@ -43,9 +43,12 @@ class PlayerSearch < ApplicationService
     end
   end
 
-  # An address, or the bare id an older address used. Either identifies him.
+  # His comparison address (what the builder sends), his full-name page address, or the
+  # bare id an older address used. Any of them identifies him.
   def excluded?(player)
-    @exclude.include?(player.to_param) || @exclude.include?(player.id.to_s)
+    @exclude.include?(player.comparison_param) ||
+      @exclude.include?(player.to_param) ||
+      @exclude.include?(player.id.to_s)
   end
 
   # Where in his name the typed letters land. The front of a name beats the middle
