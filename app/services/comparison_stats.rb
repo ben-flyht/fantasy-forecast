@@ -1,18 +1,18 @@
-# The performance underneath the answer: what each side does per 90 minutes, laid out
-# so the two can be read across.
+# The record underneath the answer: everything we hold on a player that a manager
+# weighs a trade on, laid out so two sides can be read across.
 #
-# The cards above already say what we expect of each side and what it costs, so this is
-# not that. It is the record a manager weighs a trade on — goals, assists, the defensive
-# work, how reliably they start — and nothing we forecast, only what has happened.
+# Not a forecast — the cards above are the forecast. This is what has actually
+# happened: rates per 90, season totals, current form, and FPL's own indices, each
+# row labelled with what it is so a per-90 rate is never mistaken for a total.
 #
-# Before a ball is kicked this season the record is last season's, because there is no
-# other; once the season is under way it is this season's. Either way it is per 90, and
-# a side is worth what its players do between them, so the rates are summed.
+# Where this season has not filled a figure in yet the record is last season's, and
+# a row FPL kept only for this season simply waits until the season provides it. A
+# side is worth what its players do between them, so the numbers are summed.
 class ComparisonStats < ApplicationService
-  # `this`/`last` are the stored figures for each season; `last` is nil where FPL did
-  # not keep it last season, and that row simply waits until the season provides it.
-  # `better` says which way is good.
-  Stat = Struct.new(:this, :last, :label, :better, keyword_init: true)
+  # `this`/`last` are the stored figures for each season; `last` is nil where there is
+  # no last-season equivalent. `better` says which way is good. `format` is how the
+  # figure reads — a rate to two places, a total whole, an index to one.
+  Stat = Struct.new(:this, :last, :label, :better, :format, keyword_init: true)
 
   Reading = Struct.new(:value, :text, keyword_init: true)
 
@@ -20,21 +20,31 @@ class ComparisonStats < ApplicationService
 
   Group = Struct.new(:title, :rows, keyword_init: true)
 
-  PER_90 = [
+  UNDERLYING = [
+    Stat.new(this: "form", last: nil, label: "Form", better: :high, format: :one),
+    Stat.new(this: "season_points", last: "last_season_points", label: "Points", better: :high, format: :whole),
+    Stat.new(this: "season_minutes", last: "last_season_minutes", label: "Minutes", better: :high, format: :whole),
+    Stat.new(this: "starts_per_90", last: nil, label: "Starts, per 90", better: :high, format: :two),
+    Stat.new(this: "season_goals", last: nil, label: "Goals", better: :high, format: :whole),
+    Stat.new(this: "season_assists", last: nil, label: "Assists", better: :high, format: :whole),
     Stat.new(this: "expected_goals_per_90", last: "last_season_expected_goals_per_90",
-             label: "Expected goals", better: :high),
+             label: "Expected goals, per 90", better: :high, format: :two),
     Stat.new(this: "expected_goal_involvements_per_90", last: "last_season_expected_goal_involvements_per_90",
-             label: "Expected goals and assists", better: :high),
+             label: "Expected goals and assists, per 90", better: :high, format: :two),
     Stat.new(this: "expected_goals_conceded_per_90", last: nil,
-             label: "Expected goals conceded", better: :low),
+             label: "Expected goals conceded, per 90", better: :low, format: :two),
     Stat.new(this: "clean_sheets_per_90", last: "last_season_clean_sheets_per_90",
-             label: "Clean sheets", better: :high),
+             label: "Clean sheets, per 90", better: :high, format: :two),
     Stat.new(this: "saves_per_90", last: "last_season_saves_per_90",
-             label: "Saves", better: :high),
+             label: "Saves, per 90", better: :high, format: :two),
     Stat.new(this: "defensive_contribution_per_90", last: nil,
-             label: "Defensive contributions", better: :high),
-    Stat.new(this: "starts_per_90", last: nil,
-             label: "Starts", better: :high)
+             label: "Defensive contributions, per 90", better: :high, format: :two),
+    Stat.new(this: "season_bonus", last: "last_season_bonus", label: "Bonus points", better: :high, format: :whole),
+    Stat.new(this: "bps", last: nil, label: "Bonus points system (BPS)", better: :high, format: :whole),
+    Stat.new(this: "ict_index", last: nil, label: "ICT index", better: :high, format: :one),
+    Stat.new(this: "threat", last: nil, label: "Threat", better: :high, format: :one),
+    Stat.new(this: "creativity", last: nil, label: "Creativity", better: :high, format: :one),
+    Stat.new(this: "influence", last: nil, label: "Influence", better: :high, format: :one)
   ].freeze
 
   def initialize(left:, right:)
@@ -43,26 +53,25 @@ class ComparisonStats < ApplicationService
   end
 
   def call
-    rows = PER_90.filter_map { |stat| row_for(stat) }
+    rows = UNDERLYING.filter_map { |stat| row_for(stat) }
     return [] if rows.empty?
 
-    [ Group.new(title: title, rows: rows) ]
+    [ Group.new(title: "Underlying numbers", rows: rows) ]
   end
 
   private
 
   attr_reader :left, :right
 
-  def title
-    season_started? ? "This season, per 90" : "Last season, per 90"
-  end
-
   def row_for(stat)
     key = season_started? ? stat.this : stat.last
     return if key.nil?
 
-    readings = sides.map { |side| reading_for(side, key) }
-    row_of(stat, *readings) if readings.any?(&:value)
+    readings = sides.map { |side| reading_for(side, key, stat.format) }
+    present = readings.filter_map(&:value)
+    return if present.empty? || present.all?(&:zero?)
+
+    row_of(stat, *readings)
   end
 
   def row_of(stat, left_reading, right_reading)
@@ -72,13 +81,13 @@ class ComparisonStats < ApplicationService
 
   def sides = [ left, right ]
 
-  # A side is worth what everybody on it does between them, so the rates are summed. A
-  # total is only a total when we have all of it: a side missing one man's figure is
+  # A side is worth what everybody on it does between them, so the figures are summed.
+  # A total is only a total when we have all of it: a side missing one man's figure is
   # left blank rather than reported as the rest of the side without him.
-  def reading_for(side, key)
+  def reading_for(side, key, format)
     values = side.players.map { |player| readings.dig(player.id, key) }
     total = values.sum if values.all?
-    Reading.new(value: total, text: display(total))
+    Reading.new(value: total, text: display(total, format))
   end
 
   # Which side the figure favours, where it favours anybody. Equal is nobody: lighting
@@ -90,10 +99,14 @@ class ComparisonStats < ApplicationService
     higher == (stat.better == :high) ? :left : :right
   end
 
-  def display(value)
+  def display(value, style)
     return "—" if value.nil?
 
-    format("%.2f", value)
+    case style
+    when :whole then value.round.to_s
+    when :one then format("%.1f", value)
+    when :two then format("%.2f", value)
+    end
   end
 
   def season_started?

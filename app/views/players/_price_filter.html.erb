@@ -1,8 +1,8 @@
 <% if @price_filter %>
   <div class="flex items-center gap-3" data-controller="price-slider">
     <span class="shrink-0 text-sm text-zinc-500">Price</span>
-    <%# Fills its own row on a phone, back to a fixed width once it shares a row. %>
-    <div class="price-slider relative h-6 w-full sm:w-40">
+    <%# Fills its own row until the filters share one, then back to a fixed width. %>
+    <div class="price-slider relative h-6 w-full lg:w-40">
       <div class="price-slider__track"></div>
       <div class="price-slider__range" data-price-slider-target="range"></div>
       <%= range_field_tag :min_price, @price_filter[:min],
