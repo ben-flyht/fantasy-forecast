@@ -72,7 +72,7 @@ class PlayerPageTest < ApplicationSystemTestCase
     visit player_path(@player)
     assert_text "Test Rovers (home)"
 
-    find("label", text: "Rest of Season").click
+    click_link "Rest of Season"
 
     assert_text "38 fixtures to come", exact: false
     assert_no_text "Content missing"
