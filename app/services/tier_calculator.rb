@@ -1,8 +1,18 @@
 # Assigns weather-themed tiers to player rankings based on their score
 # relative to the top-ranked player (percentage from top score).
 class TierCalculator < ApplicationService
+  # What each tier means, in words a reader can act on.
+  #
+  # The top band used to promise "top expected points", which it stopped being
+  # able to deliver when the bands became absolute rather than a share of
+  # whoever led the position. An absolute band is a statement about how many
+  # points a player is worth, not about where he stands: McBurnie cleared it on
+  # 4.5 and read "top expected points" from thirteenth in his position. The band
+  # is right and the sentence was wrong, so the sentence says what the band
+  # actually measures, which is whether a return is expected on top of turning
+  # up. See POINT_THRESHOLDS.
   TIERS = {
-    1 => { symbol: "☀️", name: "Sunshine", description: "Must-start, top expected points" },
+    1 => { symbol: "☀️", name: "Sunshine", description: "Must-start, a real return expected" },
     2 => { symbol: "🌤️", name: "Partly Cloudy", description: "Strong, dependable returns" },
     3 => { symbol: "☁️", name: "Cloudy", description: "Steady, a modest return expected" },
     4 => { symbol: "🌧️", name: "Rainy", description: "Marginal, little on top of appearance" },

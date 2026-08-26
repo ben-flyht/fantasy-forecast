@@ -99,6 +99,16 @@ class Player < ApplicationRecord
     stat&.value&.to_i || 100
   end
 
+  # How old he is today. FPL publishes the birth date and nothing else, so this
+  # is worked out rather than read, and it is nil for the players it declines to
+  # give one for.
+  def age
+    return nil if birth_date.nil?
+
+    today = Date.current
+    today.year - birth_date.year - (today.yday < birth_date.yday ? 1 : 0)
+  end
+
   private
 
   def player_name

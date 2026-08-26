@@ -1,0 +1,44 @@
+<section class="mt-8">
+  <h2 class="text-base/6 font-semibold text-zinc-950"><%= title %></h2>
+  <p class="mt-1 text-sm text-zinc-500">
+    <%= subtitle %>
+    <% if standing %><span class="text-zinc-700"><%= standing %></span><% end %>
+  </p>
+
+  <table class="mt-3 w-full table-fixed text-sm">
+    <thead>
+      <tr class="text-xs uppercase tracking-wide text-zinc-400 text-left">
+        <th class="w-[10%] py-1 font-semibold">#</th>
+        <th class="w-[38%] py-1 font-semibold">Player</th>
+        <th class="w-[17%] py-1 font-semibold text-right">Cost</th>
+        <th class="w-[15%] py-1 font-semibold text-right">Diff</th>
+        <th class="w-[20%] py-1 font-semibold text-right"><%= points_label %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% entries.each_with_index do |entry, index| %>
+        <% if (skipped = skipped_before(entry, index)).positive? %>
+          <tr class="border-t border-zinc-100 text-zinc-400">
+            <td class="py-1 text-center tabular-nums" aria-hidden="true">&ctdot;</td>
+            <td class="py-1 text-xs" colspan="4"><%= pluralize(skipped, "place") %> not shown</td>
+          </tr>
+        <% end %>
+        <tr class="border-t border-zinc-100 <%= entry.subject? ? "bg-zinc-50 text-zinc-950 font-semibold" : "text-zinc-800" %>">
+          <td class="py-2 tabular-nums text-zinc-400"><%= entry.place %></td>
+          <td class="py-2 truncate">
+            <% if entry.subject? %>
+              <%= entry.player.display_name %>
+            <% else %>
+              <%= link_to entry.player.display_name, player_path(entry.player), class: "hover:text-zinc-950 hover:underline" %>
+            <% end %>
+          </td>
+          <td class="py-2 text-right tabular-nums"><%= helpers.player_price(entry.cost) || "—" %></td>
+          <td class="py-2 text-right tabular-nums text-zinc-500"><%= difference(entry) || "—" %></td>
+          <td class="py-2 text-right tabular-nums font-semibold <%= better?(entry) ? "text-green-700" : "" %>">
+            <%= points(entry) %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

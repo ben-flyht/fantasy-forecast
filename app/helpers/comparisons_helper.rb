@@ -31,8 +31,14 @@ module ComparisonsHelper
     unforecast_line(head_to_head) unless head_to_head.forecast?
   end
 
+  # Named the way the rest of the site names them.
+  #
+  # FPL squeezes a name into one narrow column and we have room to undo it, which
+  # is what display_name is for. Read straight from FPL the chips came out as
+  # "J.Timber or Hughes?" and "J.Timber or J.Araujo?", surnames and initials
+  # mixed in the same row, which looks like a fault rather than a convention.
   def comparison_title(comparison)
-    question(comparison) { |side| and_list(side.players.map(&:short_name)) }
+    question(comparison) { |side| and_list(side.players.map(&:display_name)) }
   end
 
   def comparison_question(comparison)

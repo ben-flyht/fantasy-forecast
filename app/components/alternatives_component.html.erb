@@ -1,0 +1,13 @@
+<div class="mt-6 border-t border-zinc-200 pt-5">
+  <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-500"><%= heading %></h2>
+  <p class="mt-1.5 text-sm text-zinc-600">
+    <%= subtitle %>
+    <% if verdict %><span class="font-medium text-zinc-900"><%= verdict %></span><% end %>
+  </p>
+
+  <div class="mt-4 grid gap-3 lg:grid-cols-3">
+    <% alternatives.each do |entry| %>
+      <%= render PlayerCardComponent.new(ranking: entry.ranking, player: entry.player, facts: entry.facts) %>
+    <% end %>
+  </div>
+</div>

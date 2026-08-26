@@ -134,6 +134,25 @@ module ApplicationHelper
     format("%.1f%% owned", percent)
   end
 
+  # Two estimates a quarter of a point apart are the same estimate, and saying so
+  # is not worth a sentence.
+  FPL_AGREEMENT = 0.25
+
+  # How our figure sits against FPL's own for the same week.
+  #
+  # FPL publishes an expected points figure before every deadline, which makes it
+  # the one number on the page a reader can mark ours against for free. Where the
+  # two disagree, that disagreement is the most interesting thing we have to say.
+  def against_fpl(ours, theirs)
+    return if ours.blank? || theirs.blank? || theirs.to_f.zero?
+
+    gap = ours.to_f - theirs.to_f
+    return if gap.abs < FPL_AGREEMENT
+
+    "We make him #{format('%.1f', gap.abs)} points #{gap.positive? ? 'better' : 'worse'} " \
+      "than FPL's own estimate of #{format('%.1f', theirs)}."
+  end
+
   private
 
   def structured_data_schema

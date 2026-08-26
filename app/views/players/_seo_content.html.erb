@@ -24,7 +24,7 @@
                  "#{opponent} (#{venue})"
                } %>
             <li>
-              <%= link_to player.short_name, player_path(player), class: "font-semibold text-zinc-900 hover:underline" %>
+              <%= link_to player.display_name, player_path(player), class: "font-semibold text-zinc-900 hover:underline" %>
               (<%= player.team&.name %><%= " vs #{fixtures.join(', ')}" if fixtures.any? %>)
             </li>
           <% end %>
@@ -48,7 +48,7 @@
                  "#{opponent} (#{venue})"
                } %>
             <li>
-              <%= link_to player.short_name, player_path(player), class: "font-semibold text-zinc-900 hover:underline" %>
+              <%= link_to player.display_name, player_path(player), class: "font-semibold text-zinc-900 hover:underline" %>
               (<%= player.team&.name %><%= " vs #{fixtures.join(', ')}" if fixtures.any? %>)
             </li>
           <% end %>
