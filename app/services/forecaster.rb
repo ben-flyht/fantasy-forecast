@@ -34,7 +34,13 @@ class Forecaster < ApplicationService
   #    instead of swapping wholesale at the first whistle and distrusting what
   #    replaced it. Last season's expected assists are read at all, having been
   #    mapped but never loaded.
-  MODEL = 5
+  # 6: minutes multiply the answer rather than sitting inside our half of it, so
+  #    the first of the three terms can be heard at all; and a thin minutes record
+  #    may be lifted by what the game has paid to own him, discounted at the cheap
+  #    end, rather than only where he has changed clubs. Last season's minutes are
+  #    remembered and fade over a month rather than being blended in, a role being
+  #    the one thing a summer changes.
+  MODEL = 6
 
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek

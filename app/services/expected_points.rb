@@ -78,20 +78,31 @@ class ExpectedPoints < ApplicationService
   # rest-of-season horizon lifts the cap so his record does more of the talking.
   NEW_CLUB_MINUTES = 0.5
 
-  # How much of the game has to own a new signing before we take it that he has
-  # walked into the side.
+  # How much of the game has to own a player before we take it that he is in the
+  # side.
   #
-  # The cap above is an admission that we do not know whether he starts, and that
-  # is the one question the crowd answers better than any record can: managers do
-  # not spend a squad place on a man who sits out. So where we have said "his
-  # minutes belong to another club's team sheet", their money is allowed to say
-  # "and he is first choice at this one".
+  # A thin minutes record is an admission that we do not know whether he starts,
+  # and that is the one question the crowd answers better than any record can:
+  # managers do not spend a squad place on a man who sits out. So where a record
+  # cannot say whether he is first choice, their money is allowed to.
   #
-  # It is deliberately the narrowest use we could make of ownership. It applies
-  # only where we have already confessed to guessing, it can only lift a player
-  # and never mark him down, and it stops at a regular's share: backing may
-  # establish that a man plays, never that he is any good, which is what his
-  # record is for.
+  # This once applied to new signings alone, on the grounds that a signing is the
+  # only player we have confessed to guessing about. Giving minutes their real
+  # force widened that confession to anyone whose record is thin, whatever thinned
+  # it. Isak had 784 minutes behind him, a ninth of the game holding him at nine
+  # million, and a record that could only argue he plays four tenths of a match:
+  # the money knew he was first choice and had no way of saying so, and he fell
+  # from fourth in his position to twenty-second.
+  #
+  # It stays the narrowest use we can make of ownership. It can only lift a player
+  # and never mark him down, so a full record is left entirely alone. It stops at
+  # a regular's share: backing may establish that a man plays, never that he is any
+  # good, which is what his record is for. And it is discounted at the cheap end,
+  # where owning a player is half a decision because somebody had to fill the slot
+  # and the game piles into whichever cheap man is nailed on. That discount is what
+  # separates the two players this is meant to tell apart: Isak at nine million,
+  # lifted, from Kusi-Asare at four and a half with no minutes at all, who is not.
+  # See CHEAP_BAND.
   #
   # A tenth of the game is a lot of managers when the average player is owned by
   # two per cent of it. A starting figure, to be settled by what actually happens
@@ -462,29 +473,42 @@ class ExpectedPoints < ApplicationService
 
   private
 
+  # Minutes multiply the answer the two estimates settle on, instead of sitting
+  # inside one of them.
+  #
+  # They used to sit inside ours, and could not survive the journey out. The
+  # crowd's estimate carries no minutes of its own, and a record is only let nudge
+  # the crowd by a few percent, so at the second gameweek playing no football at
+  # all cost a well-owned man five percent: Watkins was our thirteenth best
+  # forward on an estimate of exactly nought, while McBurnie, who had played the
+  # full ninety, stood twenty-first. The first of the three terms this model is
+  # built on was the one term it could not hear.
+  #
+  # So both estimates now price the same thing, which is what a player is worth
+  # per 90 on the pitch, and everything deciding whether he is on it to earn that
+  # multiplies afterwards: how much of the match he plays, whether he is fit for
+  # it, how many games are in front of him, and what this week's traffic says.
   def forecast(ranking)
     ours = our_estimate(ranking)
     theirs = crowd_estimate(ranking)
     return { points: nil, working: {} } if ours.nil? && theirs.nil?
 
-    points = blended(ranking, ours, theirs) * starting_share(ranking) *
+    points = blended(ranking, ours, theirs) * played_share(ranking) *
              availability(ranking) * games_ahead(ranking) * transfer_factor(ranking)
     { points: points, working: working_for(ranking, ours, theirs) }
   end
 
-  # What a player is worth in a single game, before the fixture and before this
-  # week's news. Nil when there is no record to read.
+  # What a player is worth per 90 minutes on the pitch, before the fixture and
+  # before this week's news. Nil when there is no record to read at all, because
+  # unknown must not be ranked as though we had measured it.
   #
-  # A goalkeeper is worth what he is worth per 90, with no minutes in it. His
-  # minutes are a chance of playing rather than a share of a match, and a chance
-  # cannot be argued down by a few percent the way a rate can, so it is applied to
-  # the finished answer instead. See #starting_share.
+  # No minutes in it, for anybody. What the crowd and the record disagree about is
+  # how good he is; how much he plays is not a matter for either of them to argue
+  # and is applied to the finished answer instead. See #forecast.
   def our_estimate(ranking)
-    share = minutes_share(ranking)
-    return nil if share.nil?
-    return points_per_90(ranking) if goalkeeper?(ranking)
+    return nil if minutes_share(ranking).nil?
 
-    share * points_per_90(ranking)
+    points_per_90(ranking)
   end
 
   # What a player standing where he stands with the crowd is typically worth, read
@@ -635,24 +659,57 @@ class ExpectedPoints < ApplicationService
   # unknown rather than expected to do nothing, and unknown must not be ranked as
   # though we had measured it.
   def minutes_share(ranking)
-    regular = regular_share(ranking)
-    return nil if regular.nil?
-    return regular unless @movers.include?(ranking.player_id)
+    record = regular_share(ranking)
+    return nil if record.nil?
 
-    [ [ regular, @new_club_minutes ].min, settled_in(ranking) ].max
+    [ new_club_cap(record, ranking), backed_share(ranking) ].max
   end
 
-  # How much of a match his record says he plays, from both seasons at once.
+  # A signing's minutes were earned on somebody else's team sheet, so his record
+  # is held to half a match until he has played some football at this club.
+  def new_club_cap(record, ranking)
+    return record unless @movers.include?(ranking.player_id)
+
+    [ record, @new_club_minutes ].min
+  end
+
+  # How much of a match his record says he plays: this season's answer, or last
+  # season's while that is still worth remembering.
   #
   # Each season is read against its own denominator, because that is what each is
   # a share of: this season against the football there has actually been, last
-  # season against a regular's campaign. Then they blend like any other figure.
+  # season against a regular's campaign.
+  #
+  # They are not blended, though, and that is the one place a minutes share parts
+  # company with every rate above it. A rate is a noisy measurement of something
+  # that holds still, so a thin one is properly dragged towards a fuller one. A
+  # share of minutes is a claim about a player's role, and a role is exactly the
+  # thing a summer changes. Blended, Isak's full ninety minutes in the opening week
+  # counted for a sixth of the answer and an injury-hit campaign for the rest, and
+  # a fit first-choice striker was forecast to play two thirds of a match. So the
+  # better of the two claims stands, and last season's fades. See #remembered.
   def regular_share(ranking)
     now = share_of(minutes_now(ranking), regular_minutes)
     before = share_of(minutes_before(ranking), PROVEN_MINUTES)
-    return nil if now.nil? && before.nil?
+    return now if before.nil?
 
-    blend(now, before, settled(ranking))
+    remembered_share = before * remembered
+    now.nil? ? remembered_share : [ now, remembered_share ].max
+  end
+
+  # How much last season's team sheet still counts for, from all of it before a
+  # ball is kicked to none of it a month in.
+  #
+  # It has to fade on the football there has been rather than on the football he
+  # has played, because the player it protects is the one who is not playing.
+  # Weighed by his own minutes, a man who has been dropped never accumulates the
+  # evidence that would retire last year's record, and it speaks for him all
+  # season.
+  #
+  # Five matches, the same five UNPROVEN_MINUTES doubts a rate for: a month of
+  # team sheets settles what a player's role is.
+  def remembered
+    (1 - @gameweeks_played / (UNPROVEN_MINUTES / FULL_MATCH)).clamp(0.0, 1.0)
   end
 
   # What those minutes are as a share of the season they were played in, or no
@@ -663,16 +720,15 @@ class ExpectedPoints < ApplicationService
     [ minutes / season, 1.0 ].min
   end
 
-  # What a signing's backing says about the team sheet. See NAILED_ON.
-  def settled_in(ranking)
-    REGULAR_SHARE * (ownership(ranking) / NAILED_ON).clamp(0.0, 1.0)
+  # What the game's money says about whether he is in the side, discounted at the
+  # cheap end where owning a man says less about him. See NAILED_ON.
+  def backed_share(ranking)
+    REGULAR_SHARE * (ownership(ranking) / NAILED_ON).clamp(0.0, 1.0) *
+      (1 - cheapness(ranking))
   end
 
-  # A goalkeeper's chance of being the one his club picks. One for everybody else,
-  # whose minutes are already inside his own estimate. See KEEPER_BACKING.
+  # A goalkeeper's chance of being the one his club picks. See KEEPER_BACKING.
   def starting_share(ranking)
-    return 1.0 unless goalkeeper?(ranking)
-
     club_shares(ranking.team_id)[ranking.player_id] || 0.0
   end
 
@@ -721,9 +777,9 @@ class ExpectedPoints < ApplicationService
     ranking.position == GOALKEEPER
   end
 
-  # How much of a match he is expected to be on the pitch for, whichever way the
-  # model arrived at it. Reported rather than scored: it is the figure that
-  # actually multiplied his answer, so the page and the arithmetic agree.
+  # How much of a match he is expected to be on the pitch for. A share of one for
+  # an outfield player, and for a goalkeeper the chance he is the one his club
+  # picks, that being the same question asked of a place which cannot be shared.
   def played_share(ranking)
     return starting_share(ranking) if goalkeeper?(ranking)
 

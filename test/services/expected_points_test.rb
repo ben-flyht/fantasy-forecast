@@ -573,15 +573,21 @@ class ExpectedPointsTest < ActiveSupport::TestCase
            "a wider band lets his ordinary record pull him back down toward it"
   end
 
-  test "a dear, well-backed player the record has barely seen outranks a cheap one it knows well" do
+  # A dear player whose season was cut short must not be written off for the
+  # record it left him. He no longer beats a cheaper man with a full campaign
+  # behind him, which he did while minutes could not reach the answer and the
+  # market decided nearly everything. What his price and his backing buy him now
+  # is a place on the team sheet, and that is measured against the same player
+  # nobody has bought.
+  test "a dear, well-backed player is not written off for the season that cut his record short" do
     rankings, stats = crowded_field(owned: [ 12.0, 22.0 ], cost: [ 90.0, 55.0 ])
-    stats[1] = regular(minutes: 700.0, xg: 0.30, xgi: 0.45, owned: 12.0, cost: 90.0) # injured last year, still dear
-    stats[2] = regular(minutes: 3000.0, xg: 0.35, xgi: 0.55, owned: 22.0, cost: 55.0) # cheap, healthy, well-owned
+    thin = regular(minutes: 700.0, xg: 0.30, xgi: 0.45, cost: 90.0)
 
-    result = forecast(rankings, stats)
+    backed = forecast(rankings, stats.merge(1 => thin.merge("selected_by_percent" => 12.0)))
+    ignored = forecast(rankings, stats.merge(1 => thin.merge("selected_by_percent" => 0.3)))
 
-    assert result[1][:points] > result[2][:points],
-           "what he costs remembers the season his thin record has forgotten"
+    assert_operator backed[1][:points], :>, ignored[1][:points] * 1.5,
+                    "what the game paid to own him says he starts, where seven hundred minutes cannot"
   end
 
   test "a recent run counts for more as the season runs" do
@@ -617,10 +623,15 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
   # Two signings with the same thin record at their old clubs. The only thing
   # separating them is how much of the game has already picked them.
+  #
+  # A cheap man stands with them to give the position a floor. What owning a
+  # player says about him depends on how far above the floor he was bought, and a
+  # field of a single price has nothing to measure that from. See CHEAP_BAND.
   def two_signings(owned:)
-    rankings = [ ranking(1), ranking(2) ]
+    rankings = [ ranking(1), ranking(2), ranking(3) ]
     stats = { 1 => regular(minutes: 800.0, owned: owned.first),
-              2 => regular(minutes: 800.0, owned: owned.last) }
+              2 => regular(minutes: 800.0, owned: owned.last),
+              3 => regular(owned: 1.0, cost: 45.0) }
     [ rankings, stats ]
   end
 
@@ -635,8 +646,9 @@ class ExpectedPointsTest < ActiveSupport::TestCase
   end
 
   test "backing can establish that a signing plays, never that he is any good" do
-    rankings = [ ranking(1) ]
-    stats = { 1 => regular(minutes: 3000.0, owned: 90.0) } # adored, and a full record elsewhere
+    rankings = [ ranking(1), ranking(2) ]
+    stats = { 1 => regular(minutes: 3000.0, owned: 90.0), # adored, and a full record elsewhere
+              2 => regular(owned: 1.0, cost: 45.0) }      # a floor to read his price against
 
     result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
                                  season_started: false, movers: [ 1 ])
@@ -644,14 +656,31 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     assert_equal 63, result[1][:working][:minutes], "it stops at a regular's share, not a full match"
   end
 
-  test "a settled player's minutes are his own business, however many own him" do
+  test "a full record is a player's own business, however many own him" do
     rankings, stats = two_signings(owned: [ 40.0, 0.4 ])
+    stats[1] = regular(minutes: 3000.0, owned: 40.0)
+    stats[2] = regular(minutes: 3000.0, owned: 0.4)
 
     result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
                                  season_started: false, movers: [])
 
     assert_equal result[2][:working][:minutes], result[1][:working][:minutes],
-                 "ownership only answers the question the new-club cap asks"
+                 "backing lifts a thin record and has nothing to add to a full one"
+  end
+
+  test "a thin record is lifted by what the game paid to own him, and not at the floor" do
+    rankings = [ ranking(1), ranking(2), ranking(3) ]
+    stats = { 1 => regular(minutes: 780.0, owned: 17.0, cost: 90.0), # a premium who missed most of last year
+              2 => regular(minutes: 780.0, owned: 17.0, cost: 45.0), # the same record, at the floor
+              3 => regular(owned: 1.0, cost: 45.0) }
+
+    result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                 season_started: false, movers: [])
+
+    assert_equal 63, result[1][:working][:minutes],
+                 "the money says he is first choice where seven hundred minutes cannot"
+    assert_operator result[2][:working][:minutes], :<, 35,
+                    "the same backing at the floor of a position is somebody filling a slot"
   end
 
   test "a rush for the exit drops a player hard and at once" do
