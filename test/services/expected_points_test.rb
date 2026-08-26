@@ -590,19 +590,38 @@ class ExpectedPointsTest < ActiveSupport::TestCase
                     "what the game paid to own him says he starts, where seven hundred minutes cannot"
   end
 
-  test "a recent run counts for more as the season runs" do
+  # A run only means anything measured against the runs everybody else is having,
+  # so the field is ordinary and he is not. See ExpectedPoints#typical_ratio.
+  def hot_among_ordinary
     hot = { "season_minutes" => 3000.0, "expected_goals_per_90" => 0.30,
             "expected_goal_involvements_per_90" => 0.50, "clean_sheets_per_90" => 0.30,
             "selected_by_percent" => 5.0, "now_cost" => 60.0,
             "form" => 8.0, "points_per_game" => 4.0 } # in the middle of a hot streak
+    stats = (2..5).index_with { hot.merge("form" => 4.0) }.merge(1 => hot)
+    [ (1..5).map { |id| ranking(id) }, stats ]
+  end
 
-    early = ExpectedPoints.call([ ranking(1) ], stats: { 1 => hot }, fixtures_by_team: { 1 => [ fixture ] },
+  test "a recent run counts for more as the season runs" do
+    rankings, stats = hot_among_ordinary
+
+    early = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
                                 season_started: true, gameweeks_played: 2)
-    late = ExpectedPoints.call([ ranking(1) ], stats: { 1 => hot }, fixtures_by_team: { 1 => [ fixture ] },
+    late = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
                                season_started: true, gameweeks_played: 30)
 
     assert late[1][:points] > early[1][:points],
            "his hot streak is let say more once there is a season of it to trust"
+  end
+
+  test "a run is read against the runs everybody else is having" do
+    rankings, stats = hot_among_ordinary
+
+    result = ExpectedPoints.call(rankings, stats: stats, fixtures_by_team: { 1 => [ fixture ] },
+                                 season_started: true, gameweeks_played: 2)
+
+    assert_operator result[1][:working][:form], :>, 1.0, "he is scoring more than the field is"
+    assert_equal 1.0, result[2][:working][:form],
+                 "and a player scoring exactly what the field scores is neither hot nor cold"
   end
 
   test "an established signing is held to half a match, and a longer horizon eases that" do

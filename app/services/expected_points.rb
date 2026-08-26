@@ -20,6 +20,7 @@ class ExpectedPoints < ApplicationService
     expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90 saves_per_90
     expected_goals_conceded_per_90 defensive_contribution_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
+    last_season_points
     expected_assists_per_90
     last_season_expected_assists_per_90
     last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
@@ -183,6 +184,11 @@ class ExpectedPoints < ApplicationService
   # than what happened before. See #form_swing.
   FORM_SWING = 0.2
   FORM_SWING_GROWTH = 0.3
+
+  # How many matches FPL's thirty-day form window holds once it is full, which is
+  # the four games the fifth above was chosen for. Before it is full it holds
+  # fewer, and is trusted for less. See #window_filled.
+  FORM_WINDOW = 4.0
 
   # How much the opponent matters, which depends entirely on what a player is
   # paid for.
@@ -442,9 +448,28 @@ class ExpectedPoints < ApplicationService
     PRICE_POWER - (PRICE_POWER - PRICE_POWER_FLOOR) * season_progress
   end
 
-  # A fifth at the start, widening as the running becomes the evidence.
+  # A fifth once there is a month of running to read, widening from there as the
+  # running becomes the evidence, and narrow while the window is nearly empty.
   def form_swing
-    FORM_SWING + FORM_SWING_GROWTH * season_progress
+    (FORM_SWING + FORM_SWING_GROWTH * season_progress) * window_filled
+  end
+
+  # How much football the form window actually holds, from a quarter of it in the
+  # opening week to all of it a month in.
+  #
+  # A fifth is the right figure for four games, which is what FORM_SWING was
+  # chosen for and what a thirty-day window holds in mid-season. In August it
+  # holds one match, and one match handed a fifth of a player's scoring is a far
+  # louder signal than the one that fifth was priced for. Haaland's quiet opening
+  # afternoon and João Pedro's eleven points both pinned against the edge of the
+  # band, so a single week of football moved the two best forwards in the game a
+  # fifth apart in opposite directions.
+  #
+  # So the band opens as the window fills. It is the same argument as
+  # UNPROVEN_MINUTES and #credibility, applied to a measurement whose window
+  # happens to be counted in days rather than in minutes played.
+  def window_filled
+    (@gameweeks_played / FORM_WINDOW).clamp(0.0, 1.0)
   end
 
   # How much football there has been to measure against. Before the season starts
@@ -662,15 +687,7 @@ class ExpectedPoints < ApplicationService
     record = regular_share(ranking)
     return nil if record.nil?
 
-    [ new_club_cap(record, ranking), backed_share(ranking) ].max
-  end
-
-  # A signing's minutes were earned on somebody else's team sheet, so his record
-  # is held to half a match until he has played some football at this club.
-  def new_club_cap(record, ranking)
-    return record unless @movers.include?(ranking.player_id)
-
-    [ record, @new_club_minutes ].min
+    [ record, backed_share(ranking) ].max
   end
 
   # How much of a match his record says he plays: this season's answer, or last
@@ -690,11 +707,27 @@ class ExpectedPoints < ApplicationService
   # better of the two claims stands, and last season's fades. See #remembered.
   def regular_share(ranking)
     now = share_of(minutes_now(ranking), regular_minutes)
-    before = share_of(minutes_before(ranking), PROVEN_MINUTES)
+    before = new_club_cap(share_of(minutes_before(ranking), PROVEN_MINUTES), ranking)
     return now if before.nil?
 
     remembered_share = before * remembered
     now.nil? ? remembered_share : [ now, remembered_share ].max
+  end
+
+  # A signing's minutes at his old club were earned on somebody else's team
+  # sheet, so they are held to half a match. What he has played at this one is
+  # not held to anything: those minutes are the very evidence the cap is waiting
+  # for.
+  #
+  # The cap used to fall on the finished record, which meant it fell on both, and
+  # a signing who had walked straight into his new side was still held to a
+  # figure that only made sense for the club he had left. Tzolis started for
+  # Arsenal and played seventy-five minutes of it, and was forecast sixty-three:
+  # his own answer, from this club, was capped by a doubt about a different one.
+  def new_club_cap(before, ranking)
+    return before if before.nil? || !@movers.include?(ranking.player_id)
+
+    [ before, @new_club_minutes ].min
   end
 
   # How much last season's team sheet still counts for, from all of it before a
@@ -927,11 +960,76 @@ class ExpectedPoints < ApplicationService
   # Nought before a ball is kicked, and nought for a player with no record, both of
   # which read as no opinion rather than as a slump.
   def form_factor(ranking)
-    recent = stat(ranking, "form")
-    usual = stat(ranking, "points_per_game")
-    return 1.0 if recent.zero? || usual.zero?
+    ratio = form_ratio(ranking)
+    return 1.0 if ratio.nil?
 
-    (recent / usual).clamp(1 - form_swing, 1 + form_swing)
+    (ratio / typical_ratio).clamp(1 - form_swing, 1 + form_swing)
+  end
+
+  # How his recent run compares with his usual level. No opinion where either
+  # figure is missing.
+  def form_ratio(ranking)
+    recent = stat(ranking, "form")
+    usual = usual_scoring(ranking)
+    return nil if recent.zero? || usual.zero?
+
+    recent / usual
+  end
+
+  # The middle of that comparison across everybody he is ranked against.
+  #
+  # A short window sits below a season's average for almost everyone, because a
+  # gameweek's scoring is a few hauls and a great many blanks: the middle
+  # gameweek is worth less than the mean one. Read straight against a season
+  # figure, one week of football marked four players in five out of form, the
+  # median landed on the floor of the swing, and what was meant to be a
+  # comparison became a flat deduction.
+  #
+  # So the ratio is read against the middle of the same ratio for his position,
+  # which is what makes this a form signal rather than a statement about the
+  # shape of the distribution. Being in form means scoring more than the players
+  # around you are scoring, and that is now what it measures. It also needs no
+  # unwinding later: as the season lengthens the window and the average converge,
+  # the middle drifts to one on its own, and this stops doing anything.
+  #
+  # Calibrated on the field and not on the player, for the same reason as
+  # ASSIST_AWARDED above.
+  def typical_ratio
+    return @typical_ratio if defined?(@typical_ratio)
+
+    ratios = @rankings.filter_map { |other| form_ratio(other) }
+    @typical_ratio = ratios.empty? ? 1.0 : middle_of(ratios)
+  end
+
+  # What he normally scores, which is the thing a recent run is read against.
+  #
+  # This used to be FPL's points_per_game, and for the first month of a season
+  # that is not a baseline at all: points_per_game is this season's average and
+  # form is the last thirty days, and early on they are the same football. They
+  # divided to exactly one for all 292 players who had a record at the second
+  # gameweek, so the swing above was multiplying by nothing for a month, in the
+  # very window where a manager most wants to know who has started well.
+  #
+  # So the baseline is what he scored last season, which cannot move with the
+  # numerator, and it fades across to this season's average as the campaign grows
+  # long enough to be a different window from the form. See #remembered.
+  #
+  # Last season is read per 90 and FPL's form is per appearance, which are the
+  # same number for a man who plays whole games and not for a substitute, whose
+  # run therefore reads a little cool. The swing is a fifth either way at most, so
+  # the mismatch cannot do much; measuring it properly needs last season's
+  # appearances, which FPL does not publish on this endpoint.
+  def usual_scoring(ranking)
+    blend(optional_stat(ranking, "points_per_game"), last_season_per_90(ranking), 1 - remembered)
+  end
+
+  # What he scored last season, per 90 minutes on the pitch. No opinion where he
+  # did not play it.
+  def last_season_per_90(ranking)
+    played = minutes_before(ranking)
+    return nil if played.nil? || played.zero?
+
+    stat(ranking, "last_season_points") / (played / FULL_MATCH)
   end
 
   def goal_points(ranking)
