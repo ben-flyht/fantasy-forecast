@@ -61,11 +61,11 @@ class ComparisonStats < ApplicationService
              label: "Defensive contributions, per 90", better: :high, format: :two),
 
     Stat.new(this: "season_bonus", last: "last_season_bonus", label: "Bonus points", better: :high, format: :whole),
-    Stat.new(this: "bps", last: nil, label: "Bonus points system (BPS)", better: :high, format: :whole),
-    Stat.new(this: "ict_index", last: nil, label: "ICT index", better: :high, format: :one),
-    Stat.new(this: "threat", last: nil, label: "Threat", better: :high, format: :one),
-    Stat.new(this: "creativity", last: nil, label: "Creativity", better: :high, format: :one),
-    Stat.new(this: "influence", last: nil, label: "Influence", better: :high, format: :one),
+    Stat.new(this: "season_bps", last: nil, label: "Bonus points system (BPS)", better: :high, format: :whole),
+    Stat.new(this: "season_ict_index", last: nil, label: "ICT index", better: :high, format: :one),
+    Stat.new(this: "season_threat", last: nil, label: "Threat", better: :high, format: :one),
+    Stat.new(this: "season_creativity", last: nil, label: "Creativity", better: :high, format: :one),
+    Stat.new(this: "season_influence", last: nil, label: "Influence", better: :high, format: :one),
 
     Stat.new(this: "season_penalties_saved", last: nil, label: "Penalties saved", better: :high, format: :whole),
     Stat.new(this: "season_penalties_missed", last: nil, label: "Penalties missed", better: :low, format: :whole),

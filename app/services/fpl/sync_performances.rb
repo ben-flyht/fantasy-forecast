@@ -1,12 +1,29 @@
 module Fpl
   class SyncPerformances < ApplicationService
+    # The key in FPL's per-gameweek history => the statistic type we store it as,
+    # the same direction as SyncPlayers::SNAPSHOT_STATS and
+    # SyncPlayerHistories::STAT_TYPES. Most keep their own name.
     STAT_TYPES = %w[
       total_points minutes goals_scored assists clean_sheets goals_conceded own_goals
       penalties_saved penalties_missed yellow_cards red_cards saves bonus bps
       influence creativity threat ict_index starts expected_goals expected_assists
       expected_goal_involvements expected_goals_conceded clearances_blocks_interceptions
       recoveries tackles defensive_contribution
-    ].freeze
+    ].index_with { |type| type }.merge(
+      # What the game thought of him that week: how many owned him, what he cost,
+      # and which way the traffic ran. The bootstrap snapshot only ever holds the
+      # latest of these, so this is the only place the week-by-week series exists.
+      #
+      # The two transfer figures are named apart because the snapshot already
+      # stores this gameweek's traffic as transfers_in, and the unique index is
+      # player, gameweek and type: left alone, the two syncs would take turns
+      # overwriting one another every hour.
+      "selected" => "selected",
+      "value" => "value",
+      "transfers_balance" => "transfers_balance",
+      "transfers_in" => "gameweek_transfers_in",
+      "transfers_out" => "gameweek_transfers_out"
+    ).freeze
 
     def initialize(gameweek_id = nil, api: Api.new)
       @gameweek_id = gameweek_id
@@ -94,7 +111,7 @@ module Fpl
       return [] unless player
 
       stats = element["stats"] || {}
-      STAT_TYPES.filter_map { |type| build_stat_record(player, gameweek, type, stats[type], now) }
+      STAT_TYPES.filter_map { |key, type| build_stat_record(player, gameweek, type, stats[key], now) }
     end
 
     def build_stat_record(player, gameweek, type, value, now)

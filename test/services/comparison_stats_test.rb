@@ -38,7 +38,7 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     reading(@salah, "season_points", 120)
     reading(@salah, "season_goals", 9)
     reading(@salah, "expected_goals_per_90", 0.55)
-    reading(@salah, "ict_index", 145.3)
+    reading(@salah, "season_ict_index", 145.3)
 
     labels = stats.flat_map(&:rows).map(&:label)
     assert_includes labels, "Form"

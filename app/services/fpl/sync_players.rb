@@ -229,7 +229,39 @@ module Fpl
       "goals_conceded" => "season_goals_conceded",
       "clean_sheets" => "season_clean_sheets",
       "saves" => "season_saves",
+      # Named apart from the per-gameweek figures of the same name that
+      # SyncPerformances writes. These are the season's running accumulations and
+      # those are one match's worth; both are stored against the same player and
+      # gameweek, so sharing a type had the two syncs overwriting each other every
+      # hour, and the pipeline's order meant the season totals always lost.
       "starts" => "season_starts",
+      "recoveries" => "season_recoveries",
+      "tackles" => "season_tackles",
+      "clearances_blocks_interceptions" => "season_clearances_blocks_interceptions",
+      "dreamteam_count" => "season_dreamteam_count",
+      # Named apart from the transfers_in above, which is this gameweek's traffic
+      # from transfers_in_event. These two are the running season totals, and the
+      # unique index would have had the pair of them overwriting each other.
+      "transfers_in" => "season_transfers_in",
+      "transfers_out" => "season_transfers_out",
+      # What the market has done to his price: the move this gameweek, the move
+      # since August, and the pressure still building. The forecast already leans
+      # on what a player costs, and this is the same signal with a direction.
+      "cost_change_event" => "cost_change_event",
+      "cost_change_event_fall" => "cost_change_event_fall",
+      "cost_change_start" => "cost_change_start",
+      "cost_change_start_fall" => "cost_change_start_fall",
+      "price_change_percent" => "price_change_percent",
+      "price_change_hourly_rate" => "price_change_hourly_rate",
+      # Points per million, FPL's own two ways of asking whether he is worth it.
+      "value_form" => "value_form",
+      "value_season" => "value_season",
+      # FPL's own forecast for the week in progress, beside the one for the week
+      # ahead we already keep, and what he actually scored in it. Between them a
+      # published expectation can finally be marked against a result, which is
+      # the only outside benchmark our own accuracy has.
+      "ep_this" => "ep_this",
+      "event_points" => "event_points",
       "defensive_contribution" => "season_defensive_contribution",
       "own_goals" => "season_own_goals",
       "penalties_saved" => "season_penalties_saved",
@@ -238,11 +270,11 @@ module Fpl
       "red_cards" => "season_red_cards",
       # FPL's own indices and its bonus-points system: the numbers pundits quote and
       # managers argue over, published per player as running season figures.
-      "bps" => "bps",
-      "influence" => "influence",
-      "creativity" => "creativity",
-      "threat" => "threat",
-      "ict_index" => "ict_index",
+      "bps" => "season_bps",
+      "influence" => "season_influence",
+      "creativity" => "season_creativity",
+      "threat" => "season_threat",
+      "ict_index" => "season_ict_index",
       # Set-piece duty feeds underlying quality (1 = first choice). Nil when not on duty.
       "penalties_order" => "penalties_order",
       "corners_and_indirect_freekicks_order" => "corners_freekicks_order",

@@ -22,7 +22,32 @@ module Fpl
       "total_points" => "last_season_points",
       "minutes" => "last_season_minutes",
       "bonus" => "last_season_bonus",
-      "assists" => "last_season_assists"
+      "assists" => "last_season_assists",
+      # How many times he was in the side, which is a different question from how
+      # much football he got through and the better one. Everybody plays most of a
+      # match when they start, so minutes divided by starts says almost nothing
+      # while the count of starts says whether he is picked. Nothing reads it yet.
+      "starts" => "last_season_starts",
+      # What he cost at either end of the campaign. A price is FPL's own valuation
+      # and the difference between the two is a season's verdict on him.
+      "start_cost" => "last_season_start_cost",
+      "end_cost" => "last_season_end_cost",
+      # The rest of what a season leaves behind. Counts and accumulations, stored
+      # as totals like the bonus above, so whatever reads them can decide for
+      # itself whether it wants a rate and what to divide by.
+      "bps" => "last_season_bps",
+      "influence" => "last_season_influence",
+      "creativity" => "last_season_creativity",
+      "threat" => "last_season_threat",
+      "ict_index" => "last_season_ict_index",
+      "recoveries" => "last_season_recoveries",
+      "tackles" => "last_season_tackles",
+      "clearances_blocks_interceptions" => "last_season_clearances_blocks_interceptions",
+      "own_goals" => "last_season_own_goals",
+      "penalties_missed" => "last_season_penalties_missed",
+      "penalties_saved" => "last_season_penalties_saved",
+      "yellow_cards" => "last_season_yellow_cards",
+      "red_cards" => "last_season_red_cards"
     }.freeze
 
     # The same per-90 rates bootstrap publishes for the current season, worked out
@@ -71,7 +96,7 @@ module Fpl
     # What we currently record from a past season. Bump it when that set changes
     # and every player is asked again on the next run, rather than being left with
     # a partial history that nothing notices.
-    RECORD_VERSION = 6.0
+    RECORD_VERSION = 7.0
 
     REQUEST_DELAY = 0.5 # seconds between requests, to stay a polite guest
 
