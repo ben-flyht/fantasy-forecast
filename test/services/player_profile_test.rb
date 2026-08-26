@@ -67,27 +67,4 @@ class PlayerProfileTest < ActiveSupport::TestCase
 
     refute profile.doubtful?
   end
-
-  test "age is counted from the birth date" do
-    assert_equal Date.current.year - 2000 - (Date.current.yday < 1 ? 1 : 0), profile.age
-  end
-
-  test "a player settled at his club is not a new signing" do
-    refute profile.new_signing?
-    assert_equal Date.new(2019, 7, 1), profile.signed_on
-  end
-
-  test "a player who has just moved has a record earned somewhere else" do
-    @player.update!(team_join_date: Date.current - 10)
-
-    assert profile.new_signing?
-  end
-
-  test "nothing is claimed about a player with no birth date or signing date" do
-    @player.update!(birth_date: nil, team_join_date: nil)
-
-    assert_nil profile.age
-    assert_nil profile.signed_on
-    refute profile.new_signing?
-  end
 end

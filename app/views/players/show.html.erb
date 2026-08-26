@@ -45,9 +45,6 @@
   <% end %>
 </div>
 
-<!-- Set pieces, fitness and the rest of what we report without rating -->
-<%= render PlayerProfileComponent.new(profile: @profile) %>
-
 <!-- Why this grade -->
 <%# The horizon toggle lives in the heading, so the whole page navigates rather
     than the panel alone. Turbo Drive still swaps the body without a reload. %>

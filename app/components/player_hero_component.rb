@@ -13,6 +13,7 @@ class PlayerHeroComponent < PlayerRowComponent
     [
       [ "Position", player.position&.capitalize ],
       [ "Club", team&.name ],
+      [ "Age", player.age ],
       [ "Cost", cost ],
       [ "Ownership", ownership ]
     ].reject { |_label, value| value.blank? }

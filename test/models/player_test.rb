@@ -173,4 +173,17 @@ class PlayerTest < ActiveSupport::TestCase
     assert_equal 1, Player.midfielder.count
     assert_equal 1, Player.forward.count
   end
+  test "age is counted from the birth date FPL publishes" do
+    player = players(:midfielder)
+    player.update!(birth_date: Date.new(2000, 1, 1))
+
+    assert_equal Date.current.year - 2000 - (Date.current.yday < 1 ? 1 : 0), player.age
+  end
+
+  test "a player FPL gives no birth date for is not given an age" do
+    player = players(:midfielder)
+    player.update!(birth_date: nil)
+
+    assert_nil player.age
+  end
 end

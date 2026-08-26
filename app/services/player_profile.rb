@@ -70,28 +70,9 @@ class PlayerProfile < ApplicationService
     chance.present? && chance < 100
   end
 
-  def age
-    return unless @player.birth_date
 
-    now = Date.current
-    now.year - @player.birth_date.year - (now.yday < @player.birth_date.yday ? 1 : 0)
-  end
 
-  def signed_on
-    @player.team_join_date
-  end
 
-  # A player whose minutes were earned somewhere else. Worth flagging, because it
-  # is the one case where a long record says least about what happens next.
-  def new_signing?
-    return false unless signed_on
-
-    signed_on > Date.current - RECENTLY_SIGNED
-  end
-
-  def deadline
-    @gameweek&.start_time
-  end
 
   private
 
