@@ -21,7 +21,7 @@
 <!-- Player Banner -->
 <div class="mt-6">
   <% if @player_ranking %>
-    <%= render PlayerHeroComponent.new(player: @player, facts: @player_facts) %>
+    <%= render PlayerHeroComponent.new(player: @player, facts: @player_facts, duties: @profile.set_pieces) %>
   <% else %>
     <div class="flex items-start gap-6">
       <%= render PlayerAvatarComponent.new(player: @player, size: :large) %>
