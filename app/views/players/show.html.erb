@@ -136,3 +136,6 @@
 
 <!-- What he has actually done, and which way the rates are moving -->
 <%= render SeasonRecordComponent.new(history: @history) %>
+
+<%# And the season before it, which in August is nearly all the evidence there is. %>
+<%= render LastSeasonComponent.new(stats: @last_season, position: @player.position) %>

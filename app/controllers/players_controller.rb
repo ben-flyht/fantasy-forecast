@@ -106,6 +106,7 @@ class PlayersController < ApplicationController
     @comparison = PlayerComparison.call(player: @player, gameweek: @next_gameweek,
                                         horizon: @horizon, divisor: season_divisor)
     @history = PlayerHistory.call(player: @player, horizon: @horizon)
+    @last_season = latest_snapshot_stats([ @player.id ], LastSeasonComponent::TYPES)[@player.id]
   end
 
   def load_player_forecast
