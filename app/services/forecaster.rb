@@ -29,7 +29,12 @@ class Forecaster < ApplicationService
   #    counted rather than expected, a clean sheet is the chance of one rather than
   #    the share he happened to keep, saves are paid in whole threes, and a full
   #    season of evidence stops being shrunk for doubt it has already answered.
-  MODEL = 4
+  # 5: a season is a dial rather than a switch. What a player does is read from
+  #    this season and last at once, weighted by how much of this one there is,
+  #    instead of swapping wholesale at the first whistle and distrusting what
+  #    replaced it. Last season's expected assists are read at all, having been
+  #    mapped but never loaded.
+  MODEL = 5
 
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek

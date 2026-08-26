@@ -21,20 +21,22 @@ class ExpectedPoints < ApplicationService
     expected_goals_conceded_per_90 defensive_contribution_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
     expected_assists_per_90
+    last_season_expected_assists_per_90
     last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
     last_season_clean_sheets_per_90 last_season_saves_per_90 last_season_bonus
     last_season_expected_goals_conceded_per_90 last_season_defensive_contribution_per_90
   ].freeze
 
-  # Where each measurement is read from before a ball is kicked.
+  # Which figure is the same measurement taken last season.
   #
-  # All of these describe the same football, so they have to come from the same
-  # season. Take a player's minutes from last season and his scoring rate from a
-  # season he spent outside the league and he is credited with a full campaign of
-  # turning up and doing nothing, which is how a promoted club's defender came to
-  # outrank the man half the game had picked ahead of him. FPL also zeroes the
-  # current-season fields over the summer, so reading them then hands every player
-  # in the game the same bare appearance points.
+  # All of these describe the same football, so a figure and its pair have to be
+  # read together. Take a player's minutes from last season and his scoring rate
+  # from a season he spent outside the league and he is credited with a full
+  # campaign of turning up and doing nothing, which is how a promoted club's
+  # defender came to outrank the man half the game had picked ahead of him.
+  #
+  # This was once a switch: last season until the first whistle, this season from
+  # then on. It is now the far side of a blend. See #record.
   LAST_SEASON = {
     "season_minutes" => "last_season_minutes",
     "season_bonus" => "last_season_bonus",
@@ -633,13 +635,32 @@ class ExpectedPoints < ApplicationService
   # unknown rather than expected to do nothing, and unknown must not be ranked as
   # though we had measured it.
   def minutes_share(ranking)
-    played = minutes_played(ranking)
-    return nil if played.nil?
-
-    regular = [ played / regular_minutes, 1.0 ].min
+    regular = regular_share(ranking)
+    return nil if regular.nil?
     return regular unless @movers.include?(ranking.player_id)
 
     [ [ regular, @new_club_minutes ].min, settled_in(ranking) ].max
+  end
+
+  # How much of a match his record says he plays, from both seasons at once.
+  #
+  # Each season is read against its own denominator, because that is what each is
+  # a share of: this season against the football there has actually been, last
+  # season against a regular's campaign. Then they blend like any other figure.
+  def regular_share(ranking)
+    now = share_of(minutes_now(ranking), regular_minutes)
+    before = share_of(minutes_before(ranking), PROVEN_MINUTES)
+    return nil if now.nil? && before.nil?
+
+    blend(now, before, settled(ranking))
+  end
+
+  # What those minutes are as a share of the season they were played in, or no
+  # opinion where that season was never played.
+  def share_of(minutes, season)
+    return nil if minutes.nil?
+
+    [ minutes / season, 1.0 ].min
   end
 
   # What a signing's backing says about the team sheet. See NAILED_ON.
@@ -709,17 +730,54 @@ class ExpectedPoints < ApplicationService
     minutes_share(ranking).to_f
   end
 
-  def minutes_played(ranking)
-    optional_stat(ranking, season_or_last("season_minutes"))
+  # How much football we have watched him play, this season and last. Either may
+  # be silent: a promoted player has no last season in this league, and nobody
+  # has a this season until a ball is kicked.
+  def minutes_now(ranking)
+    optional_stat(ranking, "season_minutes")
   end
 
-  # What he did, read from whichever season we are measuring. See LAST_SEASON.
+  def minutes_before(ranking)
+    optional_stat(ranking, "last_season_minutes")
+  end
+
+  # How far this season has taken over from last, nought in August and most of
+  # the way across by the time a record can stand on its own.
+  #
+  # The five matches of doubt again, doing the job they were always shaped for.
+  # Read against UNPROVEN_MINUTES a record crosses halfway through its fifth
+  # match, which is about when a run of starts stops looking like a run of luck.
+  def settled(ranking)
+    played = minutes_now(ranking).to_f
+    played / (played + UNPROVEN_MINUTES)
+  end
+
+  # What he does, from both seasons at once, this season leading as it grows.
+  #
+  # This used to be a switch, and a switch is right twice a year and wrong for the
+  # month after. At the second gameweek it threw away Haaland's three thousand
+  # minutes in order to read the ninety that had replaced them, then shrank those
+  # ninety by four fifths for being thin, and his per-90 fell from seven points to
+  # under three. The two seasons did not even disagree: 0.78 expected goals a game
+  # against 0.74. We were discarding the evidence that said the same thing as the
+  # evidence we kept, and calling the remainder doubtful.
+  #
+  # So the two are blended, weighted by how much of this season there is to read.
+  # Either side may be silent, and silence is no opinion rather than a nought: a
+  # promoted player is read on this season alone, and an August on last.
   def record(ranking, type)
-    stat(ranking, season_or_last(type))
+    blend(optional_stat(ranking, type), optional_stat(ranking, LAST_SEASON.fetch(type)),
+          settled(ranking))
   end
 
-  def season_or_last(type)
-    @season_started ? type : LAST_SEASON.fetch(type)
+  # Two readings of the same thing, weighed by how far this season has taken over
+  # from last. Either may be silent, and a silence is no opinion rather than a
+  # nought: what the other one says stands unaltered.
+  def blend(now, before, settled)
+    return before.to_f if now.nil?
+    return now.to_f if before.nil?
+
+    now * settled + before * (1 - settled)
   end
 
   def regular_minutes
@@ -796,10 +854,18 @@ class ExpectedPoints < ApplicationService
   # five matches of doubt instead, and one bonus point off the bench stays worth
   # about what it was.
   def bonus_points(ranking)
-    played = minutes_played(ranking).to_f
-    return 0.0 if played.zero?
+    blend(bonus_rate(ranking, "season_bonus", minutes_now(ranking)),
+          bonus_rate(ranking, "last_season_bonus", minutes_before(ranking)),
+          settled(ranking))
+  end
 
-    record(ranking, "season_bonus") / ([ played, UNPROVEN_MINUTES ].max / FULL_MATCH)
+  # One season's bonus as a rate per 90, so the two campaigns meet as rates and
+  # not as totals. Forty-three bonus points off a full season and none off one
+  # quiet afternoon are not two numbers that can be averaged.
+  def bonus_rate(ranking, type, played)
+    return nil if played.nil? || played.zero?
+
+    stat(ranking, type) / ([ played, UNPROVEN_MINUTES ].max / FULL_MATCH)
   end
 
   # Nought before a ball is kicked, and nought for a player with no record, both of
@@ -1021,10 +1087,17 @@ class ExpectedPoints < ApplicationService
   # meant to. One match is precisely the evidence UNPROVEN_MINUTES exists to
   # distrust.
   def credibility(ranking)
-    played = minutes_played(ranking).to_f
+    played = football_seen(ranking)
     ceiling = PROVEN_MINUTES / (PROVEN_MINUTES + UNPROVEN_MINUTES)
 
     ((played / (played + UNPROVEN_MINUTES)) / ceiling).clamp(0.0, 1.0)
+  end
+
+  # Every minute we have watched him play, this season and last, because a rate is
+  # only ever doubted for the football behind it. A man with a full campaign
+  # behind him does not become an unknown quantity because a new season started.
+  def football_seen(ranking)
+    minutes_now(ranking).to_f + minutes_before(ranking).to_f
   end
 
   # THE THIRD TERM: the games in front of him, each counted for what it is worth
