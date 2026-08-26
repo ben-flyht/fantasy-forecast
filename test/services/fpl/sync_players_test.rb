@@ -258,9 +258,9 @@ class Fpl::SyncPlayersTest < ActiveSupport::TestCase
     assert_equal 9.0, stats["season_goals"]
     assert_in_delta 7.6, stats["season_expected_goals"], 0.001
     assert_equal 1.0, stats["season_own_goals"]
-    assert_equal 540.0, stats["bps"]
-    assert_in_delta 145.2, stats["ict_index"], 0.001
-    assert_in_delta 88.0, stats["threat"], 0.001
+    assert_equal 540.0, stats["season_bps"]
+    assert_in_delta 145.2, stats["season_ict_index"], 0.001
+    assert_in_delta 88.0, stats["season_threat"], 0.001
   end
 
   test "attaches snapshot statistics to the next gameweek pre-season" do
