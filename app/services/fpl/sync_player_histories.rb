@@ -10,15 +10,19 @@ module Fpl
   # incremental: players whose totals are already stored are skipped. A re-run
   # costs almost nothing and an interrupted run picks up where it stopped.
   class SyncPlayerHistories < ApplicationService
-    # Statistic type => the key to read from FPL's past-season entry.
+    # The key in FPL's past-season entry => the statistic type we store it as.
+    #
+    # Read this way round to match Fpl::SyncPlayers::SNAPSHOT_STATS. The two used
+    # to disagree, and a mapping whose direction you have to work out from the
+    # block that walks it is a mapping that gets read backwards.
     # Assists are a total rather than a rate, like the bonus beside them, because
     # that is how the forecast reads them and because a season's assists survive a
     # column of two decimal places where a rate of 0.08 a game does not.
     STAT_TYPES = {
-      "last_season_points" => "total_points",
-      "last_season_minutes" => "minutes",
-      "last_season_bonus" => "bonus",
-      "last_season_assists" => "assists"
+      "total_points" => "last_season_points",
+      "minutes" => "last_season_minutes",
+      "bonus" => "last_season_bonus",
+      "assists" => "last_season_assists"
     }.freeze
 
     # The same per-90 rates bootstrap publishes for the current season, worked out
@@ -36,15 +40,15 @@ module Fpl
     # counts. Nothing here changes what the forecast reads. It stores the other half
     # of each pair so the gap can be measured rather than argued about.
     RATE_TYPES = {
-      "last_season_expected_goals_per_90" => "expected_goals",
-      "last_season_expected_goal_involvements_per_90" => "expected_goal_involvements",
-      "last_season_expected_assists_per_90" => "expected_assists",
-      "last_season_goals_per_90" => "goals_scored",
-      "last_season_clean_sheets_per_90" => "clean_sheets",
-      "last_season_saves_per_90" => "saves",
-      "last_season_expected_goals_conceded_per_90" => "expected_goals_conceded",
-      "last_season_goals_conceded_per_90" => "goals_conceded",
-      "last_season_defensive_contribution_per_90" => "defensive_contribution"
+      "expected_goals" => "last_season_expected_goals_per_90",
+      "expected_goal_involvements" => "last_season_expected_goal_involvements_per_90",
+      "expected_assists" => "last_season_expected_assists_per_90",
+      "goals_scored" => "last_season_goals_per_90",
+      "clean_sheets" => "last_season_clean_sheets_per_90",
+      "saves" => "last_season_saves_per_90",
+      "expected_goals_conceded" => "last_season_expected_goals_conceded_per_90",
+      "goals_conceded" => "last_season_goals_conceded_per_90",
+      "defensive_contribution" => "last_season_defensive_contribution_per_90"
     }.freeze
 
     # Which season counts as last season, and nothing else does.
@@ -177,7 +181,7 @@ module Fpl
     end
 
     def totals(player, gameweek, season, now)
-      STAT_TYPES.filter_map do |type, key|
+      STAT_TYPES.filter_map do |key, type|
         value = season[key]
         next if value.nil?
 
@@ -191,7 +195,7 @@ module Fpl
       nineties = season["minutes"].to_f / MINUTES_IN_A_MATCH
       return [] unless nineties.positive?
 
-      RATE_TYPES.filter_map do |type, key|
+      RATE_TYPES.filter_map do |key, type|
         value = season[key]
         next if value.nil?
 
@@ -225,8 +229,10 @@ module Fpl
       Statistic.where(player_id: player.id, gameweek_id: gameweek.id, type: season_types).delete_all
     end
 
+    # The types we store a past season under, which is the far side of both
+    # mappings above.
     def season_types
-      @season_types ||= STAT_TYPES.keys + RATE_TYPES.keys
+      @season_types ||= STAT_TYPES.values + RATE_TYPES.values
     end
 
     def log_nothing_to_do

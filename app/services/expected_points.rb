@@ -15,16 +15,24 @@
 #   stats            - { player_id => { stat_type => Float } }
 #   fixtures_by_team - { team_id => [{ difficulty:, opponent:, home: }] } this week's games
 class ExpectedPoints < ApplicationService
+  # What the forecast reads. Every one of these reaches an answer: a figure that
+  # is loaded and then multiplied by nothing costs a query and an illusion that
+  # the model is weighing something it is not.
+  #
+  # Expected goal involvements and the clean sheet rate used to be here. They went
+  # quiet when creating was priced from expected assists instead of the combined
+  # figure, and when a clean sheet became the chance of one rather than the share
+  # a side happened to keep. Both are still synced and still read by the
+  # comparison page; they are simply no longer read here.
   STAT_TYPES = %w[
     season_minutes last_season_minutes chance_of_playing
-    expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90 saves_per_90
+    expected_goals_per_90 saves_per_90
     expected_goals_conceded_per_90 defensive_contribution_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
     last_season_points
     expected_assists_per_90
     last_season_expected_assists_per_90
-    last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
-    last_season_clean_sheets_per_90 last_season_saves_per_90 last_season_bonus
+    last_season_expected_goals_per_90 last_season_saves_per_90 last_season_bonus
     last_season_expected_goals_conceded_per_90 last_season_defensive_contribution_per_90
   ].freeze
 
@@ -43,8 +51,6 @@ class ExpectedPoints < ApplicationService
     "season_bonus" => "last_season_bonus",
     "expected_assists_per_90" => "last_season_expected_assists_per_90",
     "expected_goals_per_90" => "last_season_expected_goals_per_90",
-    "expected_goal_involvements_per_90" => "last_season_expected_goal_involvements_per_90",
-    "clean_sheets_per_90" => "last_season_clean_sheets_per_90",
     "saves_per_90" => "last_season_saves_per_90",
     "expected_goals_conceded_per_90" => "last_season_expected_goals_conceded_per_90",
     "defensive_contribution_per_90" => "last_season_defensive_contribution_per_90"
