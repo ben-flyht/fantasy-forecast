@@ -18,16 +18,33 @@ class FixtureProjection < ApplicationService
 
   def call
     @matches.map do |match|
-      Row.new(match: match, points: points_for(match), projected: match.gameweek_id != @next_gameweek_id)
+      Row.new(match: match, points: points_for(match), projected: projected?(match))
     end
   end
 
   private
 
+  # A nought is a fact about the week it was forecast for and no claim at all
+  # about the weeks after it.
+  #
+  # FPL says a ruled-out player has no chance this Saturday. It says nothing
+  # about the Saturday after, and where it gives no return date we assume a long
+  # absence by our own admission that it is a guess. Read straight, one week's
+  # nought was multiplied out into five: Timber's groin strain came out as 0.0
+  # against Chelsea in September, printed five times in a column, which reads as
+  # knowledge rather than as caution. Our own rest-of-season forecast for him is
+  # ninety-seven points, so it is not even what we think.
+  #
+  # The week itself keeps its nought, because that one we do know.
   def points_for(match)
     return unless base
+    return if base.zero? && projected?(match)
 
     (base * engine.fixture_worth(ranking, fixture_for(match))).round(1)
+  end
+
+  def projected?(match)
+    match.gameweek_id != @next_gameweek_id
   end
 
   # What the player is worth on an ordinary fixture, taken from the first anchor
