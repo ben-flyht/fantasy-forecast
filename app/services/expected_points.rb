@@ -20,21 +20,24 @@ class ExpectedPoints < ApplicationService
     expected_goals_per_90 expected_goal_involvements_per_90 clean_sheets_per_90 saves_per_90
     expected_goals_conceded_per_90 defensive_contribution_per_90
     selected_by_percent transfers_in transfers_out now_cost form points_per_game season_bonus
+    last_season_points
     expected_assists_per_90
+    last_season_expected_assists_per_90
     last_season_expected_goals_per_90 last_season_expected_goal_involvements_per_90
     last_season_clean_sheets_per_90 last_season_saves_per_90 last_season_bonus
     last_season_expected_goals_conceded_per_90 last_season_defensive_contribution_per_90
   ].freeze
 
-  # Where each measurement is read from before a ball is kicked.
+  # Which figure is the same measurement taken last season.
   #
-  # All of these describe the same football, so they have to come from the same
-  # season. Take a player's minutes from last season and his scoring rate from a
-  # season he spent outside the league and he is credited with a full campaign of
-  # turning up and doing nothing, which is how a promoted club's defender came to
-  # outrank the man half the game had picked ahead of him. FPL also zeroes the
-  # current-season fields over the summer, so reading them then hands every player
-  # in the game the same bare appearance points.
+  # All of these describe the same football, so a figure and its pair have to be
+  # read together. Take a player's minutes from last season and his scoring rate
+  # from a season he spent outside the league and he is credited with a full
+  # campaign of turning up and doing nothing, which is how a promoted club's
+  # defender came to outrank the man half the game had picked ahead of him.
+  #
+  # This was once a switch: last season until the first whistle, this season from
+  # then on. It is now the far side of a blend. See #record.
   LAST_SEASON = {
     "season_minutes" => "last_season_minutes",
     "season_bonus" => "last_season_bonus",
@@ -76,20 +79,31 @@ class ExpectedPoints < ApplicationService
   # rest-of-season horizon lifts the cap so his record does more of the talking.
   NEW_CLUB_MINUTES = 0.5
 
-  # How much of the game has to own a new signing before we take it that he has
-  # walked into the side.
+  # How much of the game has to own a player before we take it that he is in the
+  # side.
   #
-  # The cap above is an admission that we do not know whether he starts, and that
-  # is the one question the crowd answers better than any record can: managers do
-  # not spend a squad place on a man who sits out. So where we have said "his
-  # minutes belong to another club's team sheet", their money is allowed to say
-  # "and he is first choice at this one".
+  # A thin minutes record is an admission that we do not know whether he starts,
+  # and that is the one question the crowd answers better than any record can:
+  # managers do not spend a squad place on a man who sits out. So where a record
+  # cannot say whether he is first choice, their money is allowed to.
   #
-  # It is deliberately the narrowest use we could make of ownership. It applies
-  # only where we have already confessed to guessing, it can only lift a player
-  # and never mark him down, and it stops at a regular's share: backing may
-  # establish that a man plays, never that he is any good, which is what his
-  # record is for.
+  # This once applied to new signings alone, on the grounds that a signing is the
+  # only player we have confessed to guessing about. Giving minutes their real
+  # force widened that confession to anyone whose record is thin, whatever thinned
+  # it. Isak had 784 minutes behind him, a ninth of the game holding him at nine
+  # million, and a record that could only argue he plays four tenths of a match:
+  # the money knew he was first choice and had no way of saying so, and he fell
+  # from fourth in his position to twenty-second.
+  #
+  # It stays the narrowest use we can make of ownership. It can only lift a player
+  # and never mark him down, so a full record is left entirely alone. It stops at
+  # a regular's share: backing may establish that a man plays, never that he is any
+  # good, which is what his record is for. And it is discounted at the cheap end,
+  # where owning a player is half a decision because somebody had to fill the slot
+  # and the game piles into whichever cheap man is nailed on. That discount is what
+  # separates the two players this is meant to tell apart: Isak at nine million,
+  # lifted, from Kusi-Asare at four and a half with no minutes at all, who is not.
+  # See CHEAP_BAND.
   #
   # A tenth of the game is a lot of managers when the average player is owned by
   # two per cent of it. A starting figure, to be settled by what actually happens
@@ -170,6 +184,11 @@ class ExpectedPoints < ApplicationService
   # than what happened before. See #form_swing.
   FORM_SWING = 0.2
   FORM_SWING_GROWTH = 0.3
+
+  # How many matches FPL's thirty-day form window holds once it is full, which is
+  # the four games the fifth above was chosen for. Before it is full it holds
+  # fewer, and is trusted for less. See #window_filled.
+  FORM_WINDOW = 4.0
 
   # How much the opponent matters, which depends entirely on what a player is
   # paid for.
@@ -429,9 +448,28 @@ class ExpectedPoints < ApplicationService
     PRICE_POWER - (PRICE_POWER - PRICE_POWER_FLOOR) * season_progress
   end
 
-  # A fifth at the start, widening as the running becomes the evidence.
+  # A fifth once there is a month of running to read, widening from there as the
+  # running becomes the evidence, and narrow while the window is nearly empty.
   def form_swing
-    FORM_SWING + FORM_SWING_GROWTH * season_progress
+    (FORM_SWING + FORM_SWING_GROWTH * season_progress) * window_filled
+  end
+
+  # How much football the form window actually holds, from a quarter of it in the
+  # opening week to all of it a month in.
+  #
+  # A fifth is the right figure for four games, which is what FORM_SWING was
+  # chosen for and what a thirty-day window holds in mid-season. In August it
+  # holds one match, and one match handed a fifth of a player's scoring is a far
+  # louder signal than the one that fifth was priced for. Haaland's quiet opening
+  # afternoon and João Pedro's eleven points both pinned against the edge of the
+  # band, so a single week of football moved the two best forwards in the game a
+  # fifth apart in opposite directions.
+  #
+  # So the band opens as the window fills. It is the same argument as
+  # UNPROVEN_MINUTES and #credibility, applied to a measurement whose window
+  # happens to be counted in days rather than in minutes played.
+  def window_filled
+    (@gameweeks_played / FORM_WINDOW).clamp(0.0, 1.0)
   end
 
   # How much football there has been to measure against. Before the season starts
@@ -460,29 +498,42 @@ class ExpectedPoints < ApplicationService
 
   private
 
+  # Minutes multiply the answer the two estimates settle on, instead of sitting
+  # inside one of them.
+  #
+  # They used to sit inside ours, and could not survive the journey out. The
+  # crowd's estimate carries no minutes of its own, and a record is only let nudge
+  # the crowd by a few percent, so at the second gameweek playing no football at
+  # all cost a well-owned man five percent: Watkins was our thirteenth best
+  # forward on an estimate of exactly nought, while McBurnie, who had played the
+  # full ninety, stood twenty-first. The first of the three terms this model is
+  # built on was the one term it could not hear.
+  #
+  # So both estimates now price the same thing, which is what a player is worth
+  # per 90 on the pitch, and everything deciding whether he is on it to earn that
+  # multiplies afterwards: how much of the match he plays, whether he is fit for
+  # it, how many games are in front of him, and what this week's traffic says.
   def forecast(ranking)
     ours = our_estimate(ranking)
     theirs = crowd_estimate(ranking)
     return { points: nil, working: {} } if ours.nil? && theirs.nil?
 
-    points = blended(ranking, ours, theirs) * starting_share(ranking) *
+    points = blended(ranking, ours, theirs) * played_share(ranking) *
              availability(ranking) * games_ahead(ranking) * transfer_factor(ranking)
     { points: points, working: working_for(ranking, ours, theirs) }
   end
 
-  # What a player is worth in a single game, before the fixture and before this
-  # week's news. Nil when there is no record to read.
+  # What a player is worth per 90 minutes on the pitch, before the fixture and
+  # before this week's news. Nil when there is no record to read at all, because
+  # unknown must not be ranked as though we had measured it.
   #
-  # A goalkeeper is worth what he is worth per 90, with no minutes in it. His
-  # minutes are a chance of playing rather than a share of a match, and a chance
-  # cannot be argued down by a few percent the way a rate can, so it is applied to
-  # the finished answer instead. See #starting_share.
+  # No minutes in it, for anybody. What the crowd and the record disagree about is
+  # how good he is; how much he plays is not a matter for either of them to argue
+  # and is applied to the finished answer instead. See #forecast.
   def our_estimate(ranking)
-    share = minutes_share(ranking)
-    return nil if share.nil?
-    return points_per_90(ranking) if goalkeeper?(ranking)
+    return nil if minutes_share(ranking).nil?
 
-    share * points_per_90(ranking)
+    points_per_90(ranking)
   end
 
   # What a player standing where he stands with the crowd is typically worth, read
@@ -633,25 +684,84 @@ class ExpectedPoints < ApplicationService
   # unknown rather than expected to do nothing, and unknown must not be ranked as
   # though we had measured it.
   def minutes_share(ranking)
-    played = minutes_played(ranking)
-    return nil if played.nil?
+    record = regular_share(ranking)
+    return nil if record.nil?
 
-    regular = [ played / regular_minutes, 1.0 ].min
-    return regular unless @movers.include?(ranking.player_id)
-
-    [ [ regular, @new_club_minutes ].min, settled_in(ranking) ].max
+    [ record, backed_share(ranking) ].max
   end
 
-  # What a signing's backing says about the team sheet. See NAILED_ON.
-  def settled_in(ranking)
-    REGULAR_SHARE * (ownership(ranking) / NAILED_ON).clamp(0.0, 1.0)
+  # How much of a match his record says he plays: this season's answer, or last
+  # season's while that is still worth remembering.
+  #
+  # Each season is read against its own denominator, because that is what each is
+  # a share of: this season against the football there has actually been, last
+  # season against a regular's campaign.
+  #
+  # They are not blended, though, and that is the one place a minutes share parts
+  # company with every rate above it. A rate is a noisy measurement of something
+  # that holds still, so a thin one is properly dragged towards a fuller one. A
+  # share of minutes is a claim about a player's role, and a role is exactly the
+  # thing a summer changes. Blended, Isak's full ninety minutes in the opening week
+  # counted for a sixth of the answer and an injury-hit campaign for the rest, and
+  # a fit first-choice striker was forecast to play two thirds of a match. So the
+  # better of the two claims stands, and last season's fades. See #remembered.
+  def regular_share(ranking)
+    now = share_of(minutes_now(ranking), regular_minutes)
+    before = new_club_cap(share_of(minutes_before(ranking), PROVEN_MINUTES), ranking)
+    return now if before.nil?
+
+    remembered_share = before * remembered
+    now.nil? ? remembered_share : [ now, remembered_share ].max
   end
 
-  # A goalkeeper's chance of being the one his club picks. One for everybody else,
-  # whose minutes are already inside his own estimate. See KEEPER_BACKING.
+  # A signing's minutes at his old club were earned on somebody else's team
+  # sheet, so they are held to half a match. What he has played at this one is
+  # not held to anything: those minutes are the very evidence the cap is waiting
+  # for.
+  #
+  # The cap used to fall on the finished record, which meant it fell on both, and
+  # a signing who had walked straight into his new side was still held to a
+  # figure that only made sense for the club he had left. Tzolis started for
+  # Arsenal and played seventy-five minutes of it, and was forecast sixty-three:
+  # his own answer, from this club, was capped by a doubt about a different one.
+  def new_club_cap(before, ranking)
+    return before if before.nil? || !@movers.include?(ranking.player_id)
+
+    [ before, @new_club_minutes ].min
+  end
+
+  # How much last season's team sheet still counts for, from all of it before a
+  # ball is kicked to none of it a month in.
+  #
+  # It has to fade on the football there has been rather than on the football he
+  # has played, because the player it protects is the one who is not playing.
+  # Weighed by his own minutes, a man who has been dropped never accumulates the
+  # evidence that would retire last year's record, and it speaks for him all
+  # season.
+  #
+  # Five matches, the same five UNPROVEN_MINUTES doubts a rate for: a month of
+  # team sheets settles what a player's role is.
+  def remembered
+    (1 - @gameweeks_played / (UNPROVEN_MINUTES / FULL_MATCH)).clamp(0.0, 1.0)
+  end
+
+  # What those minutes are as a share of the season they were played in, or no
+  # opinion where that season was never played.
+  def share_of(minutes, season)
+    return nil if minutes.nil?
+
+    [ minutes / season, 1.0 ].min
+  end
+
+  # What the game's money says about whether he is in the side, discounted at the
+  # cheap end where owning a man says less about him. See NAILED_ON.
+  def backed_share(ranking)
+    REGULAR_SHARE * (ownership(ranking) / NAILED_ON).clamp(0.0, 1.0) *
+      (1 - cheapness(ranking))
+  end
+
+  # A goalkeeper's chance of being the one his club picks. See KEEPER_BACKING.
   def starting_share(ranking)
-    return 1.0 unless goalkeeper?(ranking)
-
     club_shares(ranking.team_id)[ranking.player_id] || 0.0
   end
 
@@ -700,26 +810,63 @@ class ExpectedPoints < ApplicationService
     ranking.position == GOALKEEPER
   end
 
-  # How much of a match he is expected to be on the pitch for, whichever way the
-  # model arrived at it. Reported rather than scored: it is the figure that
-  # actually multiplied his answer, so the page and the arithmetic agree.
+  # How much of a match he is expected to be on the pitch for. A share of one for
+  # an outfield player, and for a goalkeeper the chance he is the one his club
+  # picks, that being the same question asked of a place which cannot be shared.
   def played_share(ranking)
     return starting_share(ranking) if goalkeeper?(ranking)
 
     minutes_share(ranking).to_f
   end
 
-  def minutes_played(ranking)
-    optional_stat(ranking, season_or_last("season_minutes"))
+  # How much football we have watched him play, this season and last. Either may
+  # be silent: a promoted player has no last season in this league, and nobody
+  # has a this season until a ball is kicked.
+  def minutes_now(ranking)
+    optional_stat(ranking, "season_minutes")
   end
 
-  # What he did, read from whichever season we are measuring. See LAST_SEASON.
+  def minutes_before(ranking)
+    optional_stat(ranking, "last_season_minutes")
+  end
+
+  # How far this season has taken over from last, nought in August and most of
+  # the way across by the time a record can stand on its own.
+  #
+  # The five matches of doubt again, doing the job they were always shaped for.
+  # Read against UNPROVEN_MINUTES a record crosses halfway through its fifth
+  # match, which is about when a run of starts stops looking like a run of luck.
+  def settled(ranking)
+    played = minutes_now(ranking).to_f
+    played / (played + UNPROVEN_MINUTES)
+  end
+
+  # What he does, from both seasons at once, this season leading as it grows.
+  #
+  # This used to be a switch, and a switch is right twice a year and wrong for the
+  # month after. At the second gameweek it threw away Haaland's three thousand
+  # minutes in order to read the ninety that had replaced them, then shrank those
+  # ninety by four fifths for being thin, and his per-90 fell from seven points to
+  # under three. The two seasons did not even disagree: 0.78 expected goals a game
+  # against 0.74. We were discarding the evidence that said the same thing as the
+  # evidence we kept, and calling the remainder doubtful.
+  #
+  # So the two are blended, weighted by how much of this season there is to read.
+  # Either side may be silent, and silence is no opinion rather than a nought: a
+  # promoted player is read on this season alone, and an August on last.
   def record(ranking, type)
-    stat(ranking, season_or_last(type))
+    blend(optional_stat(ranking, type), optional_stat(ranking, LAST_SEASON.fetch(type)),
+          settled(ranking))
   end
 
-  def season_or_last(type)
-    @season_started ? type : LAST_SEASON.fetch(type)
+  # Two readings of the same thing, weighed by how far this season has taken over
+  # from last. Either may be silent, and a silence is no opinion rather than a
+  # nought: what the other one says stands unaltered.
+  def blend(now, before, settled)
+    return before.to_f if now.nil?
+    return now.to_f if before.nil?
+
+    now * settled + before * (1 - settled)
   end
 
   def regular_minutes
@@ -796,20 +943,93 @@ class ExpectedPoints < ApplicationService
   # five matches of doubt instead, and one bonus point off the bench stays worth
   # about what it was.
   def bonus_points(ranking)
-    played = minutes_played(ranking).to_f
-    return 0.0 if played.zero?
+    blend(bonus_rate(ranking, "season_bonus", minutes_now(ranking)),
+          bonus_rate(ranking, "last_season_bonus", minutes_before(ranking)),
+          settled(ranking))
+  end
 
-    record(ranking, "season_bonus") / ([ played, UNPROVEN_MINUTES ].max / FULL_MATCH)
+  # One season's bonus as a rate per 90, so the two campaigns meet as rates and
+  # not as totals. Forty-three bonus points off a full season and none off one
+  # quiet afternoon are not two numbers that can be averaged.
+  def bonus_rate(ranking, type, played)
+    return nil if played.nil? || played.zero?
+
+    stat(ranking, type) / ([ played, UNPROVEN_MINUTES ].max / FULL_MATCH)
   end
 
   # Nought before a ball is kicked, and nought for a player with no record, both of
   # which read as no opinion rather than as a slump.
   def form_factor(ranking)
-    recent = stat(ranking, "form")
-    usual = stat(ranking, "points_per_game")
-    return 1.0 if recent.zero? || usual.zero?
+    ratio = form_ratio(ranking)
+    return 1.0 if ratio.nil?
 
-    (recent / usual).clamp(1 - form_swing, 1 + form_swing)
+    (ratio / typical_ratio).clamp(1 - form_swing, 1 + form_swing)
+  end
+
+  # How his recent run compares with his usual level. No opinion where either
+  # figure is missing.
+  def form_ratio(ranking)
+    recent = stat(ranking, "form")
+    usual = usual_scoring(ranking)
+    return nil if recent.zero? || usual.zero?
+
+    recent / usual
+  end
+
+  # The middle of that comparison across everybody he is ranked against.
+  #
+  # A short window sits below a season's average for almost everyone, because a
+  # gameweek's scoring is a few hauls and a great many blanks: the middle
+  # gameweek is worth less than the mean one. Read straight against a season
+  # figure, one week of football marked four players in five out of form, the
+  # median landed on the floor of the swing, and what was meant to be a
+  # comparison became a flat deduction.
+  #
+  # So the ratio is read against the middle of the same ratio for his position,
+  # which is what makes this a form signal rather than a statement about the
+  # shape of the distribution. Being in form means scoring more than the players
+  # around you are scoring, and that is now what it measures. It also needs no
+  # unwinding later: as the season lengthens the window and the average converge,
+  # the middle drifts to one on its own, and this stops doing anything.
+  #
+  # Calibrated on the field and not on the player, for the same reason as
+  # ASSIST_AWARDED above.
+  def typical_ratio
+    return @typical_ratio if defined?(@typical_ratio)
+
+    ratios = @rankings.filter_map { |other| form_ratio(other) }
+    @typical_ratio = ratios.empty? ? 1.0 : middle_of(ratios)
+  end
+
+  # What he normally scores, which is the thing a recent run is read against.
+  #
+  # This used to be FPL's points_per_game, and for the first month of a season
+  # that is not a baseline at all: points_per_game is this season's average and
+  # form is the last thirty days, and early on they are the same football. They
+  # divided to exactly one for all 292 players who had a record at the second
+  # gameweek, so the swing above was multiplying by nothing for a month, in the
+  # very window where a manager most wants to know who has started well.
+  #
+  # So the baseline is what he scored last season, which cannot move with the
+  # numerator, and it fades across to this season's average as the campaign grows
+  # long enough to be a different window from the form. See #remembered.
+  #
+  # Last season is read per 90 and FPL's form is per appearance, which are the
+  # same number for a man who plays whole games and not for a substitute, whose
+  # run therefore reads a little cool. The swing is a fifth either way at most, so
+  # the mismatch cannot do much; measuring it properly needs last season's
+  # appearances, which FPL does not publish on this endpoint.
+  def usual_scoring(ranking)
+    blend(optional_stat(ranking, "points_per_game"), last_season_per_90(ranking), 1 - remembered)
+  end
+
+  # What he scored last season, per 90 minutes on the pitch. No opinion where he
+  # did not play it.
+  def last_season_per_90(ranking)
+    played = minutes_before(ranking)
+    return nil if played.nil? || played.zero?
+
+    stat(ranking, "last_season_points") / (played / FULL_MATCH)
   end
 
   def goal_points(ranking)
@@ -1021,10 +1241,17 @@ class ExpectedPoints < ApplicationService
   # meant to. One match is precisely the evidence UNPROVEN_MINUTES exists to
   # distrust.
   def credibility(ranking)
-    played = minutes_played(ranking).to_f
+    played = football_seen(ranking)
     ceiling = PROVEN_MINUTES / (PROVEN_MINUTES + UNPROVEN_MINUTES)
 
     ((played / (played + UNPROVEN_MINUTES)) / ceiling).clamp(0.0, 1.0)
+  end
+
+  # Every minute we have watched him play, this season and last, because a rate is
+  # only ever doubted for the football behind it. A man with a full campaign
+  # behind him does not become an unknown quantity because a new season started.
+  def football_seen(ranking)
+    minutes_now(ranking).to_f + minutes_before(ranking).to_f
   end
 
   # THE THIRD TERM: the games in front of him, each counted for what it is worth

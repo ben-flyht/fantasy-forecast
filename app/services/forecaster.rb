@@ -29,7 +29,26 @@ class Forecaster < ApplicationService
   #    counted rather than expected, a clean sheet is the chance of one rather than
   #    the share he happened to keep, saves are paid in whole threes, and a full
   #    season of evidence stops being shrunk for doubt it has already answered.
-  MODEL = 4
+  # 5: a season is a dial rather than a switch. What a player does is read from
+  #    this season and last at once, weighted by how much of this one there is,
+  #    instead of swapping wholesale at the first whistle and distrusting what
+  #    replaced it. Last season's expected assists are read at all, having been
+  #    mapped but never loaded.
+  # 6: minutes multiply the answer rather than sitting inside our half of it, so
+  #    the first of the three terms can be heard at all; and a thin minutes record
+  #    may be lifted by what the game has paid to own him, discounted at the cheap
+  #    end, rather than only where he has changed clubs. Last season's minutes are
+  #    remembered and fade over a month rather than being blended in, a role being
+  #    the one thing a summer changes.
+  # 7: a recent run is read against what a player scored last season rather than
+  #    against this season's average, which early on is the same thirty days as
+  #    the run itself and divided to exactly one for everybody. The run is read
+  #    against the field rather than in the absolute, a short window sitting below
+  #    a season average for almost everybody, and how far it may swing a player
+  #    opens as the window fills rather than being a fifth from the first week. A
+  #    signing's new-club cap falls on the minutes he played elsewhere and not on
+  #    the ones he has played here.
+  MODEL = 7
 
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek
