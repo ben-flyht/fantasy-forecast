@@ -27,9 +27,9 @@
           <td class="py-2 tabular-nums text-zinc-400"><%= entry.place %></td>
           <td class="py-2 truncate">
             <% if entry.subject? %>
-              <%= entry.player.short_name %>
+              <%= entry.player.display_name %>
             <% else %>
-              <%= link_to entry.player.short_name, player_path(entry.player), class: "hover:text-zinc-950 hover:underline" %>
+              <%= link_to entry.player.display_name, player_path(entry.player), class: "hover:text-zinc-950 hover:underline" %>
             <% end %>
           </td>
           <td class="py-2 text-right tabular-nums"><%= helpers.player_price(entry.cost) || "—" %></td>

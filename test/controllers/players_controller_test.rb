@@ -64,7 +64,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
 
     get gameweek_position_path(gameweek: 5, position: "#{@player.position}s")
     assert_response :success
-    assert_includes response.body, @player.short_name
+    assert_includes response.body, @player.display_name
   end
 
   test "should filter by gameweek parameter" do
@@ -214,7 +214,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
 
     get season_position_path(position: "#{@player.position}s")
     assert_response :success
-    assert_includes response.body, @player.short_name
+    assert_includes response.body, @player.display_name
     assert_includes response.body, "Rest of Season"
     assert_select "[aria-label='Forecast horizon'] a[aria-current=page][aria-label='Rest of Season']"
   end
@@ -311,7 +311,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
 
     get season_position_path(position: "#{@player.position}s")
     assert_response :success
-    assert_not_includes response.body, @player.short_name
+    assert_not_includes response.body, @player.display_name
   end
 
   test "should handle invalid gameweek gracefully" do
@@ -362,8 +362,8 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     get gameweek_position_path(gameweek: 5, position: "forwards", min_price: "6.0", max_price: "10.0")
 
     assert_response :success
-    assert_includes response.body, premium.short_name
-    assert_not_includes response.body, budget.short_name
+    assert_includes response.body, premium.display_name
+    assert_not_includes response.body, budget.display_name
   end
 
   test "a price band survives the trip to the clean URL" do
@@ -391,8 +391,8 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     get gameweek_position_path(gameweek: 5, position: "forwards", min_price: "9.0", max_price: "10.0")
 
     assert_response :success
-    assert_includes response.body, dear.short_name
-    assert_not_includes response.body, cheap.short_name
+    assert_includes response.body, dear.display_name
+    assert_not_includes response.body, cheap.display_name
     assert_equal "3", response.body[/tabular-nums text-zinc-900">(\d+)</, 1]
   end
 
@@ -409,8 +409,8 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     get gameweek_position_path(gameweek: 5, position: "forwards", team_id: @test_team.id)
 
     assert_response :success
-    assert_includes response.body, second.short_name
-    assert_not_includes response.body, top.short_name
+    assert_includes response.body, second.display_name
+    assert_not_includes response.body, top.display_name
     assert_equal "2", response.body[/tabular-nums text-zinc-900">(\d+)</, 1]
   end
 
