@@ -86,6 +86,19 @@ class PlayerComparison < ApplicationService
     alternatives.any? { |entry| entry.score.to_f > score }
   end
 
+  # How many players inside the budget are forecast to beat him, out of how many
+  # there are. Counted over the whole affordable field and not over the three on
+  # show, because the page says "defenders at seven million or less" and then
+  # counts, and the reader takes the count to be of the thing just named. Three
+  # of three read as "only three defenders beat him" for a man lying a hundred
+  # and seventy-sixth.
+  def beaten_by
+    return [ 0, 0 ] if cost.nil? || score.nil?
+
+    affordable = entries_for(affordable_players).reject(&:subject?)
+    [ affordable.count { |entry| entry.score.to_f > score }, affordable.size ]
+  end
+
   # What we forecast for the player whose page this is.
   def score
     @score ||= forecasts[@player.id]&.score&.to_f

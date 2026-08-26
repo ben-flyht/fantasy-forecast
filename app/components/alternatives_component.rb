@@ -37,14 +37,18 @@ class AlternativesComponent < ViewComponent::Base
     "#{player.position.capitalize}s at #{helpers.player_price(comparison.ceiling)} or less, best forecast first."
   end
 
+  # How the three on show stand against the field they were drawn from.
+  #
+  # "3 of them are forecast to beat him" counted the cards rather than the field,
+  # so a player lying a hundred and seventy-sixth was told three defenders were
+  # ahead of him under a line that had just said "defenders at £7.0m or less".
+  # The count is now of the field, which is what the sentence before it names.
   def verdict
     return if comparison.score.nil?
-    return "None of them is forecast to beat him." unless comparison.upgrade?
 
-    "#{beating.size} of them #{beating.one? ? 'is' : 'are'} forecast to beat him."
-  end
+    better, field = comparison.beaten_by
+    return "None of the #{field} is forecast to beat him." if better.zero?
 
-  def beating
-    alternatives.select { |entry| entry.score.to_f > comparison.score }
+    "#{better} of #{field} #{better == 1 ? 'is' : 'are'} forecast to beat him."
   end
 end
