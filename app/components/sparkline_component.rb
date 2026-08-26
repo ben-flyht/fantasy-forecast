@@ -10,8 +10,15 @@ class SparklineComponent < ViewComponent::Base
   HEIGHT = 28
   PADDING = 2
 
-  # Two points make a line; one makes a dot nobody can read.
-  MINIMUM = 2
+  # How many readings it takes before a line is worth drawing.
+  #
+  # Two is enough to draw one and not enough to mean anything: two points are
+  # always a straight line from one corner of the box to the other, whatever the
+  # numbers, so at the second gameweek every player on the site had the same
+  # 116-pixel diagonal stripe beside his rank. It said nothing the arrow next to
+  # it had not already said in words, and read as a rendering fault rather than a
+  # chart. Four is the fewest that can show a direction and then change it.
+  MINIMUM = 4
 
   # A rank is better when it is smaller, so its line has to be turned over or it
   # would draw a climb as a fall.

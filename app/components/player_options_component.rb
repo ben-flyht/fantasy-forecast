@@ -39,6 +39,18 @@ class PlayerOptionsComponent < ViewComponent::Base
     "He is #{subject.place.ordinalize} of #{subject.of}."
   end
 
+  # How many places are missing immediately above this row.
+  #
+  # The shortlist is the best few and him, so a squad player arrives at his real
+  # place in the order and the ranks in between are simply absent. That is the
+  # right list to show, and shown without a word it read as a fault: the table
+  # ran 1, 2, 3, 4, 5, 7 and left the reader to wonder where the sixth went.
+  def skipped_before(entry, index)
+    return 0 if index.zero?
+
+    entry.place.to_i - entries[index - 1].place.to_i - 1
+  end
+
   # What this player costs against the one whose page it is. Nothing is shown when
   # they cost the same, because "level" is not news.
   def difference(entry)
