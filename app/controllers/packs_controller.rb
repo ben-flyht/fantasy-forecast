@@ -23,7 +23,10 @@ class PacksController < ApplicationController
 
   def practice
     resume = session[:practice]
-    return redirect_to(pack_path(seed: resume["seed"], hand: resume["hand"].presence)) if resume.present?
+    if resume.present?
+      return redirect_to(pack_path(seed: resume["seed"], hand: resume["hand"].presence),
+                         notice: "Picking up your practice pack where you left off.")
+    end
 
     start
   end

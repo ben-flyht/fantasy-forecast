@@ -209,6 +209,9 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_path(seed: seed, hand: "ab")
     get practice_pack_path
     assert_redirected_to pack_path(seed: seed, hand: "ab")
+    follow_redirect!
+    assert_match "where you left off", flash[:notice]
+    assert_select "[data-pack-resume] a[href=?]", new_pack_path
 
     get new_pack_path
     assert_redirected_to %r{/pack/\d+\z}
