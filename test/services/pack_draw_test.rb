@@ -2,6 +2,7 @@ require "test_helper"
 
 class PackDrawTest < ActiveSupport::TestCase
   setup do
+    Match.destroy_all
     Statistic.destroy_all
     Forecast.destroy_all
     Player.destroy_all
@@ -79,6 +80,18 @@ class PackDrawTest < ActiveSupport::TestCase
     Player.update_all(status: "i", departed: true, selectable: false)
 
     assert_equal before, PackDraw.call(gameweek: @gameweek, seed: 9).pairs.map { |pair| pair.cards.map(&:player_id) }
+  end
+
+  test "each card knows who his club plays that gameweek, and where" do
+    build_pool
+    Match.create!(gameweek: @gameweek, home_team: @teams[0], away_team: @teams[1], fpl_id: 501)
+
+    cards = PackDraw.call(gameweek: @gameweek, seed: 4).pairs.flat_map(&:cards)
+    home = cards.find { |card| card.player.team == @teams[0] }
+    idle = cards.find { |card| [ @teams[2], @teams[3] ].include?(card.player.team) }
+
+    assert_equal [ "K1 (H)" ], home.fixtures
+    assert_equal [], idle.fixtures
   end
 
   test "a player expected to add nothing to turning up is left out of the pack" do

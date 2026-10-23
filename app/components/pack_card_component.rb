@@ -46,6 +46,10 @@ class PackCardComponent < ViewComponent::Base
 
   def captain? = @captain
 
+  def fixture
+    card.fixtures.any? ? "v #{card.fixtures.join(', ')}" : "no game"
+  end
+
   def name_class
     length = player.display_name.length
     return "pack-card__name pack-card__name--longest" if length > 10
@@ -57,9 +61,9 @@ class PackCardComponent < ViewComponent::Base
   def tag_name = href ? :a : :div
 
   def data
-    { controller: "pack-card",
-      action: "pointermove->pack-card#tilt pointerleave->pack-card#rest pointerdown->pack-card#press " \
-              "pointerup->pack-card#release pointercancel->pack-card#rest" }
+    actions = "pointermove->pack-card#tilt pointerleave->pack-card#rest pointerdown->pack-card#press " \
+              "pointerup->pack-card#release pointercancel->pack-card#rest"
+    { controller: "pack-card", pack_pick_target: ("card" if href), action: href ? "#{actions} click->pack-pick#keep" : actions }
   end
 
   def link_attributes

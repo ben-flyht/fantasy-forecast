@@ -9,7 +9,7 @@
     <% end %>
   </div>
 
-  <div class="grid grid-cols-2 gap-4 sm:gap-6">
+  <div class="grid grid-cols-2 gap-4 sm:gap-6" data-controller="pack-pick">
     <% pair.cards.each_with_index do |card, choice| %>
       <%= render PackCardComponent.new(card: card, href: hand_path(hand.keeping(choice)), shiny: pair.shiny?, index: choice) %>
     <% end %>

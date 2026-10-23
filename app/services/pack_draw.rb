@@ -66,7 +66,17 @@ class PackDraw < ApplicationService
 
   def card(forecast)
     Pack::Card.new(player: forecast.player, rank: forecast.rank, cost: costs.dig(forecast.player_id, "now_cost"),
-                   expected_points: forecast.score.to_f)
+                   expected_points: forecast.score.to_f, fixtures: fixtures_for(forecast.player.team_id))
+  end
+
+  def fixtures_for(team_id)
+    matches.fetch(team_id, []).map do |match|
+      "#{match.opponent_for(team_id)&.short_name} (#{match.home_for?(team_id) ? 'H' : 'A'})"
+    end
+  end
+
+  def matches
+    @matches ||= Match.by_team(gameweek)
   end
 
   def costs
