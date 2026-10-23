@@ -103,6 +103,25 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     result[1][:points] - result[2][:points]
   end
 
+  def minutes_in_season(season_minutes, recent: nil)
+    stats = regular.merge("season_minutes" => season_minutes)
+    stats[ExpectedPoints::RECENT_MINUTES] = recent unless recent.nil?
+    ExpectedPoints.call([ ranking(1) ], stats: { 1 => stats }, fixtures_by_team: { 1 => [ fixture ] },
+                                        season_started: true, gameweeks_played: 6)[1][:working][:minutes]
+  end
+
+  test "a new regular is believed sooner than his season share alone allows" do
+    season_only = minutes_in_season(270.0)
+    starting_lately = minutes_in_season(270.0, recent: 1.0)
+
+    assert_operator starting_lately, :>, season_only
+    assert_in_delta (season_only + 90) / 2.0, starting_lately, 1.5
+  end
+
+  test "a regular who has been dropped lately is doubted sooner" do
+    assert_operator minutes_in_season(540.0, recent: 0.0), :<, minutes_in_season(540.0)
+  end
+
   test "bonus counts for less when there is less football behind it" do
     cameo = bonus_gain(45.0, 6.0)
     regular = bonus_gain(200.0, 3.0)

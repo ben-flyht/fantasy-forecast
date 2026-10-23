@@ -403,6 +403,8 @@ class ExpectedPoints < ApplicationService
 
   SCORING_CALIBRATION = 0.8
 
+  RECENT_MINUTES = "recent_minutes_share".freeze
+
   # The knobs, gathered so a stored forecast can say which settings produced it and
   # so the optimiser has something to search over. FPL's scoring table is not among
   # them: five points for a midfielder's goal is a rule, not a parameter.
@@ -725,6 +727,14 @@ class ExpectedPoints < ApplicationService
   # a fit first-choice striker was forecast to play two thirds of a match. So the
   # better of the two claims stands, and last season's fades. See #remembered.
   def regular_share(ranking)
+    share = recorded_share(ranking)
+    recent = optional_stat(ranking, RECENT_MINUTES)
+    return share if share.nil? || recent.nil?
+
+    (share + recent) / 2
+  end
+
+  def recorded_share(ranking)
     now = share_of(minutes_now(ranking), regular_minutes)
     before = new_club_cap(share_of(minutes_before(ranking), PROVEN_MINUTES), ranking)
     return now if before.nil?

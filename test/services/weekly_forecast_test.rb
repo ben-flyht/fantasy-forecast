@@ -145,6 +145,21 @@ class WeeklyForecastTest < ActiveSupport::TestCase
     assert_equal [ 4.2 ], Forecast.where(gameweek: @gameweek).pluck(:score).map(&:to_f)
   end
 
+  test "the last three gameweeks' minutes are read alongside the season's" do
+    earlier = (77..79).map { |n| Gameweek.create!(fpl_id: n, name: "Gameweek #{n}", start_time: (81 - n).weeks.ago, is_finished: true) }
+    benched = player_with_record(fpl_id: 8101)
+    earlier.each do |week|
+      Statistic.create!(player: @player, gameweek: week, type: "minutes", value: 90)
+      Statistic.create!(player: benched, gameweek: week, type: "minutes", value: 0)
+    end
+
+    WeeklyForecast.call(gameweek: @gameweek)
+
+    starter = Forecast.find_by(player: @player, gameweek: @gameweek).working["minutes"]
+    dropped = Forecast.find_by(player: benched, gameweek: @gameweek).working["minutes"]
+    assert_operator starter, :>, dropped, "three full matches lately count for more than three on the bench"
+  end
+
   test "a player with no record still gets a row, so the position is complete" do
     unknown = Player.create!(first_name: "No", last_name: "Record", short_name: "NR",
                              fpl_id: 8200, code: 8200, team: @team, position: "forward")
