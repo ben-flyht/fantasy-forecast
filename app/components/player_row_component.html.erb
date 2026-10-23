@@ -1,5 +1,8 @@
 <tr class="cursor-pointer group"
     onclick="Turbo.visit('<%= helpers.player_path(player) %>')"
+    data-action="click->analytics#track keydown.enter->analytics#track"
+    data-analytics-event-param="player_card_click"
+    data-analytics-player-param="<%= player.to_param %>"
     role="link" tabindex="0"
     onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
   <td class="w-[104px] pl-[10px] text-center align-middle bg-white border-y border-l border-zinc-200 rounded-l-xl group-hover:bg-zinc-50">

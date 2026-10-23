@@ -14,23 +14,32 @@ class SegmentedControlComponent < ViewComponent::Base
   # A short_label is what the option is called when there is no room for its name:
   # GK rather than Goalkeepers. Both are in the markup and the breakpoint picks one,
   # so the link carries its full name as its accessible name either way.
-  Option = Struct.new(:label, :url, :current, :short_label, keyword_init: true) do
+  Option = Struct.new(:label, :url, :current, :short_label, :value, keyword_init: true) do
     def current? = current
     def abbreviated? = short_label.present? && short_label != label
   end
 
   # @param label [String] what the group of choices is, for a screen reader
   # @param options [Array<Option>]
-  def initialize(label:, options:)
+  # @param event [String, nil] the analytics event a choice reports
+  def initialize(label:, options:, event: nil)
     @label = label
     @options = options
+    @event = event
   end
 
   def render? = options.present?
 
   private
 
-  attr_reader :label, :options
+  attr_reader :label, :options, :event
+
+  def option_data(option)
+    return {} unless event
+
+    { action: "analytics#track", analytics_event_param: event,
+      analytics_control_param: label.parameterize(separator: "_"), analytics_choice_param: option.value }
+  end
 
   def option_classes(option)
     state = if option.current?

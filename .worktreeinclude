@@ -1,0 +1,4 @@
+.env*
+.claude/settings.local.json
+app/assets/builds/tailwind.css
+tmp/local_secret.txt
