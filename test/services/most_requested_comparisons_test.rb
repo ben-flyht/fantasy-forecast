@@ -54,13 +54,32 @@ class MostRequestedComparisonsTest < ActiveSupport::TestCase
     assert_equal [ good ], most_requested.map(&:slug)
   end
 
-  # Nothing asked yet this week, so the hub offers the forecast's closest pairs instead
-  # of an empty list.
-  test "when nothing has been asked, it falls back to close-ranked pairs" do
+  test "the forecast's closest pairs are not passed off as asked" do
     Forecast.create!(player: @salah, gameweek: @gameweek, horizon: "gameweek", score: 6.0, rank: 1)
     Forecast.create!(player: @palmer, gameweek: @gameweek, horizon: "gameweek", score: 5.8, rank: 2)
 
-    assert_includes most_requested.map(&:slug), Matchup.new(@salah, @palmer).slug
+    assert_empty most_requested
+  end
+
+  test "last week's asks carry over" do
+    Comparison.record(Matchup.new(@salah, @palmer), gameweeks(:finished))
+
+    assert_equal [ Matchup.new(@salah, @palmer).slug ], most_requested.map(&:slug)
+  end
+
+  test "a pair asked this week outweighs one asked as often last week" do
+    3.times { Comparison.record(Matchup.new(@salah, @raya), gameweeks(:finished)) }
+    fresh = record(Matchup.new(@salah, @palmer), 2)
+
+    assert_equal fresh, most_requested.first.slug
+  end
+
+  test "a pair asked in both weeks has its hits added together" do
+    2.times { Comparison.record(Matchup.new(@salah, @palmer), gameweeks(:finished)) }
+    both = record(Matchup.new(@salah, @palmer), 1)
+    record(Matchup.new(@salah, @raya), 1)
+
+    assert_equal both, most_requested.first.slug
   end
 
   test "the week's asks are its own" do
