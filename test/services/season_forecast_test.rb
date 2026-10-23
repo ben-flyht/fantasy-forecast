@@ -86,10 +86,32 @@ class SeasonForecastTest < ActiveSupport::TestCase
     assert_operator season, :>, weekly, "a settled signing is trusted more over a whole season"
   end
 
+  test "expects a fit regular to miss some of the season rather than play every remaining minute" do
+    WeeklyForecast.call(gameweek: @next)
+    SeasonForecast.call(gameweek: @next)
+
+    kept = SeasonForecast::MINUTES_KEPT.fetch("forward")
+    assert_equal (minutes_for("gameweek") * kept).round, minutes_for("season")
+    assert_equal kept, Forecast.find_by(horizon: "season").strategy.strategy_config[:minutes_kept][:forward]
+  end
+
+  test "discounts a flagged player's return on top of what a fit regular misses" do
+    WeeklyForecast.call(gameweek: @next)
+    @player.update!(status: "i", news: "Expected back #{@later.start_time.strftime('%-d %b')}", news_added: Time.current)
+    SeasonForecast.call(gameweek: @next)
+
+    kept = SeasonForecast::MINUTES_KEPT.fetch("forward")
+    assert_equal (minutes_for("gameweek") * 0.5 * kept).round, minutes_for("season")
+  end
+
   test "refuses to write a position it cannot score anybody in" do
     Match.destroy_all
 
     assert_not SeasonForecast.call(gameweek: @next)
     assert_equal 0, Forecast.where(horizon: "season").count
+  end
+
+  def minutes_for(horizon)
+    Forecast.find_by(player: @player, horizon: horizon).working["minutes"]
   end
 end

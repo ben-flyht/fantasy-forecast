@@ -2,8 +2,9 @@
 
 How well the forecast predicts what players actually score, what has been tried to make
 it better, and what data would move it further. Written in October 2026 from a copy of
-production after gameweek 7, so every number here rests on six or seven weeks of
-football and should be read with that in mind.
+production after gameweek 7, so the first half of it rests on six or seven weeks of
+football. The second half, [Two past seasons](#two-past-seasons), replays the model over
+every gameweek of 2024/25 and 2025/26 and settles what those weeks could not.
 
 ## How it is measured
 
@@ -33,6 +34,37 @@ it safe to try a change against the evidence the live model actually had.
 
 The upcoming horizon is scored the same way against points summed over its window,
 using 3-week windows from gameweeks 2–5 and 5-week windows from gameweeks 2–3.
+
+**History backtest.** `rake ff:fetch_history` downloads past seasons from
+[vaastav/Fantasy-Premier-League](https://github.com/vaastav/Fantasy-Premier-League) and
+match odds from [football-data.co.uk](https://www.football-data.co.uk/englandm.php), and
+`rake ff:backtest_history` replays `ExpectedPoints` over them (about three minutes).
+For each gameweek N, `History::Season` rebuilds what the model reads at N's deadline
+from gameweeks before N only: season minutes, per-90 xG, xA, xGC, saves and defensive
+contribution, bonus, form (points per match over the 30 days before the deadline),
+points per game, last season's figures matched by player `code`, and recent minutes.
+Price, ownership and the week's transfers come from gameweek N's own row, which FPL
+records at the deadline. The model is called once per position, as `Forecaster` does,
+with the same horizon settings as the live forecasters. Where it departs from live:
+
+- Nobody is flagged. The data has no fitness flags, so every player is treated as fit.
+  This inflates error and bias, mostly at the 1-week horizon, where live forecasts drop
+  injured players.
+- The manager count is the sum of every player's `selected` divided by 15, which gives
+  10.8 million at gameweek 2 of 2025/26 and 12.8 million by gameweek 20.
+- FDR and the fixture list are as they stood at the end of the season, not as they
+  were at each deadline, so postponements are already known.
+- The 2024/25 replay has no defensive contribution, which FPL introduced in 2025/26.
+- The rebuilt inputs could not be compared with production's stored snapshots for
+  this season, because the session that wrote this could not read the production copy.
+
+Scores are the same four as above, with two changes. The relevant set comes from the
+production model's forecast, so every variant is marked on the same players. Error is in
+points over the whole window. The 1-week horizon covers all 38 gameweeks, the 5-week
+horizon every gameweek with five left (34), and the season horizon every gameweek with
+ten or more left (29). Each "likelihood better" is the share of 2,000 bootstrap resamples
+of gameweeks in which the change wins. Resampling uses blocks of 5 and 10 gameweeks on
+the longer horizons, because their windows overlap.
 
 ## Where we stand (gameweeks 2–7, stored forecasts)
 
@@ -74,6 +106,21 @@ given near-full credit who then scored nothing.
 
 ## What did not help
 
+From the two-season backtest:
+
+| Idea | Result |
+|---|---|
+| Bookmaker odds in place of FDR (1 week) | Ranking 0.537 → 0.528 and 0.498 → 0.489 (better in 5% and 4% of resamples), RMSE worse in both seasons |
+| Odds with attack and defence rated apart | Ranking 0.537 → 0.530 and 0.498 → 0.488, RMSE worse |
+| `SCORING_CALIBRATION` 0.7 or 0.9 instead of 0.8 | Ranking moves by under 0.001. 0.7 lowers weekly RMSE (2.96 → 2.93), but that is against flag-free bias, so it would overcorrect live. Kept at 0.8 |
+| `RECENT_GAMEWEEKS` 2 instead of 3 | Weekly ranking +0.005 in both seasons, capture −0.004 then +0.001, season ranking −0.002. Kept at 3 |
+| `RECENT_GAMEWEEKS` 6 instead of 3 | Season ranking +0.005, RMSE −0.3, weekly ranking −0.017. Kept at 3 |
+| Dropping recent minutes entirely | Weekly ranking 0.518 → 0.468: recent minutes are confirmed |
+| Minutes discount by price band | Bands differ by 4 points at most. No better than one outfield figure |
+| Softening FDR's swing by half | 2024/25 ranking +0.006, but 2025/26 capture −1.0 point. Mixed. Worth a proper look at the fixture steps |
+
+From gameweeks 2–7:
+
 | Idea | Result |
 |---|---|
 | Retuning any of the 21 existing parameters | Nothing beats noise |
@@ -87,19 +134,68 @@ given near-full credit who then scored nothing.
 | Discounting minutes by last season's share of the season played | 5-week bias −1.97, ranking −0.005 |
 | Penalty and set-piece duty | No signal left over: FPL's xG already counts penalties |
 
+## Two past seasons
+
+The production model, replayed as above. Each figure is a mean across gameweeks ± 95%.
+
+| Season | Horizon | Gameweeks | Ranking | Capture | RMSE | Bias | Top 11 |
+|---|---|---|---|---|---|---|---|
+| 2024/25 | 1 week | 38 | 0.537 ± 0.023 | 56% ± 2 | 2.90 ± 0.09 | +0.36 ± 0.05 | 5.8 ± 0.5 |
+| 2024/25 | 5 weeks | 34 | 0.584 ± 0.018 | 72% ± 1 | 8.42 ± 0.17 | +2.10 ± 0.16 | 25.0 ± 1.5 |
+| 2024/25 | Rest of season | 29 | 0.610 ± 0.018 | 80% ± 1 | 28.3 ± 3.6 | −0.6 ± 0.6 | 102 ± 14 |
+| 2025/26 | 1 week | 38 | 0.498 ± 0.025 | 54% ± 3 | 3.02 ± 0.08 | +0.24 ± 0.06 | 5.0 ± 0.4 |
+| 2025/26 | 5 weeks | 34 | 0.530 ± 0.014 | 71% ± 1 | 8.77 ± 0.17 | +1.58 ± 0.20 | 21.5 ± 1.0 |
+| 2025/26 | Rest of season | 29 | 0.535 ± 0.016 | 78% ± 1 | 28.9 ± 3.8 | −2.5 ± 0.7 | 95 ± 12 |
+
+The weekly ranking of 0.50–0.54 over whole seasons sits below the 0.57 measured on this
+season's first seven weeks. Some of that gap is the missing fitness flags and some is
+the early weeks being easier. The season figures include the new minutes discount.
+
+### How much of a season regulars miss
+
+For every forecast, the minutes the model projected (its minutes share times the
+team's remaining fixtures) are compared with the minutes played. The sample is players
+who played the week before, a stand-in for "fit and unflagged", because the live model
+already handles flagged players through `Availability`.
+
+| Season | Outfield under £5.5m | £5.5–7.4m | £7.5m and up | All outfield | Goalkeepers |
+|---|---|---|---|---|---|
+| 2024/25 | 79% | 77% | 75% | 78% | 90% |
+| 2025/26 | 79% | 78% | 76% | 78% | 87% |
+
+Over the rest of a season, an outfield player plays 78% of the minutes the model
+projects for him. That held in both seasons, and price makes almost no difference. The
+cheapest players keep slightly more, because their projection is already lower.
+Goalkeepers keep about 88%. By position, outfielders move between seasons
+(forwards 74% then 83%, midfielders 80% then 76%), which looks like noise rather than
+something to fit. Projected full-time regulars (share 0.95 and up) keep only 74%:
+injuries, suspensions, rotation, substitutions and January departures all count.
+
+Fitted on one season and tested on the other, a flat discount of this size:
+
+| Tested on | Season RMSE | Season bias | Ranking, capture |
+|---|---|---|---|
+| 2025/26 (fitted on 2024/25) | 34.8 → 28.9 (100%) | +12.9 → −2.2 | unchanged |
+| 2024/25 (fitted on 2025/26) | 34.4 → 28.3 (100%) | +13.9 → −0.6 | unchanged |
+
+A linear version, where low-share players keep more than their projection and
+regulars less, ranked better in one season and worse in the other. It was not adopted.
+
 ## The season horizon
 
-The rest-of-season forecast still assumes a regular plays every remaining minute.
-Gabriel, Calafiori and Rice are forecast for 90 of 90 across 31 games. Recent minutes
-pull down the players who have missed time (Isak's projection fell from 161 to 128,
-João Pedro's from 158 to 126). They do nothing for an ever-present who will get injured
-in February. Seven weeks of data cannot show how much to discount for that: over five
-weeks, regulars mostly do play, and discounting them made those forecasts worse. That
-needs past seasons.
+The rest-of-season forecast assumed a regular plays every remaining minute: Haaland was
+projected for about 295 points. It now multiplies every player's season fitness by
+`SeasonForecast::MINUTES_KEPT`, 0.78 for outfielders and 0.88 for goalkeepers, pooled
+from both seasons. This is on top of `Availability` for flagged players. Ranking within a
+position does not move. The totals stop running 13 points high per relevant player.
+
+The same discount would help the 5-week horizon (RMSE 8.42 → 7.91 and 8.77 → 8.42 out
+of sample). It is not applied there yet: over five weeks, live fitness flags already
+close part of the gap that this flag-free replay sees.
 
 ## What data would help
 
-**1. Past seasons of per-gameweek FPL data.** The
+**1. Past seasons of per-gameweek FPL data. Done:** see [Two past seasons](#two-past-seasons). The
 [vaastav/Fantasy-Premier-League](https://github.com/vaastav/Fantasy-Premier-League)
 repository has every gameweek from 2016/17, under MIT, keyed by FPL's own ids (re-key
 across seasons by `code`). It turns seven gameweeks of evidence into a hundred or more,
@@ -108,7 +204,16 @@ season regulars miss, by position, price and age. Its `xP` column leaks post-mat
 information and must be shifted or ignored. It now updates three times a season, so it
 is history, not a live feed. This comes first.
 
-**2. Bookmaker odds.** [football-data.co.uk](https://www.football-data.co.uk/englandm.php)
+**2. Bookmaker odds. Tested, and not worth a sync.** Over two full seasons, odds-implied
+team goals (pre-match `AvgH/AvgD/AvgA` and `Avg>2.5/Avg<2.5`, fitted to two Poisson
+means) predict a side's goals better than FDR (Spearman 0.345 against 0.257 in
+2024/25, 0.298 against 0.236 in 2025/26), and clean sheets slightly better (0.23 against
+0.21, 0.25 against 0.20). Put in the model in place of FDR, scaled to FDR's spread, they
+rank players worse in both seasons (see above). Only the 1-week horizon is a fair test:
+pre-match odds for fixtures weeks ahead are not published at the deadline, so odds on
+the longer horizons carry future team news. The original note follows.
+
+[football-data.co.uk](https://www.football-data.co.uk/englandm.php)
 publishes match odds and over/under 2.5 for every Premier League match since 1993, free,
 updated twice a week, including this season. Turned into implied goals per team, odds
 predicted a side's goals about twice as well as FDR over this season's 70 matches
