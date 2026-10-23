@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 const TILT = 16
+const RESTING = ["--ry", "--rx", "--mx", "--my", "--tx", "--ty", "--glare"]
 
 export default class extends Controller {
   connect() {
@@ -21,6 +22,8 @@ export default class extends Controller {
       "--rx": `${(0.5 - y) * TILT}deg`,
       "--mx": `${x * 100}%`,
       "--my": `${y * 100}%`,
+      "--tx": `${x}`,
+      "--ty": `${y}`,
       "--glare": "1"
     })
   }
@@ -39,7 +42,7 @@ export default class extends Controller {
   rest() {
     this.release()
     this.element.classList.remove("is-tilting")
-    this.set({ "--ry": "0deg", "--rx": "0deg", "--mx": "50%", "--my": "50%", "--glare": "0" })
+    RESTING.forEach((name) => this.element.style.removeProperty(name))
   }
 
   set(properties) {
