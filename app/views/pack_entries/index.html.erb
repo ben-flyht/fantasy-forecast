@@ -1,0 +1,39 @@
+<% content_for :meta_title, "My Packs | Fantasy Forecast" %>
+<% content_for :meta_robots, "noindex, nofollow" %>
+
+<div class="mx-auto max-w-xl">
+  <div class="mb-6">
+    <%= render PageHeadingComponent.new(title: "My Packs", subtitle: "Every weekly pack you have locked in, and how it did.") %>
+  </div>
+
+  <% if @entries.empty? %>
+    <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">
+      No packs yet. <%= link_to "Open this week's", pack_landing_path, class: "font-bold text-zinc-950 underline underline-offset-2" %>.
+    </div>
+  <% else %>
+    <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
+      <% @entries.each do |entry| %>
+        <% gameweek = entry.weekly_pack.gameweek %>
+        <% real = PackRealScore.new(gameweek) %>
+        <% forecast = PackScore.new(entry.weekly_pack.pack).forecast %>
+        <li data-pack-history>
+          <%= link_to weekly_pack_path(gameweek: gameweek.fpl_id), class: "flex items-center gap-4 px-4 py-3 hover:bg-zinc-50" do %>
+            <span class="w-14 text-sm font-extrabold text-zinc-950">GW<%= gameweek.fpl_id %></span>
+            <span class="min-w-0 flex-1 text-xs text-zinc-500">
+              Captain <%= entry.pack_hand.captain&.player&.display_name %>
+              · <%= pack_points(entry.expected_points) %> expected
+            </span>
+            <span class="text-right">
+              <% if real.started? %>
+                <span class="block text-xl font-extrabold tabular-nums"><%= real.for(entry.pack_hand).points %></span>
+                <span class="block text-[10px] text-zinc-500 tabular-nums">forecast <%= real.for(forecast).points %><%= " · live" unless real.final? %></span>
+              <% else %>
+                <span class="block text-xs font-bold text-zinc-500">Kicks off <%= l(gameweek.start_time, format: :short) %></span>
+              <% end %>
+            </span>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  <% end %>
+</div>

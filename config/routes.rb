@@ -31,7 +31,16 @@ Rails.application.routes.draw do
   # No horizon: you captain a player for a gameweek or you do not captain him.
   get "captain", to: "captains#show", as: :captain
 
-  get "pack", to: "packs#new", as: :new_pack
+  get "pack", to: "weekly_packs#landing", as: :pack_landing
+  get "pack/practice", to: "packs#new", as: :new_pack
+  post "pack/sign-in", to: "pack_sign_ins#create", as: :pack_sign_ins
+  get "pack/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
+  delete "pack/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
+  get "pack/mine", to: "pack_entries#index", as: :my_packs
+  get "pack/gw:gameweek/leaderboard", to: "pack_leaderboards#show", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
+  post "pack/gw:gameweek/entry", to: "pack_entries#create", as: :weekly_pack_entry, constraints: { gameweek: /\d+/ }
+  get "pack/gw:gameweek(/:hand)", to: "weekly_packs#show", as: :weekly_pack,
+      constraints: { gameweek: /\d+/, hand: /[ab]{0,7}(-[0-6]{0,2})?/ }
   get "pack/:seed(/:hand)", to: "packs#show", as: :pack,
       constraints: { seed: /\d{1,9}/, hand: /[ab]{0,7}(-[0-6]{0,2})?/ }
 

@@ -51,14 +51,17 @@ export default class extends Controller {
 
   settle() {
     this.animating = false
+    this.stageTarget.classList.add("is-settled")
     this.countUp()
   }
 
   skip(event) {
     if (!this.animating) return
 
-    event.preventDefault()
-    event.stopPropagation()
+    if (!event.target.closest("a, button")) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
     clearTimeout(this.dealing)
     this.stageTarget.classList.add("is-instant")
     this.settle()

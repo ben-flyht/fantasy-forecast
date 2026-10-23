@@ -1,0 +1,51 @@
+<% content_for :meta_title, "Gameweek #{@gameweek.fpl_id} Pack Leaderboard | Fantasy Forecast" %>
+<% content_for :meta_robots, "noindex, nofollow" %>
+
+<div class="mx-auto max-w-xl">
+  <div class="mb-6">
+    <%= render PageHeadingComponent.new(
+          title: "Gameweek #{@gameweek.fpl_id} Leaderboard",
+          subtitle: "Everyone opened the same pack. Who picked the five that scored most, and who beat the forecast?") %>
+  </div>
+
+  <% if @board.nil? || @board.entry_count.zero? %>
+    <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">Nobody has locked in a team yet.</div>
+  <% else %>
+    <p class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+      <%= pluralize(@board.entry_count, "team") %> ·
+      <%= @board.final? ? "final real points" : @board.started? ? "live real points" : "ranked by expected points until kick-off" %>
+    </p>
+    <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
+      <% place = 0 %>
+      <% @board.rows.each do |row| %>
+        <% place += 1 unless row.forecast? %>
+        <% mine = current_manager && row.manager_id == current_manager.id %>
+        <li class="flex items-center gap-4 px-4 py-3 <%= 'bg-amber-50' if row.forecast? %> <%= 'bg-zinc-100' if mine %>" data-pack-row>
+          <span class="w-8 text-right text-xl font-extrabold tabular-nums text-zinc-950"><%= row.forecast? ? "–" : place %></span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate font-bold text-zinc-950"><%= row.name %><%= " (you)" if mine %></span>
+            <% if row.captain %>
+              <span class="block truncate text-xs text-zinc-500">Captain <%= row.captain.player.display_name %></span>
+            <% end %>
+          </span>
+          <span class="text-right">
+            <% if @board.started? %>
+              <span class="block text-xl font-extrabold tabular-nums"><%= row.real_points %></span>
+              <span class="block text-[10px] text-zinc-500 tabular-nums"><%= pack_points(row.expected_points) %> exp</span>
+            <% else %>
+              <span class="block text-xl font-extrabold tabular-nums"><%= pack_points(row.expected_points) %></span>
+              <span class="block text-[10px] text-zinc-500">expected</span>
+            <% end %>
+          </span>
+        </li>
+      <% end %>
+    </ol>
+  <% end %>
+
+  <p class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
+    <%= link_to "This week's pack", pack_landing_path, class: "text-zinc-950 underline underline-offset-2" %>
+    <% if current_manager %>
+      <%= link_to "My packs", my_packs_path, class: "text-zinc-500 underline underline-offset-2" %>
+    <% end %>
+  </p>
+</div>

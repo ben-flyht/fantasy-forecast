@@ -15,6 +15,10 @@
     </p>
   </div>
 
+  <% if @weekly %>
+    <%= render "packs/weekly_result", hand: hand, score: score %>
+  <% end %>
+
   <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
   <div class="grid grid-cols-3 gap-3 sm:grid-cols-5">
     <% hand.starters.each_with_index do |card, index| %>

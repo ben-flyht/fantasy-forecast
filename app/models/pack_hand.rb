@@ -14,6 +14,11 @@ class PackHand
     new(pack, keeps: keeps, bench: bench) if legal?(pack, keeps, bench)
   end
 
+  def self.legal_line_up?(line_up)
+    positions = line_up.map(&:position)
+    positions.count("goalkeeper") == 1 && Pack::OUTFIELD.all? { |position| positions.include?(position) }
+  end
+
   def self.legal?(pack, keeps, bench)
     return false if keeps.size > pack.size
     return bench.empty? if keeps.size < pack.size
@@ -49,7 +54,7 @@ class PackHand
     return false unless benching? && kept[index] && !bench.include?(index)
     return false if kept[index] == captain
 
-    legal_line_up?(starters - [ kept[index] ])
+    self.class.legal_line_up?(starters - [ kept[index] ])
   end
 
   def code
@@ -59,11 +64,4 @@ class PackHand
 
   def keeping(choice) = self.class.new(pack, keeps: keeps + [ choice ])
   def benching(index) = self.class.new(pack, keeps: keeps, bench: bench + [ index ])
-
-  private
-
-  def legal_line_up?(line_up)
-    positions = line_up.map(&:position)
-    positions.count("goalkeeper") == 1 && Pack::OUTFIELD.all? { |position| positions.include?(position) }
-  end
 end
