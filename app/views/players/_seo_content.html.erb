@@ -110,7 +110,7 @@
         <% other_positions.each_with_index do |pos, i| %>
           <%= link_to "#{pos.capitalize}s",
               position_rankings_path(horizon_param, pos),
-              class: "text-blue-600 hover:underline",
+              class: "font-semibold text-zinc-950 underline hover:text-zinc-600",
               data: { turbo_frame: "_top" } %><%= i == other_positions.size - 1 ? "." : "," %>
         <% end %>
       </p>

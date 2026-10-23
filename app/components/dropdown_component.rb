@@ -11,7 +11,7 @@ class DropdownComponent < ViewComponent::Base
 
   def select_classes
     "appearance-none relative isolate inline-flex items-center justify-center gap-x-2 rounded-lg border text-sm/6 " \
-      "font-semibold pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 " \
+      "font-semibold pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-400 " \
       "cursor-default border-zinc-950/10 text-zinc-950 hover:bg-zinc-950/[2.5%] bg-white"
   end
 
