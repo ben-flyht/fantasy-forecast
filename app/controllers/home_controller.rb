@@ -10,6 +10,7 @@ class HomeController < ApplicationController
   # an introduction to four things rather than a ranking with three footnotes.
   SHORTLIST = 5
   ARGUMENTS_PER_POSITION = 2
+  ARGUMENTS = 8
   HORIZON = "gameweek".freeze
 
   # The rankings used to be at this address, so links carrying their filters are still
@@ -24,6 +25,7 @@ class HomeController < ApplicationController
     @gameweek = Gameweek.next_gameweek
     load_shortlist
     @squad = Squad.find_by(gameweek: @gameweek, horizon: HORIZON)
+    @asked = MostRequestedComparisons.call(gameweek: @gameweek, limit: ARGUMENTS)
     @arguments = best_arguments
   end
 
@@ -43,8 +45,11 @@ class HomeController < ApplicationController
   # A couple from each position rather than all of one, so the front page does not
   # read as a page about forwards.
   def best_arguments
+    asked = @asked.map(&:slug)
     PopularComparisons.call(gameweek: @gameweek, horizon: HORIZON)
                       .values.flat_map { |pairs| pairs.first(ARGUMENTS_PER_POSITION) }
+                      .reject { |pair| asked.include?(pair.slug) }
+                      .first(ARGUMENTS - @asked.size)
   end
 
   # The best few players in the game, whatever they play. A taste rather than a list:

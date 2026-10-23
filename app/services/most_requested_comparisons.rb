@@ -9,42 +9,40 @@
 # Pairs only, though a group is counted the same as a pair. A hub of two-a-side groups
 # would be a hub nobody can scan. Reading `pair: true` means no group slug is ever
 # resolved here, so a crafted one cannot make the query expensive.
-#
-# When the week's tally is thin — early in a week, or a quiet one — it is topped up
-# with the forecast's closest pairs, so the hub always offers something worth reading.
 class MostRequestedComparisons < ApplicationService
   DEFAULT_LIMIT = 6
+  LAST_WEEK_WEIGHT = 0.5
 
-  def initialize(gameweek:, horizon: Horizon::GAMEWEEK, limit: DEFAULT_LIMIT)
+  def initialize(gameweek:, limit: DEFAULT_LIMIT)
     @gameweek = gameweek
-    @horizon = horizon
     @limit = limit
   end
 
   def call
     return [] unless @gameweek
 
-    asked = asked_pairs
-    return asked if asked.size >= @limit
-
-    (asked + close_pairs).uniq(&:slug).first(@limit)
+    asked_slugs.filter_map { |slug| pair_for(slug) }.first(@limit)
   end
 
   private
 
   # More rows read than shown, so players since transferred out do not leave it short.
-  def asked_pairs
-    Comparison.where(gameweek: @gameweek, pair: true)
-                     .order(hits: :desc, updated_at: :desc)
-                     .limit(@limit * 4)
-                     .filter_map { |request| pair_for(request.slug) }
-                     .first(@limit)
+  def asked_slugs
+    Comparison.where(gameweek: tallied_weeks, pair: true)
+              .group(:slug)
+              .order(Arel.sql(weighted_hits), Arel.sql("MAX(updated_at) DESC"))
+              .limit(@limit * 4)
+              .pluck(:slug)
   end
 
-  # Highly ranked players our forecast can barely separate: exactly the picks somebody
-  # is stuck on, and a good fallback for the ones nobody has asked yet.
-  def close_pairs
-    PopularComparisons.call(gameweek: @gameweek, horizon: @horizon).values.flatten
+  def weighted_hits
+    Comparison.sanitize_sql_array(
+      [ "SUM(CASE WHEN gameweek_id = ? THEN hits ELSE hits * ? END) DESC", @gameweek.id, LAST_WEEK_WEIGHT ]
+    )
+  end
+
+  def tallied_weeks
+    [ @gameweek, Gameweek.find_by(fpl_id: @gameweek.fpl_id - 1) ].compact
   end
 
   def pair_for(slug)
