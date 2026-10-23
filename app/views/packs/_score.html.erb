@@ -3,7 +3,7 @@
 <% percent = pack_percent(score.share(hand)) %>
 <section class="pack-stage" data-pack-stage="scored" data-pack-target="stage"
          data-pack-deal-ms-value="2000" data-action="click->pack#skip:capture">
-  <div class="mb-8 rounded-2xl bg-zinc-950 p-6 text-white">
+  <div class="pack-score-panel mb-8 rounded-2xl bg-zinc-950 p-6 text-white">
     <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your pack</h2>
     <p class="pack-score mt-2 text-6xl font-extrabold leading-none tracking-[-0.04em]"
        data-pack-share data-pack-target="score" data-pack-score="<%= percent %>"><%= percent %>%</p>

@@ -1,5 +1,6 @@
 class PackDraw < ApplicationService
   GRADED = TierCalculator::POINT_THRESHOLDS[:t4]
+  CAPTAINCY = %w[midfielder forward].freeze
 
   def initialize(gameweek:, seed:)
     @gameweek = gameweek
@@ -14,12 +15,16 @@ class PackDraw < ApplicationService
     cards = Pack::SLOTS.map { |slot| draw(slot, random, drawn) }
     return if cards.any?(&:nil?)
 
-    assemble(cards, random.rand(Pack::SLOTS.size))
+    assemble(cards, shiny_index(cards, random))
   end
 
   private
 
   attr_reader :gameweek, :seed
+
+  def shiny_index(cards, random)
+    cards.each_index.select { |index| CAPTAINCY.include?(cards[index].first.position) }.sample(random: random)
+  end
 
   def assemble(cards, shiny)
     pairs = Pack::SLOTS.each_with_index.map do |slot, index|
