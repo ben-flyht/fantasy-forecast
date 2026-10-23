@@ -18,6 +18,8 @@ class SeasonForecast < Forecaster
   # so the half-a-match caution on his old minutes is eased for this horizon.
   NEW_CLUB_MINUTES = 0.75
 
+  MINUTES_KEPT = { "goalkeeper" => 0.88, "defender" => 0.78, "midfielder" => 0.78, "forward" => 0.78 }.freeze
+
   private
 
   def horizon
@@ -38,10 +40,17 @@ class SeasonForecast < Forecaster
     { clamp_width: CLAMP_WIDTH, new_club_minutes: NEW_CLUB_MINUTES }
   end
 
+  def settings
+    super.merge(minutes_kept: MINUTES_KEPT)
+  end
+
   # An injury is a spell out, not the end of a career, so over a season a player
   # is worth the share of it he is expected to be fit for rather than nothing at
   # all. See Availability.
   def fitness(players)
-    Availability.call(players, gameweeks: remaining)
+    flagged = Availability.call(players, gameweeks: remaining)
+    players.to_h do |player|
+      [ player.id, flagged.fetch(player.id, 1.0) * MINUTES_KEPT.fetch(player.position, 1.0) ]
+    end
   end
 end
