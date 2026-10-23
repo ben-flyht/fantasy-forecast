@@ -34,7 +34,7 @@
           </td>
           <td class="py-2 text-right tabular-nums"><%= helpers.player_price(entry.cost) || "—" %></td>
           <td class="py-2 text-right tabular-nums text-zinc-500"><%= difference(entry) || "—" %></td>
-          <td class="py-2 text-right tabular-nums font-semibold <%= better?(entry) ? "text-green-700" : "" %>">
+          <td class="py-2 text-right tabular-nums font-semibold <%= better?(entry) ? "text-zinc-950" : "text-zinc-400" %>">
             <%= points(entry) %>
           </td>
         </tr>

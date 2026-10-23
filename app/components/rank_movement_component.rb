@@ -37,10 +37,4 @@ class RankMovementComponent < ViewComponent::Base
 
     "#{climbing? ? '▲' : '▼'} #{pluralize(change.abs, 'place')}"
   end
-
-  def movement_class
-    return "text-zinc-500" if steady?
-
-    climbing? ? "text-green-700" : "text-red-700"
-  end
 end
