@@ -232,7 +232,7 @@ class Forecaster < ApplicationService
   end
 
   def recent_gameweeks
-    Gameweek.where(fpl_id: (@gameweek.fpl_id - RECENT_GAMEWEEKS)...@gameweek.fpl_id).pluck(:id)
+    Gameweek.finished.where(fpl_id: (@gameweek.fpl_id - RECENT_GAMEWEEKS)...@gameweek.fpl_id).pluck(:id)
   end
 
   def record_of(players)
