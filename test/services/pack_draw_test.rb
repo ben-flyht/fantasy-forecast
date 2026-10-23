@@ -62,6 +62,16 @@ class PackDrawTest < ActiveSupport::TestCase
     end
   end
 
+  test "the shiny pair, and so the captain, is always a midfielder or a forward" do
+    build_pool
+
+    100.times do |seed|
+      shiny = PackDraw.call(gameweek: @gameweek, seed: seed).pairs.find(&:shiny?)
+
+      assert_includes PackDraw::CAPTAINCY, shiny.cards.first.position, "seed #{seed}"
+    end
+  end
+
   test "a player expected to add nothing to turning up is left out of the pack" do
     build_pool(counts: { "goalkeeper" => 2, "defender" => 4, "midfielder" => 4, "forward" => 2 })
     Forecast.joins(:player).where(players: { position: "forward" }).update_all(score: 1.0)

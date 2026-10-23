@@ -114,8 +114,11 @@ export default class extends Controller {
     if (this.still) return
 
     const burst = document.createElement("div")
+    const panel = this.scoreTarget.getBoundingClientRect()
     burst.className = "pack-confetti"
     burst.setAttribute("aria-hidden", "true")
+    burst.style.setProperty("--from-x", `${panel.left + panel.width / 2}px`)
+    burst.style.setProperty("--from-y", `${panel.top + panel.height / 2}px`)
     const pieces = score >= 100 ? 90 : 45
     for (let i = 0; i < pieces; i++) {
       const piece = document.createElement("span")
