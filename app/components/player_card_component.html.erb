@@ -13,10 +13,10 @@
       <div class="absolute inset-0" style="background-color: <%= color %>"></div>
       <% if team&.badge_url %>
         <span class="absolute right-[-9px] top-1/2 -translate-y-1/2 h-[120px] w-[120px] pointer-events-none opacity-[.2]">
-          <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain #{team.on_light? ? 'brightness-0' : 'brightness-0 invert'}" %>
+          <%= image_tag team.badge_url, alt: "", loading: "lazy", class: "w-full h-full object-contain #{team.on_light? ? 'brightness-0' : 'brightness-0 invert'}" %>
         </span>
         <span class="absolute right-[-9px] top-1/2 -translate-y-1/2 h-[120px] w-[120px] pointer-events-none opacity-[.22]">
-          <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain" %>
+          <%= image_tag team.badge_url, alt: "", loading: "lazy", class: "w-full h-full object-contain" %>
         </span>
       <% end %>
     </div>
@@ -41,7 +41,7 @@
 
     <% if player.cutout_url %>
       <span class="absolute right-3 bottom-0 h-[100px] z-[2] pointer-events-none">
-        <%= image_tag player.cutout_url, alt: "",
+        <%= image_tag player.cutout_url, alt: "", width: 110, height: 140, loading: "lazy",
               class: "block h-full w-auto object-bottom drop-shadow-[0_5px_9px_rgba(0,0,0,0.22)]",
               onerror: "this.parentElement.remove()" %>
       </span>
