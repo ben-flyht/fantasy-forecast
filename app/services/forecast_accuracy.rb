@@ -59,11 +59,17 @@ class ForecastAccuracy < ApplicationService
 
   def baselines(players, best)
     {
-      fpl: capture(ordered_by(players, fpl_expected), best),
-      crowd: capture(ordered_by(players, ownership), best),
+      fpl: snapshot_capture(players, fpl_expected, best),
+      crowd: snapshot_capture(players, ownership, best),
       last_week: capture(ordered_by(players, previous_points), best),
       average: blind(players, best)
     }
+  end
+
+  def snapshot_capture(players, values, best)
+    return nil if values.nil?
+
+    capture(ordered_by(players, values), best)
   end
 
   # What picking at random gets you: the mean player, ten times over.
@@ -164,9 +170,15 @@ class ForecastAccuracy < ApplicationService
 
   def previous_points
     @previous_points ||= begin
-      previous = Gameweek.where("fpl_id < ?", @gameweek.fpl_id).order(:fpl_id).last
+      previous = previous_gameweek
       previous ? Hash.new(0).merge(Performance.where(gameweek: previous).pluck(:player_id, :gameweek_score).to_h) : Hash.new(0)
     end
+  end
+
+  def previous_gameweek
+    return @previous_gameweek if defined?(@previous_gameweek)
+
+    @previous_gameweek = Gameweek.find_by(fpl_id: @gameweek.fpl_id - 1)
   end
 
   def fpl_expected
@@ -179,8 +191,10 @@ class ForecastAccuracy < ApplicationService
 
   # Read as it stood when the forecast was made, not as it stands now.
   def snapshot(type)
+    return nil unless previous_gameweek
+
     Hash.new(0).merge(
-      Statistic.where(gameweek: @gameweek, type: type).pluck(:player_id, :value).to_h
+      Statistic.where(gameweek: previous_gameweek, type: type).pluck(:player_id, :value).to_h
     )
   end
 end

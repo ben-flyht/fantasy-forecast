@@ -52,7 +52,16 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     # 90 minutes of a 0.3 xG, 0.2 xA midfielder on a level fixture: two points for
     # turning up, plus what he is worth on top. A full season of minutes behind
     # him, so nothing is held back for doubt.
-    assert_in_delta 4.58, result[1][:points], 0.1
+    assert_in_delta 2 + 2.58 * ExpectedPoints::SCORING_CALIBRATION, result[1][:points], 0.1
+  end
+
+  test "what he scores beyond turning up is trimmed, and turning up is not" do
+    scorer = forecast([ ranking(1) ], { 1 => regular })[1]
+    idle = forecast([ ranking(1) ], { 1 => regular(xg: 0.0, xgi: 0.0, xa: 0.0, conceded: 0.0) })[1]
+
+    assert_in_delta 2 + (scorer[:working][:per_90] - 2) * ExpectedPoints::SCORING_CALIBRATION, scorer[:points], 0.01
+    assert_operator scorer[:working][:calibration], :<, 1.0
+    assert_in_delta idle[:working][:per_90], idle[:points], 0.01
   end
 
   test "before the season, minutes are read against a full campaign" do
@@ -377,7 +386,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
     assert_operator worth, :<, 1.0,
                     "three saves a game is not a point a game, whatever the arithmetic wants"
-    assert_in_delta 0.66, worth, 0.05,
+    assert_in_delta 0.66 * ExpectedPoints::SCORING_CALIBRATION, worth, 0.05,
                     "he reaches three in 58 matches of a hundred, and six in eight more"
   end
 

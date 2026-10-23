@@ -48,7 +48,7 @@ class Forecaster < ApplicationService
   #    opens as the window fills rather than being a fifth from the first week. A
   #    signing's new-club cap falls on the minutes he played elsewhere and not on
   #    the ones he has played here.
-  MODEL = 7
+  MODEL = 8
 
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek
@@ -56,6 +56,7 @@ class Forecaster < ApplicationService
 
   def call
     return log_nothing_to_forecast unless forecastable?
+    return keep_forecast_made_before_deadline if deadline_passed?
 
     rows = POSITIONS.flat_map { |position| rows_for(position) }
     return log_nothing_to_forecast if rows.empty?
@@ -87,6 +88,15 @@ class Forecaster < ApplicationService
 
   def forecastable?
     @gameweek.present? && !@gameweek.is_finished?
+  end
+
+  def deadline_passed?
+    @gameweek.start_time.past?
+  end
+
+  def keep_forecast_made_before_deadline
+    Rails.logger.info "Gameweek #{@gameweek.fpl_id} deadline has passed, keeping the #{horizon} forecast made before it."
+    0
   end
 
   def rows_for(position)
