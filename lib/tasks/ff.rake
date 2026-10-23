@@ -30,14 +30,16 @@ namespace :ff do
     abort "Gameweek #{gameweek.fpl_id} is not finished" unless result
 
     puts "Gameweek #{gameweek.fpl_id}: how many of the available points our top 10 captured"
+    percent = ->(value) { value ? format("%.1f%%", value) : "-" }
     puts format("  %-12s %8s %8s | %8s %8s %8s %8s", "position", "ours", "rho", "fpl", "crowd", "last wk", "average")
     result.each do |position, scores|
       b = scores[:baselines]
-      puts format("  %-12s %7.1f%% %8s | %7.1f%% %7.1f%% %7.1f%% %7.1f%%",
-                  position, scores[:capture_rate], scores[:correlation] || "-",
-                  b[:fpl], b[:crowd], b[:last_week], b[:average])
+      puts format("  %-12s %8s %8s | %8s %8s %8s %8s",
+                  position, percent.(scores[:capture_rate]), scores[:correlation] || "-",
+                  percent.(b[:fpl]), percent.(b[:crowd]), percent.(b[:last_week]), percent.(b[:average]))
     end
-    beaten = result.count { |_, s| s[:capture_rate] > s[:baselines][:fpl] }
-    puts "\nBeat FPL's own expectation in #{beaten} of #{result.size} positions."
+    marked = result.select { |_, s| s[:baselines][:fpl] }
+    beaten = marked.count { |_, s| s[:capture_rate] > s[:baselines][:fpl] }
+    puts "\nBeat FPL's own expectation in #{beaten} of #{marked.size} positions."
   end
 end

@@ -71,19 +71,48 @@ class ForecastAccuracyTest < ActiveSupport::TestCase
     assert result["forward"][:capture_rate] < 100.0, "our top pick blanked and that has to count"
   end
 
+  def previous_gameweek
+    @previous_gameweek ||= Gameweek.create!(fpl_id: 89, name: "Gameweek 89", start_time: 2.weeks.ago, is_finished: true)
+  end
+
+  def snapshot(players, gameweek, ep_next:, owned:)
+    players.each_with_index do |player, index|
+      Statistic.create!(player: player, gameweek: gameweek, type: "ep_next", value: ep_next.call(index))
+      Statistic.create!(player: player, gameweek: gameweek, type: "selected_by_percent", value: owned.call(index))
+    end
+  end
+
   test "reports what the free alternatives would have got" do
     players = field((1..20).to_a.reverse)
     # FPL's own expectation is exactly wrong, the crowd is exactly right
-    players.each_with_index do |player, index|
-      Statistic.create!(player: player, gameweek: @gameweek, type: "ep_next", value: index + 1)
-      Statistic.create!(player: player, gameweek: @gameweek, type: "selected_by_percent", value: 20 - index)
-    end
+    snapshot(players, previous_gameweek, ep_next: ->(i) { i + 1 }, owned: ->(i) { 20 - i })
 
     result = ForecastAccuracy.call(gameweek: @gameweek)
     baselines = result["forward"][:baselines]
 
     assert baselines[:crowd] > baselines[:fpl], "the crowd had them the right way round and FPL did not"
     assert baselines[:average] < 100.0, "picking blind cannot capture everything"
+  end
+
+  test "the free alternatives are read from before the deadline, not from after the football" do
+    players = field((1..20).to_a.reverse)
+    snapshot(players, previous_gameweek, ep_next: ->(i) { i + 1 }, owned: ->(i) { i + 1 })
+    snapshot(players, @gameweek, ep_next: ->(i) { 20 - i }, owned: ->(i) { 20 - i })
+
+    baselines = ForecastAccuracy.call(gameweek: @gameweek)["forward"][:baselines]
+
+    assert baselines[:fpl] < 100.0, "FPL is marked on what it said beforehand"
+    assert baselines[:crowd] < 100.0, "the crowd is marked on what it owned beforehand"
+  end
+
+  test "with no earlier gameweek there is nothing honest to compare against" do
+    players = field((1..20).to_a.reverse)
+    snapshot(players, @gameweek, ep_next: ->(i) { 20 - i }, owned: ->(i) { 20 - i })
+
+    baselines = ForecastAccuracy.call(gameweek: @gameweek)["forward"][:baselines]
+
+    assert_nil baselines[:fpl]
+    assert_nil baselines[:crowd]
   end
 
   test "an unfinished gameweek is not marked" do

@@ -48,7 +48,9 @@ class Forecaster < ApplicationService
   #    opens as the window fills rather than being a fifth from the first week. A
   #    signing's new-club cap falls on the minutes he played elsewhere and not on
   #    the ones he has played here.
-  MODEL = 7
+  MODEL = 9
+
+  RECENT_GAMEWEEKS = 3
 
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek
@@ -56,6 +58,7 @@ class Forecaster < ApplicationService
 
   def call
     return log_nothing_to_forecast unless forecastable?
+    return keep_forecast_made_before_deadline if deadline_passed?
 
     rows = POSITIONS.flat_map { |position| rows_for(position) }
     return log_nothing_to_forecast if rows.empty?
@@ -87,6 +90,15 @@ class Forecaster < ApplicationService
 
   def forecastable?
     @gameweek.present? && !@gameweek.is_finished?
+  end
+
+  def deadline_passed?
+    @gameweek.start_time.past?
+  end
+
+  def keep_forecast_made_before_deadline
+    Rails.logger.info "Gameweek #{@gameweek.fpl_id} deadline has passed, keeping the #{horizon} forecast made before it."
+    0
   end
 
   def rows_for(position)
@@ -207,7 +219,20 @@ class Forecaster < ApplicationService
   def stats_for(players)
     stats = record_of(players)
     fitness_of(players).each { |player_id, reading| stats[player_id].merge!(reading) }
+    recent_minutes(players).each { |player_id, share| stats[player_id][ExpectedPoints::RECENT_MINUTES] = share }
     stats
+  end
+
+  def recent_minutes(players)
+    weeks = recent_gameweeks
+    return {} if weeks.empty?
+
+    played = Statistic.where(player_id: players.map(&:id), type: "minutes", gameweek_id: weeks).group(:player_id).sum(:value)
+    players.to_h { |player| [ player.id, played[player.id].to_f / (weeks.size * ExpectedPoints::FULL_MATCH) ] }
+  end
+
+  def recent_gameweeks
+    Gameweek.finished.where(fpl_id: (@gameweek.fpl_id - RECENT_GAMEWEEKS)...@gameweek.fpl_id).pluck(:id)
   end
 
   def record_of(players)

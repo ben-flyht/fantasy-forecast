@@ -70,6 +70,17 @@ class UpcomingForecastTest < ActiveSupport::TestCase
     assert_in_delta weekly * Horizon::WINDOW, upcoming, weekly * Horizon::WINDOW * 0.35
   end
 
+  test "a player out this week but due back is not written off for the whole window" do
+    @player.update!(status: "i", news: "Calf injury - Expected back #{@weeks.second.start_time.strftime('%-d %b')}",
+                    news_added: Time.current)
+    Statistic.create!(player: @player, gameweek: @weeks.first, type: "chance_of_playing", value: 0)
+
+    UpcomingForecast.call(gameweek: @weeks.first)
+
+    assert Forecast.find_by(player: @player, horizon: "upcoming").score.to_f.positive?,
+           "he misses one week of five, not all of them"
+  end
+
   # In May there is no five-week run left, and the horizon has to mean whatever is
   # actually there rather than refusing or reaching for weeks that do not exist.
   test "a season with less football left than the window forecasts what is there" do

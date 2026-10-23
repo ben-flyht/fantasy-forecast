@@ -52,7 +52,16 @@ class ExpectedPointsTest < ActiveSupport::TestCase
     # 90 minutes of a 0.3 xG, 0.2 xA midfielder on a level fixture: two points for
     # turning up, plus what he is worth on top. A full season of minutes behind
     # him, so nothing is held back for doubt.
-    assert_in_delta 4.58, result[1][:points], 0.1
+    assert_in_delta 2 + 2.58 * ExpectedPoints::SCORING_CALIBRATION, result[1][:points], 0.1
+  end
+
+  test "what he scores beyond turning up is trimmed, and turning up is not" do
+    scorer = forecast([ ranking(1) ], { 1 => regular })[1]
+    idle = forecast([ ranking(1) ], { 1 => regular(xg: 0.0, xgi: 0.0, xa: 0.0, conceded: 0.0) })[1]
+
+    assert_in_delta 2 + (scorer[:working][:per_90] - 2) * ExpectedPoints::SCORING_CALIBRATION, scorer[:points], 0.01
+    assert_operator scorer[:working][:calibration], :<, 1.0
+    assert_in_delta idle[:working][:per_90], idle[:points], 0.01
   end
 
   test "before the season, minutes are read against a full campaign" do
@@ -92,6 +101,25 @@ class ExpectedPointsTest < ActiveSupport::TestCase
                                 fixtures_by_team: { 1 => [ fixture ] },
                                 season_started: true, gameweeks_played: 2)
     result[1][:points] - result[2][:points]
+  end
+
+  def minutes_in_season(season_minutes, recent: nil)
+    stats = regular.merge("season_minutes" => season_minutes)
+    stats[ExpectedPoints::RECENT_MINUTES] = recent unless recent.nil?
+    ExpectedPoints.call([ ranking(1) ], stats: { 1 => stats }, fixtures_by_team: { 1 => [ fixture ] },
+                                        season_started: true, gameweeks_played: 6)[1][:working][:minutes]
+  end
+
+  test "a new regular is believed sooner than his season share alone allows" do
+    season_only = minutes_in_season(270.0)
+    starting_lately = minutes_in_season(270.0, recent: 1.0)
+
+    assert_operator starting_lately, :>, season_only
+    assert_in_delta (season_only + 90) / 2.0, starting_lately, 1.5
+  end
+
+  test "a regular who has been dropped lately is doubted sooner" do
+    assert_operator minutes_in_season(540.0, recent: 0.0), :<, minutes_in_season(540.0)
   end
 
   test "bonus counts for less when there is less football behind it" do
@@ -377,7 +405,7 @@ class ExpectedPointsTest < ActiveSupport::TestCase
 
     assert_operator worth, :<, 1.0,
                     "three saves a game is not a point a game, whatever the arithmetic wants"
-    assert_in_delta 0.66, worth, 0.05,
+    assert_in_delta 0.66 * ExpectedPoints::SCORING_CALIBRATION, worth, 0.05,
                     "he reaches three in 58 matches of a hundred, and six in eight more"
   end
 

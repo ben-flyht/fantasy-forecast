@@ -6,7 +6,7 @@ class ComparisonsController < ApplicationController
   def index
     @gameweek = Gameweek.next_gameweek
     @horizon = horizon
-    @most_requested = MostRequestedComparisons.call(gameweek: @gameweek, horizon: @horizon)
+    @most_requested = MostRequestedComparisons.call(gameweek: @gameweek)
     @pairs = PopularComparisons.call(gameweek: @gameweek, horizon: @horizon)
   end
 

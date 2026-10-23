@@ -137,6 +137,45 @@ class WeeklyForecastTest < ActiveSupport::TestCase
     assert_equal 0, Forecast.count, "once the football has happened the forecast is evidence"
   end
 
+  test "a forecast made before the deadline is not rewritten after it" do
+    Forecast.create!(player: @player, gameweek: @gameweek, horizon: "gameweek", rank: 1, score: 4.2)
+    @gameweek.update!(start_time: 1.minute.ago)
+
+    assert WeeklyForecast.call(gameweek: @gameweek), "a passed deadline is a quiet skip, not a failure"
+    assert_equal [ 4.2 ], Forecast.where(gameweek: @gameweek).pluck(:score).map(&:to_f)
+  end
+
+  test "the last three gameweeks' minutes are read alongside the season's" do
+    earlier = (77..79).map { |n| Gameweek.create!(fpl_id: n, name: "Gameweek #{n}", start_time: (81 - n).weeks.ago, is_finished: true) }
+    benched = player_with_record(fpl_id: 8101)
+    earlier.each do |week|
+      Statistic.create!(player: @player, gameweek: week, type: "minutes", value: 90)
+      Statistic.create!(player: benched, gameweek: week, type: "minutes", value: 0)
+    end
+
+    WeeklyForecast.call(gameweek: @gameweek)
+
+    starter = Forecast.find_by(player: @player, gameweek: @gameweek).working["minutes"]
+    dropped = Forecast.find_by(player: benched, gameweek: @gameweek).working["minutes"]
+    assert_operator starter, :>, dropped, "three full matches lately count for more than three on the bench"
+  end
+
+  test "a gameweek still being played does not count against players yet to play in it" do
+    finished = (77..78).map { |n| Gameweek.create!(fpl_id: n, name: "Gameweek #{n}", start_time: (81 - n).weeks.ago, is_finished: true) }
+    in_progress = Gameweek.create!(fpl_id: 79, name: "Gameweek 79", start_time: 2.days.ago, is_current: true)
+    yet_to_play = player_with_record(fpl_id: 8102)
+    finished.each do |week|
+      [ @player, yet_to_play ].each { |player| Statistic.create!(player: player, gameweek: week, type: "minutes", value: 90) }
+    end
+    Statistic.create!(player: @player, gameweek: in_progress, type: "minutes", value: 90)
+
+    WeeklyForecast.call(gameweek: @gameweek)
+
+    played = Forecast.find_by(player: @player, gameweek: @gameweek).working["minutes"]
+    waiting = Forecast.find_by(player: yet_to_play, gameweek: @gameweek).working["minutes"]
+    assert_equal played, waiting, "his match has not kicked off yet, which is not the same as being dropped"
+  end
+
   test "a player with no record still gets a row, so the position is complete" do
     unknown = Player.create!(first_name: "No", last_name: "Record", short_name: "NR",
                              fpl_id: 8200, code: 8200, team: @team, position: "forward")
