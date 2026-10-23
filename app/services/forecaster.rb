@@ -48,7 +48,9 @@ class Forecaster < ApplicationService
   #    opens as the window fills rather than being a fifth from the first week. A
   #    signing's new-club cap falls on the minutes he played elsewhere and not on
   #    the ones he has played here.
-  MODEL = 8
+  MODEL = 9
+
+  RECENT_GAMEWEEKS = 3
 
   def initialize(gameweek: nil)
     @gameweek = gameweek || Gameweek.next_gameweek
@@ -217,7 +219,20 @@ class Forecaster < ApplicationService
   def stats_for(players)
     stats = record_of(players)
     fitness_of(players).each { |player_id, reading| stats[player_id].merge!(reading) }
+    recent_minutes(players).each { |player_id, share| stats[player_id][ExpectedPoints::RECENT_MINUTES] = share }
     stats
+  end
+
+  def recent_minutes(players)
+    weeks = recent_gameweeks
+    return {} if weeks.empty?
+
+    played = Statistic.where(player_id: players.map(&:id), type: "minutes", gameweek_id: weeks).group(:player_id).sum(:value)
+    players.to_h { |player| [ player.id, played[player.id].to_f / (weeks.size * ExpectedPoints::FULL_MATCH) ] }
+  end
+
+  def recent_gameweeks
+    Gameweek.where(fpl_id: (@gameweek.fpl_id - RECENT_GAMEWEEKS)...@gameweek.fpl_id).pluck(:id)
   end
 
   def record_of(players)

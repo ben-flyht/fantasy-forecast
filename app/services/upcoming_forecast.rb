@@ -45,4 +45,8 @@ class UpcomingForecast < Forecaster
   def model_overrides
     { clamp_width: CLAMP_WIDTH, new_club_minutes: NEW_CLUB_MINUTES }
   end
+
+  def fitness(players)
+    Availability.call(players, gameweeks: window)
+  end
 end
