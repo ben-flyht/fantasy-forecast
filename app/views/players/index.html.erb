@@ -35,7 +35,7 @@
       <%# The positions are the same control as the horizon above, and links for the
           same reason: /gameweeks/1/goalkeepers is a page people arrive on from a
           search, so it deserves an href rather than a radio button. %>
-      <%= render SegmentedControlComponent.new(label: "Position", options: position_options) %>
+      <%= render SegmentedControlComponent.new(label: "Position", options: position_options, event: "horizon_switch") %>
 
       <%= form_with url: rankings_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance", controller: "filter-navigation", action: "submit->filter-navigation#submit" }, id: "filters-form", class: "contents" do |f| %>
         <%# The horizon and the position are links now, so the form carries them as
