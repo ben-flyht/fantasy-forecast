@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 const TILT = 16
-const RESTING = ["--ry", "--rx", "--mx", "--my", "--tx", "--ty", "--glare"]
+const RESTING = ["--ry", "--rx", "--mx", "--my", "--tx", "--ty"]
 
 export default class extends Controller {
   connect() {
@@ -23,8 +23,7 @@ export default class extends Controller {
       "--mx": `${x * 100}%`,
       "--my": `${y * 100}%`,
       "--tx": `${x}`,
-      "--ty": `${y}`,
-      "--glare": "1"
+      "--ty": `${y}`
     })
   }
 

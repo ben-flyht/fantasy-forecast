@@ -7,7 +7,8 @@
             <span class="pack-card__glitter--shards"></span>
             <span class="pack-card__glitter--left"></span>
             <span class="pack-card__glitter--top"></span>
-            <span class="pack-card__glitter--shine"></span>
+            <span class="pack-card__glitter--flecks-a"></span>
+            <span class="pack-card__glitter--flecks-b"></span>
           </span>
           <% if team&.badge_url %>
             <%= image_tag team.badge_url, alt: "", class: "pack-card__badge" %>
@@ -27,7 +28,7 @@
             <span class="pack-card__given"><%= player.given_name %></span>
           <% end %>
           <span class="<%= name_class %>"><%= player.display_name %></span>
-          <span class="pack-card__team"><%= team&.short_name %></span>
+          <span class="pack-card__team"><%= team&.short_name %> <span class="pack-card__fixture" data-pack-fixture><%= fixture %></span></span>
         </div>
 
         <span class="pack-card__grade" data-pack-grade><%= grade %></span>
@@ -35,7 +36,6 @@
           <span class="pack-card__captain" title="Captain">C</span>
         <% end %>
 
-        <span class="pack-card__glare" aria-hidden="true"></span>
       </div>
 
       <div class="pack-card__back" aria-hidden="true">

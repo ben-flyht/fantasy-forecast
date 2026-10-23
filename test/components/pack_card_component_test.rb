@@ -33,4 +33,18 @@ class PackCardComponentTest < ViewComponent::TestCase
 
     assert_selector ".pack-card--shiny .pack-card__captain", text: "C"
   end
+
+  test "a card says who he plays, and where" do
+    render_inline PackCardComponent.new(card: @card.with(fixtures: [ "ARS (H)" ]))
+    assert_selector "[data-pack-fixture]", text: "v ARS (H)"
+
+    render_inline PackCardComponent.new(card: @card)
+    assert_selector "[data-pack-fixture]", text: "no game"
+  end
+
+  test "a shiny card carries the coloured flecks" do
+    render_inline PackCardComponent.new(card: @card, shiny: true)
+
+    assert_selector ".pack-card--shiny .pack-card__glitter--flecks-a"
+  end
 end
