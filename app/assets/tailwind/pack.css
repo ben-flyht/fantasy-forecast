@@ -201,7 +201,7 @@
   position: absolute;
   left: 0;
   right: 6cqw;
-  bottom: 9cqw;
+  bottom: 7cqw;
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -259,12 +259,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-left: 5.5cqw;
-  margin-top: 1.4cqw;
-  font-size: 5.6cqw;
+  margin-top: 2cqw;
+  font-size: 8cqw;
   font-weight: 800;
   line-height: 1;
+  letter-spacing: -0.01em;
   text-transform: uppercase;
-  opacity: 0.9;
 }
 
 .pack-card__back {
