@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
 class PlayerRowComponent < ViewComponent::Base
-  def initialize(ranking:, player:, facts:, leading: nil, captain: false)
+  def initialize(ranking:, player:, facts:, leading: nil, captain: false, href: nil)
     @ranking = ranking
     @player = player
     @facts = facts || {}
     @leading = leading
     @captain = captain
+    @href = href
   end
 
   private
@@ -17,6 +18,10 @@ class PlayerRowComponent < ViewComponent::Base
   # in it; a squad does not count, so there it is the position he fills.
   def leading
     @leading || rank
+  end
+
+  def href
+    @href || helpers.player_path(player)
   end
 
   def captain?

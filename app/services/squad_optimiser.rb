@@ -31,7 +31,7 @@ class SquadOptimiser < ApplicationService
 
   # The chance a given starter does not play at all: injured late, dropped, rested.
   # Every bench weight below follows from this one number.
-  MISS_RATE = 0.07
+  MISS_RATE = BenchChance::MISS_RATE
 
   OUTFIELD_STARTERS = 10
 
@@ -55,34 +55,11 @@ class SquadOptimiser < ApplicationService
 
   attr_reader :gameweek, :horizon
 
-  # Players we would actually pick. A flagged player is a different bet from the one
-  # the forecast is making, so he is not one of them.
   def pool
-    @pool ||= Forecast.where(gameweek: gameweek, horizon: horizon)
-                      .includes(player: :team)
-                      .filter_map { |forecast| candidate(forecast) }
-  end
-
-  def candidate(forecast)
-    player = forecast.player
-    return unless pickable?(player, forecast)
-
-    cost = costs.dig(player.id, "now_cost")
-    return if cost.nil? || cost.zero?
-
-    { player_id: player.id, position: player.position, team_id: player.team_id,
-      cost: cost.to_i, expected_points: forecast.score.to_f }
-  end
-
-  def pickable?(player, forecast)
-    return false if player.nil? || player.departed || !player.selectable
-    return false if player.status.present? && player.status != "a"
-
-    forecast.score.present?
-  end
-
-  def costs
-    @costs ||= Statistic.where(type: "now_cost").latest_by_player
+    @pool ||= PickablePool.call(gameweek: gameweek, horizon: horizon).map do |candidate|
+      { player_id: candidate.player_id, position: candidate.position, team_id: candidate.team_id,
+        cost: candidate.cost, expected_points: candidate.expected_points }
+    end
   end
 
   def by_position
@@ -99,11 +76,7 @@ class SquadOptimiser < ApplicationService
     }
   end
 
-  def at_least(count)
-    1 - (0...count).sum { |k| combinations(OUTFIELD_STARTERS, k) * MISS_RATE**k * (1 - MISS_RATE)**(OUTFIELD_STARTERS - k) }
-  end
-
-  def combinations(n, k) = (1..k).reduce(1) { |total, i| total * (n - i + 1) / i }
+  def at_least(count) = BenchChance.at_least(count, of: OUTFIELD_STARTERS)
 
   # ---- the search -------------------------------------------------------------
 

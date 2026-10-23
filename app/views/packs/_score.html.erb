@@ -1,0 +1,53 @@
+<% best = score.perfect %>
+<% forecast = score.forecast %>
+<section data-pack-stage="scored">
+  <div class="mb-6 rounded-xl bg-zinc-100 p-5">
+    <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Your pack</h2>
+    <p class="mt-1.5 text-4xl font-extrabold leading-none tracking-[-0.03em] text-zinc-950" data-pack-share>
+      <%= pack_share(score.share(hand)) %>
+    </p>
+    <p class="mt-2 text-sm/6 text-zinc-700">
+      of the best team this pack allowed.
+      You <strong class="tabular-nums"><%= pack_points(score.points(hand)) %></strong>,
+      the forecast <strong class="tabular-nums"><%= pack_points(score.points(forecast)) %></strong>,
+      the perfect pack <strong class="tabular-nums"><%= pack_points(score.points(best)) %></strong> expected points.
+    </p>
+  </div>
+
+  <h2 class="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
+  <div class="flex flex-col gap-2">
+    <% hand.starters.each do |card| %>
+      <%= render PlayerCardComponent.new(**pack_card_arguments(card, revealed: true, captain: card == hand.captain)) %>
+    <% end %>
+  </div>
+
+  <h2 class="mt-6 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Bench</h2>
+  <div class="flex flex-col gap-2">
+    <% hand.substitutes.each do |card| %>
+      <%= render PlayerCardComponent.new(**pack_card_arguments(card, revealed: true)) %>
+    <% end %>
+  </div>
+
+  <h2 class="mt-8 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pair by pair</h2>
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-[10px] uppercase tracking-wider text-zinc-400 font-bold text-left">
+        <th class="pb-2">You kept</th>
+        <th class="pb-2">The forecast kept</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% hand.kept.zip(forecast.kept).each do |mine, theirs| %>
+        <tr class="border-t border-zinc-200 <%= 'text-zinc-400' if mine == theirs %>" data-pack-pair>
+          <td class="py-2"><%= mine.player.display_name %> <span class="tabular-nums text-zinc-500"><%= pack_card_points(mine.expected_points) %></span></td>
+          <td class="py-2"><%= theirs.player.display_name %> <span class="tabular-nums text-zinc-500"><%= pack_card_points(theirs.expected_points) %></span></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <p class="mt-6 text-xs/6 text-zinc-500">
+    Expected points for the coming gameweek: the five starters in full, the captain twice,
+    and each substitute by how often he would actually come on.
+  </p>
+</section>

@@ -1,7 +1,7 @@
 <tr class="cursor-pointer group"
-    onclick="Turbo.visit('<%= helpers.player_path(player) %>')"
+    onclick="Turbo.visit('<%= href %>')"
     role="link" tabindex="0"
-    onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
+    onkeydown="if(event.key === 'Enter') Turbo.visit('<%= href %>')">
   <td class="w-[104px] pl-[10px] text-center align-middle bg-white border-y border-l border-zinc-200 rounded-l-xl group-hover:bg-zinc-50">
     <span class="text-[46px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><%= leading %></span>
   </td>
