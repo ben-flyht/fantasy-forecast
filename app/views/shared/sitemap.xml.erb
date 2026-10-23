@@ -14,34 +14,24 @@
     <priority>0.9</priority>
   </url>
 
-  <!-- The armband: one decision, one address, answered every week -->
+  <!-- The coming gameweek, and only that one: a week already played is history
+       rather than a page anyone is searching for, and offering all thirty-eight
+       spends the crawler on near-copies of each other instead of on the season
+       pages and the players. -->
+  <% if @next_gameweek %>
+    <% %w[goalkeepers defenders midfielders forwards].each do |position| %>
   <url>
-    <loc><%= @base_url %><%= captain_path %></loc>
+    <loc><%= @base_url %><%= gameweek_position_path(gameweek: @next_gameweek, position: position) %></loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
-
-  <!-- The best fifteen the budget buys, at each distance it is picked over -->
-  <url>
-    <loc><%= @base_url %><%= squad_path %></loc>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc><%= @base_url %><%= upcoming_squad_path %></loc>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc><%= @base_url %><%= season_squad_path %></loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
+    <% end %>
+  <% end %>
 
   <!-- The two ranking URLs that are good all year: the run of fixtures ahead, and
        the whole of what is left. A gameweek's own page goes stale the week it is
        played; these two never do. -->
-  <% %w[forwards midfielders defenders goalkeepers].each do |position| %>
+  <% %w[goalkeepers defenders midfielders forwards].each do |position| %>
   <url>
     <loc><%= @base_url %><%= upcoming_position_path(position: position) %></loc>
     <changefreq>daily</changefreq>
@@ -52,20 +42,6 @@
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
-  <% end %>
-
-  <!-- The coming gameweek, and only that one: a week already played is history
-       rather than a page anyone is searching for, and offering all thirty-eight
-       spends the crawler on near-copies of each other instead of on the season
-       pages and the players. -->
-  <% if @next_gameweek %>
-    <% %w[forwards midfielders defenders goalkeepers].each do |position| %>
-  <url>
-    <loc><%= @base_url %><%= gameweek_position_path(gameweek: @next_gameweek, position: position) %></loc>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-    <% end %>
   <% end %>
 
   <!-- Comparisons. Every pair of players has an address and every one of them is
@@ -86,8 +62,32 @@
   </url>
   <% end %>
 
+  <!-- The best fifteen the budget buys, at each distance it is picked over -->
+  <url>
+    <loc><%= @base_url %><%= squad_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc><%= @base_url %><%= upcoming_squad_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc><%= @base_url %><%= season_squad_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- The armband: one decision, one address, answered every week -->
+  <url>
+    <loc><%= @base_url %><%= captain_path %></loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
   <!-- Player Pages (grouped by position) -->
-  <% %w[forward midfielder defender goalkeeper].each do |position| %>
+  <% %w[goalkeeper defender midfielder forward].each do |position| %>
     <% @players_by_position[position]&.each do |player| %>
   <url>
     <loc><%= @base_url %><%= player_path(player) %></loc>
@@ -98,11 +98,6 @@
   <% end %>
 
   <!-- Static Pages -->
-  <url>
-    <loc><%= @base_url %><%= contact_us_path %></loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
   <url>
     <loc><%= @base_url %><%= privacy_policy_path %></loc>
     <changefreq>monthly</changefreq>
@@ -117,5 +112,10 @@
     <loc><%= @base_url %><%= cookie_policy_path %></loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
+  </url>
+  <url>
+    <loc><%= @base_url %><%= contact_us_path %></loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
 </urlset>
