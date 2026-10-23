@@ -196,6 +196,25 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to %r{/pack/\d+\z}
   end
 
+  test "each pair runs on a ten-second clock that forfeits it" do
+    get pack_path(seed: 3, hand: "ab")
+
+    assert_select "[data-controller=pack-pick][data-pack-pick-forfeit-value=?]", pack_path(seed: 3, hand: "abx")
+    assert_select "[data-pack-pick-target=clock]", "10"
+  end
+
+  test "a forfeited pair shows as time's up, scores nothing, and the pack can still be locked in" do
+    sign_in
+    code = "axaaa"
+    WeeklyPack.for(@gameweek)
+
+    get weekly_pack_path(gameweek: 1, hand: code)
+    assert_select "[data-pack-stage=scored] [data-pack-forfeit]", text: /Time's up/
+    assert_select "[data-pack-stage=scored] .pack-card", count: 4
+
+    assert_difference(-> { PackEntry.count }, 1) { post weekly_pack_entry_path(gameweek: 1), params: { hand: code } }
+  end
+
   test "a hand longer than the pack is not a pack page" do
     get "/pack/3/aaaaaa"
 

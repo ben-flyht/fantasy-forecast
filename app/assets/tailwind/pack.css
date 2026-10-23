@@ -443,6 +443,36 @@
   rotate: calc((var(--i) - 3) * 1.4deg);
 }
 
+.pack-clock__bar {
+  transform-origin: left;
+  transition-property: transform;
+  transition-timing-function: linear;
+}
+
+.pack-clock__bar.is-running {
+  transform: scaleX(0);
+}
+
+.pack-forfeit {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 5 / 7;
+  border: 2px dashed var(--color-zinc-300);
+  border-radius: 1rem;
+  container-type: inline-size;
+}
+
+.pack-hand .pack-forfeit {
+  rotate: calc((var(--i) - 3) * 1.4deg);
+}
+
+.pack-forfeit span {
+  font-size: 9cqw;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--color-zinc-400);
+}
+
 .pack-card.is-kept {
   animation: pack-keep 0.4s cubic-bezier(0.4, 0, 0.6, 1) forwards;
 }

@@ -40,4 +40,18 @@ class PackHandTest < ActiveSupport::TestCase
     assert_nil PackHand.parse(pack, "aac"), "not a choice"
     assert_nil PackHand.parse(pack, "aaaaa-12"), "the old bench suffix"
   end
+
+  test "a pair left too long is forfeited, and kept as an empty slot" do
+    hand = PackHand.parse(pack, "axb")
+
+    assert_equal [ 1, nil, 6 ], hand.picks.map { |card| card&.player_id }
+    assert_equal [ 1, 6 ], hand.kept.map(&:player_id)
+    assert_equal "axb", hand.code
+    assert_equal "axbx", hand.forfeiting.code
+  end
+
+  test "forfeiting the shiny pair leaves you without a captain" do
+    assert_nil PackHand.parse(pack, "aax").captain
+    assert PackHand.parse(pack, "aaxaa").complete?
+  end
 end

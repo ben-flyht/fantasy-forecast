@@ -39,9 +39,9 @@ Rails.application.routes.draw do
   get "pack/practice/new", to: "packs#start", as: :new_pack
   get "pack/gw:gameweek/leaderboard", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
   post "pack/gw:gameweek/entry", to: "pack_entries#create", as: :weekly_pack_entry, constraints: { gameweek: /\d+/ }
-  get "pack/gw:gameweek(/:hand)", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/, hand: /[ab]{0,5}/ }
+  get "pack/gw:gameweek(/:hand)", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/, hand: /[abx]{0,5}/ }
   get "pack/:seed(/:hand)", to: "packs#show", as: :pack,
-      constraints: { seed: /\d{1,9}/, hand: /[ab]{0,5}/ }
+      constraints: { seed: /\d{1,9}/, hand: /[abx]{0,5}/ }
 
   # Him or him: the question a manager asks when he has already narrowed it to
   # two, with an address of its own so it can be found by asking it.

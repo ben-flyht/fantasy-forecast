@@ -1,6 +1,7 @@
 class PackHand
   LETTERS = %w[a b].freeze
-  FORMAT = /\A[ab]*\z/
+  FORFEIT = "x"
+  FORMAT = /\A[abx]*\z/
 
   attr_reader :pack, :keeps
 
@@ -16,9 +17,11 @@ class PackHand
     @keeps = keeps
   end
 
-  def kept
-    @kept ||= pack.pairs.zip(keeps).first(keeps.size).map { |pair, keep| pair.cards[keep] }
+  def picks
+    @picks ||= pack.pairs.zip(keeps).first(keeps.size).map { |pair, keep| keep && pair.cards[keep] }
   end
+
+  def kept = picks.compact
 
   def complete? = keeps.size == pack.size
 
@@ -26,10 +29,12 @@ class PackHand
 
   def captain
     index = pack.shiny_index
-    kept[index] if index && index < keeps.size
+    picks[index] if index && index < keeps.size
   end
 
-  def code = keeps.map { |keep| LETTERS[keep] }.join
+  def code = keeps.map { |keep| keep ? LETTERS[keep] : FORFEIT }.join
 
   def keeping(choice) = self.class.new(pack, keeps: keeps + [ choice ])
+
+  def forfeiting = keeping(nil)
 end

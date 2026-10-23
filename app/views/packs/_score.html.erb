@@ -22,13 +22,17 @@
 
   <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
   <div class="pack-reveal grid grid-cols-3 gap-3 sm:grid-cols-5">
-    <% hand.kept.each_with_index do |card, index| %>
+    <% hand.picks.each_with_index do |card, index| %>
       <div>
-        <%= render PackCardComponent.new(card: card, captain: card == hand.captain, index: index) %>
-        <% if @real %>
-          <p class="mt-1.5 text-center text-xs font-bold tabular-nums text-zinc-700" data-pack-card-points>
-            <%= pluralize(@real.of(card) * (card == hand.captain ? 2 : 1), "pt") %>
-          </p>
+        <% if card %>
+          <%= render PackCardComponent.new(card: card, captain: card == hand.captain, index: index) %>
+          <% if @real %>
+            <p class="mt-1.5 text-center text-xs font-bold tabular-nums text-zinc-700" data-pack-card-points>
+              <%= pluralize(@real.of(card) * (card == hand.captain ? 2 : 1), "pt") %>
+            </p>
+          <% end %>
+        <% else %>
+          <%= render "packs/forfeit", index: index %>
         <% end %>
       </div>
     <% end %>

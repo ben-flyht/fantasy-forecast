@@ -33,4 +33,13 @@ class PackTest < ApplicationSystemTestCase
     assert_selector "[data-pack-stage=scored]"
     assert_selector "[data-pack-practice-done]"
   end
+
+  test "waiting out the ten seconds forfeits the pair and moves on" do
+    visit pack_path(seed: 5)
+    assert_text(/Pair 1 of 5/i)
+
+    assert_text(/Pair 2 of 5/i, wait: 14)
+    assert_current_path pack_path(seed: 5, hand: "x")
+    assert_selector "[data-pack-forfeit]", text: /Time's up/i
+  end
 end
