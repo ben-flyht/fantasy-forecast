@@ -160,6 +160,22 @@ class WeeklyForecastTest < ActiveSupport::TestCase
     assert_operator starter, :>, dropped, "three full matches lately count for more than three on the bench"
   end
 
+  test "a gameweek still being played does not count against players yet to play in it" do
+    finished = (77..78).map { |n| Gameweek.create!(fpl_id: n, name: "Gameweek #{n}", start_time: (81 - n).weeks.ago, is_finished: true) }
+    in_progress = Gameweek.create!(fpl_id: 79, name: "Gameweek 79", start_time: 2.days.ago, is_current: true)
+    yet_to_play = player_with_record(fpl_id: 8102)
+    finished.each do |week|
+      [ @player, yet_to_play ].each { |player| Statistic.create!(player: player, gameweek: week, type: "minutes", value: 90) }
+    end
+    Statistic.create!(player: @player, gameweek: in_progress, type: "minutes", value: 90)
+
+    WeeklyForecast.call(gameweek: @gameweek)
+
+    played = Forecast.find_by(player: @player, gameweek: @gameweek).working["minutes"]
+    waiting = Forecast.find_by(player: yet_to_play, gameweek: @gameweek).working["minutes"]
+    assert_equal played, waiting, "his match has not kicked off yet, which is not the same as being dropped"
+  end
+
   test "a player with no record still gets a row, so the position is complete" do
     unknown = Player.create!(first_name: "No", last_name: "Record", short_name: "NR",
                              fpl_id: 8200, code: 8200, team: @team, position: "forward")
