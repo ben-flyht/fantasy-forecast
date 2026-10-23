@@ -100,7 +100,7 @@ class LastSeasonComponent < ViewComponent::Base
   def rates
     @rates ||= RATES.filter_map do |type, (key, paid)|
       figure = value(type)
-      [ term(key), format("%.2f", figure) ] if figure.positive? && ExpectedPoints.pays?(paid, position)
+      [ term(key), format("%.2f", figure) ] if figure.positive? && ExpectedPoints.worth_showing?(paid, position)
     end
   end
 

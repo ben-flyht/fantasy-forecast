@@ -92,7 +92,7 @@ class ComparisonStats < ApplicationService
   def sides = [ left, right ]
 
   def paid_for?(stat)
-    sides.flat_map(&:players).any? { |player| ExpectedPoints.pays?(stat.paid, player.position) }
+    sides.flat_map(&:players).any? { |player| ExpectedPoints.worth_showing?(stat.paid, player.position) }
   end
 
   def reading_for(side, key, stat)

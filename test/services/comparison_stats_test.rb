@@ -131,7 +131,7 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     assert_nil row("Form").leader
   end
 
-  test "a row FPL pays nobody on either side for is not drawn" do
+  test "a row worth nothing to anybody on either side is not drawn" do
     forward = players(:brazilian)
     reading(forward, "saves_per_90", 0.2)
     reading(forward, "clean_sheets_per_90", 0.4)
@@ -141,7 +141,7 @@ class ComparisonStatsTest < ActiveSupport::TestCase
 
     assert_not_includes rows, "Saves per 90"
     assert_not_includes rows, "Clean sheets per 90"
-    assert_includes rows, "Defensive actions per 90"
+    assert_not_includes rows, "Defensive actions per 90"
   end
 
   test "a row is drawn when anybody on either side is paid for it" do
