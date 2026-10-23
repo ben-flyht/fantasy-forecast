@@ -38,10 +38,16 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "Play is in the navigation, and the weekly pack asks who you are first" do
+  test "Play is hidden from the public until someone has been sent to /pack" do
+    get root_path
+    assert_select "a[href=?]", pack_landing_path, count: 0
+
+    get pack_landing_path
     get root_path
     assert_select "a[href=?]", pack_landing_path, text: "Play"
+  end
 
+  test "the weekly pack asks who you are first" do
     get pack_landing_path
     assert_select "h1", /Pack of the Week/
     assert_select "input[type=email][name=email]"
@@ -184,8 +190,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get practice_pack_path
     assert_redirected_to pack_path(seed: seed, hand: "ab")
     follow_redirect!
-    assert_match "where you left off", flash[:notice]
-    assert_select "[data-pack-resume] a[href=?]", new_pack_path
+    assert_select "a[href=?]", new_pack_path, text: "Start a new practice pack"
 
     get new_pack_path
     assert_redirected_to %r{/pack/\d+\z}

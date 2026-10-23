@@ -2,12 +2,18 @@ module PackManager
   extend ActiveSupport::Concern
 
   SIGNED_IN_FOR = 1.year
+  PLAY_COOKIE = :play
 
   included do
     helper_method :current_manager
+    before_action :remember_play
   end
 
   private
+
+  def remember_play
+    cookies.permanent[PLAY_COOKIE] = "1"
+  end
 
   def current_manager
     return @current_manager if defined?(@current_manager)

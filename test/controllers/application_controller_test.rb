@@ -10,6 +10,18 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, gameweek_position_path(gameweek: 22, position: "forwards")
   end
 
+  test "on production, search engines are kept out of the invite-only pack game" do
+    get "/robots.txt"
+
+    assert_includes response.body, "Disallow: /pack"
+  end
+
+  test "the sitemap does not list the pack game" do
+    get "/sitemap.xml"
+
+    assert_not_includes response.body, "/pack"
+  end
+
   test "the sitemap offers a season page for every position" do
     get "/sitemap.xml"
 

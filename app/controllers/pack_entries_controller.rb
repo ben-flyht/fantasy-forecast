@@ -7,7 +7,7 @@ class PackEntriesController < ApplicationController
 
     entry = enter(WeeklyPack.find_by!(gameweek: gameweek))
     destination = weekly_pack_path(gameweek: gameweek.fpl_id)
-    return redirect_to(destination, notice: "Locked in. Come back once the games start to watch your points and your place.") if entry.save
+    return redirect_to(destination) if entry.save
 
     redirect_to destination, alert: entry.errors.full_messages.to_sentence
   end

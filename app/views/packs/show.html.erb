@@ -10,12 +10,6 @@
           horizons: pack_sections(current: weekly? ? :play : :practice)) %>
   </div>
 
-  <% if !weekly? && @hand.keeps.any? && !@hand.complete? %>
-    <p class="mb-4 text-xs text-zinc-500" data-pack-resume>
-      <%= link_to "Start a new practice pack instead", new_pack_path, class: "font-medium underline underline-offset-2" %>
-    </p>
-  <% end %>
-
   <% if @hand.complete? %>
     <%= render "packs/score", hand: @hand %>
   <% else %>
