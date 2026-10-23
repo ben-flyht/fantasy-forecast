@@ -152,6 +152,34 @@ module History
       assert_equal 6.0, fixtures[2].first[:difficulty]
     end
 
+    def with_opponents
+      visitor = { "id" => "14", "code" => "104", "element_type" => "3", "web_name" => "Visitor", "team_join_date" => "2020-01-01" }
+      visits = (1..4).map do |round|
+        row(14, round, 90, 2, 0, 1.5, 500, 50, 0, 0).merge("was_home" => (round.odd? ? "False" : "True"))
+      end
+      Season.new(rows: rows + visits, players: players + [ visitor ], fixtures: fixtures, teams: teams,
+                 previous_players: previous_players)
+    end
+
+    test "opponent form is read only from matches before the forecast round" do
+      season = with_opponents
+      plain = season.fixtures_by_team([ 3 ])[1].first
+      before_any = season.fixtures_by_team([ 3 ], as_of: 1)[1].first
+      informed = season.fixtures_by_team([ 3 ], as_of: 3)[1].first
+
+      assert_nil plain[:attack]
+      assert_nil before_any[:attack]
+      assert_equal season.opponent_form(3).ratings(2, 2.0), informed.slice(:attack, :defence)
+      assert_operator informed[:defence], :>, 2.0, "Beta have been making more chances than an average side"
+    end
+
+    test "a rating that already splits attack from defence is left alone" do
+      split = ->(_fixture, _team, _fdr) { { attack: 1.0, defence: 5.0 } }
+      fixture = @season.fixtures_by_team([ 3 ], difficulty: split, as_of: 3)[1].first
+
+      assert_equal [ 1.0, 5.0 ], fixture.values_at(:attack, :defence)
+    end
+
     test "actual points and minutes are summed over the window" do
       assert_equal 5.0, @season.points([ 3, 4 ])[10]
       assert_equal 90.0, @season.minutes([ 3, 4 ])[10]

@@ -48,7 +48,7 @@ class Forecaster < ApplicationService
   #    opens as the window fills rather than being a fifth from the first week. A
   #    signing's new-club cap falls on the minutes he played elsewhere and not on
   #    the ones he has played here.
-  MODEL = 9
+  MODEL = 10
 
   RECENT_GAMEWEEKS = 3
 
@@ -258,11 +258,17 @@ class Forecaster < ApplicationService
     end
   end
 
+  def opponent_form
+    @opponent_form ||= OpponentForm.before(@gameweek)
+  end
+
   # A fixture FPL has not rated is still a fixture. Dropping it would turn a gap in
   # the data into a statement that the team is not playing, which multiplies every
   # player at that club down to nothing.
   def add_fixture(fixtures, match, team_id, opponent, home:)
-    fixtures[team_id] << { difficulty: match.difficulty_for(team_id), opponent: opponent&.name, home: home }
+    difficulty = match.difficulty_for(team_id)
+    fixtures[team_id] << { difficulty: difficulty, opponent: opponent&.name, home: home }
+                         .merge(opponent_form.ratings(opponent&.id, difficulty))
   end
 
   # Players who arrived over the summer, whose minutes record belongs to a

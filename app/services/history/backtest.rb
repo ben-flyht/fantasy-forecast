@@ -67,7 +67,7 @@ module History
     def run(variant, horizon, round)
       inputs = inputs(round, variant.recent_gameweeks)
       span = window(horizon, round)
-      fixtures = @season.fixtures_by_team(span, difficulty: variant.ratings)
+      fixtures = @season.fixtures_by_team(span, difficulty: variant.ratings, as_of: round)
       Run.new(round: round, window: span, rankings: inputs[:rankings], stats: inputs[:stats],
               forecasts: forecast(variant, horizon, inputs, fixtures, span),
               actuals: actuals(span), minutes: minutes(span), fixtures: fixtures)

@@ -164,6 +164,21 @@ class ExpectedPointsTest < ActiveSupport::TestCase
                  "no opponent can change what a man gets for being on the pitch"
   end
 
+  test "an opponent's attack and defence move only the points they decide" do
+    rankings = [ ranking(1, position: "defender"), ranking(2, position: "forward") ]
+    stats = { 1 => regular(conceded: 1.05, xg: 0.0, xgi: 0.0, xa: 0.0), 2 => regular(xg: 0.5) }
+    level = { difficulty: 3, opponent: "Someone", home: true }
+
+    easy_to_score = forecast(rankings, stats, fixtures: { 1 => [ level.merge(attack: 1, defence: 3) ] })
+    hard_to_keep_out = forecast(rankings, stats, fixtures: { 1 => [ level.merge(attack: 3, defence: 5) ] })
+    plain = forecast(rankings, stats, fixtures: { 1 => [ level ] })
+
+    assert_operator easy_to_score[2][:points], :>, plain[2][:points]
+    assert_in_delta plain[1][:points], easy_to_score[1][:points], 0.001
+    assert_operator hard_to_keep_out[1][:points], :<, plain[1][:points]
+    assert_in_delta plain[2][:points], hard_to_keep_out[2][:points], 0.001
+  end
+
   test "a hard afternoon costs a defender his clean sheet and brings a goalkeeper saves" do
     rankings = [ ranking(1, position: "defender"), ranking(2, position: "goalkeeper") ]
     # 1.05 expected against is a 0.35 chance of the sheet staying clean

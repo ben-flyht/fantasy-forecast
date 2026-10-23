@@ -104,6 +104,40 @@ already did. Of the 31 forecasts it changes by more than half a point, 22 move c
 what happened. The aggregate ranking is 0.003 lower, almost all from one doubtful player
 given near-full credit who then scored nothing.
 
+**Opponent form** (`OpponentForm`, model 10). FDR is a fixed, preseason view of each
+club. Fixture difficulty now also reads how the opponent has actually played this
+season: the expected goals it has conceded and created per match, from finished
+gameweeks only, pulled towards the league average by four matches' worth of it. That
+is turned into a difficulty on FDR's scale and given a quarter of the say. The rest
+stays with FDR. Attack reads the opponent's conceding and moves goals and assists.
+Defence reads its creating and moves clean sheets, saves, goals conceded and
+defensive contributions. The idea came from Let's Talk FPL, which grades fixtures on
+opponents' xG conceded per game.
+
+The backtest rebuilds the form from matches before each forecast round, including for
+the five-week horizon:
+
+| Season | Horizon | Ranking | Capture | Top 11 | Likelihood ranking is better |
+|---|---|---|---|---|---|
+| 2024/25 | 1 week | 0.537 → 0.541 | 56.3% → 56.6% | 5.81 → 5.84 | 100% |
+| 2024/25 | 5 weeks | 0.584 → 0.585 | 72.3% → 72.4% | 25.0 → 25.1 | 91% |
+| 2025/26 | 1 week | 0.498 → 0.500 | 54.3% → 54.4% | 4.98 → 4.95 | 93% |
+| 2025/26 | 5 weeks | 0.530 → 0.531 | 71.2% → 71.4% | 21.5 → 21.7 (99%) | 76% |
+| 2026/27, gameweeks 2–6 | 1 week | 0.498 → 0.499 | 54.0% → 54.7% (88%) | 5.29 → 5.42 (88%) | 70% |
+
+The weight was swept. More of the say helps 2024/25 and hurts the two seasons after it,
+so a quarter is the most that improves every season:
+
+| Weight | 2024/25 ranking, 1 week | 2025/26 ranking, 1 week | 2025/26 ranking, 5 weeks | 2026/27 ranking, 1 week |
+|---|---|---|---|---|
+| 0.25 | 0.541 | 0.500 | 0.531 | 0.499 |
+| 0.5 | 0.542 | 0.499 | 0.530 | 0.497 |
+| 0.75 | 0.541 | 0.496 | 0.527 | 0.493 |
+| 1.0 | 0.538 | 0.494 | 0.525 | 0.486 |
+
+Full weight is close to the earlier "ratings from this season's xG instead of FDR",
+which lost 0.011.
+
 ## What did not help
 
 From the two-season backtest:
@@ -134,18 +168,28 @@ From gameweeks 2–7:
 | Discounting minutes by last season's share of the season played | 5-week bias −1.97, ranking −0.005 |
 | Penalty and set-piece duty | No signal left over: FPL's xG already counts penalties |
 
+From Let's Talk FPL's habits, tested on the two-season backtest and 2026/27 gameweeks 2–6:
+
+| Idea | Result |
+|---|---|
+| Weighting this season's defensive contribution rate more than last season's | 2026/27 ranking 0.498 → 0.494 with this season alone. Kept as blended |
+| Defensive contribution from how often he cleared the bar, not his average | 2026/27 ranking −0.002, RMSE worse |
+| Fewer minutes for clubs in Europe (×0.95 or ×0.90) | Weekly ranking +0.001, but 5-week ranking −0.001 to −0.004 in 2025/26 and capture mixed |
+| Regressing per-90 xG above 0.5 and xA above 0.3 by half | Top-11 picks worse in both seasons (2% and 1% of resamples better) |
+| Halving the form swing | Ranking +0.004 in 2025/26 and RMSE better everywhere, but 2024/25 capture worse (0% and 3% of resamples better). Not taken up yet |
+
 ## Two past seasons
 
 The production model, replayed as above. Each figure is a mean across gameweeks ± 95%.
 
 | Season | Horizon | Gameweeks | Ranking | Capture | RMSE | Bias | Top 11 |
 |---|---|---|---|---|---|---|---|
-| 2024/25 | 1 week | 38 | 0.537 ± 0.023 | 56% ± 2 | 2.90 ± 0.09 | +0.36 ± 0.05 | 5.8 ± 0.5 |
-| 2024/25 | 5 weeks | 34 | 0.584 ± 0.018 | 72% ± 1 | 8.42 ± 0.17 | +2.10 ± 0.16 | 25.0 ± 1.5 |
-| 2024/25 | Rest of season | 29 | 0.610 ± 0.018 | 80% ± 1 | 28.3 ± 3.6 | −0.6 ± 0.6 | 102 ± 14 |
-| 2025/26 | 1 week | 38 | 0.498 ± 0.025 | 54% ± 3 | 3.02 ± 0.08 | +0.24 ± 0.06 | 5.0 ± 0.4 |
-| 2025/26 | 5 weeks | 34 | 0.530 ± 0.014 | 71% ± 1 | 8.77 ± 0.17 | +1.58 ± 0.20 | 21.5 ± 1.0 |
-| 2025/26 | Rest of season | 29 | 0.535 ± 0.016 | 78% ± 1 | 28.9 ± 3.8 | −2.5 ± 0.7 | 95 ± 12 |
+| 2024/25 | 1 week | 38 | 0.541 ± 0.023 | 56% ± 2 | 2.88 ± 0.09 | +0.34 ± 0.06 | 5.8 ± 0.6 |
+| 2024/25 | 5 weeks | 34 | 0.585 ± 0.017 | 73% ± 2 | 8.35 ± 0.17 | +2.01 ± 0.16 | 25.1 ± 1.5 |
+| 2024/25 | Rest of season | 29 | 0.610 ± 0.018 | 80% ± 1 | 28.2 ± 3.6 | −1.1 ± 0.6 | 102 ± 14 |
+| 2025/26 | 1 week | 38 | 0.499 ± 0.025 | 54% ± 3 | 3.01 ± 0.07 | +0.23 ± 0.06 | 4.9 ± 0.4 |
+| 2025/26 | 5 weeks | 34 | 0.531 ± 0.014 | 71% ± 1 | 8.74 ± 0.16 | +1.53 ± 0.20 | 21.7 ± 1.0 |
+| 2025/26 | Rest of season | 29 | 0.535 ± 0.016 | 78% ± 1 | 28.9 ± 3.8 | −2.8 ± 0.7 | 95 ± 12 |
 
 The weekly ranking of 0.50–0.54 over whole seasons sits below the 0.57 measured on this
 season's first seven weeks. Some of that gap is the missing fitness flags and some is
