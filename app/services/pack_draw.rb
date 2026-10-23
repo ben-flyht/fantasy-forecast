@@ -2,8 +2,9 @@ class PackDraw < ApplicationService
   GRADED = TierCalculator::POINT_THRESHOLDS[:t4]
   STARTING_MINUTES = 60
   CAPTAINCY = %w[midfielder forward].freeze
+  SEEDS = 1..999_999_999
 
-  def initialize(gameweek:, seed:)
+  def initialize(gameweek:, seed: rand(SEEDS))
     @gameweek = gameweek
     @seed = seed
   end
@@ -31,7 +32,7 @@ class PackDraw < ApplicationService
     pairs = Pack::SLOTS.each_with_index.map do |slot, index|
       Pack::Pair.new(slot: slot, cards: cards[index], shiny: index == shiny)
     end
-    Pack.new(seed: seed, pairs: pairs)
+    Pack.new(pairs: pairs)
   end
 
   def draw(slot, random, drawn)

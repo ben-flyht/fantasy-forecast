@@ -1,8 +1,6 @@
 class PacksController < ApplicationController
   include PackSignIn
 
-  SEEDS = 1..999_999_999
-
   def latest
     return render(:sign_in) unless current_user
 
@@ -45,26 +43,27 @@ class PacksController < ApplicationController
 
   def start
     session.delete(:practice)
-    redirect_to pack_path(seed: rand(SEEDS))
+    redirect_to pack_path(seed: rand(PackDraw::SEEDS))
   end
 
   def show
     @gameweek = Gameweek.next_gameweek
-    @pack = PackDraw.call(gameweek: @gameweek, seed: params[:seed].to_i)
+    @seed = params[:seed].to_i
+    @pack = PackDraw.call(gameweek: @gameweek, seed: @seed)
     return render(:empty) unless @pack
 
     hand = PackHand.parse(@pack, params[:hand])
-    session[:practice] = hand.complete? ? nil : { "seed" => @pack.seed, "hand" => hand.code }
+    session[:practice] = hand.complete? ? nil : { "seed" => @seed, "hand" => hand.code }
     show_hand(hand)
   end
 
   private
 
-  def unopened = render(@gameweek.start_time.future? ? :not_open : :closed)
+  def unopened = render(@gameweek.started? ? :closed : :not_open)
 
   def play_selection
     @pack = @selection.pack
-    @real = PackRealPoints.new(@gameweek) if @gameweek.start_time.past?
+    @real = PackRealPoints.new(@gameweek) if @gameweek.started?
     @board = PackLeaderboard.new(@gameweek) unless @shared
     show_hand(@selection.pack_hand)
   end
@@ -88,14 +87,11 @@ class PacksController < ApplicationController
   helper_method :shared?
 
   def pick_path(hand, choice)
-    return pack_path(seed: @pack.seed, hand: hand.keeping(choice).code) unless weekly?
+    return pack_path(seed: @seed, hand: hand.keeping(choice).code) unless weekly?
 
     weekly_pack_picks_path(gameweek: @gameweek.fpl_id, keep: choice ? PackHand::LETTERS[choice] : PackHand::FORFEIT)
   end
   helper_method :pick_path
-
-  def pick_method = (:post if weekly?)
-  helper_method :pick_method
 
   def share_path = pack_selection_url(@selection)
   helper_method :share_path

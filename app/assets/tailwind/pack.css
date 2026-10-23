@@ -4,7 +4,6 @@
   --mx: 50%;
   --my: 50%;
   --lift: 0;
-  --flip: 0deg;
   --frame: #0a0a0b;
   --ink: #fff;
   --ease-spring: cubic-bezier(0.3, 1.35, 0.5, 1);
@@ -22,7 +21,6 @@
 
 .pack-card--choice {
   cursor: pointer;
-  --lift: 0;
 }
 
 .pack-card--choice:hover {
@@ -55,7 +53,7 @@
   transform:
     translateY(calc(var(--lift) * -2.5cqw))
     rotateX(var(--rx))
-    rotateY(calc(var(--ry) + var(--flip)));
+    rotateY(var(--ry));
   box-shadow:
     0 1px 2px rgb(0 0 0 / 0.14),
     0 6px 16px -6px rgb(0 0 0 / 0.3);
@@ -84,7 +82,7 @@
   transform:
     translateY(0)
     rotateX(var(--rx))
-    rotateY(calc(var(--ry) + var(--flip)))
+    rotateY(var(--ry))
     scale(0.965);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 0.2),

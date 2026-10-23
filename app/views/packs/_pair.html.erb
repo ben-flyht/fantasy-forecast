@@ -1,7 +1,7 @@
 <% pair = hand.current_pair %>
 <section data-pack-stage="picking" data-controller="pack-pick"
          data-pack-pick-forfeit-value="<%= pick_path(hand, nil) %>"
-         data-pack-pick-method-value="<%= pick_method %>">
+         data-pack-pick-method-value="<%= "post" if weekly? %>">
   <div class="mb-2 flex items-baseline justify-between gap-3">
     <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
       Pair <%= hand.keeps.size + 1 %> of <%= hand.pack.size %><%= " · wildcard" if pair.wildcard? %>
@@ -20,7 +20,7 @@
 
   <div class="pack-reveal pack-reveal--pair <%= 'pack-reveal--shiny' if pair.shiny? %> grid grid-cols-2 gap-4 sm:gap-6">
     <% pair.cards.each_with_index do |card, choice| %>
-      <%= render PackCardComponent.new(card: card, href: pick_path(hand, choice), method: pick_method, shiny: pair.shiny?, index: choice) %>
+      <%= render PackCardComponent.new(card: card, href: pick_path(hand, choice), method: (:post if weekly?), shiny: pair.shiny?, index: choice) %>
     <% end %>
   </div>
 

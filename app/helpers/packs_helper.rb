@@ -5,6 +5,4 @@ module PacksHelper
       PageHeadingComponent::Horizon.new(label: "Practice", url: practice_pack_path, current: current == :practice)
     ]
   end
-
-  def pack_place(place) = place&.ordinalize
 end

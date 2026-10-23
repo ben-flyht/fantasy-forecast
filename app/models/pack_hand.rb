@@ -1,6 +1,7 @@
 class PackHand
   LETTERS = %w[a b].freeze
   FORFEIT = "x"
+  CHOICES = (LETTERS + [ FORFEIT ]).freeze
   FORMAT = /\A[abx]*\z/
 
   attr_reader :pack, :keeps

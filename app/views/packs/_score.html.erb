@@ -10,7 +10,7 @@
           <%= pluralize(row.points, "point") %>
         </p>
         <p class="mt-3 text-sm/6 text-zinc-300">
-          <%= pack_place(row.place) %> of <%= @board.rows.size %> on the leaderboard<%= " so far. Points update through the gameweek" unless @gameweek.is_finished %>.
+          <%= row.place&.ordinalize %> of <%= @board.rows.size %> on the leaderboard<%= " so far. Points update through the gameweek" unless @gameweek.is_finished %>.
           Your captain counts twice.
           <%= link_to "See the leaderboard", pack_leaderboard_path(gameweek: @gameweek.fpl_id), class: "font-bold text-white underline underline-offset-2" %>
         </p>

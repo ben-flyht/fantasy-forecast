@@ -39,4 +39,11 @@ class Gameweek < ApplicationRecord
   def self.remaining_count
     [ remaining.count, 1 ].max
   end
+
+  def started? = start_time.past?
+
+  def pack_open?
+    previous = Gameweek.find_by(fpl_id: fpl_id - 1)
+    !started? && (previous.nil? || previous.is_finished)
+  end
 end

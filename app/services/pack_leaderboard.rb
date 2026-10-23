@@ -7,11 +7,8 @@ class PackLeaderboard
     @gameweek = gameweek
   end
 
-  def started? = gameweek.start_time.past?
-  def final? = gameweek.is_finished
-
   def rows
-    @rows ||= started? ? ranked : selections.sort_by(&:created_at).map { |selection| Row.new(place: nil, selection: selection, points: nil) }
+    @rows ||= gameweek.started? ? ranked : selections.sort_by(&:created_at).map { |selection| Row.new(place: nil, selection: selection, points: nil) }
   end
 
   def row_for(selection) = rows.find { |row| row.selection == selection }

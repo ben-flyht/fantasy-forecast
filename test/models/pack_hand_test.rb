@@ -14,7 +14,7 @@ class PackHandTest < ActiveSupport::TestCase
       [ card(9, "midfielder", 3.0), card(10, "midfielder", 2.0) ]
     ]
     pairs = Pack::SLOTS.each_with_index.map { |slot, i| Pack::Pair.new(slot: slot, cards: cards[i], shiny: i == shiny) }
-    Pack.new(seed: 1, pairs: pairs)
+    Pack.new(pairs: pairs)
   end
 
   test "a code reads back as the cards it kept, and every one of them starts" do
