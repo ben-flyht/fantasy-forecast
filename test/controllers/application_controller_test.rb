@@ -103,4 +103,18 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "nav a[href=?][aria-current=page]", rankings_path
   end
+
+  test "an iPhone still on iOS 16 is served the site" do
+    get root_path, headers: { "User-Agent" => "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X) " \
+                                               "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1" }
+
+    assert_response :success
+  end
+
+  test "a browser older than the stylesheet can draw is turned away" do
+    get root_path, headers: { "User-Agent" => "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 " \
+                                               "(KHTML, like Gecko) Chrome/109.0.0.0 Mobile Safari/537.36" }
+
+    assert_response :not_acceptable
+  end
 end
