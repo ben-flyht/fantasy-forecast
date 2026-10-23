@@ -25,23 +25,26 @@
   --lift: 0;
 }
 
-.pack-card--choice:hover,
-.pack-card.is-tilting {
+.pack-card--choice:hover {
   --lift: 1;
+}
+
+.pack-card.is-tilting {
+  --lift: 0;
 }
 
 .pack-card--choice:focus-visible {
   outline: none;
 }
 
-.pack-card--choice:focus-visible .pack-card__space {
-  position: absolute;
-  inset: 0;
-  perspective: 900px;
+.pack-card--choice:focus-visible .pack-card__body {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--color-zinc-950), 0 22px 40px -10px rgb(0 0 0 / 0.4);
 }
 
-.pack-card__body {
-  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--color-zinc-950), 0 22px 40px -10px rgb(0 0 0 / 0.4);
+.pack-card__space {
+  position: absolute;
+  inset: 0;
+  perspective: 700px;
 }
 
 .pack-card__body {
@@ -61,11 +64,16 @@
     box-shadow 0.3s ease;
 }
 
-.pack-card--choice:hover .pack-card__body,
-.pack-card.is-tilting .pack-card__body {
+.pack-card--choice:hover .pack-card__body {
   box-shadow:
     0 4px 8px rgb(0 0 0 / 0.14),
     0 24px 40px -12px rgb(0 0 0 / 0.45);
+}
+
+.pack-card.is-tilting .pack-card__body {
+  box-shadow:
+    calc((0.5 - var(--tx)) * 4cqw) calc((0.5 - var(--ty)) * 4cqw + 2cqw) 4cqw rgb(0 0 0 / 0.18),
+    calc((0.5 - var(--tx)) * 10cqw) calc((0.5 - var(--ty)) * 10cqw + 8cqw) 14cqw -4cqw rgb(0 0 0 / 0.4);
 }
 
 .pack-card.is-tilting .pack-card__body {

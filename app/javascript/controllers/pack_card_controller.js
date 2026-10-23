@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-const TILT = 16
+const TILT = 22
 const RESTING = ["--ry", "--rx", "--mx", "--my", "--tx", "--ty"]
 
 export default class extends Controller {
