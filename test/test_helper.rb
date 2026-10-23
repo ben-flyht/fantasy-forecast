@@ -1,4 +1,6 @@
 ENV["RAILS_ENV"] ||= "test"
+ENV["LANG"] ||= "en_GB.UTF-8"
+ENV["PANGOCAIRO_BACKEND"] ||= "fontconfig"
 require_relative "../config/environment"
 require "rails/test_help"
 require "webmock/minitest"
