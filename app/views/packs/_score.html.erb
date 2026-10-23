@@ -1,34 +1,35 @@
 <% best = score.perfect %>
 <% forecast = score.forecast %>
-<section data-pack-stage="scored">
-  <div class="mb-6 rounded-xl bg-zinc-100 p-5">
-    <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Your pack</h2>
-    <p class="mt-1.5 text-4xl font-extrabold leading-none tracking-[-0.03em] text-zinc-950" data-pack-share>
-      <%= pack_share(score.share(hand)) %>
-    </p>
-    <p class="mt-2 text-sm/6 text-zinc-700">
-      of the best team this pack allowed.
-      You <strong class="tabular-nums"><%= pack_points(score.points(hand)) %></strong>,
-      the forecast <strong class="tabular-nums"><%= pack_points(score.points(forecast)) %></strong>,
-      the perfect pack <strong class="tabular-nums"><%= pack_points(score.points(best)) %></strong> expected points.
+<% percent = pack_percent(score.share(hand)) %>
+<section class="pack-stage" data-pack-stage="scored" data-pack-target="stage"
+         data-pack-deal-ms-value="2000" data-action="click->pack#skip:capture">
+  <div class="mb-8 rounded-2xl bg-zinc-950 p-6 text-white">
+    <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your pack</h2>
+    <p class="pack-score mt-2 text-6xl font-extrabold leading-none tracking-[-0.04em]"
+       data-pack-share data-pack-target="score" data-pack-score="<%= percent %>"><%= percent %>%</p>
+    <p class="mt-3 text-sm/6 text-zinc-300">
+      <%= percent >= 100 ? "A perfect pack. " : "" %>of the best team this pack allowed.
+      You <strong class="tabular-nums text-white"><%= pack_points(score.points(hand)) %></strong>,
+      the forecast <strong class="tabular-nums text-white"><%= pack_points(score.points(forecast)) %></strong>,
+      the perfect pack <strong class="tabular-nums text-white"><%= pack_points(score.points(best)) %></strong> expected points.
     </p>
   </div>
 
-  <h2 class="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
-  <div class="flex flex-col gap-2">
-    <% hand.starters.each do |card| %>
-      <%= render PlayerCardComponent.new(**pack_card_arguments(card, revealed: true, captain: card == hand.captain)) %>
+  <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
+  <div class="grid grid-cols-3 gap-3 sm:grid-cols-5">
+    <% hand.starters.each_with_index do |card, index| %>
+      <%= render PackCardComponent.new(card: card, revealed: true, captain: card == hand.captain, index: index) %>
     <% end %>
   </div>
 
-  <h2 class="mt-6 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Bench</h2>
-  <div class="flex flex-col gap-2">
-    <% hand.substitutes.each do |card| %>
-      <%= render PlayerCardComponent.new(**pack_card_arguments(card, revealed: true)) %>
+  <h2 class="mt-8 mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Bench</h2>
+  <div class="grid grid-cols-4 gap-3 sm:grid-cols-7">
+    <% hand.substitutes.each_with_index do |card, index| %>
+      <%= render PackCardComponent.new(card: card, revealed: true, size: :small, index: index + 5) %>
     <% end %>
   </div>
 
-  <h2 class="mt-8 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pair by pair</h2>
+  <h2 class="mt-10 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pair by pair</h2>
   <table class="w-full text-sm">
     <thead>
       <tr class="text-[10px] uppercase tracking-wider text-zinc-400 font-bold text-left">

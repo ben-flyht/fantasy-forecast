@@ -1,72 +1,38 @@
 <% content_for :meta_title, "Open a Pack | Fantasy Forecast" %>
 <% content_for :meta_robots, "noindex, nofollow" %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
 
-<div class="mx-auto max-w-md">
+<div class="mx-auto max-w-xl" data-controller="pack">
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Open a Pack",
           subtitle: "Seven pairs from neighbouring places in our rankings. Keep one card from each, name your bench, and see how you did against the forecast.") %>
   </div>
 
-  <% if @hand.picking? %>
-    <% pair = @hand.current_pair %>
-    <section data-pack-stage="picking">
-      <h2 class="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-        Pair <%= @hand.keeps.size + 1 %> of <%= @pack.size %><%= " · wildcard" if pair.wildcard? %>
-      </h2>
-      <% if pair.shiny? %>
-        <p class="mb-2 text-sm font-bold text-amber-600">Shiny pair: the card you keep is your captain.</p>
-      <% end %>
-      <div class="flex flex-col gap-2 <%= 'rounded-2xl p-2 bg-gradient-to-br from-amber-200 via-yellow-100 to-amber-300' if pair.shiny? %>">
-        <% pair.cards.each_with_index do |card, choice| %>
-          <div data-pack-choice><%= render PlayerCardComponent.new(**pack_card_arguments(card, href: hand_path(@hand.keeping(choice)))) %></div>
-        <% end %>
-      </div>
-    </section>
+  <% if @hand.keeps.empty? %>
+    <%= render "sealed", gameweek: @gameweek %>
+  <% end %>
 
-    <% if @hand.kept.any? %>
-      <section class="mt-8">
-        <h2 class="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Kept so far</h2>
-        <div class="flex flex-col gap-2 opacity-80 pointer-events-none" inert>
-          <% @hand.kept.each do |card| %>
-            <%= render PlayerCardComponent.new(**pack_card_arguments(card, captain: card == @hand.captain)) %>
-          <% end %>
-        </div>
-      </section>
-    <% end %>
+  <% if @hand.picking? %>
+    <%= render "pair", hand: @hand, hidden: @hand.keeps.empty? %>
   <% elsif @hand.benching? %>
-    <section data-pack-stage="benching">
-      <h2 class="mb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-        Bench <%= @hand.bench.size + 1 %> of <%= PackHand::BENCH_SIZE %>
-      </h2>
-      <p class="mb-3 text-sm text-zinc-600">
-        Five start: the keeper and four outfield, with at least one defender, midfielder and forward.
-        Tap a card to put him on the bench. The first on comes on first.
-      </p>
-      <div class="flex flex-col gap-2">
-        <% @hand.kept.each_with_index do |card, index| %>
-          <% next if @hand.bench.include?(index) %>
-          <% if @hand.benchable?(index) %>
-            <div data-pack-choice><%= render PlayerCardComponent.new(**pack_card_arguments(card, href: hand_path(@hand.benching(index)), captain: card == @hand.captain)) %></div>
-          <% else %>
-            <div class="opacity-60 pointer-events-none" inert><%= render PlayerCardComponent.new(**pack_card_arguments(card, captain: card == @hand.captain)) %></div>
-          <% end %>
-        <% end %>
-      </div>
-      <% if @hand.substitutes.any? %>
-        <h2 class="mt-6 mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">On the bench</h2>
-        <div class="flex flex-col gap-2 opacity-80 pointer-events-none" inert>
-          <% @hand.substitutes.each do |card| %>
-            <%= render PlayerCardComponent.new(**pack_card_arguments(card)) %>
-          <% end %>
-        </div>
-      <% end %>
-    </section>
+    <%= render "bench", hand: @hand %>
   <% else %>
     <%= render "score", hand: @hand, score: @score %>
   <% end %>
 
-  <p class="mt-8 text-sm">
-    <%= link_to "Open another pack", new_pack_path, class: "font-medium text-zinc-950 underline underline-offset-2" %>
-  </p>
+  <% if @hand.complete? %>
+    <div class="mt-10">
+      <%= link_to new_pack_path, class: "pack-another" do %>
+        <span class="pack-another__pack" aria-hidden="true"></span>
+        <span>Open another pack</span>
+      <% end %>
+    </div>
+  <% elsif @hand.keeps.any? %>
+    <p class="mt-10 text-xs">
+      <%= link_to "Start again with a new pack", new_pack_path, class: "font-medium text-zinc-500 underline underline-offset-2" %>
+    </p>
+  <% end %>
 </div>

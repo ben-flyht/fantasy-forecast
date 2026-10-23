@@ -1,0 +1,41 @@
+<%= tag.div class: classes, style: style, data: data, **interactive_attributes do %>
+  <div class="pack-card__space">
+    <div class="pack-card__body">
+      <div class="pack-card__face <%= ink_class %>">
+        <div class="pack-card__club">
+          <% if team&.badge_url %>
+            <%= image_tag team.badge_url, alt: "", class: "pack-card__badge" %>
+          <% end %>
+          <% if player.cutout_url %>
+            <%= image_tag player.cutout_url, alt: "", class: "pack-card__photo", onerror: "this.remove()" %>
+          <% end %>
+        </div>
+
+        <span class="pack-card__corner pack-card__corner--position"><%= position %></span>
+        <% if price %>
+          <span class="pack-card__corner pack-card__corner--price"><%= price %></span>
+        <% end %>
+
+        <div class="pack-card__banner">
+          <% if player.given_name.present? %>
+            <span class="pack-card__given"><%= player.given_name %></span>
+          <% end %>
+          <span class="<%= name_class %>"><%= player.display_name %></span>
+          <span class="pack-card__team"><%= team&.short_name %></span>
+        </div>
+
+        <span class="pack-card__grade" data-pack-grade><%= grade %></span>
+        <% if captain? %>
+          <span class="pack-card__captain" title="Captain">C</span>
+        <% end %>
+
+        <span class="pack-card__foil" aria-hidden="true"></span>
+        <span class="pack-card__glare" aria-hidden="true"></span>
+      </div>
+
+      <div class="pack-card__back" aria-hidden="true">
+        <%= render "shared/logo", size: (@size == :small ? "0.45rem" : "0.7rem") %>
+      </div>
+    </div>
+  </div>
+<% end %>
