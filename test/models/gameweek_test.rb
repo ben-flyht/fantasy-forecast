@@ -230,4 +230,20 @@ class GameweekTest < ActiveSupport::TestCase
     ordered_gameweeks = Gameweek.ordered
     assert_equal [ gw1, gw2, gw3 ], ordered_gameweeks.to_a
   end
+
+  test "a gameweek has started once its deadline has passed" do
+    assert Gameweek.new(fpl_id: 90, start_time: 1.minute.ago).started?
+    assert_not Gameweek.new(fpl_id: 90, start_time: 1.minute.from_now).started?
+  end
+
+  test "a gameweek's pack opens once the one before it is finished, until its own deadline" do
+    previous = Gameweek.create!(fpl_id: 88, name: "Gameweek 88", start_time: 4.days.ago)
+    upcoming = Gameweek.create!(fpl_id: 89, name: "Gameweek 89", start_time: 3.days.from_now)
+
+    assert_not upcoming.pack_open?
+    previous.update!(is_finished: true)
+    assert upcoming.pack_open?
+    upcoming.update!(start_time: 1.minute.ago)
+    assert_not upcoming.pack_open?
+  end
 end

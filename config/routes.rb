@@ -31,6 +31,19 @@ Rails.application.routes.draw do
   # No horizon: you captain a player for a gameweek or you do not captain him.
   get "captain", to: "captains#show", as: :captain
 
+  get "pack", to: "packs#latest", as: :pack_landing
+  post "pack/sign-in", to: "pack_sign_ins#create", as: :pack_sign_ins
+  get "pack/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
+  delete "pack/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
+  get "pack/practice", to: "packs#practice", as: :practice_pack
+  get "pack/practice/new", to: "packs#start", as: :new_pack
+  get "pack/gw:gameweek/leaderboard", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
+  post "pack/gw:gameweek/picks", to: "pack_picks#create", as: :weekly_pack_picks, constraints: { gameweek: /\d+/ }
+  get "pack/gw:gameweek", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/ }
+  get "pack/selections/:id", to: "packs#selection", as: :pack_selection, constraints: { id: /\d+/ }
+  get "pack/:seed(/:hand)", to: "packs#show", as: :pack,
+      constraints: { seed: /\d{1,9}/, hand: /[abx]{0,5}/ }
+
   # Him or him: the question a manager asks when he has already narrowed it to
   # two, with an address of its own so it can be found by asking it.
   #

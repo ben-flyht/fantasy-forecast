@@ -1,0 +1,9 @@
+<div style="font-family: Inter, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #09090b;">
+  <p style="font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #71717a;">Fantasy Forecast</p>
+  <h1 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 16px;">Your <%= "Gameweek #{@gameweek.fpl_id} " if @gameweek %>Pack of the Week is ready, <%= @user.first_name %>.</h1>
+  <p style="font-size: 15px; line-height: 1.6;">Five pairs of players. Your own pack, one go: keep one from each pair before the deadline, then watch your five climb the leaderboard on real FPL points.</p>
+  <p style="margin: 28px 0;">
+    <a href="<%= @link %>" style="display: inline-block; background: #09090b; color: #ffffff; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; text-decoration: none; padding: 14px 22px; border-radius: 12px;">Open my pack</a>
+  </p>
+  <p style="font-size: 13px; line-height: 1.6; color: #71717a;">The link signs you in on this device and works for seven days. If you did not ask for it, ignore this email.</p>
+</div>

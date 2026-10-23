@@ -10,10 +10,13 @@ module ApplicationHelper
     [ "Captain", :captain_path, "captains" ]
   ].freeze
 
+  PLAY = [ "Play", :pack_landing_path, "packs" ].freeze
+
   # Which one you are on is decided by the controller answering, not by the address,
   # because a ranking has an address per position and a gameweek and is one page.
   def navigation_links
-    NAVIGATION.map do |label, path, on|
+    links = cookies[PackSignIn::PLAY_COOKIE].present? ? NAVIGATION + [ PLAY ] : NAVIGATION
+    links.map do |label, path, on|
       [ label, public_send(path), controller.controller_name == on ]
     end
   end
