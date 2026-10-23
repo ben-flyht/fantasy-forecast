@@ -1,10 +1,10 @@
 class PacksController < ApplicationController
-  include PackManager
+  include PackSignIn
 
   SEEDS = 1..999_999_999
 
   def latest
-    return render(:sign_in) unless current_manager
+    return render(:sign_in) unless current_user
 
     gameweek = playing_gameweek
     gameweek ? redirect_to(weekly_pack_path(gameweek: gameweek.fpl_id)) : render(:empty)
@@ -12,19 +12,26 @@ class PacksController < ApplicationController
 
   def weekly
     @gameweek = Gameweek.find_by!(fpl_id: params[:gameweek])
-    @weekly_pack = WeeklyPack.for(@gameweek) || WeeklyPack.find_by(gameweek: @gameweek)
-    return unopened unless @weekly_pack
+    return redirect_to(pack_landing_path) unless current_user
 
-    @pack = @weekly_pack.pack
-    @entry = @weekly_pack.entry_for(current_manager)
-    @real = PackRealPoints.new(@gameweek) if @gameweek.start_time.past?
-    weekly_hand
+    @selection = Selection.deal(current_user, @gameweek)
+    return unopened unless @selection
+
+    play_selection
+  end
+
+  def selection
+    @selection = Selection.find(params[:id])
+    return head(:not_found) unless @selection.complete?
+
+    @shared = @selection.user != current_user
+    @gameweek = @selection.gameweek
+    play_selection
   end
 
   def leaderboard
     @gameweek = Gameweek.find_by!(fpl_id: params[:gameweek])
-    @weekly_pack = WeeklyPack.find_by(gameweek: @gameweek)
-    @board = PackLeaderboard.new(@weekly_pack) if @weekly_pack
+    @board = PackLeaderboard.new(@gameweek)
   end
 
   def practice
@@ -53,7 +60,14 @@ class PacksController < ApplicationController
 
   private
 
-  def unopened = render(@gameweek.start_time.future? ? :not_open : :empty)
+  def unopened = render(@gameweek.start_time.future? ? :not_open : :closed)
+
+  def play_selection
+    @pack = @selection.pack
+    @real = PackRealPoints.new(@gameweek) if @gameweek.start_time.past?
+    @board = PackLeaderboard.new(@gameweek) unless @shared
+    show_hand(@selection.pack_hand)
+  end
 
   def playing_gameweek
     current = Gameweek.current_gameweek
@@ -62,29 +76,12 @@ class PacksController < ApplicationController
     Gameweek.next_gameweek || current || Gameweek.finished.ordered.last
   end
 
-  def weekly_hand
-    shared = PackHand.parse(@pack, params[:hand])
-    return shared_hand(shared) if shared_with_me?(shared)
-    return redirect_to(pack_landing_path) unless current_manager
-    return render(:closed) if @weekly_pack.locked? && @entry.nil?
-
-    show_hand(@entry&.pack_hand || PackHand.new(@pack, keeps: []))
-  end
-
-  def shared_with_me?(hand) = hand.complete? && hand.code != @entry&.hand
-
-  def shared_hand(hand)
-    @shared = true
-    show_hand(hand)
-  end
-
   def show_hand(hand)
     @hand = hand
-    @board = PackLeaderboard.new(@weekly_pack) if @entry
     render :show
   end
 
-  def weekly? = @weekly_pack.present?
+  def weekly? = @selection.present?
   helper_method :weekly?
 
   def shared? = @shared.present?
@@ -100,6 +97,6 @@ class PacksController < ApplicationController
   def pick_method = (:post if weekly?)
   helper_method :pick_method
 
-  def share_path = weekly_pack_url(gameweek: @gameweek.fpl_id, hand: @hand.code)
+  def share_path = pack_selection_url(@selection)
   helper_method :share_path
 end

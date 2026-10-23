@@ -5,35 +5,35 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Pack of the Week",
-          subtitle: "Every gameweek, one pack of five pairs, the same for everyone. Keep one player from each pair, lock in your five, and climb the leaderboard on real FPL points.",
+          subtitle: "Every gameweek you get your own pack of five pairs. Keep one player from each pair and climb the leaderboard on real FPL points.",
           horizons: pack_sections(current: :play)) %>
   </div>
 
   <ul class="mb-6 space-y-2 text-sm/6 text-zinc-700">
-    <li><strong class="text-zinc-950">One pack a week, one go.</strong> Once you lock in your five, that's your team for the gameweek.</li>
+    <li><strong class="text-zinc-950">One pack a week, one go.</strong> Every pick is final, and your five are your team for the gameweek.</li>
     <li><strong class="text-zinc-950">Scored for real.</strong> Come back while the games are on and we'll show your points and your place on the leaderboard as they happen.</li>
     <li><strong class="text-zinc-950">Practice is free.</strong> Open as many practice packs as you like, no email needed.</li>
   </ul>
 
   <%= form_with url: pack_sign_ins_path, class: "rounded-2xl border border-zinc-200 p-6", data: { turbo: false } do |form| %>
-    <% if @manager&.errors&.any? %>
-      <p class="mb-4 rounded-lg bg-red-400/20 px-4 py-3 text-sm text-red-700"><%= @manager.errors.full_messages.to_sentence %></p>
+    <% if @user&.errors&.any? %>
+      <p class="mb-4 rounded-lg bg-red-400/20 px-4 py-3 text-sm text-red-700"><%= @user.errors.full_messages.to_sentence %></p>
     <% end %>
     <div class="space-y-4">
       <div>
         <%= form.label :email, "Your email", class: "block text-xs font-bold uppercase tracking-wider text-zinc-500" %>
-        <%= form.email_field :email, value: @manager&.email, required: true, autocomplete: "email",
+        <%= form.email_field :email, value: @user&.email, required: true, autocomplete: "email",
               class: "mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base" %>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <%= form.label :first_name, "First name", class: "block text-xs font-bold uppercase tracking-wider text-zinc-500" %>
-          <%= form.text_field :first_name, value: @manager&.first_name, maxlength: Manager::NAME_LENGTH, autocomplete: "given-name",
+          <%= form.text_field :first_name, value: @user&.first_name, maxlength: User::NAME_LENGTH, autocomplete: "given-name",
                 class: "mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base" %>
         </div>
         <div>
           <%= form.label :last_name, "Last name", class: "block text-xs font-bold uppercase tracking-wider text-zinc-500" %>
-          <%= form.text_field :last_name, value: @manager&.last_name, maxlength: Manager::NAME_LENGTH, autocomplete: "family-name",
+          <%= form.text_field :last_name, value: @user&.last_name, maxlength: User::NAME_LENGTH, autocomplete: "family-name",
                 class: "mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base" %>
         </div>
       </div>

@@ -1,33 +1,33 @@
 class PackLeaderboard
-  Row = Data.define(:place, :entry, :points) do
-    def manager = entry.manager
+  Row = Data.define(:place, :selection, :points) do
+    def user = selection.user
   end
 
-  def initialize(weekly_pack)
-    @weekly_pack = weekly_pack
-    @gameweek = weekly_pack.gameweek
+  def initialize(gameweek)
+    @gameweek = gameweek
   end
 
   def started? = gameweek.start_time.past?
   def final? = gameweek.is_finished
 
   def rows
-    @rows ||= started? ? ranked : entries.sort_by(&:created_at).map { |entry| Row.new(place: nil, entry: entry, points: nil) }
+    @rows ||= started? ? ranked : selections.sort_by(&:created_at).map { |selection| Row.new(place: nil, selection: selection, points: nil) }
   end
 
-  def place_of(entry) = rows.find { |row| row.entry == entry }&.place
+  def row_for(selection) = rows.find { |row| row.selection == selection }
 
   private
 
-  attr_reader :weekly_pack, :gameweek
+  attr_reader :gameweek
 
-  def entries
-    @entries ||= weekly_pack.pack_entries.includes(:manager).to_a
+  def selections
+    @selections ||= Selection.where(gameweek: gameweek).includes(:user, :gameweek).to_a
   end
 
   def ranked
-    scored = entries.map { |entry| [ entry, real.for(entry.pack_hand) ] }.sort_by { |entry, points| [ -points, entry.created_at ] }
-    scored.map { |entry, points| Row.new(place: scored.index { |_, score| score == points } + 1, entry: entry, points: points) }
+    scored = selections.map { |selection| [ selection, real.for(selection.pack_hand) ] }
+                       .sort_by { |selection, points| [ -points, selection.created_at ] }
+    scored.map { |selection, points| Row.new(place: scored.index { |_, score| score == points } + 1, selection: selection, points: points) }
   end
 
   def real

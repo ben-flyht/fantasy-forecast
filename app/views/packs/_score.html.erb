@@ -1,7 +1,7 @@
 <section data-pack-stage="scored">
   <% if weekly? %>
-    <% if @entry && @real %>
-      <% row = @board.rows.find { |candidate| candidate.entry == @entry } %>
+    <% if @board && @real %>
+      <% row = @board.row_for(@selection) %>
       <div class="mb-8 rounded-2xl bg-zinc-950 p-6 text-white" data-pack-verdict>
         <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
           Gameweek <%= @gameweek.fpl_id %>, <%= @gameweek.is_finished ? "final" : "live" %>
@@ -15,7 +15,7 @@
           <%= link_to "See the leaderboard", pack_leaderboard_path(gameweek: @gameweek.fpl_id), class: "font-bold text-white underline underline-offset-2" %>
         </p>
       </div>
-    <% elsif @entry %>
+    <% elsif @board %>
       <p class="mb-8 rounded-2xl border-2 border-zinc-950 p-5 text-sm/6 text-zinc-700" data-pack-locked>
         <strong class="text-zinc-950">That's your five.</strong> This is your one pack for Gameweek <%= @gameweek.fpl_id %>.
         Come back once the games start and we'll show your points and your place on the leaderboard as the gameweek goes on.
@@ -23,7 +23,7 @@
     <% end %>
   <% end %>
 
-  <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
+  <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= shared? ? "Their five" : "Your five" %></h2>
   <div class="pack-reveal grid grid-cols-3 gap-3 sm:grid-cols-5">
     <% hand.picks.each_with_index do |card, index| %>
       <div>

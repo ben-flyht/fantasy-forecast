@@ -6,7 +6,7 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: weekly? ? "Pack of the Week: Gameweek #{@gameweek.fpl_id}" : "Practice Pack",
-          subtitle: weekly? ? "One pack a week, one go. Keep one player from each pair and lock in your five: they score real points on the leaderboard." : "Practise as much as you like. Nothing here counts towards the leaderboard.",
+          subtitle: weekly? ? "Your own pack, one go a week. Keep one player from each pair: your five score real points on the leaderboard." : "Practise as much as you like. Nothing here counts towards the leaderboard.",
           share: ("Share my pack" if weekly? && @hand.complete? && !shared?),
           horizons: pack_sections(current: weekly? ? :play : :practice)) %>
   </div>
@@ -22,7 +22,7 @@
       <%= link_to "Leaderboard", pack_leaderboard_path(gameweek: @gameweek.fpl_id), class: "text-zinc-950 underline underline-offset-2" %>
     <% end %>
     <%= link_to (weekly? ? "Play a practice pack" : "Start a new practice pack"), (weekly? ? practice_pack_path : new_pack_path), class: "text-zinc-500 underline underline-offset-2" %>
-    <% if current_manager %>
+    <% if current_user %>
       <%= button_to "Sign out", pack_sign_out_path, method: :delete, form_class: "inline", class: "text-xs font-medium text-zinc-500 underline underline-offset-2 cursor-pointer" %>
     <% end %>
   </p>

@@ -4,7 +4,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
   include ActionMailer::TestHelper
 
   setup do
-    [ PackEntry, WeeklyPack, Manager, Performance, Statistic, Forecast, Player, Gameweek, Team ].each(&:destroy_all)
+    [ Selection, User, Performance, Statistic, Forecast, Player, Gameweek, Team ].each(&:destroy_all)
     stub_player_images
 
     @gameweek = Gameweek.create!(fpl_id: 1, name: "Gameweek 1", start_time: 3.days.from_now, is_next: true)
@@ -21,13 +21,9 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
   end
 
   def sign_in(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
-    manager = Manager.create!(email: email, first_name: first_name, last_name: last_name)
-    get pack_sign_in_path(token: manager.generate_token_for(:pack_link))
-    manager
-  end
-
-  def weekly_code(keep = 0)
-    "ab"[keep] * WeeklyPack.for(@gameweek).pack.size
+    user = User.create!(email: email, first_name: first_name, last_name: last_name)
+    get pack_sign_in_path(token: user.generate_token_for(:pack_link))
+    user
   end
 
   def pick_all(code)
@@ -35,10 +31,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
   end
 
   def score_everyone(points)
-    WeeklyPack.last.pack.pairs.each do |pair|
-      pair.cards.each_with_index do |card, keep|
-        Performance.create!(player: card.player, gameweek: @gameweek, team: card.player.team, gameweek_score: points[keep])
-      end
+    Player.find_each do |player|
+      Performance.create!(player: player, gameweek: @gameweek, team: player.team, gameweek_score: points)
     end
   end
 
@@ -63,19 +57,19 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
   test "joining with an email and a name sends a link that signs you in" do
     assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "New@Example.com", first_name: "Sam", last_name: "Kerr" } }
     assert_select "[data-pack-sent]", /new@example.com/
-    manager = Manager.find_by(email: "new@example.com")
-    assert_equal "Sam K.", manager.leaderboard_name
+    user = User.find_by(email: "new@example.com")
+    assert_equal "Sam K.", user.leaderboard_name
 
-    get pack_sign_in_path(token: manager.generate_token_for(:pack_link))
+    get pack_sign_in_path(token: user.generate_token_for(:pack_link))
     follow_redirect!
     assert_redirected_to weekly_pack_path(gameweek: 1)
   end
 
   test "a returning email needs no name, and nobody else can rename it" do
-    Manager.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
+    User.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
 
     assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "ana@example.com", first_name: "Not", last_name: "Ana" } }
-    assert_equal "Ana", Manager.find_by(email: "ana@example.com").first_name
+    assert_equal "Ana", User.find_by(email: "ana@example.com").first_name
   end
 
   test "a new email without a name is sent back to the form" do
@@ -94,47 +88,49 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "nav a, [role=tablist] a, a", text: "Practice"
   end
 
-  test "every weekly pick is final as you make it" do
-    sign_in
-    WeeklyPack.for(@gameweek)
+  test "every user gets their own pack, and every pick is final as they make it" do
+    ana = sign_in
+    get weekly_pack_path(gameweek: 1)
+    assert_select "h2", /Pair 1 of 5/
+    assert_select "[data-pack-rules]", /Every pick is final/
 
     post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" }
     assert_redirected_to weekly_pack_path(gameweek: 1)
     follow_redirect!
     assert_select "h2", /Pair 2 of 5/
-    assert_select "[data-pack-rules]", /Every pick is final/
     assert_select "a.pack-card--choice[data-turbo-method=post][href=?]", weekly_pack_picks_path(gameweek: 1, keep: "b")
+    assert_equal "a", ana.selections.last.picks
 
-    get weekly_pack_path(gameweek: 1, hand: "b")
-    assert_select "h2", /Pair 2 of 5/
-    assert_equal "a", PackEntry.last.hand
+    delete pack_sign_out_path
+    bo = sign_in(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
+    get weekly_pack_path(gameweek: 1)
+    assert_not_equal ana.selections.last.offered, bo.selections.last.offered
   end
 
   test "once five are picked, that is your one pack for the week" do
-    sign_in
-    WeeklyPack.for(@gameweek)
+    user = sign_in
+    get weekly_pack_path(gameweek: 1)
     pick_all("abaab")
 
-    assert_no_difference(-> { PackEntry.last.hand.size }) { post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" } }
+    assert_no_difference(-> { user.selections.last.picks.size }) { post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" } }
     get weekly_pack_path(gameweek: 1)
     assert_select "[data-pack-locked]", /your one pack for Gameweek 1/
     assert_select "[aria-label='Share my pack']"
-    assert_equal "abaab", PackEntry.last.hand
+    assert_equal "abaab", user.selections.last.picks
   end
 
   test "after the deadline the pack is closed to anyone who has not started it" do
     sign_in
-    WeeklyPack.for(@gameweek)
     @gameweek.update!(start_time: 1.minute.ago)
 
     get weekly_pack_path(gameweek: 1)
     assert_select "h2", /has closed/
-    assert_no_difference(-> { PackEntry.count }) { post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" } }
+    assert_no_difference(-> { Selection.count }) { post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" } }
   end
 
   test "a pack left half-picked at the deadline counts the rest as forfeited" do
     sign_in
-    WeeklyPack.for(@gameweek)
+    get weekly_pack_path(gameweek: 1)
     pick_all("ab")
     @gameweek.update!(start_time: 1.minute.ago)
 
@@ -148,7 +144,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get weekly_pack_path(gameweek: 2)
     assert_select "[data-pack-not-open]", /opens once every Gameweek 1 game has been played/
-    assert_nil WeeklyPack.find_by(gameweek: later)
+    assert_nil Selection.find_by(gameweek: later)
 
     @gameweek.update!(is_finished: true, start_time: 1.day.ago)
     Forecast.where(gameweek: @gameweek).find_each { |forecast| forecast.dup.update!(gameweek: later) }
@@ -167,40 +163,51 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the leaderboard ranks everyone on real points, live then final" do
-    ana = sign_in
-    WeeklyPack.for(@gameweek)
-    pick_all(weekly_code(0))
-    bo = Manager.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
-    PackEntry.create!(manager: bo, weekly_pack: WeeklyPack.last, hand: weekly_code(1))
+    sign_in
+    get weekly_pack_path(gameweek: 1)
+    pick_all("aaaaa")
+    bo = User.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
+    Selection.deal(bo, @gameweek).then { |selection| "aaxxx".each_char { |choice| selection.pick(choice) } }
 
     get pack_leaderboard_path(gameweek: 1)
     assert_select "p", /ranked once the games start/
     assert_select "[data-pack-row]", count: 2
 
-    score_everyone([ 2, 5 ])
+    score_everyone(3)
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
     get pack_leaderboard_path(gameweek: 1)
     rows = css_select("[data-pack-row]").map { |row| row.text.squish }
-    assert_match(/1st Bo K\..*30/, rows.first)
-    assert_match(/2nd Ana L\. \(you\).*12/, rows.second)
+    assert_match(/1st Ana L\. \(you\).*1[58]/, rows.first)
+    assert_match(/2nd Bo K\..*[69]/, rows.second)
     assert_select "p", /live points/
 
     get weekly_pack_path(gameweek: 1)
-    assert_select "[data-pack-verdict]", /12 points/
-    assert_select "[data-pack-verdict]", /2nd of 2/
+    assert_select "[data-pack-verdict]", /1st of 2/
     assert_select "[data-pack-verdict]", /live/
-    assert_not_nil ana
   end
 
-  test "a finished pack's shared link can be opened by anyone, read-only" do
-    code = weekly_code
+  test "a finished pack can be shared by its own address and opened by anyone, read-only" do
+    user = sign_in
+    get weekly_pack_path(gameweek: 1)
+    pick_all("abaab")
+    selection = user.selections.last
+    delete pack_sign_out_path
 
-    get weekly_pack_path(gameweek: 1, hand: code)
-
+    get pack_selection_path(selection)
     assert_select "[data-pack-stage=scored]"
+    assert_select "h2", /Their five/
     assert_select ".pack-card--choice", count: 0
-    assert_select "[aria-label='Share my pack']", count: 0
+    assert_select "[data-pack-locked]", count: 0
+  end
+
+  test "a half-picked pack cannot be shared" do
+    user = sign_in
+    get weekly_pack_path(gameweek: 1)
+    pick_all("ab")
+
+    get pack_selection_path(user.selections.last)
+    assert_response :not_found
   end
 
   test "practice never counts, and points you to the real pack" do
@@ -234,7 +241,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
   test "a forfeited pair shows as time's up and scores nothing" do
     sign_in
-    WeeklyPack.for(@gameweek)
+    get weekly_pack_path(gameweek: 1)
     pick_all("axaaa")
 
     get weekly_pack_path(gameweek: 1)

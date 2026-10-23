@@ -5,11 +5,11 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Leaderboard: Gameweek #{@gameweek.fpl_id}",
-          subtitle: "Everyone opened the same pack. Real FPL points for each five, with the captain counting twice.",
+          subtitle: "Everyone opened their own pack. Real FPL points for each five, with the captain counting twice.",
           horizons: pack_sections(current: :play)) %>
   </div>
 
-  <% if @board.nil? || @board.rows.empty? %>
+  <% if @board.rows.empty? %>
     <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">Nobody has locked in a pack yet.</div>
   <% else %>
     <p class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
@@ -18,12 +18,12 @@
     </p>
     <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
       <% @board.rows.each do |row| %>
-        <% mine = current_manager && row.manager == current_manager %>
+        <% mine = current_user && row.user == current_user %>
         <li class="flex items-center gap-4 px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-row>
           <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= pack_place(row.place) || "–" %></span>
           <span class="min-w-0 flex-1">
-            <span class="block truncate font-bold text-zinc-950"><%= row.manager.leaderboard_name %><%= " (you)" if mine %></span>
-            <% if (captain = row.entry.pack_hand.captain) %>
+            <span class="block truncate font-bold text-zinc-950"><%= row.user.leaderboard_name %><%= " (you)" if mine %></span>
+            <% if (captain = row.selection.pack_hand.captain) %>
               <span class="block truncate text-xs text-zinc-500">Captain <%= captain.player.display_name %></span>
             <% end %>
           </span>

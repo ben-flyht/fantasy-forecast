@@ -1,7 +1,7 @@
-class Manager < ApplicationRecord
+class User < ApplicationRecord
   NAME_LENGTH = 40
 
-  has_many :pack_entries, dependent: :destroy
+  has_many :selections, dependent: :destroy
 
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :first_name, :last_name, with: ->(name) { name.squish }
