@@ -48,9 +48,9 @@ class SeasonRecordComponent < ViewComponent::Base
   end
 
   def blanks
-    return unless history.played?
+    return if history.appearances.empty?
 
-    [ "Blanks", "#{history.blanks} of #{history.points.size}" ]
+    [ "Blanks", "#{history.blanks} of #{history.appearances.size}" ]
   end
 
   def latest(trend)
