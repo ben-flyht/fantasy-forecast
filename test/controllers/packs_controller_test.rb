@@ -1,7 +1,12 @@
 require "test_helper"
 
 class PacksControllerTest < ActionDispatch::IntegrationTest
+  include ActionMailer::TestHelper
+
   setup do
+    PackEntry.destroy_all
+    WeeklyPack.destroy_all
+    Manager.destroy_all
     Performance.destroy_all
     Statistic.destroy_all
     Forecast.destroy_all
@@ -83,43 +88,129 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", /No pack to open/
   end
 
-  test "Play is in the navigation and opens this week's pack" do
+  def sign_in
+    @manager = Manager.create!(email: "ana@example.com")
+    get pack_sign_in_path(token: @manager.generate_token_for(:pack_link))
+  end
+
+  def weekly_code
+    PackScore.new(WeeklyPack.for(@gameweek).pack).forecast.code
+  end
+
+  test "Play is in the navigation, and the real pack asks for an email first" do
     get root_path
     assert_select "a[href=?]", pack_landing_path, text: "Play"
 
     get pack_landing_path
+    assert_select "h1", /Beat the Algorithm/
+    assert_select "input[type=email][name=email]"
+    assert_select "li", /One pack a week, one go/
+  end
+
+  test "asking for a pack emails a link that signs you in" do
+    assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "New@Example.com" } }
+    assert_select "[data-pack-sent]", /new@example.com/
+
+    get pack_sign_in_path(token: Manager.find_by(email: "new@example.com").generate_token_for(:pack_link))
+    follow_redirect!
     assert_redirected_to weekly_pack_path(gameweek: 1)
   end
 
-  test "this week's pack is the same pack for everyone, with picks in the address" do
+  test "a bad email is sent back to the form" do
+    assert_no_enqueued_emails { post pack_sign_ins_path, params: { email: "nope" } }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=email]"
+  end
+
+  test "picking the weekly pack needs you signed in" do
     get weekly_pack_path(gameweek: 1)
-    first = css_select("[data-pack-choice] .pack-card__name").map(&:text)
+
+    assert_redirected_to pack_landing_path
+  end
+
+  test "signed in, this week's pack is the same pack every time" do
+    sign_in
+    get weekly_pack_path(gameweek: 1)
+    first = css_select(".pack-card__name").map(&:text)
 
     get weekly_pack_path(gameweek: 1)
-    assert_equal first, css_select("[data-pack-choice] .pack-card__name").map(&:text)
-    assert_select "h1", /Gameweek 1 Pack/
+    assert_equal first, css_select(".pack-card__name").map(&:text)
+    assert_select "h1", /Beat the Algorithm: Gameweek 1/
     assert_select "h2", /Pair 1 of 5/
   end
 
-  test "a finished weekly pack can be shared" do
-    pack = PackDraw.call(gameweek: @gameweek, seed: 1)
+  test "you lock in one pack a week, and then that is the pack you see" do
+    sign_in
+    code = weekly_code
 
-    get weekly_pack_path(gameweek: 1, hand: PackScore.new(pack).forecast.code)
+    get weekly_pack_path(gameweek: 1, hand: code)
+    assert_select "[data-pack-lock]", /One pack a week, one go/
+
+    assert_difference(-> { PackEntry.count }, 1) { post weekly_pack_entry_path(gameweek: 1), params: { hand: code } }
+    assert_no_difference(-> { PackEntry.count }) { post weekly_pack_entry_path(gameweek: 1), params: { hand: code.tr("ab", "ba") } }
+
+    get weekly_pack_path(gameweek: 1)
+    assert_select "[data-pack-locked]", /your one pack for Gameweek 1/
+    assert_select "[data-pack-lock]", count: 0
+  end
+
+  test "a half-picked pack cannot be locked in" do
+    sign_in
+    weekly_code
+
+    assert_no_difference(-> { PackEntry.count }) { post weekly_pack_entry_path(gameweek: 1), params: { hand: "aa" } }
+  end
+
+  test "after the deadline the pack is closed to anyone who has not locked in" do
+    sign_in
+    code = weekly_code
+    @gameweek.update!(start_time: 1.minute.ago)
+
+    get weekly_pack_path(gameweek: 1)
+    assert_select "h2", /has closed/
+    assert_no_difference(-> { PackEntry.count }) { post weekly_pack_entry_path(gameweek: 1), params: { hand: code } }
+  end
+
+  test "once the games start, a locked-in pack shows its score live against the algorithm's" do
+    sign_in
+    code = weekly_code
+    post weekly_pack_entry_path(gameweek: 1), params: { hand: code }
+    WeeklyPack.last.pack.pairs.flat_map(&:cards).each do |card|
+      Performance.create!(player: card.player, gameweek: @gameweek, team: card.player.team, gameweek_score: 3)
+    end
+    @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
+
+    get weekly_pack_path(gameweek: 1)
+    assert_select "[data-pack-verdict]", /live/
+    assert_select "[data-pack-verdict]", /18\s+v 18/
+
+    @gameweek.update!(is_finished: true)
+    get weekly_pack_path(gameweek: 1)
+    assert_select "[data-pack-verdict]", /final/
+    assert_select "[data-pack-verdict]", /Level with the algorithm/
+  end
+
+  test "a finished pack's link can be shared and opened by anyone" do
+    code = weekly_code
+
+    get weekly_pack_path(gameweek: 1, hand: code)
 
     assert_select "[data-pack-stage=scored]"
     assert_select "[aria-label='Share my pack']"
+    assert_select "[data-pack-lock]", count: 0
   end
 
-  test "once the gameweek is over, the same link shows real points against the forecast's" do
-    pack = PackDraw.call(gameweek: @gameweek, seed: 1)
-    pack.pairs.flat_map(&:cards).each do |card|
-      Performance.create!(player: card.player, gameweek: @gameweek, team: card.player.team, gameweek_score: 3)
-    end
-    @gameweek.update!(start_time: 3.days.ago, is_next: false, is_finished: true)
+  test "practice packs need no email, and you pick up where you left off" do
+    get practice_pack_path
+    follow_redirect!
+    seed = request.path[%r{/pack/(\d+)}, 1]
 
-    get weekly_pack_path(gameweek: 1, hand: PackScore.new(pack).forecast.code)
+    get pack_path(seed: seed, hand: "ab")
+    get practice_pack_path
+    assert_redirected_to pack_path(seed: seed, hand: "ab")
 
-    assert_select "[data-pack-verdict]", /18\s+v 18/
-    assert_select "[data-pack-verdict]", /Level with the forecast/
+    get new_pack_path
+    assert_redirected_to %r{/pack/\d+\z}
   end
 end

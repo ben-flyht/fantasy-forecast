@@ -32,7 +32,12 @@ Rails.application.routes.draw do
   get "captain", to: "captains#show", as: :captain
 
   get "pack", to: "packs#latest", as: :pack_landing
-  get "pack/practice", to: "packs#new", as: :new_pack
+  post "pack/sign-in", to: "pack_sign_ins#create", as: :pack_sign_ins
+  get "pack/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
+  delete "pack/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
+  get "pack/practice", to: "packs#practice", as: :practice_pack
+  get "pack/practice/new", to: "packs#start", as: :new_pack
+  post "pack/gw:gameweek/entry", to: "pack_entries#create", as: :weekly_pack_entry, constraints: { gameweek: /\d+/ }
   get "pack/gw:gameweek(/:hand)", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/, hand: /[ab]{0,5}/ }
   get "pack/:seed(/:hand)", to: "packs#show", as: :pack,
       constraints: { seed: /\d{1,9}/, hand: /[ab]{0,5}/ }

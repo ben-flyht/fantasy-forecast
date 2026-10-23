@@ -5,12 +5,17 @@
     <% if @real %>
       <% mine = @real.for(hand) %>
       <% theirs = @real.for(forecast) %>
-      <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Gameweek <%= @gameweek.fpl_id %>, real points</h2>
+      <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Gameweek <%= @gameweek.fpl_id %>, real points<%= @gameweek.is_finished ? ", final" : ", live" %></h2>
       <p class="mt-2 text-5xl font-extrabold leading-none tracking-[-0.04em] tabular-nums">
         <%= mine %> <span class="text-2xl text-zinc-400">v <%= theirs %></span>
       </p>
       <p class="mt-3 text-sm/6 text-zinc-300">
-        <%= mine > theirs ? "You beat the forecast." : mine == theirs ? "Level with the forecast." : "The forecast won this one." %>
+        <% if @gameweek.is_finished %>
+          <%= mine > theirs ? "You beat the algorithm." : mine == theirs ? "Level with the algorithm." : "The algorithm won this one." %>
+        <% else %>
+          <%= mine > theirs ? "You're beating the algorithm so far." : mine == theirs ? "Level with the algorithm so far." : "The algorithm is ahead so far." %>
+          Points update through the gameweek.
+        <% end %>
         Your captain counts twice.
       </p>
     <% else %>
@@ -22,10 +27,12 @@
         <% else %>
           You agreed with the forecast on <%= pluralize(agreed, "pair") %> and went your own way on <%= hand.pack.size - agreed %>.
         <% end %>
-        <%= @weekly ? "Real points decide who was right once Gameweek #{@gameweek.fpl_id} is played." : "In this week's pack, real points decide who was right." %>
+        <%= weekly? ? "Real points decide who beats the algorithm once Gameweek #{@gameweek.fpl_id} kicks off." : "In the weekly pack, real points decide who was right." %>
       </p>
     <% end %>
   </div>
+
+  <%= render "packs/lock_in", hand: hand if weekly? %>
 
   <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
   <div class="pack-reveal grid grid-cols-3 gap-3 sm:grid-cols-5">

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -57,6 +57,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
     t.index ["fpl_id"], name: "index_gameweeks_on_fpl_id", unique: true
   end
 
+  create_table "managers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((email)::text)", name: "index_managers_on_lower_email", unique: true
+  end
+
   create_table "matches", force: :cascade do |t|
     t.integer "away_difficulty"
     t.bigint "away_team_id", null: false
@@ -72,6 +79,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
     t.index ["gameweek_id", "home_team_id"], name: "index_matches_on_gameweek_id_and_home_team_id"
     t.index ["gameweek_id"], name: "index_matches_on_gameweek_id"
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
+  end
+
+  create_table "pack_entries", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "hand", null: false
+    t.bigint "manager_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "weekly_pack_id", null: false
+    t.index ["manager_id"], name: "index_pack_entries_on_manager_id"
+    t.index ["weekly_pack_id", "manager_id"], name: "index_pack_entries_on_weekly_pack_id_and_manager_id", unique: true
+    t.index ["weekly_pack_id"], name: "index_pack_entries_on_weekly_pack_id"
   end
 
   create_table "payloads", force: :cascade do |t|
@@ -181,6 +199,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
     t.index ["fpl_id"], name: "index_teams_on_fpl_id", unique: true
   end
 
+  create_table "weekly_packs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "gameweek_id", null: false
+    t.jsonb "pairs", default: [], null: false
+    t.integer "seed", null: false
+    t.datetime "updated_at", null: false
+    t.index ["gameweek_id"], name: "index_weekly_packs_on_gameweek_id", unique: true
+  end
+
   add_foreign_key "comparisons", "gameweeks"
   add_foreign_key "forecasts", "gameweeks"
   add_foreign_key "forecasts", "players"
@@ -188,6 +215,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
   add_foreign_key "matches", "gameweeks"
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"
+  add_foreign_key "pack_entries", "managers"
+  add_foreign_key "pack_entries", "weekly_packs"
   add_foreign_key "payloads", "gameweeks"
   add_foreign_key "performances", "gameweeks"
   add_foreign_key "performances", "players"
@@ -196,4 +225,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
   add_foreign_key "squads", "gameweeks"
   add_foreign_key "statistics", "gameweeks"
   add_foreign_key "statistics", "players"
+  add_foreign_key "weekly_packs", "gameweeks"
 end
