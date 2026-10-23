@@ -190,17 +190,17 @@
 
 .pack-card__captain {
   position: absolute;
-  top: 18cqw;
-  left: 6cqw;
+  top: 5cqw;
+  right: 5.5cqw;
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 12cqw;
-  height: 12cqw;
+  width: 14cqw;
+  height: 14cqw;
   border-radius: 999px;
   background: var(--color-zinc-950);
   color: #fff;
-  font-size: 7cqw;
+  font-size: 8cqw;
   font-weight: 800;
   box-shadow: 0 0 0 0.8cqw var(--frame);
 }
