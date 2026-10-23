@@ -2,8 +2,8 @@ class Pack
   SLOTS = %w[goalkeeper defender midfielder forward wildcard].freeze
   OUTFIELD = %w[defender midfielder forward].freeze
 
-  Card = Data.define(:player, :rank, :cost, :expected_points, :fixtures) do
-    def initialize(player:, rank:, cost:, expected_points:, fixtures: [])
+  Card = Data.define(:player, :rank, :expected_points, :fixtures) do
+    def initialize(player:, rank:, expected_points:, fixtures: [])
       super
     end
 

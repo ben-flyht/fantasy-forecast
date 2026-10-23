@@ -1,31 +1,36 @@
-<% best = score.perfect %>
 <% forecast = score.forecast %>
-<% percent = pack_percent(score.share(hand)) %>
+<% agreed = score.agreements(hand) %>
 <section data-pack-stage="scored">
-  <div class="mb-8 rounded-2xl bg-zinc-950 p-6 text-white">
-    <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your pack</h2>
-    <p class="mt-2 text-6xl font-extrabold leading-none tracking-[-0.04em] tabular-nums" data-pack-share><%= percent %>%</p>
-    <p class="mt-3 text-sm/6 text-zinc-300">
-      <%= percent >= 100 ? "A perfect pack. " : "" %>of the best team this pack allowed.
-      You <strong class="tabular-nums text-white"><%= pack_points(score.points(hand)) %></strong>,
-      the forecast <strong class="tabular-nums text-white"><%= pack_points(score.points(forecast)) %></strong>,
-      the perfect pack <strong class="tabular-nums text-white"><%= pack_points(score.points(best)) %></strong> expected points.
-    </p>
-  </div>
-
-  <% if @real %>
-    <div class="mb-8 rounded-2xl border-2 border-zinc-950 p-5" data-pack-real>
-      <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Real points, Gameweek <%= @gameweek.fpl_id %></h2>
-      <p class="mt-2 text-4xl font-extrabold leading-none tracking-[-0.03em] tabular-nums">
-        <%= @real.for(hand) %> <span class="text-base font-bold text-zinc-500">v the forecast <%= @real.for(forecast) %></span>
+  <div class="mb-8 rounded-2xl bg-zinc-950 p-6 text-white" data-pack-verdict>
+    <% if @real %>
+      <% mine = @real.for(hand) %>
+      <% theirs = @real.for(forecast) %>
+      <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Gameweek <%= @gameweek.fpl_id %>, real points</h2>
+      <p class="mt-2 text-5xl font-extrabold leading-none tracking-[-0.04em] tabular-nums">
+        <%= mine %> <span class="text-2xl text-zinc-400">v <%= theirs %></span>
       </p>
-    </div>
-  <% end %>
+      <p class="mt-3 text-sm/6 text-zinc-300">
+        <%= mine > theirs ? "You beat the forecast." : mine == theirs ? "Level with the forecast." : "The forecast won this one." %>
+        Your captain counts twice.
+      </p>
+    <% else %>
+      <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">You and the forecast</h2>
+      <p class="mt-2 text-5xl font-extrabold leading-none tracking-[-0.04em] tabular-nums"><%= agreed %> of <%= hand.pack.size %></p>
+      <p class="mt-3 text-sm/6 text-zinc-300">
+        <% if agreed == hand.pack.size %>
+          You picked the same five as the forecast.
+        <% else %>
+          You agreed with the forecast on <%= pluralize(agreed, "pair") %> and went your own way on <%= hand.pack.size - agreed %>.
+        <% end %>
+        <%= @weekly ? "Real points decide who was right once Gameweek #{@gameweek.fpl_id} is played." : "In this week's pack, real points decide who was right." %>
+      </p>
+    <% end %>
+  </div>
 
   <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
   <div class="pack-reveal grid grid-cols-3 gap-3 sm:grid-cols-5">
     <% hand.kept.each_with_index do |card, index| %>
-      <%= render PackCardComponent.new(card: card, revealed: true, captain: card == hand.captain, index: index) %>
+      <%= render PackCardComponent.new(card: card, captain: card == hand.captain, index: index) %>
     <% end %>
   </div>
 
@@ -40,14 +45,10 @@
     <tbody>
       <% hand.kept.zip(forecast.kept).each do |mine, theirs| %>
         <tr class="border-t border-zinc-200 <%= 'text-zinc-400' if mine == theirs %>" data-pack-pair>
-          <td class="py-2"><%= mine.player.display_name %> <span class="tabular-nums text-zinc-500"><%= pack_card_points(mine.expected_points) %><%= " · #{@real.of(mine)} pts" if @real %></span></td>
-          <td class="py-2"><%= theirs.player.display_name %> <span class="tabular-nums text-zinc-500"><%= pack_card_points(theirs.expected_points) %><%= " · #{@real.of(theirs)} pts" if @real %></span></td>
+          <td class="py-2"><%= mine.player.display_name %><% if @real %> <span class="tabular-nums text-zinc-500"><%= pluralize(@real.of(mine), "pt") %></span><% end %></td>
+          <td class="py-2"><%= theirs.player.display_name %><% if @real %> <span class="tabular-nums text-zinc-500"><%= pluralize(@real.of(theirs), "pt") %></span><% end %></td>
         </tr>
       <% end %>
     </tbody>
   </table>
-
-  <p class="mt-6 text-xs/6 text-zinc-500">
-    Expected points for the gameweek: all five count, and the captain counts twice.
-  </p>
 </section>

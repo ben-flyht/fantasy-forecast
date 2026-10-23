@@ -2,7 +2,7 @@ require "test_helper"
 
 class PackHandTest < ActiveSupport::TestCase
   def card(id, position, points)
-    Pack::Card.new(player: Player.new(id: id, position: position), rank: id, cost: 50, expected_points: points)
+    Pack::Card.new(player: Player.new(id: id, position: position), rank: id, expected_points: points)
   end
 
   def pack(shiny: 2)
@@ -39,12 +39,5 @@ class PackHandTest < ActiveSupport::TestCase
     assert_nil PackHand.parse(pack, "aaaaaa"), "more picks than pairs"
     assert_nil PackHand.parse(pack, "aac"), "not a choice"
     assert_nil PackHand.parse(pack, "aaaaa-12"), "the old bench suffix"
-  end
-
-  test "every hand a pack allows is every combination of keeps" do
-    hands = PackHand.every(pack)
-
-    assert_equal 32, hands.size
-    assert hands.all?(&:complete?)
   end
 end

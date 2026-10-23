@@ -19,7 +19,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
         id += 1
         player = Player.create!(first_name: "P", last_name: "#{position}#{i}", short_name: "#{position[0, 3]}#{i}",
                                 fpl_id: 7500 + id, code: 7500 + id, team: team, position: position)
-        Forecast.create!(player: player, gameweek: @gameweek, horizon: "gameweek", rank: i + 1, score: 6.0 - (i * 0.4))
+        Forecast.create!(player: player, gameweek: @gameweek, horizon: "gameweek", rank: i + 1, score: 6.0 - (i * 0.4), working: { "minutes" => 90 })
         Statistic.create!(player: player, gameweek: @gameweek, type: "now_cost", value: 45 + i)
       end
     end
@@ -45,25 +45,26 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "meta[name=robots][content*=noindex]"
   end
 
-  test "a finished pack is scored against the best it allowed and the forecast's own picks" do
+  test "a finished pack says how many of the forecast's picks you shared" do
     get pack_path(seed: 3, hand: finished_code(3))
 
     assert_response :success
     assert_select "[data-pack-stage=scored]"
-    assert_select "[data-pack-share]", /100%/
+    assert_select "[data-pack-verdict]", /5 of 5/
+    assert_select "[data-pack-verdict]", /same five as the forecast/
     assert_select "[data-pack-pair]", count: 5
   end
 
-  test "where you and the forecast kept different neighbours, each is shown on his own points" do
-    Forecast.find_each { |forecast| forecast.update!(score: 6.0 - (forecast.rank * 0.03)) }
+  test "going against the forecast on every pair is said plainly, pair by pair" do
     pack = PackDraw.call(gameweek: @gameweek, seed: 3)
     keeps = pack.pairs.map { |pair| pair.cards.index(pair.cards.min_by(&:expected_points)) }
 
     get pack_path(seed: 3, hand: PackHand.new(pack, keeps: keeps).code)
 
+    assert_select "[data-pack-verdict]", /0 of 5/
     css_select("[data-pack-pair]").each do |row|
-      mine, theirs = row.css("td").map { |cell| cell.text.split.last }
-      assert_not_equal mine, theirs, row.text.squish
+      mine, theirs = row.css("td").map { |cell| cell.text.squish }
+      assert_not_equal mine, theirs
     end
   end
 
@@ -118,6 +119,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get weekly_pack_path(gameweek: 1, hand: PackScore.new(pack).forecast.code)
 
-    assert_select "[data-pack-real]", /18\s+v the forecast 18/
+    assert_select "[data-pack-verdict]", /18\s+v 18/
+    assert_select "[data-pack-verdict]", /Level with the forecast/
   end
 end

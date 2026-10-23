@@ -20,7 +20,7 @@ class PackDrawTest < ActiveSupport::TestCase
         id += 1
         player = Player.create!(first_name: "P", last_name: "#{position}#{i}", short_name: "#{position[0, 3]}#{i}",
                                 fpl_id: 7000 + id, code: 7000 + id, team: @teams[id % @teams.size], position: position)
-        Forecast.create!(player: player, gameweek: @gameweek, horizon: "gameweek", rank: i + 1, score: 6.0 - (i * 0.4))
+        Forecast.create!(player: player, gameweek: @gameweek, horizon: "gameweek", rank: i + 1, score: 6.0 - (i * 0.4), working: { "minutes" => 90 })
         Statistic.create!(player: player, gameweek: @gameweek, type: "now_cost", value: 45 + i)
       end
     end
@@ -92,6 +92,16 @@ class PackDrawTest < ActiveSupport::TestCase
 
     assert_equal [ "K1 (H)" ], home.fixtures
     assert_equal [], idle.fixtures
+  end
+
+  test "only players expected to start are dealt" do
+    build_pool
+    benched = Forecast.joins(:player).where(players: { position: "forward" }).order(:rank).limit(3)
+    benched.each { |forecast| forecast.update!(working: { "minutes" => 25 }) }
+
+    dealt = 30.times.flat_map { |seed| PackDraw.call(gameweek: @gameweek, seed: seed).pairs.flat_map { |pair| pair.cards.map(&:player_id) } }
+
+    assert_empty dealt & benched.map(&:player_id)
   end
 
   test "a player expected to add nothing to turning up is left out of the pack" do

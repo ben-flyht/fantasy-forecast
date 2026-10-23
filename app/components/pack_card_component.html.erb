@@ -19,9 +19,6 @@
         </div>
 
         <span class="pack-card__corner pack-card__corner--position"><%= position %></span>
-        <% if price %>
-          <span class="pack-card__corner pack-card__corner--price"><%= price %></span>
-        <% end %>
 
         <div class="pack-card__banner">
           <% if player.given_name.present? %>
@@ -31,7 +28,6 @@
           <span class="pack-card__team"><%= team&.short_name %> <span class="pack-card__fixture" data-pack-fixture><%= fixture %></span></span>
         </div>
 
-        <span class="pack-card__grade" data-pack-grade><%= grade %></span>
         <% if captain? %>
           <span class="pack-card__captain" title="Captain">C</span>
         <% end %>

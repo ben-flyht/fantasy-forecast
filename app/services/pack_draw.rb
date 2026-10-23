@@ -1,5 +1,6 @@
 class PackDraw < ApplicationService
   GRADED = TierCalculator::POINT_THRESHOLDS[:t4]
+  STARTING_MINUTES = 60
   CAPTAINCY = %w[midfielder forward].freeze
 
   def initialize(gameweek:, seed:)
@@ -58,6 +59,7 @@ class PackDraw < ApplicationService
 
   def ladders
     @ladders ||= Forecast.where(gameweek: gameweek, horizon: "gameweek").where(score: GRADED..)
+                         .where("(working->>'minutes')::float >= ?", STARTING_MINUTES)
                          .includes(player: :team)
                          .map { |forecast| card(forecast) }
                          .group_by(&:position)
@@ -65,8 +67,8 @@ class PackDraw < ApplicationService
   end
 
   def card(forecast)
-    Pack::Card.new(player: forecast.player, rank: forecast.rank, cost: costs.dig(forecast.player_id, "now_cost"),
-                   expected_points: forecast.score.to_f, fixtures: fixtures_for(forecast.player.team_id))
+    Pack::Card.new(player: forecast.player, rank: forecast.rank, expected_points: forecast.score.to_f,
+                   fixtures: fixtures_for(forecast.player.team_id))
   end
 
   def fixtures_for(team_id)
@@ -77,9 +79,5 @@ class PackDraw < ApplicationService
 
   def matches
     @matches ||= Match.by_team(gameweek)
-  end
-
-  def costs
-    @costs ||= Statistic.where(type: "now_cost").latest_by_player
   end
 end

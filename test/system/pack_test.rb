@@ -16,7 +16,7 @@ class PackTest < ApplicationSystemTestCase
         id += 1
         player = Player.create!(first_name: "P", last_name: "#{position}#{i}", short_name: "#{position[0, 3]}#{i}",
                                 fpl_id: 7800 + id, code: 7800 + id, team: team, position: position)
-        Forecast.create!(player: player, gameweek: @gameweek, horizon: "gameweek", rank: i + 1, score: 6.0 - (i * 0.4))
+        Forecast.create!(player: player, gameweek: @gameweek, horizon: "gameweek", rank: i + 1, score: 6.0 - (i * 0.4), working: { "minutes" => 90 })
         Statistic.create!(player: player, gameweek: @gameweek, type: "now_cost", value: 45 + i)
       end
     end

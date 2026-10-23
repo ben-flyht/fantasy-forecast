@@ -1,12 +1,9 @@
 # frozen_string_literal: true
 
 class PackCardComponent < ViewComponent::Base
-  HIDDEN_GRADE = "?"
-
-  def initialize(card:, href: nil, revealed: false, shiny: false, captain: false, size: :full, index: 0)
+  def initialize(card:, href: nil, shiny: false, captain: false, size: :full, index: 0)
     @card = card
     @href = href
-    @revealed = revealed
     @shiny = shiny
     @captain = captain
     @size = size
@@ -38,11 +35,6 @@ class PackCardComponent < ViewComponent::Base
   end
 
   def position = helpers.position_letter(card.position)
-  def price = helpers.player_price(card.cost)
-
-  def grade
-    @revealed ? TierCalculator.grade_from_points(card.expected_points) : HIDDEN_GRADE
-  end
 
   def captain? = @captain
 

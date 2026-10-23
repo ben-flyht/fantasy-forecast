@@ -2,7 +2,7 @@ require "test_helper"
 
 class PackScoreTest < ActiveSupport::TestCase
   def card(id, position, points)
-    Pack::Card.new(player: Player.new(id: id, position: position), rank: id, cost: 50, expected_points: points)
+    Pack::Card.new(player: Player.new(id: id, position: position), rank: id, expected_points: points)
   end
 
   setup do
@@ -18,16 +18,13 @@ class PackScoreTest < ActiveSupport::TestCase
     @score = PackScore.new(@pack)
   end
 
-  test "all five count, and the captain counts twice" do
-    assert_in_delta 4.0 + 3.0 + 5.0 + 5.5 + 3.0 + 5.0, @score.points(PackHand.parse(@pack, "abbaa")), 0.0001
-  end
-
   test "the forecast keeps the higher card of every pair" do
     assert_equal [ 1, 3, 5, 7, 9 ], @score.forecast.kept.map(&:player_id)
   end
 
-  test "nobody beats the perfect pack" do
-    assert_in_delta 1.0, @score.share(@score.forecast), 0.0001
-    assert_operator @score.share(PackHand.parse(@pack, "bbbbb")), :<, 1.0
+  test "agreement is how many of the forecast's picks you kept" do
+    assert_equal 5, @score.agreements(PackHand.parse(@pack, "aaaaa"))
+    assert_equal 3, @score.agreements(PackHand.parse(@pack, "abaab"))
+    assert_equal 0, @score.agreements(PackHand.parse(@pack, "bbbbb"))
   end
 end

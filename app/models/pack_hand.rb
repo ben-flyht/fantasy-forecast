@@ -11,10 +11,6 @@ class PackHand
     new(pack, keeps: code.chars.map { |letter| LETTERS.index(letter) })
   end
 
-  def self.every(pack)
-    [ 0, 1 ].repeated_permutation(pack.size).map { |keeps| new(pack, keeps: keeps) }
-  end
-
   def initialize(pack, keeps:)
     @pack = pack
     @keeps = keeps
