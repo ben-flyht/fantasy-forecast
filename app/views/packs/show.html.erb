@@ -1,10 +1,7 @@
-<% content_for :meta_title, "Open a Pack | Fantasy Forecast" %>
+<% content_for :meta_title, "#{@weekly ? "Gameweek #{@gameweek.fpl_id} Pack" : 'Practice Pack'} | Fantasy Forecast" %>
 <% content_for :meta_robots, "noindex, nofollow" %>
-<% content_for :head do %>
-  <meta name="turbo-cache-control" content="no-cache">
-<% end %>
 
-<div class="mx-auto max-w-xl" data-controller="pack">
+<div class="mx-auto max-w-xl">
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: @weekly ? "The Gameweek #{@gameweek.fpl_id} Pack" : "Practice Pack",
@@ -13,26 +10,13 @@
           horizons: pack_sections(weekly: @weekly.present?)) %>
   </div>
 
-  <% if @hand.keeps.empty? %>
-    <%= render "sealed", gameweek: @gameweek %>
-  <% end %>
-
-  <% unless @hand.complete? %>
-    <%= render "pair", hand: @hand, hidden: @hand.keeps.empty? %>
-  <% else %>
-    <%= render "score", hand: @hand, score: @score %>
-  <% end %>
-
   <% if @hand.complete? %>
-    <div class="mt-10">
-      <%= link_to new_pack_path, class: "pack-another" do %>
-        <span class="pack-another__pack" aria-hidden="true"></span>
-        <span>Open another pack</span>
-      <% end %>
-    </div>
-  <% elsif @hand.keeps.any? %>
-    <p class="mt-10 text-xs">
-      <%= link_to "Start again with a new pack", new_pack_path, class: "font-medium text-zinc-500 underline underline-offset-2" %>
-    </p>
+    <%= render "score", hand: @hand, score: @score %>
+  <% else %>
+    <%= render "pair", hand: @hand %>
   <% end %>
+
+  <p class="mt-10 text-xs">
+    <%= link_to (@weekly ? "Play a practice pack" : "Open another practice pack"), new_pack_path, class: "font-medium text-zinc-500 underline underline-offset-2" %>
+  </p>
 </div>

@@ -22,21 +22,15 @@ class PackTest < ApplicationSystemTestCase
     end
   end
 
-  test "a pack is opened, picked, benched and scored by clicking cards" do
+  test "a pack is picked and scored by tapping cards" do
     visit pack_path(seed: 5)
-    find("[data-pack-target=sealed]").click
 
     5.times do |pair|
       assert_text(/Pair #{pair + 1} of 5/i)
-      pick_first_card
+      first(".pack-card--choice").click
     end
 
     assert_selector "[data-pack-stage=scored]"
     assert_selector "[data-pack-pair]", count: 5
-  end
-
-  def pick_first_card
-    assert_selector ".pack-stage.is-settled"
-    first("[data-pack-choice] [role=button]").click
   end
 end

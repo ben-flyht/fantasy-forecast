@@ -3,7 +3,7 @@
 class PackCardComponent < ViewComponent::Base
   HIDDEN_GRADE = "?"
 
-  def initialize(card:, href: nil, revealed: false, shiny: false, captain: false, size: :full, index: 0, verb: "Keep")
+  def initialize(card:, href: nil, revealed: false, shiny: false, captain: false, size: :full, index: 0)
     @card = card
     @href = href
     @revealed = revealed
@@ -11,7 +11,6 @@ class PackCardComponent < ViewComponent::Base
     @captain = captain
     @size = size
     @index = index
-    @verb = verb
   end
 
   private
@@ -55,17 +54,17 @@ class PackCardComponent < ViewComponent::Base
     "pack-card__name"
   end
 
-  def data
-    attributes = { controller: "pack-card", action: "pointermove->pack-card#tilt pointerleave->pack-card#rest pointerdown->pack-card#press pointerup->pack-card#release pointercancel->pack-card#rest" }
-    return attributes unless href
+  def tag_name = href ? :a : :div
 
-    attributes.merge(pack_target: "choice", pack_href: href,
-                     action: "#{attributes[:action]} click->pack#pick keydown.enter->pack#pick keydown.space->pack#pick")
+  def data
+    { controller: "pack-card",
+      action: "pointermove->pack-card#tilt pointerleave->pack-card#rest pointerdown->pack-card#press " \
+              "pointerup->pack-card#release pointercancel->pack-card#rest" }
   end
 
-  def interactive_attributes
+  def link_attributes
     return {} unless href
 
-    { role: "button", tabindex: 0, aria: { label: "#{@verb} #{player.display_name}" } }
+    { href: href, aria: { label: "Keep #{player.display_name}" } }
   end
 end

@@ -1,9 +1,5 @@
 <% pair = hand.current_pair %>
-<section class="pack-stage <%= 'pack-stage--shiny' if pair.shiny? %>"
-         data-pack-stage="picking" data-pack-target="stage"
-         data-pack-deal-ms-value="<%= pair.shiny? ? 2600 : 1400 %>"
-         data-action="click->pack#skip:capture"
-         <%= 'hidden' if hidden %>>
+<section data-pack-stage="picking">
   <div class="mb-3 flex items-baseline justify-between gap-3">
     <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
       Pair <%= hand.keeps.size + 1 %> of <%= hand.pack.size %><%= " · wildcard" if pair.wildcard? %>
@@ -15,22 +11,18 @@
 
   <div class="grid grid-cols-2 gap-4 sm:gap-6">
     <% pair.cards.each_with_index do |card, choice| %>
-      <div data-pack-choice>
-        <%= render PackCardComponent.new(card: card, href: hand_path(hand.keeping(choice)), shiny: pair.shiny?, index: choice) %>
-      </div>
+      <%= render PackCardComponent.new(card: card, href: hand_path(hand.keeping(choice)), shiny: pair.shiny?, index: choice) %>
     <% end %>
   </div>
 
-  <p class="mt-4 text-center text-xs text-zinc-500">Tap a card to keep it. The other goes back in the box.</p>
+  <p class="mt-4 text-center text-xs text-zinc-500">Tap a card to keep it.</p>
 
   <% if hand.kept.any? %>
-    <section class="mt-10">
-      <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your hand</h2>
-      <div class="pack-hand" inert>
-        <% hand.kept.each_with_index do |card, index| %>
-          <%= render PackCardComponent.new(card: card, captain: card == hand.captain, size: :small, index: index) %>
-        <% end %>
-      </div>
-    </section>
+    <h2 class="mt-10 mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your hand</h2>
+    <div class="pack-hand">
+      <% hand.kept.each_with_index do |card, index| %>
+        <%= render PackCardComponent.new(card: card, captain: card == hand.captain, size: :small, index: index) %>
+      <% end %>
+    </div>
   <% end %>
 </section>

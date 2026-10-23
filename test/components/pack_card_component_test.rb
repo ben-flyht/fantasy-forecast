@@ -15,17 +15,16 @@ class PackCardComponentTest < ViewComponent::TestCase
     assert_selector "[data-pack-grade]", text: "A"
   end
 
-  test "a card to pick is a button the pack listens to" do
+  test "a card to pick is a link to the hand that keeps it" do
     render_inline PackCardComponent.new(card: @card, href: "/pack/1/a")
 
-    assert_selector ".pack-card--choice[role=button][data-pack-href='/pack/1/a'][data-pack-target=choice]"
-    assert_selector "[aria-label='Keep #{@card.player.display_name}']"
+    assert_selector "a.pack-card--choice[href='/pack/1/a'][aria-label='Keep #{@card.player.display_name}']"
   end
 
-  test "a card in the hand is not a button" do
+  test "a card in the hand is not a link" do
     render_inline PackCardComponent.new(card: @card, size: :small)
 
-    assert_no_selector "[role=button]"
+    assert_no_selector "a"
     assert_selector ".pack-card--small"
   end
 

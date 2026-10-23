@@ -1,12 +1,10 @@
 <% best = score.perfect %>
 <% forecast = score.forecast %>
 <% percent = pack_percent(score.share(hand)) %>
-<section class="pack-stage" data-pack-stage="scored" data-pack-target="stage"
-         data-pack-deal-ms-value="2000" data-action="click->pack#skip:capture">
-  <div class="pack-score-panel mb-8 rounded-2xl bg-zinc-950 p-6 text-white">
+<section data-pack-stage="scored">
+  <div class="mb-8 rounded-2xl bg-zinc-950 p-6 text-white">
     <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your pack</h2>
-    <p class="pack-score mt-2 text-6xl font-extrabold leading-none tracking-[-0.04em]"
-       data-pack-share data-pack-target="score" data-pack-score="<%= percent %>"><%= percent %>%</p>
+    <p class="mt-2 text-6xl font-extrabold leading-none tracking-[-0.04em] tabular-nums" data-pack-share><%= percent %>%</p>
     <p class="mt-3 text-sm/6 text-zinc-300">
       <%= percent >= 100 ? "A perfect pack. " : "" %>of the best team this pack allowed.
       You <strong class="tabular-nums text-white"><%= pack_points(score.points(hand)) %></strong>,
@@ -25,7 +23,7 @@
   <% end %>
 
   <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
-  <div class="grid grid-cols-3 gap-3 sm:grid-cols-5">
+  <div class="pack-reveal grid grid-cols-3 gap-3 sm:grid-cols-5">
     <% hand.kept.each_with_index do |card, index| %>
       <%= render PackCardComponent.new(card: card, revealed: true, captain: card == hand.captain, index: index) %>
     <% end %>
