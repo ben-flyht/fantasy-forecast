@@ -401,6 +401,8 @@ class ExpectedPoints < ApplicationService
   EXODUS_FLOOR = 0.5
   INFLOW_CEILING = 1.15
 
+  SCORING_CALIBRATION = 0.8
+
   # The knobs, gathered so a stored forecast can say which settings produced it and
   # so the optimiser has something to search over. FPL's scoring table is not among
   # them: five points for a midfielder's goal is a rule, not a parameter.
@@ -411,9 +413,9 @@ class ExpectedPoints < ApplicationService
       clean_sheet_step: CLEAN_SHEET_STEP, attack_step: ATTACK_STEP, save_step: SAVE_STEP,
       concede_step: CONCEDE_STEP, defensive_step: DEFENSIVE_STEP, club_evidence: CLUB_EVIDENCE,
       clamp_width: CLAMP_WIDTH, perf_growth: PERF_GROWTH, price_power: PRICE_POWER,
-      price_power_floor: PRICE_POWER_FLOOR, new_club_minutes: NEW_CLUB_MINUTES,
-      nailed_on: NAILED_ON, cheap_band: CHEAP_BAND, keeper_backing: KEEPER_BACKING,
-      record_power: RECORD_POWER, exodus_floor: EXODUS_FLOOR, inflow_ceiling: INFLOW_CEILING
+      price_power_floor: PRICE_POWER_FLOOR, new_club_minutes: NEW_CLUB_MINUTES, nailed_on: NAILED_ON,
+      cheap_band: CHEAP_BAND, keeper_backing: KEEPER_BACKING, record_power: RECORD_POWER,
+      exodus_floor: EXODUS_FLOOR, inflow_ceiling: INFLOW_CEILING, scoring_calibration: SCORING_CALIBRATION
     }
   end
 
@@ -524,9 +526,20 @@ class ExpectedPoints < ApplicationService
     theirs = crowd_estimate(ranking)
     return { points: nil, working: {} } if ours.nil? && theirs.nil?
 
-    points = blended(ranking, ours, theirs) * played_share(ranking) *
+    points = calibrated(blended(ranking, ours, theirs)) * played_share(ranking) *
              availability(ranking) * games_ahead(ranking) * transfer_factor(ranking)
     { points: points, working: working_for(ranking, ours, theirs) }
+  end
+
+  def calibrated(per_90)
+    APPEARANCE + SCORING_CALIBRATION * (per_90 - APPEARANCE)
+  end
+
+  def calibration(ranking, ours, theirs)
+    per_90 = blended(ranking, ours, theirs)
+    return 1.0 unless per_90.positive?
+
+    calibrated(per_90) / per_90
   end
 
   # What a player is worth per 90 minutes on the pitch, before the fixture and
@@ -1341,7 +1354,8 @@ class ExpectedPoints < ApplicationService
       per_90: points_per_90(ranking).round(2),
       ours: ours&.round(2),
       crowd: theirs&.round(2),
-      perf_factor: perf_factor(ranking, ours, theirs)
+      perf_factor: perf_factor(ranking, ours, theirs),
+      calibration: calibration(ranking, ours, theirs).round(3)
     }
   end
 

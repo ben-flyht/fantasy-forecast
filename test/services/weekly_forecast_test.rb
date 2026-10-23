@@ -137,6 +137,14 @@ class WeeklyForecastTest < ActiveSupport::TestCase
     assert_equal 0, Forecast.count, "once the football has happened the forecast is evidence"
   end
 
+  test "a forecast made before the deadline is not rewritten after it" do
+    Forecast.create!(player: @player, gameweek: @gameweek, horizon: "gameweek", rank: 1, score: 4.2)
+    @gameweek.update!(start_time: 1.minute.ago)
+
+    assert WeeklyForecast.call(gameweek: @gameweek), "a passed deadline is a quiet skip, not a failure"
+    assert_equal [ 4.2 ], Forecast.where(gameweek: @gameweek).pluck(:score).map(&:to_f)
+  end
+
   test "a player with no record still gets a row, so the position is complete" do
     unknown = Player.create!(first_name: "No", last_name: "Record", short_name: "NR",
                              fpl_id: 8200, code: 8200, team: @team, position: "forward")
