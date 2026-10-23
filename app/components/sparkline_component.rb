@@ -63,15 +63,4 @@ class SparklineComponent < ViewComponent::Base
   def high
     @high ||= @values.max
   end
-
-  # Which way the line finished, so the colour agrees with the story. Rising is
-  # good unless the reading is a rank, where the arrow points the other way.
-  def improving?
-    change = @values.last <=> @values.first
-    @inverted ? change.negative? : change.positive?
-  end
-
-  def stroke
-    improving? ? "#16a34a" : "#dc2626"
-  end
 end
