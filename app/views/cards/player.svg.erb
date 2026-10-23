@@ -30,9 +30,9 @@
       <%= [ team&.name, @player.position.capitalize ].compact.join(" · ") %>
     </text>
 
-    <% [ [ "Grade", @forecast&.dig(:grade) || "—", 56 ],
-         [ "XP #{reach.short_span}", card_points(@forecast&.dig(:score)), 300 ],
-         [ "Rank", @forecast&.dig(:rank) ? "##{@forecast[:rank]}" : "—", 560 ] ].each do |label, value, x| %>
+    <% [ [ "Rank", @forecast&.dig(:rank) ? "##{@forecast[:rank]}" : "—", 56 ],
+         [ "Grade", @forecast&.dig(:grade) || "—", 300 ],
+         [ "XP #{reach.short_span}", card_points(@forecast&.dig(:score)), 560 ] ].each do |label, value, x| %>
       <text x="<%= x %>" y="360" fill="<%= ink %>" font-size="15" font-weight="700"
             letter-spacing="1.5" opacity="0.7"><%= label.upcase %></text>
       <text x="<%= x %>" y="430" fill="<%= ink %>" font-size="64" font-weight="800"
