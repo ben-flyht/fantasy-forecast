@@ -18,7 +18,7 @@ class PacksController < ApplicationController
     @pack = @weekly_pack.pack
     @entry = @weekly_pack.entry_for(current_manager)
     @real = PackRealPoints.new(@gameweek) if @gameweek.start_time.past?
-    @entry ? show_hand(@entry.pack_hand) : weekly_hand
+    weekly_hand
   end
 
   def leaderboard
@@ -63,11 +63,18 @@ class PacksController < ApplicationController
   end
 
   def weekly_hand
-    hand = PackHand.parse(@pack, params[:hand])
-    return show_hand(hand) if hand.complete?
+    shared = PackHand.parse(@pack, params[:hand])
+    return shared_hand(shared) if shared_with_me?(shared)
     return redirect_to(pack_landing_path) unless current_manager
-    return render(:closed) if @weekly_pack.locked?
+    return render(:closed) if @weekly_pack.locked? && @entry.nil?
 
+    show_hand(@entry&.pack_hand || PackHand.new(@pack, keeps: []))
+  end
+
+  def shared_with_me?(hand) = hand.complete? && hand.code != @entry&.hand
+
+  def shared_hand(hand)
+    @shared = true
     show_hand(hand)
   end
 
@@ -80,9 +87,19 @@ class PacksController < ApplicationController
   def weekly? = @weekly_pack.present?
   helper_method :weekly?
 
-  def hand_path(hand)
-    code = hand.code.presence
-    weekly? ? weekly_pack_path(gameweek: @gameweek.fpl_id, hand: code) : pack_path(seed: @pack.seed, hand: code)
+  def shared? = @shared.present?
+  helper_method :shared?
+
+  def pick_path(hand, choice)
+    return pack_path(seed: @pack.seed, hand: hand.keeping(choice).code) unless weekly?
+
+    weekly_pack_picks_path(gameweek: @gameweek.fpl_id, keep: choice ? PackHand::LETTERS[choice] : PackHand::FORFEIT)
   end
-  helper_method :hand_path
+  helper_method :pick_path
+
+  def pick_method = (:post if weekly?)
+  helper_method :pick_method
+
+  def share_path = weekly_pack_url(gameweek: @gameweek.fpl_id, hand: @hand.code)
+  helper_method :share_path
 end

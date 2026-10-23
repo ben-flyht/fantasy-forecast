@@ -30,6 +30,10 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     "ab"[keep] * WeeklyPack.for(@gameweek).pack.size
   end
 
+  def pick_all(code)
+    code.each_char { |choice| post weekly_pack_picks_path(gameweek: 1), params: { keep: choice } }
+  end
+
   def score_everyone(points)
     WeeklyPack.last.pack.pairs.each do |pair|
       pair.cards.each_with_index do |card, keep|
@@ -90,28 +94,52 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "nav a, [role=tablist] a, a", text: "Practice"
   end
 
-  test "you lock in one pack a week, and then that is the pack you see" do
+  test "every weekly pick is final as you make it" do
     sign_in
-    code = weekly_code
+    WeeklyPack.for(@gameweek)
 
-    get weekly_pack_path(gameweek: 1, hand: code)
-    assert_select "[data-pack-lock]", /One pack a week, one go/
+    post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" }
+    assert_redirected_to weekly_pack_path(gameweek: 1)
+    follow_redirect!
+    assert_select "h2", /Pair 2 of 5/
+    assert_select "[data-pack-rules]", /Every pick is final/
+    assert_select "a.pack-card--choice[data-turbo-method=post][href=?]", weekly_pack_picks_path(gameweek: 1, keep: "b")
 
-    assert_difference(-> { PackEntry.count }, 1) { post weekly_pack_entry_path(gameweek: 1), params: { hand: code } }
-    assert_no_difference(-> { PackEntry.count }) { post weekly_pack_entry_path(gameweek: 1), params: { hand: weekly_code(1) } }
-
-    get weekly_pack_path(gameweek: 1)
-    assert_select "[data-pack-locked]", /your one pack for Gameweek 1/
+    get weekly_pack_path(gameweek: 1, hand: "b")
+    assert_select "h2", /Pair 2 of 5/
+    assert_equal "a", PackEntry.last.hand
   end
 
-  test "after the deadline the pack is closed to anyone who has not locked in" do
+  test "once five are picked, that is your one pack for the week" do
     sign_in
-    code = weekly_code
+    WeeklyPack.for(@gameweek)
+    pick_all("abaab")
+
+    assert_no_difference(-> { PackEntry.last.hand.size }) { post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" } }
+    get weekly_pack_path(gameweek: 1)
+    assert_select "[data-pack-locked]", /your one pack for Gameweek 1/
+    assert_select "[aria-label='Share my pack']"
+    assert_equal "abaab", PackEntry.last.hand
+  end
+
+  test "after the deadline the pack is closed to anyone who has not started it" do
+    sign_in
+    WeeklyPack.for(@gameweek)
     @gameweek.update!(start_time: 1.minute.ago)
 
     get weekly_pack_path(gameweek: 1)
     assert_select "h2", /has closed/
-    assert_no_difference(-> { PackEntry.count }) { post weekly_pack_entry_path(gameweek: 1), params: { hand: code } }
+    assert_no_difference(-> { PackEntry.count }) { post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" } }
+  end
+
+  test "a pack left half-picked at the deadline counts the rest as forfeited" do
+    sign_in
+    WeeklyPack.for(@gameweek)
+    pick_all("ab")
+    @gameweek.update!(start_time: 1.minute.ago)
+
+    get weekly_pack_path(gameweek: 1)
+    assert_select "[data-pack-stage=scored] [data-pack-forfeit]", count: 3
   end
 
   test "next week's pack does not open until every game this gameweek has been played" do
@@ -140,7 +168,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
   test "the leaderboard ranks everyone on real points, live then final" do
     ana = sign_in
-    post weekly_pack_entry_path(gameweek: 1), params: { hand: weekly_code(0) }
+    WeeklyPack.for(@gameweek)
+    pick_all(weekly_code(0))
     bo = Manager.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
     PackEntry.create!(manager: bo, weekly_pack: WeeklyPack.last, hand: weekly_code(1))
 
@@ -164,14 +193,14 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil ana
   end
 
-  test "a finished pack's link can be shared and opened by anyone" do
+  test "a finished pack's shared link can be opened by anyone, read-only" do
     code = weekly_code
 
     get weekly_pack_path(gameweek: 1, hand: code)
 
     assert_select "[data-pack-stage=scored]"
-    assert_select "[aria-label='Share my pack']"
-    assert_select "[data-pack-lock]", count: 0
+    assert_select ".pack-card--choice", count: 0
+    assert_select "[aria-label='Share my pack']", count: 0
   end
 
   test "practice never counts, and points you to the real pack" do
@@ -203,16 +232,14 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-pick-target=clock]", "10"
   end
 
-  test "a forfeited pair shows as time's up, scores nothing, and the pack can still be locked in" do
+  test "a forfeited pair shows as time's up and scores nothing" do
     sign_in
-    code = "axaaa"
     WeeklyPack.for(@gameweek)
+    pick_all("axaaa")
 
-    get weekly_pack_path(gameweek: 1, hand: code)
+    get weekly_pack_path(gameweek: 1)
     assert_select "[data-pack-stage=scored] [data-pack-forfeit]", text: /Time's up/
     assert_select "[data-pack-stage=scored] .pack-card", count: 4
-
-    assert_difference(-> { PackEntry.count }, 1) { post weekly_pack_entry_path(gameweek: 1), params: { hand: code } }
   end
 
   test "a hand longer than the pack is not a pack page" do

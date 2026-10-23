@@ -1,6 +1,7 @@
 <% pair = hand.current_pair %>
 <section data-pack-stage="picking" data-controller="pack-pick"
-         data-pack-pick-forfeit-value="<%= hand_path(hand.forfeiting) %>">
+         data-pack-pick-forfeit-value="<%= pick_path(hand, nil) %>"
+         data-pack-pick-method-value="<%= pick_method %>">
   <div class="mb-2 flex items-baseline justify-between gap-3">
     <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
       Pair <%= hand.keeps.size + 1 %> of <%= hand.pack.size %><%= " · wildcard" if pair.wildcard? %>
@@ -17,13 +18,15 @@
     <span class="w-6 text-right text-sm font-extrabold tabular-nums text-zinc-950" data-pack-pick-target="clock">10</span>
   </div>
 
-  <div class="grid grid-cols-2 gap-4 sm:gap-6">
+  <div class="pack-reveal pack-reveal--pair <%= 'pack-reveal--shiny' if pair.shiny? %> grid grid-cols-2 gap-4 sm:gap-6">
     <% pair.cards.each_with_index do |card, choice| %>
-      <%= render PackCardComponent.new(card: card, href: hand_path(hand.keeping(choice)), shiny: pair.shiny?, index: choice) %>
+      <%= render PackCardComponent.new(card: card, href: pick_path(hand, choice), method: pick_method, shiny: pair.shiny?, index: choice) %>
     <% end %>
   </div>
 
-  <p class="mt-4 text-center text-xs text-zinc-500">Tap a card to keep it. Run out of time and the pair is lost.</p>
+  <p class="mt-4 text-center text-xs text-zinc-500" data-pack-rules>
+    Tap a card to keep it. Run out of time and the pair is lost.<%= " Every pick is final." if weekly? %>
+  </p>
 
   <% unless hand.keeps.empty? %>
     <h2 class="mt-10 mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your hand</h2>

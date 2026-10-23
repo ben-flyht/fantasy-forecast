@@ -3,17 +3,28 @@ class PackEntry < ApplicationRecord
   belongs_to :weekly_pack
 
   validates :manager_id, uniqueness: { scope: :weekly_pack_id }
-  validate :hand_is_complete
-  validate :before_the_deadline, on: :create
+  validates :hand, format: { with: /\A[abx]*\z/ }
+  validate :within_the_pack
+  validate :before_the_deadline, if: :hand_changed?
 
   def pack_hand
-    @pack_hand ||= PackHand.parse(weekly_pack.pack, hand)
+    code = weekly_pack.locked? ? hand.ljust(weekly_pack.pack.size, PackHand::FORFEIT) : hand
+    PackHand.parse(weekly_pack.pack, code)
+  end
+
+  def complete? = pack_hand&.complete?
+
+  def pick(choice)
+    return false if complete? || !PackHand::FORMAT.match?(choice.to_s) || choice.to_s.size != 1
+
+    self.hand = hand.to_s + choice
+    save
   end
 
   private
 
-  def hand_is_complete
-    errors.add(:hand, "is not a finished pack") unless weekly_pack && pack_hand&.complete?
+  def within_the_pack
+    errors.add(:hand, "is longer than the pack") if weekly_pack && hand.to_s.size > weekly_pack.pack.size
   end
 
   def before_the_deadline

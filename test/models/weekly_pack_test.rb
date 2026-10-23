@@ -40,15 +40,17 @@ class WeeklyPackTest < ActiveSupport::TestCase
     assert_nil WeeklyPack.for(@gameweek)
   end
 
-  test "an email has one pack a week, and only a finished one before the deadline" do
+  test "an email has one pack a week, picked one card at a time until it is done" do
     weekly = WeeklyPack.for(@gameweek)
     manager = Manager.create!(email: " Ana@Example.com ", first_name: " Ana ", last_name: "Lopes")
     code = "a" * weekly.pack.size
 
     assert_equal "ana@example.com", manager.email
     assert_equal "Ana L.", manager.leaderboard_name
-    assert_not PackEntry.new(manager: manager, weekly_pack: weekly, hand: "ab").valid?
-    PackEntry.create!(manager: manager, weekly_pack: weekly, hand: code)
-    assert_not PackEntry.new(manager: manager, weekly_pack: weekly, hand: code).valid?
+    entry = PackEntry.create!(manager: manager, weekly_pack: weekly, hand: "")
+    code.each_char { |choice| assert entry.pick(choice) }
+    assert entry.complete?
+    assert_not entry.pick("a")
+    assert_not PackEntry.new(manager: manager, weekly_pack: weekly, hand: "").valid?
   end
 end

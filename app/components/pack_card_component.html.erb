@@ -10,14 +10,14 @@
             <span class="pack-card__glitter--flecks-a"></span>
             <span class="pack-card__glitter--flecks-b"></span>
           </span>
-          <% if team&.badge_url %>
-            <%= image_tag team.badge_url, alt: "", class: "pack-card__badge" %>
-          <% end %>
           <% if player.cutout_url %>
             <%= image_tag player.cutout_url, alt: "", class: "pack-card__photo", onerror: "this.remove()" %>
           <% end %>
         </div>
 
+        <% if team&.badge_url %>
+          <%= image_tag team.badge_url, alt: team.name, class: "pack-card__badge" %>
+        <% end %>
         <span class="pack-card__corner pack-card__corner--position"><%= position %></span>
 
         <div class="pack-card__banner">

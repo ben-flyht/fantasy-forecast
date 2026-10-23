@@ -27,6 +27,7 @@ class PackTest < ApplicationSystemTestCase
 
     5.times do |pair|
       assert_text(/Pair #{pair + 1} of 5/i)
+      assert_selector "[data-pack-revealed]"
       first(".pack-card--choice").click
     end
 
