@@ -1,13 +1,14 @@
 module ApplicationHelper
   BASE_URL = "https://www.fantasyforecast.co.uk"
 
-  # The four pages this site is. Everything else is reached from inside one of them,
+  # The five pages this site is. Everything else is reached from inside one of them,
   # so it belongs in the footer rather than here.
   NAVIGATION = [
     [ "Rankings", :rankings_path, "players" ],
     [ "Compare", :comparisons_path, "comparisons" ],
     [ "Squad", :squad_path, "squads" ],
-    [ "Captain", :captain_path, "captains" ]
+    [ "Captain", :captain_path, "captains" ],
+    [ "Play", :pack_landing_path, "packs" ]
   ].freeze
 
   # Which one you are on is decided by the controller answering, not by the address,

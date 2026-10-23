@@ -15,6 +15,15 @@
     </p>
   </div>
 
+  <% if @real %>
+    <div class="mb-8 rounded-2xl border-2 border-zinc-950 p-5" data-pack-real>
+      <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Real points, Gameweek <%= @gameweek.fpl_id %></h2>
+      <p class="mt-2 text-4xl font-extrabold leading-none tracking-[-0.03em] tabular-nums">
+        <%= @real.for(hand) %> <span class="text-base font-bold text-zinc-500">v the forecast <%= @real.for(forecast) %></span>
+      </p>
+    </div>
+  <% end %>
+
   <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
   <div class="grid grid-cols-3 gap-3 sm:grid-cols-5">
     <% hand.kept.each_with_index do |card, index| %>
@@ -33,8 +42,8 @@
     <tbody>
       <% hand.kept.zip(forecast.kept).each do |mine, theirs| %>
         <tr class="border-t border-zinc-200 <%= 'text-zinc-400' if mine == theirs %>" data-pack-pair>
-          <td class="py-2"><%= mine.player.display_name %> <span class="tabular-nums text-zinc-500"><%= pack_card_points(mine.expected_points) %></span></td>
-          <td class="py-2"><%= theirs.player.display_name %> <span class="tabular-nums text-zinc-500"><%= pack_card_points(theirs.expected_points) %></span></td>
+          <td class="py-2"><%= mine.player.display_name %> <span class="tabular-nums text-zinc-500"><%= pack_card_points(mine.expected_points) %><%= " · #{@real.of(mine)} pts" if @real %></span></td>
+          <td class="py-2"><%= theirs.player.display_name %> <span class="tabular-nums text-zinc-500"><%= pack_card_points(theirs.expected_points) %><%= " · #{@real.of(theirs)} pts" if @real %></span></td>
         </tr>
       <% end %>
     </tbody>

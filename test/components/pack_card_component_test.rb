@@ -4,7 +4,7 @@ class PackCardComponentTest < ViewComponent::TestCase
   setup do
     team = Team.new(name: "Card City", short_name: "CRD")
     player = Player.new(id: 1, first_name: "Test", last_name: "Winger", short_name: "Winger", position: "midfielder", team: team)
-    @card = PickablePool::Candidate.new(player: player, rank: 4, cost: 65, expected_points: 4.6)
+    @card = Pack::Card.new(player: player, rank: 4, cost: 65, expected_points: 4.6)
   end
 
   test "the grade stays face down until the pack is scored" do

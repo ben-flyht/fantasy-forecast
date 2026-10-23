@@ -31,7 +31,9 @@ Rails.application.routes.draw do
   # No horizon: you captain a player for a gameweek or you do not captain him.
   get "captain", to: "captains#show", as: :captain
 
-  get "pack", to: "packs#new", as: :new_pack
+  get "pack", to: "packs#latest", as: :pack_landing
+  get "pack/practice", to: "packs#new", as: :new_pack
+  get "pack/gw:gameweek(/:hand)", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/, hand: /[ab]{0,5}/ }
   get "pack/:seed(/:hand)", to: "packs#show", as: :pack,
       constraints: { seed: /\d{1,9}/, hand: /[ab]{0,5}/ }
 

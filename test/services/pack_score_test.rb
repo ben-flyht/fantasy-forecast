@@ -2,7 +2,7 @@ require "test_helper"
 
 class PackScoreTest < ActiveSupport::TestCase
   def card(id, position, points)
-    PickablePool::Candidate.new(player: Player.new(id: id, position: position), rank: id, cost: 50, expected_points: points)
+    Pack::Card.new(player: Player.new(id: id, position: position), rank: id, cost: 50, expected_points: points)
   end
 
   setup do

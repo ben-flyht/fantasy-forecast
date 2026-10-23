@@ -2,6 +2,7 @@ require "test_helper"
 
 class PacksControllerTest < ActionDispatch::IntegrationTest
   setup do
+    Performance.destroy_all
     Statistic.destroy_all
     Forecast.destroy_all
     Player.destroy_all
@@ -79,5 +80,44 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h2", /No pack to open/
+  end
+
+  test "Play is in the navigation and opens this week's pack" do
+    get root_path
+    assert_select "a[href=?]", pack_landing_path, text: "Play"
+
+    get pack_landing_path
+    assert_redirected_to weekly_pack_path(gameweek: 1)
+  end
+
+  test "this week's pack is the same pack for everyone, with picks in the address" do
+    get weekly_pack_path(gameweek: 1)
+    first = css_select("[data-pack-choice] .pack-card__name").map(&:text)
+
+    get weekly_pack_path(gameweek: 1)
+    assert_equal first, css_select("[data-pack-choice] .pack-card__name").map(&:text)
+    assert_select "h1", /Gameweek 1 Pack/
+    assert_select "h2", /Pair 1 of 5/
+  end
+
+  test "a finished weekly pack can be shared" do
+    pack = PackDraw.call(gameweek: @gameweek, seed: 1)
+
+    get weekly_pack_path(gameweek: 1, hand: PackScore.new(pack).forecast.code)
+
+    assert_select "[data-pack-stage=scored]"
+    assert_select "[aria-label='Share my pack']"
+  end
+
+  test "once the gameweek is over, the same link shows real points against the forecast's" do
+    pack = PackDraw.call(gameweek: @gameweek, seed: 1)
+    pack.pairs.flat_map(&:cards).each do |card|
+      Performance.create!(player: card.player, gameweek: @gameweek, team: card.player.team, gameweek_score: 3)
+    end
+    @gameweek.update!(start_time: 3.days.ago, is_next: false, is_finished: true)
+
+    get weekly_pack_path(gameweek: 1, hand: PackScore.new(pack).forecast.code)
+
+    assert_select "[data-pack-real]", /18\s+v the forecast 18/
   end
 end

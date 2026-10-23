@@ -72,6 +72,15 @@ class PackDrawTest < ActiveSupport::TestCase
     end
   end
 
+  test "a pack is fixed by the gameweek's forecasts, not by who is flagged or departed later" do
+    build_pool
+    before = PackDraw.call(gameweek: @gameweek, seed: 9).pairs.map { |pair| pair.cards.map(&:player_id) }
+
+    Player.update_all(status: "i", departed: true, selectable: false)
+
+    assert_equal before, PackDraw.call(gameweek: @gameweek, seed: 9).pairs.map { |pair| pair.cards.map(&:player_id) }
+  end
+
   test "a player expected to add nothing to turning up is left out of the pack" do
     build_pool(counts: { "goalkeeper" => 2, "defender" => 4, "midfielder" => 4, "forward" => 2 })
     Forecast.joins(:player).where(players: { position: "forward" }).update_all(score: 1.0)

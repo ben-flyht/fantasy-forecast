@@ -7,8 +7,10 @@
 <div class="mx-auto max-w-xl" data-controller="pack">
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
-          title: "Open a Pack",
-          subtitle: "Five pairs from neighbouring places in our rankings. Keep one card from each and see how your five do against the forecast's.") %>
+          title: @weekly ? "The Gameweek #{@gameweek.fpl_id} Pack" : "Practice Pack",
+          subtitle: @weekly ? "Five pairs from neighbouring places in our rankings, the same for everyone this week. Keep one from each, then share your link and see who beat the forecast." : "A random pack to practise on. Keep one card from each pair and see how your five do against the forecast's.",
+          share: ("Share my pack" if @weekly && @hand.complete?),
+          horizons: pack_sections(weekly: @weekly.present?)) %>
   </div>
 
   <% if @hand.keeps.empty? %>

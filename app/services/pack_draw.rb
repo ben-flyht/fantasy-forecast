@@ -57,9 +57,19 @@ class PackDraw < ApplicationService
   end
 
   def ladders
-    @ladders ||= PickablePool.call(gameweek: gameweek)
-                             .select { |card| card.expected_points >= GRADED }
-                             .group_by(&:position)
-                             .transform_values { |cards| cards.sort_by { |card| [ -card.expected_points, card.rank || Float::INFINITY, card.player_id ] } }
+    @ladders ||= Forecast.where(gameweek: gameweek, horizon: "gameweek").where(score: GRADED..)
+                         .includes(player: :team)
+                         .map { |forecast| card(forecast) }
+                         .group_by(&:position)
+                         .transform_values { |cards| cards.sort_by { |card| [ -card.expected_points, card.rank || Float::INFINITY, card.player_id ] } }
+  end
+
+  def card(forecast)
+    Pack::Card.new(player: forecast.player, rank: forecast.rank, cost: costs.dig(forecast.player_id, "now_cost"),
+                   expected_points: forecast.score.to_f)
+  end
+
+  def costs
+    @costs ||= Statistic.where(type: "now_cost").latest_by_player
   end
 end
