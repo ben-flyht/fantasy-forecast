@@ -17,6 +17,33 @@ class RankingsTest < ApplicationSystemTestCase
     Forecast.create!(player: @player, gameweek: @gameweek, rank: 1, score: 180.0, horizon: "season")
   end
 
+  {
+    "the coming week" => -> { gameweek_position_path(gameweek: 1, position: "defenders") },
+    "the next five" => -> { upcoming_position_path(position: "defenders") },
+    "the season" => -> { season_position_path(position: "defenders") }
+  }.each do |name, path|
+    test "the price slider filters #{name}" do
+      pricey = Player.create!(first_name: "Pricey", last_name: "Defender", short_name: "P.Defender",
+                              fpl_id: 9702, code: 9702, team: @team, position: "defender")
+      Forecast.create!(player: @player, gameweek: @gameweek, rank: 1, score: 5.0, horizon: "upcoming")
+      Horizon::KEYS.each do |horizon|
+        Forecast.create!(player: pricey, gameweek: @gameweek, rank: 2, score: 4.0, horizon: horizon)
+      end
+      Statistic.create!(player: @player, gameweek: @gameweek, type: "now_cost", value: 45)
+      Statistic.create!(player: pricey, gameweek: @gameweek, type: "now_cost", value: 70)
+      start = instance_exec(&path)
+
+      visit start
+      assert_selector player_row(pricey)
+      move_slider("max_price", "5.0")
+
+      assert_no_text "Content missing"
+      assert_no_selector player_row(pricey)
+      assert_selector player_row(@player)
+      assert_current_path "#{start}?max_price=5"
+    end
+  end
+
   test "switching the horizon to the season shows the season's rankings" do
     visit gameweek_position_path(gameweek: 1, position: "defenders")
     assert_text @player.short_name
@@ -63,5 +90,19 @@ class RankingsTest < ApplicationSystemTestCase
 
     assert_current_path gameweek_position_path(gameweek: 1, position: "midfielders")
     assert_title "Best FPL Midfielders GW1 | Fantasy Forecast"
+  end
+
+  private
+
+  def player_row(player)
+    "[onclick*='#{player_path(player)}']"
+  end
+
+  def move_slider(name, value)
+    execute_script(<<~JS, name, value)
+      const input = document.querySelector(`input[name='${arguments[0]}']`)
+      input.value = arguments[1]
+      input.dispatchEvent(new Event("change", { bubbles: true }))
+    JS
   end
 end
