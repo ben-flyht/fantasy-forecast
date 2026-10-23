@@ -29,7 +29,7 @@
 
   <% if horizons %>
     <div class="sm:col-start-1 sm:row-start-2 sm:justify-self-start">
-      <%= render SegmentedControlComponent.new(label: "Forecast horizon", options: horizons) %>
+      <%= render SegmentedControlComponent.new(label: "Forecast horizon", options: horizons, event: "horizon_switch") %>
     </div>
   <% end %>
 

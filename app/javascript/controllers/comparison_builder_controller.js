@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { track } from "controllers/analytics_controller"
 
 // The two sides, laid out the same whether you are building an argument or reading
 // one. A side is its players and a box at the foot of it you can always type into;
@@ -46,7 +47,9 @@ export default class extends Controller {
     try {
       const response = await fetch(url, { headers: { Accept: "application/json" } })
       if (!response.ok) return this.showResults(side, [])
-      this.showResults(side, await response.json())
+      const players = await response.json()
+      track("player_search", { search_term: term, results: players.length })
+      this.showResults(side, players)
     } catch {
       this.showResults(side, [])
     }
@@ -190,6 +193,8 @@ export default class extends Controller {
   }
 
   visit(sides) {
+    const [ playerA, playerB ] = sides.map((players) => players.join("-and-"))
+    track("comparison_built", { player_a: playerA, player_b: playerB })
     Turbo.visit(`/compare/${this.address(sides)}`, { action: "advance" })
   }
 

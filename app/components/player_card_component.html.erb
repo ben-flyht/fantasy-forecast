@@ -1,7 +1,10 @@
 <div class="flex items-stretch h-24 rounded-xl overflow-hidden bg-white border border-zinc-200 shadow-sm cursor-pointer"
-     onclick="Turbo.visit('<%= href %>')"
+     onclick="Turbo.visit('<%= helpers.player_path(player) %>')"
+     data-action="click->analytics#track keydown.enter->analytics#track"
+     data-analytics-event-param="player_card_click"
+     data-analytics-player-param="<%= player.to_param %>"
      role="link" tabindex="0"
-     onkeydown="if(event.key === 'Enter') Turbo.visit('<%= href %>')">
+     onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
   <div class="w-[54px] shrink-0 flex items-center justify-center text-[32px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><span class="relative left-[5px]"><%= leading %></span></div>
 
   <div class="relative flex-1 overflow-hidden">
