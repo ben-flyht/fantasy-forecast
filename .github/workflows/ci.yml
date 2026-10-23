@@ -5,6 +5,10 @@ on:
   push:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
@@ -29,13 +33,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
       # Booting Rails at all needs libvips: Active Storage loads its vips analyzer as
       # the engine loads, whatever the variant processor is set to.
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips
-
-      - name: Checkout code
-        uses: actions/checkout@v7
+        uses: ./.github/actions/install-libvips
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -81,13 +85,13 @@ jobs:
       #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
       - name: Install packages
         # libvips draws the share cards, and the tests assert the pictures that come
         # out, so the runner needs the library the dyno already has.
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config google-chrome-stable libvips
-
-      - name: Checkout code
-        uses: actions/checkout@v7
+        uses: ./.github/actions/install-libvips
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
