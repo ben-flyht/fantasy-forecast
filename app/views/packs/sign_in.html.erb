@@ -1,17 +1,17 @@
-<% content_for :meta_title, "Beat the Algorithm | Fantasy Forecast" %>
+<% content_for :meta_title, "Pack of the Week | Fantasy Forecast" %>
 <% content_for :meta_robots, "noindex, nofollow" %>
 
 <div class="mx-auto max-w-xl">
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
-          title: "Beat the Algorithm",
-          subtitle: "Every week, one pack of five pairs. Keep one player from each pair, lock in your five, and see if they outscore the five our forecast would pick.",
-          horizons: pack_sections(weekly: true)) %>
+          title: "Pack of the Week",
+          subtitle: "Every gameweek, one pack of five pairs, the same for everyone. Keep one player from each pair, lock in your five, and climb the leaderboard on real FPL points.",
+          horizons: pack_sections(current: :play)) %>
   </div>
 
   <ul class="mb-6 space-y-2 text-sm/6 text-zinc-700">
     <li><strong class="text-zinc-950">One pack a week, one go.</strong> Once you lock in your five, that's your team for the gameweek.</li>
-    <li><strong class="text-zinc-950">Scored for real.</strong> Come back while the games are on and we'll show your score against the algorithm's as it happens.</li>
+    <li><strong class="text-zinc-950">Scored for real.</strong> Come back while the games are on and we'll show your points and your place on the leaderboard as they happen.</li>
     <li><strong class="text-zinc-950">Practice is free.</strong> Open as many practice packs as you like, no email needed.</li>
   </ul>
 
@@ -19,12 +19,29 @@
     <% if @manager&.errors&.any? %>
       <p class="mb-4 rounded-lg bg-red-400/20 px-4 py-3 text-sm text-red-700"><%= @manager.errors.full_messages.to_sentence %></p>
     <% end %>
-    <%= form.label :email, "Your email", class: "block text-xs font-bold uppercase tracking-wider text-zinc-500" %>
-    <%= form.email_field :email, value: @manager&.email, required: true, autocomplete: "email",
-          class: "mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base" %>
+    <div class="space-y-4">
+      <div>
+        <%= form.label :email, "Your email", class: "block text-xs font-bold uppercase tracking-wider text-zinc-500" %>
+        <%= form.email_field :email, value: @manager&.email, required: true, autocomplete: "email",
+              class: "mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base" %>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <%= form.label :first_name, "First name", class: "block text-xs font-bold uppercase tracking-wider text-zinc-500" %>
+          <%= form.text_field :first_name, value: @manager&.first_name, maxlength: Manager::NAME_LENGTH, autocomplete: "given-name",
+                class: "mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base" %>
+        </div>
+        <div>
+          <%= form.label :last_name, "Last name", class: "block text-xs font-bold uppercase tracking-wider text-zinc-500" %>
+          <%= form.text_field :last_name, value: @manager&.last_name, maxlength: Manager::NAME_LENGTH, autocomplete: "family-name",
+                class: "mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-base" %>
+        </div>
+      </div>
+      <p class="text-xs text-zinc-500">Your name is only needed the first time. The leaderboard shows your first name and last initial.</p>
+    </div>
     <%= form.submit "Email me my pack", class: "mt-5 rounded-xl bg-zinc-950 px-5 py-3 text-sm font-extrabold uppercase text-white cursor-pointer" %>
     <p class="mt-4 text-xs/5 text-zinc-500">
-      We email you a link that opens your pack and keeps you signed in on that device. No password. Your email is only used for your pack.
+      We email you a link that opens your pack and keeps you signed in on that device. No password. Your email is only used for your pack and is never shown.
     </p>
   <% end %>
 

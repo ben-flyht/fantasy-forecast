@@ -37,6 +37,7 @@ Rails.application.routes.draw do
   delete "pack/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
   get "pack/practice", to: "packs#practice", as: :practice_pack
   get "pack/practice/new", to: "packs#start", as: :new_pack
+  get "pack/gw:gameweek/leaderboard", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
   post "pack/gw:gameweek/entry", to: "pack_entries#create", as: :weekly_pack_entry, constraints: { gameweek: /\d+/ }
   get "pack/gw:gameweek(/:hand)", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/, hand: /[ab]{0,5}/ }
   get "pack/:seed(/:hand)", to: "packs#show", as: :pack,

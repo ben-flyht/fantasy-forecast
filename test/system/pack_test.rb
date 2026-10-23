@@ -31,6 +31,6 @@ class PackTest < ApplicationSystemTestCase
     end
 
     assert_selector "[data-pack-stage=scored]"
-    assert_selector "[data-pack-pair]", count: 5
+    assert_selector "[data-pack-practice-done]"
   end
 end

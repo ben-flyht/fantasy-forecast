@@ -60,6 +60,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_090000) do
   create_table "managers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false
+    t.string "first_name", null: false
+    t.string "last_name", null: false
     t.datetime "updated_at", null: false
     t.index "lower((email)::text)", name: "index_managers_on_lower_email", unique: true
   end

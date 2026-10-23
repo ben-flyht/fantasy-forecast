@@ -3,8 +3,8 @@
 
 <div class="mx-auto max-w-xl rounded-2xl border border-zinc-200 px-6 py-10 text-center">
   <h2 class="text-base font-extrabold text-zinc-950">The Gameweek <%= @gameweek.fpl_id %> pack has closed</h2>
-  <p class="mt-2 text-sm text-zinc-500">The deadline has passed. Next week's pack opens once this gameweek is under way.</p>
+  <p class="mt-2 text-sm text-zinc-500">The deadline has passed. Next week's pack opens once every game this gameweek has been played.</p>
   <p class="mt-5 text-sm">
-    <%= link_to "Play a practice pack", practice_pack_path, class: "font-bold underline underline-offset-2" %>
+    <%= link_to "See the leaderboard", pack_leaderboard_path(gameweek: @gameweek.fpl_id), class: "font-bold underline underline-offset-2" %> · <%= link_to "Practice", practice_pack_path, class: "underline underline-offset-2" %>
   </p>
 </div>

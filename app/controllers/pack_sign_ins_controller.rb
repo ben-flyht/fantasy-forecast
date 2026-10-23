@@ -6,6 +6,7 @@ class PackSignInsController < ApplicationController
 
   def create
     @manager = Manager.find_or_initialize_by(email: Manager.normalize_value_for(:email, params[:email].to_s))
+    @manager.assign_attributes(params.permit(:first_name, :last_name)) if @manager.new_record?
     return render("packs/sign_in", status: :unprocessable_entity) unless @manager.save
 
     PackMailer.with(manager: @manager, gameweek: Gameweek.next_gameweek).pack_link.deliver_later

@@ -1,0 +1,18 @@
+<% content_for :meta_title, "Pack of the Week | Fantasy Forecast" %>
+<% content_for :meta_robots, "noindex, nofollow" %>
+
+<div class="mx-auto max-w-xl">
+  <div class="mb-6">
+    <%= render PageHeadingComponent.new(title: "Pack of the Week: Gameweek #{@gameweek.fpl_id}", horizons: pack_sections(current: :play)) %>
+  </div>
+  <div class="rounded-2xl border border-zinc-200 px-6 py-10 text-center" data-pack-not-open>
+    <h2 class="text-base font-extrabold text-zinc-950">Not open yet</h2>
+    <p class="mt-2 text-sm text-zinc-500">
+      The Gameweek <%= @gameweek.fpl_id %> pack opens once every Gameweek <%= @gameweek.fpl_id - 1 %> game has been played.
+    </p>
+    <p class="mt-5 flex justify-center gap-5 text-sm">
+      <%= link_to "Gameweek #{@gameweek.fpl_id - 1} leaderboard", pack_leaderboard_path(gameweek: @gameweek.fpl_id - 1), class: "font-bold underline underline-offset-2" %>
+      <%= link_to "Practice", practice_pack_path, class: "text-zinc-500 underline underline-offset-2" %>
+    </p>
+  </div>
+</div>

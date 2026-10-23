@@ -6,8 +6,13 @@ class WeeklyPack < ApplicationRecord
     find_by(gameweek: gameweek) || draw(gameweek)
   end
 
+  def self.open?(gameweek)
+    previous = Gameweek.find_by(fpl_id: gameweek.fpl_id - 1)
+    gameweek.start_time.future? && (previous.nil? || previous.is_finished)
+  end
+
   def self.draw(gameweek)
-    return if gameweek.start_time.past?
+    return unless open?(gameweek)
 
     pack = PackDraw.call(gameweek: gameweek, seed: gameweek.fpl_id)
     create!(gameweek: gameweek, seed: pack.seed, pairs: pack.pairs.map { |pair| row(pair) }) if pack
