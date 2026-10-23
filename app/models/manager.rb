@@ -7,7 +7,13 @@ class Manager < ApplicationRecord
   normalizes :nickname, with: ->(nickname) { nickname.squish }
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }, uniqueness: { case_sensitive: false }
-  validates :nickname, presence: true, length: { maximum: NICKNAME_LENGTH }
+  validates :nickname, presence: { message: "is needed the first time you join" }, length: { maximum: NICKNAME_LENGTH }
 
   generates_token_for :pack_link, expires_in: 7.days
+
+  def marked_entries = pack_entries.where.not(accuracy: nil)
+
+  def accuracy = marked_entries.average(:accuracy)&.to_f
+
+  def forecast_accuracy = marked_entries.average(:forecast_accuracy)&.to_f
 end

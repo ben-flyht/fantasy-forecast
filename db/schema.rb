@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_120200) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -83,10 +83,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_120200) do
   end
 
   create_table "pack_entries", force: :cascade do |t|
+    t.float "accuracy"
     t.datetime "created_at", null: false
     t.float "expected_points", null: false
+    t.float "forecast_accuracy"
     t.string "hand", null: false
     t.bigint "manager_id", null: false
+    t.integer "real_points"
+    t.datetime "results_sent_at"
     t.datetime "updated_at", null: false
     t.bigint "weekly_pack_id", null: false
     t.index ["manager_id"], name: "index_pack_entries_on_manager_id"

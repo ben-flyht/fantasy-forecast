@@ -1,6 +1,8 @@
 module PackManager
   extend ActiveSupport::Concern
 
+  SIGNED_IN_FOR = 1.year
+
   included do
     helper_method :current_manager
   end
@@ -8,15 +10,22 @@ module PackManager
   private
 
   def current_manager
-    @current_manager ||= Manager.find_by(id: session[:manager_id]) if session[:manager_id]
+    return @current_manager if defined?(@current_manager)
+
+    @current_manager = Manager.find_by(id: cookies.signed[:manager_id])
   end
 
   def sign_in_manager(manager)
     reset_session
-    session[:manager_id] = manager.id
+    cookies.signed[:manager_id] = { value: manager.id, expires: SIGNED_IN_FOR, httponly: true, same_site: :lax }
+  end
+
+  def sign_out_manager
+    cookies.delete(:manager_id)
+    reset_session
   end
 
   def require_manager
-    redirect_to pack_landing_path unless current_manager
+    redirect_to pack_landing_path, alert: "Sign in to open your pack." unless current_manager
   end
 end

@@ -1,7 +1,7 @@
-Your Gameweek <%= @gameweek.fpl_id %> pack is sealed and waiting, <%= @manager.nickname %>.
+<%= @gameweek ? "Your Gameweek #{@gameweek.fpl_id} pack is sealed and waiting" : "Here is your sign-in link" %>, <%= @manager.nickname %>.
 
 Seven pairs, one shiny. Keep one card from each, name your bench and lock it in before the deadline. Then watch your five score for real against everyone else and the forecast.
 
-Open my pack: <%= @link %>
+<%= @gameweek ? "Open my pack" : "Sign in" %>: <%= @link %>
 
 The link signs you in on this device and works for seven days. If you did not ask for a pack, ignore this email.

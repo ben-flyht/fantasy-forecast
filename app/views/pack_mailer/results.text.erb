@@ -1,0 +1,12 @@
+Gameweek <%= @gameweek.fpl_id %> pack, final: <%= @entry.real_points %> points.
+<%= @standing[:place].ordinalize %> of <%= @standing[:of] %>, <%= @manager.nickname %>.
+
+Your accuracy: <%= (@entry.accuracy * 100).round %>%
+The forecast's accuracy: <%= (@entry.forecast_accuracy * 100).round %>%
+
+Accuracy is your points as a share of the best five this pack could have given, knowing what we know now.
+
+Leaderboard: <%= pack_leaderboard_url(gameweek: @gameweek.fpl_id) %>
+<% if @next_link %>
+Open the Gameweek <%= @next_gameweek.fpl_id %> pack: <%= @next_link %>
+<% end %>

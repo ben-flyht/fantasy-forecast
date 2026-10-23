@@ -56,4 +56,12 @@ class PackHandTest < ActiveSupport::TestCase
     assert_nil PackHand.parse(pack, "aa-1"), "a bench before the picks are done"
     assert_nil PackHand.parse(pack, "aaaaaaaa"), "more picks than pairs"
   end
+
+  test "every line-up a pack allows is every keep with every legal bench" do
+    line_ups = PackHand.every_line_up(pack(shiny: 3))
+
+    assert line_ups.all?(&:complete?)
+    assert_equal line_ups.map(&:code).uniq.size, line_ups.size
+    assert_includes line_ups.map(&:code), "aaaaaaa-26"
+  end
 end

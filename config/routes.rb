@@ -37,6 +37,7 @@ Rails.application.routes.draw do
   get "pack/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
   delete "pack/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
   get "pack/mine", to: "pack_entries#index", as: :my_packs
+  patch "pack/account", to: "pack_accounts#update", as: :pack_account
   get "pack/gw:gameweek/leaderboard", to: "pack_leaderboards#show", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
   post "pack/gw:gameweek/entry", to: "pack_entries#create", as: :weekly_pack_entry, constraints: { gameweek: /\d+/ }
   get "pack/gw:gameweek(/:hand)", to: "weekly_packs#show", as: :weekly_pack,

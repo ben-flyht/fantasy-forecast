@@ -16,7 +16,7 @@ class PackScore
   end
 
   def perfect
-    @perfect ||= every_keep.map { |keeps| best_line_up(keeps) }.max_by { |hand| points(hand) }
+    @perfect ||= PackHand.every_line_up(pack).max_by { |hand| points(hand) }
   end
 
   def forecast
@@ -32,17 +32,7 @@ class PackScore
 
   attr_reader :pack
 
-  def every_keep
-    [ 0, 1 ].repeated_permutation(pack.size)
-  end
-
   def best_line_up(keeps)
-    picked = PackHand.new(pack, keeps: keeps)
-    benched_once = benchings(picked)
-    benched_once.flat_map { |hand| benchings(hand) }.max_by { |hand| points(hand) }
-  end
-
-  def benchings(hand)
-    hand.kept.each_index.select { |index| hand.benchable?(index) }.map { |index| hand.benching(index) }
+    PackHand.new(pack, keeps: keeps).line_ups.max_by { |hand| points(hand) }
   end
 end

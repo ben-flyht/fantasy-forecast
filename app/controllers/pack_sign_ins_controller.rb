@@ -8,7 +8,7 @@ class PackSignInsController < ApplicationController
     @manager = Manager.find_or_initialize_by(email: Manager.normalize_value_for(:email, params[:email].to_s))
     @manager.nickname = params[:nickname] if @manager.new_record?
 
-    if @gameweek && @manager.save
+    if @manager.save
       PackMailer.with(manager: @manager, gameweek: @gameweek).pack_link.deliver_later
       render :sent
     else
@@ -22,11 +22,11 @@ class PackSignInsController < ApplicationController
 
     sign_in_manager(manager)
     gameweek = Gameweek.next_gameweek || Gameweek.current_gameweek
-    redirect_to gameweek ? weekly_pack_path(gameweek: gameweek.fpl_id) : pack_landing_path
+    redirect_to gameweek ? weekly_pack_path(gameweek: gameweek.fpl_id) : my_packs_path
   end
 
   def destroy
-    reset_session
-    redirect_to pack_landing_path
+    sign_out_manager
+    redirect_to pack_landing_path, notice: "Signed out."
   end
 end

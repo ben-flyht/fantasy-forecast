@@ -14,6 +14,10 @@ class PackHand
     new(pack, keeps: keeps, bench: bench) if legal?(pack, keeps, bench)
   end
 
+  def self.every_line_up(pack)
+    [ 0, 1 ].repeated_permutation(pack.size).flat_map { |keeps| new(pack, keeps: keeps).line_ups }
+  end
+
   def self.legal_line_up?(line_up)
     positions = line_up.map(&:position)
     positions.count("goalkeeper") == 1 && Pack::OUTFIELD.all? { |position| positions.include?(position) }
@@ -61,6 +65,10 @@ class PackHand
     letters = keeps.map { |keep| LETTERS[keep] }.join
     picking? ? letters : "#{letters}-#{bench.join}"
   end
+
+  def line_ups = benchings.flat_map(&:benchings)
+
+  def benchings = kept.each_index.select { |index| benchable?(index) }.map { |index| benching(index) }
 
   def keeping(choice) = self.class.new(pack, keeps: keeps + [ choice ])
   def benching(index) = self.class.new(pack, keeps: keeps, bench: bench + [ index ])

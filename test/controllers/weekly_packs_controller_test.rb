@@ -45,6 +45,55 @@ class WeeklyPacksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Ana", @manager.reload.nickname
   end
 
+  test "a returning manager signs in with an email alone" do
+    assert_enqueued_emails 1 do
+      post pack_sign_ins_path, params: { email: "ANA@example.com" }
+    end
+
+    assert_select "[data-pack-sent]"
+  end
+
+  test "somebody new is asked for a leaderboard name" do
+    assert_no_enqueued_emails do
+      post pack_sign_ins_path, params: { email: "fresh@example.com" }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "form", /needed the first time you join/
+  end
+
+  test "signing in lasts, and signing out ends it" do
+    sign_in
+    assert cookies[:manager_id].present?
+
+    get weekly_pack_path(gameweek: 8)
+    assert_response :success
+
+    delete pack_sign_out_path
+    get weekly_pack_path(gameweek: 8)
+    assert_redirected_to pack_landing_path
+  end
+
+  test "you can rename yourself on the leaderboard" do
+    sign_in
+
+    patch pack_account_path, params: { nickname: "Ana the Great" }
+
+    assert_redirected_to my_packs_path
+    assert_equal "Ana the Great", @manager.reload.nickname
+  end
+
+  test "my packs shows your accuracy beside the forecast's once a gameweek is marked" do
+    sign_in
+    post weekly_pack_entry_path(gameweek: 8), params: { hand: finished_code }
+    PackEntry.last.update!(real_points: 30, accuracy: 0.81, forecast_accuracy: 0.74)
+
+    get my_packs_path
+
+    assert_select "[data-pack-accuracy]", /81%/
+    assert_select "[data-pack-accuracy]", /74%/
+  end
+
   test "a bad email is sent back to the form" do
     assert_no_enqueued_emails do
       post pack_sign_ins_path, params: { email: "nope", nickname: "Nope" }

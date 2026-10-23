@@ -1,5 +1,5 @@
 class PackLeaderboard
-  Row = Data.define(:name, :manager_id, :captain, :expected_points, :real_points, :forecast) do
+  Row = Data.define(:name, :manager_id, :captain, :expected_points, :real_points, :accuracy, :forecast) do
     def forecast? = forecast
   end
 
@@ -21,6 +21,10 @@ class PackLeaderboard
 
   attr_reader :weekly, :real
 
+  def accuracy
+    @accuracy ||= PackAccuracy.new(weekly.pack, real)
+  end
+
   def entries
     weekly.pack_entries.includes(:manager).map do |entry|
       row_for(entry.manager.nickname, entry.pack_hand, entry.expected_points, manager_id: entry.manager_id)
@@ -34,6 +38,6 @@ class PackLeaderboard
 
   def row_for(name, hand, expected_points, manager_id: nil, forecast: false)
     Row.new(name: name, manager_id: manager_id, captain: hand.captain, expected_points: expected_points,
-            real_points: (real.for(hand).points if started?), forecast: forecast)
+            real_points: (real.for(hand).points if started?), accuracy: (accuracy.of(hand) if final?), forecast: forecast)
   end
 end

@@ -24,6 +24,7 @@ module Fpl
 
       failures = syncs.reject(&:call).map { |sync| sync.class.name }
       failures << "forecasts" unless generate_forecasts
+      failures << "pack results" unless PackResults.call
       return true if failures.empty?
 
       Rails.logger.error "Hourly pipeline finished with failures: #{failures.join(', ')}"
