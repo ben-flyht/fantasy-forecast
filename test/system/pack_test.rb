@@ -26,18 +26,13 @@ class PackTest < ApplicationSystemTestCase
     visit pack_path(seed: 5)
     find("[data-pack-target=sealed]").click
 
-    7.times do |pair|
-      assert_text(/Pair #{pair + 1} of 7/i)
-      pick_first_card
-    end
-
-    2.times do |place|
-      assert_text(/Bench #{place + 1} of 2/i)
+    5.times do |pair|
+      assert_text(/Pair #{pair + 1} of 5/i)
       pick_first_card
     end
 
     assert_selector "[data-pack-stage=scored]"
-    assert_selector "[data-pack-pair]", count: 7
+    assert_selector "[data-pack-pair]", count: 5
   end
 
   def pick_first_card

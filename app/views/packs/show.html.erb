@@ -8,17 +8,15 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Open a Pack",
-          subtitle: "Seven pairs from neighbouring places in our rankings. Keep one card from each, name your bench, and see how you did against the forecast.") %>
+          subtitle: "Five pairs from neighbouring places in our rankings. Keep one card from each and see how your five do against the forecast's.") %>
   </div>
 
   <% if @hand.keeps.empty? %>
     <%= render "sealed", gameweek: @gameweek %>
   <% end %>
 
-  <% if @hand.picking? %>
+  <% unless @hand.complete? %>
     <%= render "pair", hand: @hand, hidden: @hand.keeps.empty? %>
-  <% elsif @hand.benching? %>
-    <%= render "bench", hand: @hand %>
   <% else %>
     <%= render "score", hand: @hand, score: @score %>
   <% end %>

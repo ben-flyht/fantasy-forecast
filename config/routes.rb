@@ -33,7 +33,7 @@ Rails.application.routes.draw do
 
   get "pack", to: "packs#new", as: :new_pack
   get "pack/:seed(/:hand)", to: "packs#show", as: :pack,
-      constraints: { seed: /\d{1,9}/, hand: /[ab]{0,7}(-[0-6]{0,2})?/ }
+      constraints: { seed: /\d{1,9}/, hand: /[ab]{0,5}/ }
 
   # Him or him: the question a manager asks when he has already narrowed it to
   # two, with an address of its own so it can be found by asking it.

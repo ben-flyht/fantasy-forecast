@@ -17,15 +17,8 @@
 
   <h2 class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Your five</h2>
   <div class="grid grid-cols-3 gap-3 sm:grid-cols-5">
-    <% hand.starters.each_with_index do |card, index| %>
+    <% hand.kept.each_with_index do |card, index| %>
       <%= render PackCardComponent.new(card: card, revealed: true, captain: card == hand.captain, index: index) %>
-    <% end %>
-  </div>
-
-  <h2 class="mt-8 mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">Bench</h2>
-  <div class="grid grid-cols-4 gap-3 sm:grid-cols-7">
-    <% hand.substitutes.each_with_index do |card, index| %>
-      <%= render PackCardComponent.new(card: card, revealed: true, size: :small, index: index + 5) %>
     <% end %>
   </div>
 
@@ -48,7 +41,6 @@
   </table>
 
   <p class="mt-6 text-xs/6 text-zinc-500">
-    Expected points for the coming gameweek: the five starters in full, the captain twice,
-    and each substitute by how often he would actually come on.
+    Expected points for the gameweek: all five count, and the captain counts twice.
   </p>
 </section>

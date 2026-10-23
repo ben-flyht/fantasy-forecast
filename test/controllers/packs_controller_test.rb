@@ -40,15 +40,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "[data-pack-stage=picking]"
-    assert_select "h2", /Pair 1 of 7/
+    assert_select "h2", /Pair 1 of 5/
     assert_select "meta[name=robots][content*=noindex]"
-  end
-
-  test "seven picks in, it asks for the bench" do
-    get pack_path(seed: 3, hand: "abababa")
-
-    assert_response :success
-    assert_select "[data-pack-stage=benching]"
   end
 
   test "a finished pack is scored against the best it allowed and the forecast's own picks" do
@@ -57,18 +50,15 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "[data-pack-stage=scored]"
     assert_select "[data-pack-share]", /100%/
-    assert_select "[data-pack-pair]", count: 7
+    assert_select "[data-pack-pair]", count: 5
   end
 
   test "where you and the forecast kept different neighbours, each is shown on his own points" do
     Forecast.find_each { |forecast| forecast.update!(score: 6.0 - (forecast.rank * 0.03)) }
     pack = PackDraw.call(gameweek: @gameweek, seed: 3)
     keeps = pack.pairs.map { |pair| pair.cards.index(pair.cards.min_by(&:expected_points)) }
-    hand = PackHand.new(pack, keeps: keeps)
-    bench = hand.kept.each_index.select { |index| hand.benchable?(index) }.first(1)
-    bench << hand.benching(bench.first).kept.each_index.find { |index| hand.benching(bench.first).benchable?(index) }
 
-    get pack_path(seed: 3, hand: PackHand.new(pack, keeps: keeps, bench: bench).code)
+    get pack_path(seed: 3, hand: PackHand.new(pack, keeps: keeps).code)
 
     css_select("[data-pack-pair]").each do |row|
       mine, theirs = row.css("td").map { |cell| cell.text.split.last }
@@ -76,10 +66,10 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "an impossible hand starts the pack again" do
-    get pack_path(seed: 3, hand: "aaaaaaa-0")
+  test "a hand longer than the pack is not a pack page" do
+    get "/pack/3/aaaaaa"
 
-    assert_redirected_to pack_path(seed: 3)
+    assert_response :not_found
   end
 
   test "with nothing forecast there is no pack to open" do

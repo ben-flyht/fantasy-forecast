@@ -5,55 +5,46 @@ class PackHandTest < ActiveSupport::TestCase
     PickablePool::Candidate.new(player: Player.new(id: id, position: position), rank: id, cost: 50, expected_points: points)
   end
 
-  def pack(shiny: 0)
+  def pack(shiny: 2)
     cards = [
       [ card(1, "goalkeeper", 4.0), card(2, "goalkeeper", 3.0) ],
       [ card(3, "defender", 4.0), card(4, "defender", 3.0) ],
-      [ card(5, "defender", 3.5), card(6, "defender", 2.5) ],
-      [ card(7, "midfielder", 6.0), card(8, "midfielder", 5.0) ],
-      [ card(9, "midfielder", 4.5), card(10, "midfielder", 4.0) ],
-      [ card(11, "forward", 5.5), card(12, "forward", 5.0) ],
-      [ card(13, "midfielder", 3.0), card(14, "midfielder", 2.0) ]
+      [ card(5, "midfielder", 6.0), card(6, "midfielder", 5.0) ],
+      [ card(7, "forward", 5.5), card(8, "forward", 5.0) ],
+      [ card(9, "midfielder", 3.0), card(10, "midfielder", 2.0) ]
     ]
     pairs = Pack::SLOTS.each_with_index.map { |slot, i| Pack::Pair.new(slot: slot, cards: cards[i], shiny: i == shiny) }
     Pack.new(seed: 1, pairs: pairs)
   end
 
-  test "a code reads back as the cards it kept and the bench it named" do
-    hand = PackHand.parse(pack, "abaaaab-14")
+  test "a code reads back as the cards it kept, and every one of them starts" do
+    hand = PackHand.parse(pack, "abaab")
 
     assert hand.complete?
-    assert_equal [ 1, 4, 5, 7, 9, 11, 14 ], hand.kept.map(&:player_id)
-    assert_equal [ 4, 9 ], hand.substitutes.map(&:player_id)
-    assert_equal "abaaaab-14", hand.code
+    assert_equal [ 1, 4, 5, 7, 10 ], hand.kept.map(&:player_id)
+    assert_equal "abaab", hand.code
   end
 
   test "the card kept from the shiny pair is the captain" do
-    hand = PackHand.parse(pack(shiny: 3), "aaab")
-
-    assert_equal 8, hand.captain.player_id
+    assert_equal 6, PackHand.parse(pack, "aab").captain.player_id
+    assert_nil PackHand.parse(pack, "aa").captain
   end
 
-  test "a hand is picking until all seven are kept, then benching until two sit down" do
-    assert PackHand.parse(pack, "aaa").picking?
-    assert PackHand.parse(pack, "aaaaaaa").benching?
-    assert PackHand.parse(pack, "aaaaaaa-1").benching?
+  test "a hand is unfinished until all five are kept" do
+    assert_not PackHand.parse(pack, "aaa").complete?
+    assert_equal pack.pairs[3], PackHand.parse(pack, "aaa").current_pair
   end
 
-  test "the keeper, the captain and the last of a position cannot be benched" do
-    hand = PackHand.parse(pack(shiny: 3), "aaaaaaa")
-
-    assert_not hand.benchable?(0), "the only keeper"
-    assert_not hand.benchable?(3), "the captain"
-    assert_not hand.benchable?(5), "the only forward"
-    assert hand.benchable?(1)
+  test "a code that is not a pack's is refused" do
+    assert_nil PackHand.parse(pack, "aaaaaa"), "more picks than pairs"
+    assert_nil PackHand.parse(pack, "aac"), "not a choice"
+    assert_nil PackHand.parse(pack, "aaaaa-12"), "the old bench suffix"
   end
 
-  test "a code that breaks the rules is refused" do
-    assert_nil PackHand.parse(pack, "aaaaaaa-12"), "no defender left starting"
-    assert_nil PackHand.parse(pack, "aaaaaaa-0"), "the keeper benched"
-    assert_nil PackHand.parse(pack, "aaaaaaa-11"), "the same card benched twice"
-    assert_nil PackHand.parse(pack, "aa-1"), "a bench before the picks are done"
-    assert_nil PackHand.parse(pack, "aaaaaaaa"), "more picks than pairs"
+  test "every hand a pack allows is every combination of keeps" do
+    hands = PackHand.every(pack)
+
+    assert_equal 32, hands.size
+    assert hands.all?(&:complete?)
   end
 end

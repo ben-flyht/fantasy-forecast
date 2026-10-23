@@ -1,5 +1,5 @@
 class Pack
-  SLOTS = %w[goalkeeper defender defender midfielder midfielder forward wildcard].freeze
+  SLOTS = %w[goalkeeper defender midfielder forward wildcard].freeze
   OUTFIELD = %w[defender midfielder forward].freeze
 
   Pair = Data.define(:slot, :cards, :shiny) do
