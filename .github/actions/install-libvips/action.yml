@@ -1,0 +1,27 @@
+name: Install libvips
+description: Install libvips, caching the downloaded packages between runs
+
+runs:
+  using: composite
+  steps:
+    - name: Restore apt package cache
+      id: restore
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: ~/apt-cache
+        key: apt-${{ runner.os }}-${{ runner.arch }}-libvips-v1
+
+    - name: Install libvips
+      shell: bash
+      run: |
+        mkdir -p ~/apt-cache/partial
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y -o Dir::Cache::Archives="$HOME/apt-cache" libvips
+        sudo chown -R "$USER" ~/apt-cache
+
+    - name: Save apt package cache
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6.1.0
+      with:
+        path: ~/apt-cache
+        key: ${{ steps.restore.outputs.cache-primary-key }}
