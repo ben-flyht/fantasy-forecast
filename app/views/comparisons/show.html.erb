@@ -93,7 +93,9 @@
                   picking, and that answer already has a page: his own. The cross sits
                   outside the link rather than inside it, because a button inside an
                   anchor is neither valid nor clickable. %>
-              <%= link_to player_path(member.player), class: "group block cursor-pointer rounded-xl transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
+              <%= link_to player_path(member.player),
+                          data: { action: "analytics#track", analytics_event_param: "player_card_click", analytics_player_param: member.player.to_param },
+                          class: "group block cursor-pointer rounded-xl transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
                           aria: { label: "#{member.player.display_name}'s forecast in full" } do %>
                 <%= render PlayerCompactCardComponent.new(**comparison_card_arguments(member)) %>
               <% end %>

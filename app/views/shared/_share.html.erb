@@ -13,7 +13,8 @@
         data-share-url-value="<%= local_assigns.fetch(:url, meta_url) %>"
         data-share-title-value="<%= local_assigns.fetch(:title, meta_title) %>"
         <%= tag.attributes("aria-label": local_assigns[:aria_label]) if local_assigns[:aria_label] %>
-        data-action="share#share"
+        data-action="share#share click->analytics#track"
+        data-analytics-event-param="share_click"
         class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-zinc-400 hover:text-zinc-950">
   <svg class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
     <path stroke-linecap="round" stroke-linejoin="round"
