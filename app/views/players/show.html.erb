@@ -117,21 +117,21 @@
   </section>
 <% end %>
 
-<!-- Fixtures & Form -->
+<!-- Form & Fixtures -->
 <div class="mt-8 grid gap-8 md:grid-cols-2">
-  <%= render "fixture_table",
-        title: "Next #{(@upcoming_rows&.size).to_i} #{'Fixture'.pluralize((@upcoming_rows&.size).to_i)}",
-        rows: @upcoming_rows || [],
-        points_label: "xP",
-        note: nil,
-        empty_message: "No upcoming fixtures scheduled." %>
-
   <%= render "fixture_table",
         title: "Recent Form",
         rows: @recent_rows || [],
         points_label: "Pts",
         note: nil,
         empty_message: "No matches played yet this season." %>
+
+  <%= render "fixture_table",
+        title: "Next #{(@upcoming_rows&.size).to_i} #{'Fixture'.pluralize((@upcoming_rows&.size).to_i)}",
+        rows: @upcoming_rows || [],
+        points_label: "xP",
+        note: nil,
+        empty_message: "No upcoming fixtures scheduled." %>
 </div>
 
 <!-- What he has actually done, and which way the rates are moving -->

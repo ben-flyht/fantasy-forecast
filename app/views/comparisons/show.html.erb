@@ -161,7 +161,7 @@
             than both crowding the label in the middle. %>
         <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-2.5 sm:gap-6">
           <dd class="text-left text-sm tabular-nums <%= comparison_value_class(row.leader == :left) %>"><%= row.left %></dd>
-          <dt class="text-center text-[11px] leading-tight text-zinc-500 sm:text-xs"><%= row.label %></dt>
+          <dt class="text-center text-[11px] leading-tight text-zinc-500 sm:text-xs"><%= render StatLabelComponent.new(term: row.term) %></dt>
           <dd class="text-right text-sm tabular-nums <%= comparison_value_class(row.leader == :right) %>"><%= row.right %></dd>
         </div>
       <% end %>
