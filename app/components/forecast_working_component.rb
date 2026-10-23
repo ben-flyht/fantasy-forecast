@@ -112,6 +112,10 @@ class ForecastWorkingComponent < ViewComponent::Base
     swing(working[:transfers])
   end
 
+  def calibration_swing
+    swing(working[:calibration])
+  end
+
   def swing(factor)
     return if factor.nil?
     return if (factor - 1).abs < NEGLIGIBLE

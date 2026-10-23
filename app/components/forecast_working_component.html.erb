@@ -47,6 +47,9 @@
         <% if form_swing %>
           His recent form is <span class="tabular-nums font-medium"><%= percentage(form_swing) %></span> on his usual, already inside this rate.
         <% end %>
+        <% if calibration_swing %>
+          Trimmed <span class="tabular-nums font-medium"><%= percentage(calibration_swing) %></span>, because forecasts this high have run ahead of what players went on to score.
+        <% end %>
       </p>
     </div>
 
