@@ -421,6 +421,15 @@ class ExpectedPoints < ApplicationService
     }
   end
 
+  def self.worth_showing?(rule, position)
+    case rule
+    when :keeper then position == GOALKEEPER
+    when :sheets then CLEAN_SHEET.fetch(position, 0).positive?
+    when :defending then DEFENSIVE_ACTIONS.key?(position) && position != Player::POSITION_FORWARD
+    else true
+    end
+  end
+
   def initialize(rankings, stats:, fixtures_by_team:, season_started: true, gameweeks_played: nil,
                  managers: nil, movers: [], fitness: {},
                  clamp_width: CLAMP_WIDTH, new_club_minutes: NEW_CLUB_MINUTES)
@@ -926,7 +935,7 @@ class ExpectedPoints < ApplicationService
   # the whole of the saving in every rate underneath it.
   def points_per_90(ranking, fixture = nil)
     @points_per_90 ||= {}
-    @points_per_90[[ ranking.player_id, fixture && difficulty_of(fixture) ]] ||=
+    @points_per_90[[ ranking.player_id, fixture&.values_at(:difficulty, :attack, :defence) ]] ||=
       APPEARANCE + scoring_per_90(ranking, fixture)
   end
 
@@ -959,7 +968,7 @@ class ExpectedPoints < ApplicationService
   def swing(step, fixture)
     return 1.0 if fixture.nil?
 
-    step**(AVERAGE_DIFFICULTY - difficulty_of(fixture))
+    step**(AVERAGE_DIFFICULTY - difficulty_of(fixture, step == ATTACK_STEP ? :attack : :defence))
   end
 
   # Bonus is awarded per match to the three best performers, so it is not in any
@@ -1306,8 +1315,8 @@ class ExpectedPoints < ApplicationService
 
   # An unrated fixture counts as an ordinary one. Treating it as unplayable would
   # be a much bigger claim than the data supports.
-  def difficulty_of(fixture)
-    fixture[:difficulty] || AVERAGE_DIFFICULTY
+  def difficulty_of(fixture, aspect = nil)
+    (aspect && fixture[aspect]) || fixture[:difficulty] || AVERAGE_DIFFICULTY
   end
 
   def fixtures_for(ranking)

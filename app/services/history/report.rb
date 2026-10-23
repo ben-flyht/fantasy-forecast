@@ -14,7 +14,7 @@ module History
                            "Outfield", "Goalkeeper" ].freeze
     GOAL_TESTS = %i[scored fdr conceded fdr].freeze
     ODDS_VARIANTS = { "odds" => [ :odds, ExpectedPoints ],
-                      "odds, attack and defence apart" => [ :split, Engines::SplitFixtures ] }.freeze
+                      "odds, attack and defence apart" => [ :split, ExpectedPoints ] }.freeze
 
     def self.season_dir(dir, season)
       File.join(dir, "vaastav", season)

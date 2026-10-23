@@ -37,13 +37,7 @@
           search, so it deserves an href rather than a radio button. %>
       <%= render SegmentedControlComponent.new(label: "Position", options: position_options, event: "horizon_switch") %>
 
-      <%= form_with url: rankings_path, method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance", controller: "filter-navigation", action: "submit->filter-navigation#submit" }, id: "filters-form", class: "contents" do |f| %>
-        <%# The horizon and the position are links now, so the form carries them as
-            hidden fields instead. Without them the filters submit no gameweek at all
-            and ask for /gameweeks/null/goalkeepers. %>
-        <%= hidden_field_tag :gameweek, horizon_param, id: nil %>
-        <%= hidden_field_tag :position, @position_filter, id: nil %>
-
+      <%= form_with url: position_rankings_path(horizon_param, @position_filter), method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance", controller: "filter-navigation", action: "submit->filter-navigation#submit" }, id: "filters-form", class: "contents" do |f| %>
         <div class="flex items-center gap-2">
           <span class="shrink-0 text-sm text-zinc-500">Team</span>
           <%= render DropdownComponent.new(

@@ -1,5 +1,5 @@
 module History
-  Appearance = Struct.new(:element, :round, :team_id, :kickoff, :minutes, :points, :bonus,
+  Appearance = Struct.new(:element, :round, :fixture, :team_id, :kickoff, :minutes, :points, :bonus,
                           :rates, :selected, :value, :transfers_in, :transfers_out, keyword_init: true) do
     def self.from_row(row, fixture)
       new(**identity(row, fixture), **performance(row), **market(row))
@@ -7,7 +7,7 @@ module History
 
     def self.identity(row, fixture)
       home = row["was_home"].to_s.casecmp?("true")
-      { element: row["element"].to_i, round: row["round"].to_i,
+      { element: row["element"].to_i, round: row["round"].to_i, fixture: row["fixture"].to_i,
         team_id: fixture[home ? "team_h" : "team_a"].to_i, kickoff: Time.zone.parse(row["kickoff_time"]) }
     end
 

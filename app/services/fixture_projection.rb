@@ -71,7 +71,14 @@ class FixtureProjection < ApplicationService
   end
 
   def fixture_for(match)
-    { difficulty: match.difficulty_for(@player.team_id), home: match.home_team_id == @player.team_id }
+    home = match.home_team_id == @player.team_id
+    difficulty = match.difficulty_for(@player.team_id)
+    { difficulty: difficulty, home: home }
+      .merge(opponent_form.ratings(home ? match.away_team_id : match.home_team_id, difficulty))
+  end
+
+  def opponent_form
+    @opponent_form ||= OpponentForm.new(OpponentForm.played_meetings)
   end
 
   def ranking

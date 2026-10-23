@@ -18,7 +18,6 @@
         <li class="flex items-center gap-4 py-2.5">
           <span class="flex-1 text-sm text-zinc-600"><%= trend.label %></span>
           <span class="text-sm font-semibold tabular-nums text-zinc-950"><%= latest(trend) %></span>
-          <%= render SparklineComponent.new(values: trend.points.map(&:value)) %>
         </li>
       <% end %>
     </ul>
@@ -30,7 +29,6 @@
       <span class="text-sm font-semibold tabular-nums text-zinc-950">
         <%= helpers.player_price(history.price_history.latest) %>
       </span>
-      <%= render SparklineComponent.new(values: history.price_history.points.map(&:value)) %>
     </div>
   <% end %>
 </section>

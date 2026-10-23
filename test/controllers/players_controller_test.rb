@@ -284,18 +284,22 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#rankings_container[data-turbo-action=advance]"
   end
 
-  # The filters submit the horizon along with everything else. Without it the form
-  # asks for /gameweeks/null/goalkeepers the moment you change team or position.
   test "changing a filter keeps the horizon you are reading at" do
     get rankings_path
 
-    assert_select "#filters-form input[type=hidden][name=gameweek][value=?]", @gameweek2.fpl_id.to_s
+    assert_select "#filters-form[action=?]", gameweek_position_path(gameweek: @gameweek2.fpl_id, position: "forwards")
   end
 
   test "the season horizon travels with the filters too" do
     get season_position_path(position: "#{@player.position}s")
 
-    assert_select "#filters-form input[type=hidden][name=gameweek][value=season]"
+    assert_select "#filters-form[action=?]", season_position_path(position: "#{@player.position}s")
+  end
+
+  test "the next five gameweeks travel with the filters too" do
+    get upcoming_position_path(position: "#{@player.position}s")
+
+    assert_select "#filters-form[action=?]", upcoming_position_path(position: "#{@player.position}s")
   end
 
   # A crawler follows links, not form posts, so both horizons are addresses.

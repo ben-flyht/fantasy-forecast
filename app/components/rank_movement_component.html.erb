@@ -1,4 +1,3 @@
 <span class="mt-1.5 flex items-center gap-2">
-  <span class="text-xs font-semibold <%= movement_class %>"><%= movement %></span>
-  <%= render SparklineComponent.new(values: history.ranks.map(&:value), inverted: true) %>
+  <span class="text-sm font-semibold text-zinc-500"><%= movement %></span>
 </span>
