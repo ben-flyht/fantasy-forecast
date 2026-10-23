@@ -33,8 +33,10 @@ class RankMovementComponent < ViewComponent::Base
   # Said in places rather than in signs, because "-8" reads as bad news and a rank
   # falling by eight is the opposite.
   def movement
-    return "No change" if steady?
+    return "Same as #{since}" if steady?
 
-    "#{climbing? ? '▲' : '▼'} #{pluralize(change.abs, 'place')}"
+    "#{climbing? ? 'Up' : 'Down'} #{pluralize(change.abs, 'place')} since #{since}"
   end
+
+  def since = "GW#{history.ranks[-2].gameweek}"
 end
