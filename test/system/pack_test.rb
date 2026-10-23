@@ -1,10 +1,6 @@
 require "application_system_test_case"
 
 class PackTest < ApplicationSystemTestCase
-  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |options|
-    options.add_argument("--force-prefers-reduced-motion")
-  end
-
   setup do
     Statistic.destroy_all
     Forecast.destroy_all
@@ -32,15 +28,20 @@ class PackTest < ApplicationSystemTestCase
 
     7.times do |pair|
       assert_text(/Pair #{pair + 1} of 7/i)
-      first("[data-pack-choice] [role=button]").click
+      pick_first_card
     end
 
     2.times do |place|
       assert_text(/Bench #{place + 1} of 2/i)
-      first("[data-pack-choice] [role=button]").click
+      pick_first_card
     end
 
     assert_selector "[data-pack-stage=scored]"
     assert_selector "[data-pack-pair]", count: 7
+  end
+
+  def pick_first_card
+    assert_selector ".pack-stage.is-settled"
+    first("[data-pack-choice] [role=button]").click
   end
 end
