@@ -28,12 +28,12 @@ class LastSeasonComponent < ViewComponent::Base
   # side keeps clean sheets and he is paid nothing for them, and a goalkeeper is
   # paid nothing for winning the ball back.
   RATES = {
-    "last_season_goals_per_90" => [ "Goals, per 90", :anybody ],
-    "last_season_expected_goals_per_90" => [ "Expected goals, per 90", :anybody ],
-    "last_season_expected_assists_per_90" => [ "Expected assists, per 90", :anybody ],
-    "last_season_clean_sheets_per_90" => [ "Clean sheets, per 90", :paid_for_sheets ],
-    "last_season_saves_per_90" => [ "Saves, per 90", :keeper ],
-    "last_season_defensive_contribution_per_90" => [ "Defensive contributions, per 90", :paid_for_defending ]
+    "last_season_goals_per_90" => [ :goals_per_90, :anybody ],
+    "last_season_expected_goals_per_90" => [ :expected_goals_per_90, :anybody ],
+    "last_season_expected_assists_per_90" => [ :expected_assists_per_90, :anybody ],
+    "last_season_clean_sheets_per_90" => [ :clean_sheets_per_90, :sheets ],
+    "last_season_saves_per_90" => [ :saves_per_90, :keeper ],
+    "last_season_defensive_contribution_per_90" => [ :defensive_contribution_per_90, :defending ]
   }.freeze
 
   def initialize(stats:, position:)
@@ -61,7 +61,7 @@ class LastSeasonComponent < ViewComponent::Base
   end
 
   def points
-    [ "Points", value("last_season_points").round.to_s ]
+    [ term(:points), value("last_season_points").round.to_s ]
   end
 
   # Only once FPL's starts have been stored for a past season. Until then the
@@ -70,49 +70,42 @@ class LastSeasonComponent < ViewComponent::Base
     figure = value("last_season_starts")
     return if figure.zero?
 
-    [ "Starts", figure.round.to_s ]
+    [ term(:starts), figure.round.to_s ]
   end
 
   def played
-    [ "Minutes", helpers.number_with_delimiter(minutes.round) ]
+    [ term(:minutes), helpers.number_with_delimiter(minutes.round) ]
   end
 
   # What a season's points came to per 90 on the pitch, which is the figure that
   # compares with anybody else's and the one the totals cannot give on their own.
   def per_90
-    [ "Points per 90", format("%.1f", value("last_season_points") / (minutes / MINUTES_IN_A_MATCH)) ]
+    [ term(:points_per_90), format("%.1f", value("last_season_points") / (minutes / MINUTES_IN_A_MATCH)) ]
   end
 
   def assists
     figure = value("last_season_assists")
     return if figure.zero?
 
-    [ "Assists", figure.round.to_s ]
+    [ term(:assists), figure.round.to_s ]
   end
 
   def bonus
     figure = value("last_season_bonus")
     return if figure.zero?
 
-    [ "Bonus", figure.round.to_s ]
+    [ term(:bonus), figure.round.to_s ]
   end
 
   def rates
-    @rates ||= RATES.filter_map do |type, (label, paid)|
+    @rates ||= RATES.filter_map do |type, (key, paid)|
       figure = value(type)
-      [ label, format("%.2f", figure) ] if figure.positive? && paid?(paid)
+      [ term(key), format("%.2f", figure) ] if figure.positive? && ExpectedPoints.pays?(paid, position)
     end
   end
 
-  # Whether FPL pays this position for that, read from the scoring table the
-  # forecast itself prices from rather than from a second list that can drift.
-  def paid?(rule)
-    case rule
-    when :keeper then position == ExpectedPoints::GOALKEEPER
-    when :paid_for_sheets then ExpectedPoints::CLEAN_SHEET.fetch(position, 0).positive?
-    when :paid_for_defending then ExpectedPoints::DEFENSIVE_ACTIONS.key?(position)
-    else true
-    end
+  def term(key)
+    StatGlossary.fetch(key)
   end
 
   def value(type)

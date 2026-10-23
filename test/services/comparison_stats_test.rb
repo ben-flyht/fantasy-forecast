@@ -31,21 +31,21 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     assert_equal "Underlying numbers", stats.first.title
   end
 
-  # Rates, totals, form and indices sit together, each row labelled with what it is so
-  # a per-90 rate is never mistaken for a total.
-  test "per-90 rates, totals, form and indices sit side by side, each labelled" do
+  # Rates, totals and form sit together, each row labelled with what it is so a per-90
+  # rate is never mistaken for a total.
+  test "per-90 rates, totals and form sit side by side, each labelled" do
     reading(@salah, "form", 5.2)
     reading(@salah, "season_points", 120)
     reading(@salah, "season_goals", 9)
     reading(@salah, "expected_goals_per_90", 0.55)
-    reading(@salah, "season_ict_index", 145.3)
+    reading(@salah, "expected_assists_per_90", 0.31)
 
     labels = stats.flat_map(&:rows).map(&:label)
     assert_includes labels, "Form"
-    assert_includes labels, "Points"
+    assert_includes labels, "Total points"
     assert_includes labels, "Goals"
-    assert_includes labels, "Expected goals, per 90"
-    assert_includes labels, "ICT index"
+    assert_includes labels, "xG per 90"
+    assert_includes labels, "xA per 90"
   end
 
   # A total reads whole, a rate to two places, form to one.
@@ -54,8 +54,8 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     reading(@salah, "expected_goals_per_90", 0.55)
     reading(@salah, "form", 5.2)
 
-    assert_equal "120", row("Points").left
-    assert_equal "0.55", row("Expected goals, per 90").left
+    assert_equal "120", row("Total points").left
+    assert_equal "0.55", row("xG per 90").left
     assert_equal "5.2", row("Form").left
   end
 
@@ -66,7 +66,7 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     reading(@palmer, "expected_goals_conceded_per_90", 0.9)
 
     assert_equal :left, row("Goals").leader
-    assert_equal :right, row("Expected goals conceded, per 90").leader
+    assert_equal :right, row("xGC per 90").leader
   end
 
   # Before a ball is kicked this season the record is last season's.
@@ -75,14 +75,14 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     reading(@salah, "last_season_points", 200)
     reading(@salah, "season_points", 0)
 
-    assert_equal "200", row("Points").left
+    assert_equal "200", row("Total points").left
   end
 
   test "a figure with no last-season record waits until the season starts" do
     Gameweek.update_all(is_finished: false)
-    reading(@salah, "ict_index", 100)
+    reading(@salah, "form", 5.0)
 
-    assert_nil row("ICT index")
+    assert_nil row("Form")
   end
 
   # You own both, so between them they do the sum.
@@ -129,5 +129,49 @@ class ComparisonStatsTest < ActiveSupport::TestCase
     reading(@palmer, "form", 4.0)
 
     assert_nil row("Form").leader
+  end
+
+  test "a row FPL pays nobody on either side for is not drawn" do
+    forward = players(:brazilian)
+    reading(forward, "saves_per_90", 0.2)
+    reading(forward, "clean_sheets_per_90", 0.4)
+    reading(forward, "defensive_contribution_per_90", 3.9)
+
+    rows = ComparisonStats.call(left: forward, right: forward).flat_map(&:rows).map(&:label)
+
+    assert_not_includes rows, "Saves per 90"
+    assert_not_includes rows, "Clean sheets per 90"
+    assert_includes rows, "Defensive actions per 90"
+  end
+
+  test "a row is drawn when anybody on either side is paid for it" do
+    forward = players(:brazilian)
+    reading(forward, "clean_sheets_per_90", 0.4)
+    reading(@salah, "clean_sheets_per_90", 0.6)
+
+    rows = ComparisonStats.call(left: forward, right: @salah).flat_map(&:rows).map(&:label)
+
+    assert_includes rows, "Clean sheets per 90"
+  end
+
+  test "the penalty taker leads, and a fourth choice is no taker at all" do
+    reading(@salah, "penalties_order", 1)
+    reading(@palmer, "penalties_order", 4)
+
+    assert_equal "1st", row("Penalties").left
+    assert_equal "—", row("Penalties").right
+    assert_equal :left, row("Penalties").leader
+  end
+
+  test "nobody on penalties is no row" do
+    reading(@salah, "form", 5.0)
+
+    assert_nil row("Penalties")
+  end
+
+  test "rows carry the definition behind their label" do
+    reading(@salah, "expected_goals_per_90", 0.5)
+
+    assert_match "Expected goals", row("xG per 90").term.definition
   end
 end

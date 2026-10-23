@@ -421,6 +421,15 @@ class ExpectedPoints < ApplicationService
     }
   end
 
+  def self.pays?(rule, position)
+    case rule
+    when :keeper then position == GOALKEEPER
+    when :sheets then CLEAN_SHEET.fetch(position, 0).positive?
+    when :defending then DEFENSIVE_ACTIONS.key?(position)
+    else true
+    end
+  end
+
   def initialize(rankings, stats:, fixtures_by_team:, season_started: true, gameweeks_played: nil,
                  managers: nil, movers: [], fitness: {},
                  clamp_width: CLAMP_WIDTH, new_club_minutes: NEW_CLUB_MINUTES)
