@@ -456,6 +456,7 @@ class PlayersController < ApplicationController
         label: position.pluralize.capitalize,
         short_label: FantasyForecast::POSITION_CONFIG.dig(position, :display_name),
         url: position_rankings_path(horizon_param, position, **{ team_id: @team_filter }.compact_blank),
+        value: position,
         current: @position_filter == position
       )
     end
