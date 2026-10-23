@@ -131,4 +131,16 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
                              "team_id" => players(:midfielder).team_id, "cost" => 55,
                              "expected_points" => 5.1, "starting" => true } ])
   end
+
+  test "the comparisons managers are asking about lead, ahead of the forecast's own" do
+    asked = Matchup.new(players(:midfielder), players(:goalkeeper))
+    Comparison.record(asked, gameweeks(:next_gw))
+
+    get root_path
+
+    assert_select "p", text: /managers are asking about/
+    assert_select "a[href=?]", comparison_path(pair: asked.slug), count: 1
+    assert_equal comparison_path(pair: asked.slug),
+                 css_select("a[href*='-vs-']").first["href"]
+  end
 end

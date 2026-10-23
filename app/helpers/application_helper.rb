@@ -53,7 +53,7 @@ module ApplicationHelper
       PageHeadingComponent::Horizon.new(
         label: horizon.label(gameweek: gameweek),
         short_label: horizon.short_label(gameweek: gameweek),
-        url: url,
+        url: url, value: horizon.key,
         current: horizon.key == current.to_s
       )
     end

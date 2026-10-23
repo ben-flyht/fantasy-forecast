@@ -1,5 +1,8 @@
 <tr class="cursor-pointer group"
     onclick="Turbo.visit('<%= helpers.player_path(player) %>')"
+    data-action="click->analytics#track keydown.enter->analytics#track"
+    data-analytics-event-param="player_card_click"
+    data-analytics-player-param="<%= player.to_param %>"
     role="link" tabindex="0"
     onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
   <td class="w-[104px] pl-[10px] text-center align-middle bg-white border-y border-l border-zinc-200 rounded-l-xl group-hover:bg-zinc-50">
@@ -14,10 +17,10 @@
           <div class="absolute inset-0" style="background-color: <%= color %>"></div>
           <% if team&.badge_url %>
             <span class="absolute -right-4 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.2]">
-              <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain #{team.on_light? ? 'brightness-0' : 'brightness-0 invert'}" %>
+              <%= image_tag team.badge_url, alt: "", loading: "lazy", class: "w-full h-full object-contain #{team.on_light? ? 'brightness-0' : 'brightness-0 invert'}" %>
             </span>
             <span class="absolute -right-4 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.22]">
-              <%= image_tag team.badge_url, alt: "", class: "w-full h-full object-contain" %>
+              <%= image_tag team.badge_url, alt: "", loading: "lazy", class: "w-full h-full object-contain" %>
             </span>
           <% end %>
         </div>
@@ -45,7 +48,7 @@
 
       <% if player.cutout_url %>
         <span class="absolute right-4 bottom-0 h-[112px] z-[2] pointer-events-none">
-          <%= image_tag player.cutout_url, alt: "",
+          <%= image_tag player.cutout_url, alt: "", width: 110, height: 140, loading: "lazy",
                 class: "block h-full w-auto object-contain object-bottom drop-shadow-[0_6px_11px_rgba(0,0,0,0.24)]",
                 onerror: "this.parentElement.remove()" %>
         </span>

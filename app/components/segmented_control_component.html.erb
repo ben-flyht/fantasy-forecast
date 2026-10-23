@@ -6,6 +6,7 @@
           reading both spans out one after the other. %>
       <%= link_to option.url, "aria-label": option.label,
             "aria-current": ("page" if option.current?),
+            data: option_data(option),
             class: option_classes(option) do %>
         <span class="sm:hidden"><%= option.short_label %></span>
         <span class="hidden sm:inline"><%= option.label %></span>
@@ -13,6 +14,7 @@
     <% else %>
       <%= link_to option.label, option.url,
             "aria-current": ("page" if option.current?),
+            data: option_data(option),
             class: option_classes(option) %>
     <% end %>
   <% end %>

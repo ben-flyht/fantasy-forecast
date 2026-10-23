@@ -1,6 +1,7 @@
 class ApplicationController < ActionController::Base
-  # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
-  allow_browser versions: :modern
+  TAILWIND_BASELINE_BROWSERS = { safari: 16.4, chrome: 111, firefox: 128, opera: 97, ie: false }.freeze
+
+  allow_browser versions: TAILWIND_BASELINE_BROWSERS
 
   def robots
     @app_host = ENV.fetch("APP_HOST", "www.fantasyforecast.co.uk")

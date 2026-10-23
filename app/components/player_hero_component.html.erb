@@ -17,7 +17,7 @@
 
   <% if player.cutout_url %>
     <span class="pointer-events-none absolute bottom-0 right-5 z-[1] h-[208px] sm:right-7 sm:h-[248px] lg:h-[276px]">
-      <%= image_tag player.cutout_url, alt: "",
+      <%= image_tag player.cutout_url, alt: "", width: 110, height: 140, fetchpriority: "high",
             class: "block h-full w-auto object-bottom drop-shadow-[0_6px_14px_rgba(0,0,0,0.28)]",
             onerror: "this.parentElement.remove()" %>
     </span>
