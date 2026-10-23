@@ -97,12 +97,18 @@ module History
       end
     end
 
-    def fixtures_by_team(rounds, difficulty: nil)
+    def fixtures_by_team(rounds, difficulty: nil, as_of: nil)
+      form = as_of ? opponent_form(as_of) : OpponentForm.new([])
       matches(rounds).each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |fixture, by_team|
         home, away = fixture.values_at("team_h", "team_a").map(&:to_i)
-        by_team[home] << fixture_for(fixture, home, away, true, difficulty)
-        by_team[away] << fixture_for(fixture, away, home, false, difficulty)
+        by_team[home] << fixture_for(fixture, home, away, true, difficulty, form)
+        by_team[away] << fixture_for(fixture, away, home, false, difficulty, form)
       end
+    end
+
+    def opponent_form(round)
+      @opponent_forms ||= {}
+      @opponent_forms[round] ||= OpponentForm.new(meetings_before(round))
     end
 
     def matches(rounds)
@@ -245,10 +251,27 @@ module History
                   .each_with_object(Hash.new(0.0)) { |row, totals| totals[row.element] += yield(row) }
     end
 
-    def fixture_for(fixture, team, opponent, home, difficulty)
+    def fixture_for(fixture, team, opponent, home, difficulty, form)
       rated = { difficulty: fixture[home ? "team_h_difficulty" : "team_a_difficulty"]&.to_f }
       rated = rated.merge(difficulty.call(fixture, team, rated[:difficulty])) if difficulty
-      rated.merge(opponent: @teams[opponent], home: home, fixture: fixture["id"].to_i)
+      form.ratings(opponent, rated[:difficulty]).merge(rated).merge(opponent: @teams[opponent], home: home, fixture: fixture["id"].to_i)
+    end
+
+    def meetings_before(round)
+      xg = xg_by_side(round)
+      matches(rounds.select { |candidate| candidate < round }).filter_map { |fixture| meeting(fixture, xg) }
+    end
+
+    def xg_by_side(round)
+      @appearances.select { |row| row.round < round }
+                  .each_with_object(Hash.new(0.0)) { |row, sums| sums[[ row.fixture, row.team_id ]] += row.rates["expected_goals"].to_f }
+    end
+
+    def meeting(fixture, xg)
+      home, away = fixture.values_at("team_h", "team_a").map { |team| [ fixture["id"].to_i, team.to_i ] }
+      return unless xg.key?(home) && xg.key?(away)
+
+      { home: home.last, away: away.last, home_xg: xg[home], away_xg: xg[away] }
     end
   end
 end
