@@ -25,21 +25,21 @@ class PlayerHistory < ApplicationService
     "goalkeeper" => {
       "saves_per_90" => "Saves per 90",
       "clean_sheets_per_90" => "Clean sheets per 90",
-      "expected_goals_conceded_per_90" => "Goals conceded per 90"
+      "expected_goals_conceded_per_90" => "Expected goals conceded per 90"
     },
     "defender" => {
       "clean_sheets_per_90" => "Clean sheets per 90",
       "defensive_contribution_per_90" => "Defensive actions per 90",
-      "expected_goal_involvements_per_90" => "Goal involvements per 90"
+      "expected_goal_involvements_per_90" => "Expected goal involvements per 90"
     },
     "midfielder" => {
       "expected_goals_per_90" => "Expected goals per 90",
-      "expected_goal_involvements_per_90" => "Goal involvements per 90",
+      "expected_goal_involvements_per_90" => "Expected goal involvements per 90",
       "defensive_contribution_per_90" => "Defensive actions per 90"
     },
     "forward" => {
       "expected_goals_per_90" => "Expected goals per 90",
-      "expected_goal_involvements_per_90" => "Goal involvements per 90"
+      "expected_goal_involvements_per_90" => "Expected goal involvements per 90"
     }
   }.freeze
 
@@ -101,7 +101,11 @@ class PlayerHistory < ApplicationService
 
   # Weeks he played and returned nothing worth having.
   def blanks
-    points.count { |point| point.value <= BLANK }
+    appearances.count { |point| point.value <= BLANK }
+  end
+
+  def appearances
+    @appearances ||= points.select { |point| minutes_by_week.fetch(point.gameweek, 0).positive? }
   end
 
   # Points per million: what the return has cost. Nil before he has scored any, or
@@ -130,6 +134,13 @@ class PlayerHistory < ApplicationService
 
   def cost
     price_history.latest
+  end
+
+  def minutes_by_week
+    @minutes_by_week ||= Statistic.where(player_id: @player.id, type: "minutes")
+                                  .joins(:gameweek)
+                                  .pluck(Arel.sql("gameweeks.fpl_id"), :value)
+                                  .to_h
   end
 
   def series

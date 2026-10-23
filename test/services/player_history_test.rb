@@ -19,8 +19,9 @@ class PlayerHistoryTest < ActiveSupport::TestCase
     Forecast.create!(player: @player, gameweek: week, horizon: horizon, rank: rank, score: 5.0)
   end
 
-  def performance(week, score)
+  def performance(week, score, minutes: 90)
     Performance.create!(player: @player, gameweek: week, team: @team, gameweek_score: score)
+    Statistic.create!(player: @player, gameweek: week, type: "minutes", value: minutes)
   end
 
   test "one week of forecasts is a rank, not a movement" do
@@ -71,6 +72,15 @@ class PlayerHistoryTest < ActiveSupport::TestCase
     assert_equal 12, history.best_week.value
     assert_equal 91, history.best_week.gameweek
     assert_equal 1, history.blanks, "two points is the bare appearance, so it did nothing for anybody"
+  end
+
+  test "a week he did not play is not a blank" do
+    performance(@weeks[0], 8)
+    performance(@weeks[1], 0, minutes: 0)
+    performance(@weeks[2], 1)
+
+    assert_equal 1, history.blanks, "out injured is not the same as playing and returning nothing"
+    assert_equal 2, history.appearances.size
   end
 
   test "points per million needs a price to divide by" do
