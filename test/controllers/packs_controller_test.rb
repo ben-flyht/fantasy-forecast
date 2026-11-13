@@ -493,7 +493,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-row-hand] [data-pack-row-kept] .pack-card", count: 4
     assert_select "[data-pack-row-hand] [data-pack-row-kept] [data-pack-forfeit]", count: 1
     assert_select "[data-pack-row-hand] [data-pack-row-discarded] .pack-card", count: 4
-    assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: "3 pts", count: 4
+    assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: /\A\s*(3|6) pts\s*\z/, count: 4
     assert_select "[data-pack-row-kept] [data-pack-card-points]", text: /\A\s*(3|6) pts\s*\z/, count: 4
     assert_select "[data-pack-row-verdict=level] [data-pack-verdict-mark=tick]", text: /Right call/, count: 4
     assert_select "[data-pack-verdict-mark=cross]", count: 0
@@ -505,6 +505,24 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-row-verdict=pending]", count: 4
     assert_select "[data-pack-row-verdict=pending] [data-pack-verdict-mark]", count: 0
     assert_select "[data-pack-row] [data-pack-accuracy]", text: "–"
+  end
+
+  test "the card passed over in the captain pair shows the doubled points it would have scored" do
+    sign_in
+    get weekly_pack_path(gameweek: 1)
+    pick_all("aaaaa")
+    pack = Selection.last.pack
+    captain, passed = pack.pairs[pack.shiny_index].cards
+    score_everyone(3)
+    Performance.find_by(player: captain.player).update!(gameweek_score: 10)
+    Performance.find_by(player: passed.player).update!(gameweek_score: 11)
+    @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
+
+    get pack_leaderboard_path(gameweek: 1)
+    assert_select "[data-pack-row-kept] [data-pack-card-points]", text: "20 pts", count: 1
+    assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: "22 pts", count: 1
+    assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: "3 pts", count: 4
+    assert_select "[data-pack-row-verdict=worse] [data-pack-verdict-mark=cross]", count: 1
   end
 
   test "a pick answers with a stream that updates just that pair and the status, not the page" do
