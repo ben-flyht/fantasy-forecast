@@ -21,7 +21,7 @@ class PackSeasonLeaderboard
   def pros = totals.select(&:pro?).map(&:user)
 
   def accuracy_rows
-    @accuracy_rows ||= rank(totals) { |row| row.score }
+    @accuracy_rows ||= rank(totals) { |row| row.rating }
   end
 
   private
