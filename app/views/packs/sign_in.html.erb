@@ -9,12 +9,14 @@
           horizons: play_tabs(current: :pack)) %>
   </div>
 
-  <div class="relative overflow-x-clip pt-20">
-  <div class="pointer-events-none absolute right-6 top-0 rotate-[14deg] sm:right-12" aria-hidden="true">
-    <%= render "packs/sealed_pack", gameweek: @gameweek, small: true %>
+  <div class="relative flex min-h-[26rem] items-center">
+  <div class="pointer-events-none absolute inset-0 overflow-x-clip" aria-hidden="true">
+    <div class="absolute right-6 top-1/2 -translate-y-1/2 rotate-[14deg] sm:right-12">
+      <%= render "packs/sealed_pack", gameweek: @gameweek %>
+    </div>
   </div>
 
-  <%= form_with url: pack_sign_ins_path, class: "relative z-10 rounded-2xl border border-white/70 bg-white/75 p-6 shadow-2xl shadow-zinc-950/20 backdrop-blur-[3px]", data: { turbo: false } do |form| %>
+  <%= form_with url: pack_sign_ins_path, class: "relative z-10 w-full rounded-2xl border border-white/70 bg-white/75 p-6 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.18)] backdrop-blur-[3px]", data: { turbo: false } do |form| %>
     <h2 class="mb-4 text-lg font-extrabold tracking-tight text-zinc-950">
       <%= @gameweek ? "Your Gameweek #{@gameweek.fpl_id} pack is waiting" : "Your pack is waiting" %>
     </h2>
