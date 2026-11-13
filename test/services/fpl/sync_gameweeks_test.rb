@@ -49,7 +49,7 @@ module Fpl
       stub_request(:get, @fixtures_api_url).to_return(
         status: 200,
         body: [ { "id" => 7001, "event" => 1, "team_h" => team_h.fpl_id, "team_a" => team_a.fpl_id,
-                  "team_h_difficulty" => 2, "team_a_difficulty" => 4 } ].to_json,
+                  "team_h_difficulty" => 2, "team_a_difficulty" => 4, "finished" => true } ].to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
@@ -58,6 +58,7 @@ module Fpl
 
       assert_equal 2, match.home_difficulty, "without this every fixture reads as unplayable"
       assert_equal 4, match.away_difficulty
+      assert match.finished, "a pack pair is only called once both teams have finished"
     end
 
     test "call creates new gameweeks from API data" do

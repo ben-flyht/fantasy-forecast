@@ -368,6 +368,13 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-row-verdict=level] [data-pack-verdict-mark=tick]", text: /Right call/, count: 4
     assert_select "[data-pack-verdict-mark=cross]", count: 0
     assert_select "[data-pack-row-verdict=no_pick]", count: 1
+
+    rival = Team.create!(fpl_id: 961, code: 961, name: "Rival", short_name: "RVL")
+    Match.create!(gameweek: @gameweek, home_team: Team.find_by(fpl_id: 960), away_team: rival, fpl_id: 96_001)
+    get pack_leaderboard_path(gameweek: 1)
+    assert_select "[data-pack-row-verdict=pending]", count: 4
+    assert_select "[data-pack-row-verdict=pending] [data-pack-verdict-mark]", count: 0
+    assert_select "[data-pack-row] [data-pack-accuracy]", text: "0%"
   end
 
   test "a pack is dealt out the first time it is opened, and stays put once picking starts" do

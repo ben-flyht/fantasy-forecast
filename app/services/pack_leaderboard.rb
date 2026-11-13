@@ -37,6 +37,6 @@ class PackLeaderboard
 
   def score(selection)
     hand = selection.pack_hand
-    Row.new(place: nil, selection: selection, points: real.for(hand), right: real.right_calls(hand), pairs: hand.pack.size)
+    Row.new(place: nil, selection: selection, points: real.for(hand), right: real.right_calls(hand), pairs: real.called(hand))
   end
 end
