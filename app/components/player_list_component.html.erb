@@ -1,0 +1,20 @@
+<div class="hidden overflow-x-auto md:block">
+  <div class="min-w-[720px]">
+    <div class="eyebrow flex pb-2" aria-hidden="true">
+      <span class="w-[104px] text-center"><%= leading_label %></span>
+      <span class="flex-1 pl-10">Player</span>
+      <span class="w-[104px] text-center">Grade</span>
+    </div>
+    <ol class="flex flex-col gap-2">
+      <% entries.each do |entry| %>
+        <li><%= render PlayerRowComponent.new(**entry) %></li>
+      <% end %>
+    </ol>
+  </div>
+</div>
+
+<ol class="flex flex-col gap-2 md:hidden">
+  <% entries.each do |entry| %>
+    <li><%= render PlayerCardComponent.new(**entry) %></li>
+  <% end %>
+</ol>

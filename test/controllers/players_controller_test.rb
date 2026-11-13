@@ -397,7 +397,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, dear.display_name
     assert_not_includes response.body, cheap.display_name
-    assert_equal "3", response.body[/tabular-nums text-zinc-900">(\d+)</, 1]
+    assert_equal "3", response.body[/tabular-nums text-ink">(\d+)</, 1]
   end
 
   test "rank reflects the whole field when filtering by team" do
@@ -415,7 +415,7 @@ class PlayersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, second.display_name
     assert_not_includes response.body, top.display_name
-    assert_equal "2", response.body[/tabular-nums text-zinc-900">(\d+)</, 1]
+    assert_equal "2", response.body[/tabular-nums text-ink">(\d+)</, 1]
   end
 
   # A page that leans on a dozen readings must not fall over when a player has

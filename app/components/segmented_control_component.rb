@@ -43,9 +43,9 @@ class SegmentedControlComponent < ViewComponent::Base
 
   def option_classes(option)
     state = if option.current?
-      "bg-white text-zinc-900 shadow-sm"
+      "bg-surface text-ink shadow-sm"
     else
-      "text-zinc-500 hover:text-zinc-900"
+      "text-muted hover:text-ink"
     end
 
     "flex-1 sm:flex-none rounded-md px-3 py-2 text-center text-sm font-medium " \

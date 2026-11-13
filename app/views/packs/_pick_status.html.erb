@@ -1,9 +1,10 @@
-<p id="pack_status" class="mb-6 rounded-2xl border-2 border-zinc-950 p-5 text-sm/6 text-zinc-700" data-pack-status>
+<%= render PanelComponent.new(tone: :strong, tag: :p, id: "pack_status", class: "mb-group text-copy text-body",
+                              data: { pack_status: true }) do %>
   <% if hand.complete? %>
-    <strong class="text-zinc-950">That's your five.</strong>
+    <strong class="text-ink">That's your five.</strong>
   <% else %>
-    <strong class="text-zinc-950"><%= hand.kept.size %> of <%= hand.pack.size %> picked.</strong>
+    <strong class="text-ink"><%= hand.kept.size %> of <%= hand.pack.size %> picked.</strong>
   <% end %>
   Tap a card to keep it. You can change any pick until the deadline,
-  <strong class="text-zinc-950"><%= gameweek.start_time.in_time_zone("London").strftime("%a %-d %b, %H:%M") %></strong>.
-</p>
+  <strong class="text-ink"><%= gameweek.start_time.in_time_zone("London").strftime("%a %-d %b, %H:%M") %></strong>.
+<% end %>

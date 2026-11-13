@@ -57,8 +57,8 @@ class SquadsControllerTest < ActionDispatch::IntegrationTest
 
     get squad_path
 
-    assert_select "td", text: "GK", count: 1
-    assert_select "th", text: "Pos"
+    assert_select "ol li a span", text: "GK", count: 2
+    assert_select "span", text: "Pos"
   end
 
   test "the reserve keeper heads the bench" do
@@ -129,7 +129,7 @@ class SquadsControllerTest < ActionDispatch::IntegrationTest
     build_squad
     get squad_path
 
-    assert_select "h2", /Who to captain/
+    assert_select "section p", /Who to captain/
     assert_select "a[href=?]", captain_path
     assert_select "a[href=?]", player_path(@player), text: @player.display_name
   end

@@ -1,0 +1,30 @@
+---
+title: Fantasy Forecast UI
+label: Overview
+landing: true
+---
+
+Every piece of interface on Fantasy Forecast, and every variant of it, in one place.
+
+## How it is organised
+
+- **Foundations** are the rules everything else is built from: the colour palette, the type scale, the spacing rhythm and the logo.
+- **Elements** are the smallest parts: buttons, badges, chips, fields and controls.
+- **Layout** is how a page is put together: headings, panels, callouts, empty states and prose.
+- **Figures** are how numbers are shown: stats, tables and leaderboards.
+- **Players** are the cards, rows and panels a player is drawn with.
+- **Play** is the weekly pack game.
+
+## The rules
+
+1. **The interface is black and zinc.** Colour belongs to the player cards, where it is the club's own. The only other colour is red on a form error.
+2. **Use the tokens, not raw values.** Colours, text styles, section spacing and corner radii all have names, shown under Foundations. A raw `zinc-500` or `text-[11px]` in a view fails the test suite.
+3. **One piece of UI, one component.** If something on a page looks like something already here, it should be the thing already here, with a new variant if it needs one.
+
+## Keeping this up to date
+
+A change to the interface is not finished until it shows here.
+
+- A new component needs a preview in `test/components/previews`, with a scenario for each variant: sizes, tones, light and dark clubs, empty and overlong content.
+- A new variant of an existing component needs a new scenario.
+- The test suite renders every scenario, and fails if a component has no preview.

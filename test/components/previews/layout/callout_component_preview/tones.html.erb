@@ -1,0 +1,10 @@
+<div class="space-y-4">
+  <% tones.each do |tone| %>
+    <%= render CalloutComponent.new(eyebrow: "Our captain pick, gameweek 12", title: "Haaland", url: "#", tone: tone) do %>
+      <p>
+        Man City, at home to Fulham. We forecast 7.4 points before the armband, so around 14.8 with it.
+        <a href="#" class="text-link <%= "text-white" if tone == :dark %>">See every captain option</a>.
+      </p>
+    <% end %>
+  <% end %>
+</div>

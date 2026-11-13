@@ -82,6 +82,9 @@ end
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
+
+  # Component library and preview browser, mounted at /lookbook [https://lookbook.build]
+  gem "lookbook", ">= 2.3.15"
 end
 
 group :test do

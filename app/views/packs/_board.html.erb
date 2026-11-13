@@ -2,8 +2,8 @@
   <% if @dealing %>
     <div class="flex flex-col items-center gap-8 py-6" data-pack-opener>
       <%= render "packs/sealed_pack", gameweek: @gameweek %>
-      <button type="button" class="rounded-xl bg-zinc-950 px-8 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white cursor-pointer disabled:opacity-60"
-              data-pack-open-target="button" data-action="pack-open#open">Open pack</button>
+      <%= render ButtonComponent.new(label: "Open pack", variant: :solid, size: :md,
+                                     data: { pack_open_target: "button", action: "pack-open#open" }) %>
     </div>
   <% end %>
   <div <%= tag.attributes(hidden: @dealing, data: { pack_open_target: ("board" if @dealing) }) %>>

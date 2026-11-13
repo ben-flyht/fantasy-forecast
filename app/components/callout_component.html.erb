@@ -1,0 +1,15 @@
+<%= render PanelComponent.new(tone: tone, tag: :section, **attributes) do %>
+  <% if eyebrow %>
+    <p class="<%= eyebrow_classes %>"><%= eyebrow %></p>
+  <% end %>
+  <p class="mt-1.5 break-words <%= title_classes %>">
+    <% if url %>
+      <%= link_to title, url, class: "underline-offset-4 hover:underline" %>
+    <% else %>
+      <%= title %>
+    <% end %>
+  </p>
+  <% if content? %>
+    <div class="<%= body_classes %>"><%= content %></div>
+  <% end %>
+<% end %>

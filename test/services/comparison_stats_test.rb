@@ -174,4 +174,25 @@ class ComparisonStatsTest < ActiveSupport::TestCase
 
     assert_match "Expected goals", row("xG per 90").term.definition
   end
+
+  test "a row says how far each side reaches, measured against the larger" do
+    reading(@salah, "expected_goals_per_90", 0.5)
+    reading(@palmer, "expected_goals_per_90", 0.25)
+
+    assert_equal [ 1.0, 0.5 ], row("xG per 90").shares
+  end
+
+  test "where fewer is better, the smaller figure reaches furthest" do
+    reading(@salah, "season_yellow_cards", 4)
+    reading(@palmer, "season_yellow_cards", 1)
+
+    assert_equal [ 0.25, 1.0 ], row("Yellow cards").shares
+  end
+
+  test "a place in the penalty order has no reach to draw" do
+    reading(@salah, "penalties_order", 1)
+    reading(@palmer, "penalties_order", 2)
+
+    assert_nil row("Penalties").shares
+  end
 end

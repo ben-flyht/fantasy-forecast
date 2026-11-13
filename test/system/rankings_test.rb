@@ -95,7 +95,7 @@ class RankingsTest < ApplicationSystemTestCase
   private
 
   def player_row(player)
-    "[onclick*='#{player_path(player)}']"
+    "a[href='#{player_path(player)}']"
   end
 
   def move_slider(name, value)

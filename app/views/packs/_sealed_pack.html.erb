@@ -1,13 +1,13 @@
 <div class="pack-sealed <%= "pack-sealed--small" if local_assigns[:small] %>" data-pack-open-target="pack" data-pack-sealed>
   <div class="pack-sealed__cards" aria-hidden="true">
     <% 3.times do |card| %>
-      <span class="pack-sealed__card" style="--card: <%= card %>;"><%= render "shared/logo", size: "0.8rem" %></span>
+      <span class="pack-sealed__card" style="--card: <%= card %>;"><%= render LogoComponent.new(size: "5.4cqw", inverse: true) %></span>
     <% end %>
   </div>
   <div class="pack-sealed__wrapper">
     <span class="pack-sealed__strip" aria-hidden="true"></span>
     <div class="pack-sealed__face">
-      <%= render "shared/logo", size: "1rem" %>
+      <%= render LogoComponent.new(size: "6.6cqw", inverse: true) %>
       <p class="pack-sealed__title"><%= gameweek ? "Gameweek #{gameweek.fpl_id}" : "This week" %></p>
       <p class="pack-sealed__count">10 cards · 5 pairs</p>
     </div>

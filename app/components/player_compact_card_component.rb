@@ -21,11 +21,4 @@ class PlayerCompactCardComponent < PlayerRowComponent
   def headline?
     @leading.present?
   end
-
-  # A badge is drawn twice: once knocked out to a silhouette so it reads against the
-  # colour, once in its own colours over the top. Which way it is knocked out depends
-  # on whether the club plays in something pale.
-  def badge_silhouette
-    team&.on_light? ? "brightness-0" : "brightness-0 invert"
-  end
 end

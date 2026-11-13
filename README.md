@@ -39,3 +39,13 @@ bin/dev          # web + tailwind watch
 bin/rails test
 bin/rubocop
 ```
+
+## Component library
+
+Every piece of interface, and every variant of it, lives in [Lookbook](https://lookbook.build) at
+`/lookbook` in development: the colour, type and spacing foundations, then each component.
+
+- Components are in `app/components`, their previews in `test/components/previews`.
+- Design tokens (colours, text styles, spacing, radii) are defined in `app/assets/tailwind/application.css`.
+- A UI change is not finished until its preview is: the test suite renders every preview, fails if a
+  component has none, and fails on a raw colour, text size or radius that bypasses the tokens.

@@ -1,0 +1,10 @@
+<%= render PageHeadingComponent.new(title: "Leaderboard: Gameweek 12",
+                                    subtitle: "Everyone opened their own pack. Real FPL points for each five, with the captain counting twice.",
+                                    horizons: horizons) do |heading| %>
+  <% heading.with_aside do %>
+    <div class="flex items-center gap-4 text-sm font-medium">
+      <a href="#" class="text-muted hover:text-ink">Profile</a>
+      <a href="#" class="text-muted hover:text-ink">Sign out</a>
+    </div>
+  <% end %>
+<% end %>

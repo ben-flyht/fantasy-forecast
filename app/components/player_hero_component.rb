@@ -40,8 +40,4 @@ class PlayerHeroComponent < PlayerRowComponent
   def dead_balls
     duties.select(&:first_choice?).map(&:name).join(", ").presence
   end
-
-  def badge_silhouette
-    team.on_light? ? "brightness-0" : "brightness-0 invert"
-  end
 end

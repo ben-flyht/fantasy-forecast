@@ -13,7 +13,7 @@
 <%= turbo_frame_tag "rankings_container", data: { turbo_action: "advance" } do %>
     <%# The horizon comes out of the filter bar below and into the heading, so it is
         the same control in the same place as every other page reads its forecast at. %>
-    <div class="mb-6" data-controller="page-title" data-page-title-text-value="<%= document_title %>">
+    <div class="mb-group" data-controller="page-title" data-page-title-text-value="<%= document_title %>">
       <%= render PageHeadingComponent.new(
             title: @page_title,
             subtitle: "Check the forecast before you pick your team.",
@@ -31,7 +31,7 @@
         price pushed to the far end where a range belongs. Position, team and a 160px
         slider with its label need the best part of eight hundred pixels between them, so
         they share a row only from lg up — below that they would crowd and clip. %>
-    <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+    <div class="mb-group flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
       <%# The positions are the same control as the horizon above, and links for the
           same reason: /gameweeks/1/goalkeepers is a page people arrive on from a
           search, so it deserves an href rather than a radio button. %>
@@ -39,7 +39,7 @@
 
       <%= form_with url: position_rankings_path(horizon_param, @position_filter), method: :get, data: { turbo_frame: "rankings_container", turbo_action: "advance", controller: "filter-navigation", action: "submit->filter-navigation#submit" }, id: "filters-form", class: "contents" do |f| %>
         <div class="flex items-center gap-2">
-          <span class="shrink-0 text-sm text-zinc-500">Team</span>
+          <span class="shrink-0 text-sm text-muted">Team</span>
           <%= render DropdownComponent.new(
             label: "Team",
             name: "team_id",
@@ -48,48 +48,19 @@
           ) %>
         </div>
 
-        <%= render "players/price_filter" %>
+        <%= render PriceSliderComponent.new(filter: @price_filter) %>
       <% end %>
     </div>
 
     <!-- Rankings Table -->
     <% if @consensus_rankings.any? %>
-      <div class="hidden md:block overflow-x-auto">
-        <table class="w-full min-w-[720px] table-fixed border-separate border-spacing-y-2 text-zinc-950">
-          <thead>
-            <tr class="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
-              <th class="w-[104px] pb-2 text-center">Rank</th>
-              <th class="pb-2 pl-10 text-left">Player</th>
-              <th class="w-[104px] pb-2 text-center">Grade</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @consensus_rankings.each do |ranking| %>
-              <% player = @players_by_id[ranking.player_id] %>
-              <%= render PlayerRowComponent.new(ranking: ranking, player: player, facts: @row_facts&.dig(player.id)) %>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="md:hidden flex flex-col gap-2">
-        <% @consensus_rankings.each do |ranking| %>
-          <% player = @players_by_id[ranking.player_id] %>
-          <%= render PlayerCardComponent.new(ranking: ranking, player: player, facts: @row_facts&.dig(player.id)) %>
-        <% end %>
-      </div>
+      <%= render PlayerListComponent.new(entries: @consensus_rankings.map { |ranking|
+            { ranking: ranking, player: @players_by_id[ranking.player_id], facts: @row_facts&.dig(ranking.player_id) }
+          }) %>
     <% else %>
-      <div class="px-6 py-8 text-center">
-        <div class="text-zinc-500">
-          <svg class="mx-auto h-12 w-12 text-zinc-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-            <path d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.713-3.714M14 40v-4c0-1.313.253-2.566.713-3.714m0 0A9.971 9.971 0 0124 24c4.004 0 7.625 2.31 9.287 5.286" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <h3 class="mt-2 text-sm font-medium text-zinc-900">No rankings yet</h3>
-          <p class="mt-1 text-sm text-zinc-500">
-            No ranking data available for <%= horizon_label.downcase %><%= " (#{@position_filter.capitalize}s)" if @position_filter.present? %>.
-          </p>
-        </div>
-      </div>
+      <%= render EmptyStateComponent.new(
+            title: "No rankings yet",
+            message: "No ranking data available for #{horizon_label.downcase}#{" (#{@position_filter.capitalize}s)" if @position_filter.present?}.") %>
     <% end %>
 
     <%= render "players/seo_content" %>

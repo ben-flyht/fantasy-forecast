@@ -1,0 +1,8 @@
+<div class="flex items-center gap-6">
+  <% %i[better level worse].each do |verdict| %>
+    <div class="text-center">
+      <%= render "packs/pick_verdict", verdict: verdict %>
+      <p class="eyebrow mt-2"><%= verdict %></p>
+    </div>
+  <% end %>
+</div>

@@ -12,7 +12,7 @@ import { track } from "controllers/analytics_controller"
 // because an empty side is not yet a question. The chips in the DOM are the state, so
 // nothing is held in step with them.
 export default class extends Controller {
-  static targets = ["side", "chips", "chip", "input", "results", "hint"]
+  static targets = ["side", "chips", "chip", "input", "results", "hint", "removeTemplate"]
   static values = { url: String }
 
   // How long to wait after the last keystroke before asking. Short enough to feel
@@ -78,10 +78,10 @@ export default class extends Controller {
       option.dataset.side = side
       option.dataset.player = JSON.stringify(player)
       option.className =
-        "flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none aria-selected:bg-zinc-100"
+        "flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-surface-subtle focus:bg-surface-subtle focus:outline-none aria-selected:bg-surface-muted"
       option.innerHTML =
-        `<span class="font-medium text-zinc-900"></span>` +
-        `<span class="text-xs text-zinc-500"></span>`
+        `<span class="font-medium text-ink"></span>` +
+        `<span class="text-xs text-muted"></span>`
       option.children[0].textContent = player.full_name
       option.children[1].textContent = [player.team, player.position].filter(Boolean).join(" · ")
       list.appendChild(option)
@@ -157,7 +157,7 @@ export default class extends Controller {
   clearPick() {
     this.element.querySelectorAll("[data-pick-badge]").forEach((badge) => badge.remove())
     this.element.querySelectorAll("[data-pick-ring]").forEach((ring) =>
-      ring.classList.replace("ring-zinc-900", "ring-transparent"))
+      ring.classList.replace("ring-ink", "ring-transparent"))
     this.element.querySelectorAll("[data-comparison-card]").forEach((card) => (card.dataset.pick = "false"))
   }
 
@@ -235,17 +235,17 @@ export default class extends Controller {
   // there is a page with his real card on it.
   chip(side, player) {
     const chip = document.createElement("div")
-    chip.className = "relative rounded-xl border border-zinc-200 bg-white px-3 py-2 pr-8"
+    chip.className = "relative rounded-card border border-line bg-surface px-3 py-2 pr-8"
     chip.dataset.comparisonBuilderTarget = "chip"
     chip.dataset.side = side
     chip.dataset.param = player.param
 
     const name = document.createElement("p")
-    name.className = "text-sm font-medium text-zinc-900"
+    name.className = "text-sm font-medium text-ink"
     name.textContent = player.full_name
 
     const meta = document.createElement("p")
-    meta.className = "text-xs text-zinc-500"
+    meta.className = "text-xs text-muted"
     meta.textContent = [player.team, player.position].filter(Boolean).join(" · ")
 
     chip.appendChild(name)
@@ -255,15 +255,8 @@ export default class extends Controller {
   }
 
   removeButton(name) {
-    const remove = document.createElement("button")
-    remove.type = "button"
-    remove.dataset.action = "comparison-builder#remove"
+    const remove = this.removeTemplateTarget.content.firstElementChild.cloneNode(true)
     remove.setAttribute("aria-label", `Remove ${name}`)
-    remove.className =
-      "absolute right-2 top-2 rounded p-0.5 text-zinc-400 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
-    remove.innerHTML =
-      `<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">` +
-      `<path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>`
     return remove
   }
 

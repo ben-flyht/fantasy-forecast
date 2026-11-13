@@ -108,6 +108,10 @@ class LastSeasonComponent < ViewComponent::Base
     StatGlossary.fetch(key)
   end
 
+  def labelled(pairs)
+    pairs.map { |term, figure| [ render(StatLabelComponent.new(term: term)), figure ] }
+  end
+
   def value(type)
     stats[type].to_f
   end

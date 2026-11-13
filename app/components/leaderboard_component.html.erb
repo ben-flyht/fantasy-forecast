@@ -1,0 +1,15 @@
+<% if caption %>
+  <p class="eyebrow mb-3"><%= caption %></p>
+<% end %>
+<div class="eyebrow mb-2 flex items-center gap-3 px-4" data-pack-columns>
+  <span class="w-10 text-right">#</span>
+  <span class="flex-1">Player</span>
+  <% columns.each do |column| %>
+    <span class="<%= column.width %> text-right"><%= column.label %></span>
+  <% end %>
+</div>
+<ol class="divide-y divide-line rounded-card border border-line">
+  <% rows.each do |row| %>
+    <%= row %>
+  <% end %>
+</ol>

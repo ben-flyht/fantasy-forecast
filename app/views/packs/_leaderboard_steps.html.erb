@@ -1,13 +1,13 @@
 <% steps = leaderboard_steps(gameweek) %>
 <% if steps.values.any? %>
-  <nav class="mb-4 flex items-center justify-between text-sm font-bold" aria-label="Other gameweeks" data-pack-steps>
+  <nav class="mb-4 flex items-center justify-between text-sm" aria-label="Other gameweeks" data-pack-steps>
     <% if steps[:previous] %>
-      <%= link_to "← Gameweek #{steps[:previous].fpl_id}", pack_leaderboard_path(gameweek: steps[:previous].fpl_id), class: "text-zinc-950 underline underline-offset-2" %>
+      <%= link_to "← Gameweek #{steps[:previous].fpl_id}", pack_leaderboard_path(gameweek: steps[:previous].fpl_id), class: "text-link" %>
     <% else %>
       <span></span>
     <% end %>
     <% if steps[:next] %>
-      <%= link_to "Gameweek #{steps[:next].fpl_id} →", pack_leaderboard_path(gameweek: steps[:next].fpl_id), class: "text-zinc-950 underline underline-offset-2" %>
+      <%= link_to "Gameweek #{steps[:next].fpl_id} →", pack_leaderboard_path(gameweek: steps[:next].fpl_id), class: "text-link" %>
     <% end %>
   </nav>
 <% end %>

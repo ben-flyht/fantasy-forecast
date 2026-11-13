@@ -1,0 +1,27 @@
+<div class="max-w-3xl">
+  <p class="text-copy text-body">
+    The interface is black and zinc greys. Every colour is used through a named token rather than a raw shade,
+    so one role is always one colour. Colour itself belongs to the player cards.
+  </p>
+
+  <% groups.each do |title, swatches| %>
+    <section class="mt-section">
+      <h2 class="text-heading text-ink"><%= title %></h2>
+      <ul class="mt-stack divide-y divide-line-subtle">
+        <% swatches.each do |swatch| %>
+          <li class="flex items-center gap-4 py-3">
+            <span class="size-12 shrink-0 rounded-card border border-line <%= swatch.swatch %>"></span>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-ink"><%= swatch.name %></p>
+              <p class="text-sm text-muted"><%= swatch.use %></p>
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="font-mono text-xs text-ink"><%= swatch.token %></p>
+              <p class="font-mono text-xs text-faint"><%= swatch.source %></p>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+</div>

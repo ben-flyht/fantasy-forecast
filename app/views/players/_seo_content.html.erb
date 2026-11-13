@@ -2,9 +2,9 @@
   <% grade_a = @consensus_rankings.select { |r| r.tier == 1 && r.bot_rank.present? } %>
   <% grade_b = @consensus_rankings.select { |r| r.tier == 2 && r.bot_rank.present? } %>
 
-  <div class="mt-8 space-y-6 text-sm text-zinc-600">
+  <div class="mt-section space-y-6 text-sm text-body">
     <div>
-      <h2 class="text-lg font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> Rankings — <%= horizon_label %></h2>
+      <h2 class="text-heading text-ink">FPL <%= @position_filter.capitalize %> Rankings — <%= horizon_label %></h2>
       <p class="mt-2">
         Our algorithm ranks every Premier League <%= @position_filter %> for <%= horizon_label %> by starting from the market — each player's price and ownership — and weighing it against recent form, upcoming fixtures, and expected goals.
         Players are graded from A (must-start picks) down to D (marginal). Anyone we would avoid is left ungraded.
@@ -13,7 +13,7 @@
 
     <% if grade_a.any? %>
       <div>
-        <h3 class="font-semibold text-zinc-900">Grade A — Top <%= @position_filter.capitalize %> Picks for <%= horizon_short %></h3>
+        <h3 class="font-semibold text-ink">Grade A — Top <%= @position_filter.capitalize %> Picks for <%= horizon_short %></h3>
         <ul class="mt-2 space-y-2">
           <% grade_a.first(5).each do |r| %>
             <% player = @players_by_id[r.player_id] %>
@@ -24,7 +24,7 @@
                  "#{opponent} (#{venue})"
                } %>
             <li>
-              <%= link_to player.display_name, player_path(player), class: "font-semibold text-zinc-900 hover:underline" %>
+              <%= link_to player.display_name, player_path(player), class: "font-semibold text-ink hover:underline" %>
               (<%= player.team&.name %><%= " vs #{fixtures.join(', ')}" if fixtures.any? %>)
             </li>
           <% end %>
@@ -37,7 +37,7 @@
 
     <% if grade_b.any? %>
       <div>
-        <h3 class="font-semibold text-zinc-900">Grade B — Strong <%= @position_filter.capitalize %> Alternatives for <%= horizon_short %></h3>
+        <h3 class="font-semibold text-ink">Grade B — Strong <%= @position_filter.capitalize %> Alternatives for <%= horizon_short %></h3>
         <ul class="mt-2 space-y-2">
           <% grade_b.first(5).each do |r| %>
             <% player = @players_by_id[r.player_id] %>
@@ -48,7 +48,7 @@
                  "#{opponent} (#{venue})"
                } %>
             <li>
-              <%= link_to player.display_name, player_path(player), class: "font-semibold text-zinc-900 hover:underline" %>
+              <%= link_to player.display_name, player_path(player), class: "font-semibold text-ink hover:underline" %>
               (<%= player.team&.name %><%= " vs #{fixtures.join(', ')}" if fixtures.any? %>)
             </li>
           <% end %>
@@ -60,7 +60,7 @@
     <% end %>
 
     <div>
-      <h3 class="font-semibold text-zinc-900">How Our FPL <%= @position_filter.capitalize %> Rankings Work</h3>
+      <h3 class="font-semibold text-ink">How Our FPL <%= @position_filter.capitalize %> Rankings Work</h3>
       <p class="mt-1">
         Fantasy Forecast uses a data-driven algorithm that lets the market lead — a player's price and how many managers own him — and weighs it against recent performance, expected goals and assists, minutes security, and fixture difficulty to produce weekly rankings for every Premier League position.
         Rankings update automatically each gameweek and are designed to help FPL managers make informed captain, transfer, and starting XI decisions.
@@ -68,19 +68,19 @@
     </div>
 
     <div>
-      <h3 class="font-semibold text-zinc-900">Grade System</h3>
+      <h3 class="font-semibold text-ink">Grade System</h3>
       <ul class="mt-1 space-y-1">
         <% TierCalculator::TIERS.each do |tier, info| %>
-          <li><span class="font-semibold text-zinc-900"><%= TierCalculator::GRADE_LETTERS.fetch(tier, TierCalculator::UNGRADED) %></span> — <%= info[:description] %></li>
+          <li><span class="font-semibold text-ink"><%= TierCalculator::GRADE_LETTERS.fetch(tier, TierCalculator::UNGRADED) %></span> — <%= info[:description] %></li>
         <% end %>
       </ul>
     </div>
 
     <div>
-      <h3 class="font-semibold text-zinc-900">FPL <%= @position_filter.capitalize %> FAQ</h3>
+      <h3 class="font-semibold text-ink">FPL <%= @position_filter.capitalize %> FAQ</h3>
       <dl class="mt-2 space-y-3">
         <div>
-          <dt class="font-medium text-zinc-900">Who are the best FPL <%= @position_filter %>s for <%= horizon_label %>?</dt>
+          <dt class="font-medium text-ink">Who are the best FPL <%= @position_filter %>s for <%= horizon_label %>?</dt>
           <dd class="mt-1">
             <% if grade_a.any? %>
               Our top-rated <%= @position_filter %>s for <%= horizon_short %> are
@@ -92,11 +92,11 @@
           </dd>
         </div>
         <div>
-          <dt class="font-medium text-zinc-900">How often do FPL <%= @position_filter %> rankings update?</dt>
+          <dt class="font-medium text-ink">How often do FPL <%= @position_filter %> rankings update?</dt>
           <dd class="mt-1">Rankings update automatically every hour, incorporating the latest player statistics, fixture data, and team news from the Premier League.</dd>
         </div>
         <div>
-          <dt class="font-medium text-zinc-900">What data is used to rank FPL <%= @position_filter %>s?</dt>
+          <dt class="font-medium text-ink">What data is used to rank FPL <%= @position_filter %>s?</dt>
           <dd class="mt-1">Our algorithm analyses recent performance metrics (points, goals, assists, clean sheets, expected goals), upcoming fixture difficulty, and how many managers are backing each player, to produce an expected points score.</dd>
         </div>
       </dl>
@@ -104,13 +104,13 @@
 
     <% other_positions = %w[goalkeeper defender midfielder forward].reject { |p| p == @position_filter } %>
     <div>
-      <h3 class="font-semibold text-zinc-900">More FPL Rankings</h3>
+      <h3 class="font-semibold text-ink">More FPL Rankings</h3>
       <p class="mt-1">
         Browse rankings for other positions:
         <% other_positions.each_with_index do |pos, i| %>
           <%= link_to "#{pos.capitalize}s",
               position_rankings_path(horizon_param, pos),
-              class: "font-semibold text-zinc-950 underline hover:text-zinc-600",
+              class: "font-semibold text-ink underline hover:text-body",
               data: { turbo_frame: "_top" } %><%= i == other_positions.size - 1 ? "." : "," %>
         <% end %>
       </p>

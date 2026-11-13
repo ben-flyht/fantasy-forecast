@@ -25,6 +25,10 @@ class PlayerOptionsComponent < ViewComponent::Base
 
   attr_reader :entries, :title, :subtitle, :horizon, :cost, :score
 
+  def summary
+    safe_join([ subtitle, (tag.span(standing, class: "text-body") if standing) ].compact, " ")
+  end
+
   def points_label
     horizon == "season" ? "Rest of season" : "This week"
   end

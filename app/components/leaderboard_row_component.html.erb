@@ -1,0 +1,16 @@
+<% if gap? %>
+  <li class="px-4 py-1 text-center text-xs font-bold tracking-[0.3em] text-faint" aria-hidden="true" data-pack-gap>⋯</li>
+<% end %>
+<%= tag.li **attributes, class: classes do %>
+  <div class="flex w-full items-center gap-3">
+    <span class="w-10 text-right text-figure tabular-nums text-ink"><%= place || "–" %></span>
+    <span class="flex min-w-0 flex-1 items-center gap-1.5">
+      <span class="truncate font-bold text-ink"><%= name %></span>
+      <% if pro? %>
+        <%= render BadgeComponent.new(label: "Pro", title: pro_title, data: { pack_pro: true }) %>
+      <% end %>
+    </span>
+    <%= figures %>
+  </div>
+  <%= content %>
+<% end %>

@@ -2,8 +2,8 @@
   <div class="flex items-center gap-4 text-sm font-medium" data-play-account>
     <% on_profile = current_page?(pack_profile_path) %>
     <%= link_to "Profile", pack_profile_path, "aria-current": ("page" if on_profile),
-          class: on_profile ? "text-zinc-950 underline decoration-2 underline-offset-4" : "text-zinc-500 hover:text-zinc-950" %>
+          class: on_profile ? "text-ink underline decoration-2 underline-offset-4" : "text-muted hover:text-ink" %>
     <%= button_to "Sign out", pack_sign_out_path, method: :delete, form_class: "inline",
-          class: "text-zinc-500 hover:text-zinc-950 cursor-pointer" %>
+          class: "text-muted hover:text-ink cursor-pointer" %>
   </div>
 <% end %>

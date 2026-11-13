@@ -26,5 +26,7 @@ module FantasyForecast
 
     # Disable Active Storage variant processing (not using image attachments)
     config.active_storage.variant_processor = :disabled
+
+    config.view_component.previews.default_layout = "component_preview"
   end
 end

@@ -1,0 +1,11 @@
+<ul class="max-w-3xl divide-y divide-line-subtle">
+  <% weights.each do |token, weight, use| %>
+    <li class="flex items-baseline justify-between gap-6 py-4">
+      <p class="text-2xl text-ink <%= token %>">Fantasy Forecast <%= weight %></p>
+      <div class="shrink-0 text-right">
+        <p class="font-mono text-xs text-ink"><%= token %></p>
+        <p class="text-xs text-muted"><%= use %></p>
+      </div>
+    </li>
+  <% end %>
+</ul>

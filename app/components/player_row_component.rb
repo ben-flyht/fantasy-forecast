@@ -23,6 +23,11 @@ class PlayerRowComponent < ViewComponent::Base
     captain
   end
 
+  def link_data
+    { turbo_frame: "_top", action: "analytics#track", analytics_event_param: "player_card_click",
+      analytics_player_param: player.to_param }
+  end
+
   def rank
     ranking.bot_rank || "-"
   end
@@ -40,7 +45,7 @@ class PlayerRowComponent < ViewComponent::Base
   end
 
   def text_class
-    team&.on_light? ? "text-zinc-900" : "text-white"
+    team&.on_light? ? "text-ink" : "text-white"
   end
 
   def cost

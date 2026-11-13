@@ -1,0 +1,10 @@
+<ul class="grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
+  <% radii.each do |name, token, size, use| %>
+    <li>
+      <span class="block h-20 border-2 border-ink bg-surface-muted <%= token %>"></span>
+      <p class="mt-2 text-sm font-semibold text-ink"><%= name %> <span class="font-mono text-xs font-normal text-faint"><%= size %></span></p>
+      <p class="font-mono text-xs text-ink"><%= token %></p>
+      <p class="mt-1 text-xs text-muted"><%= use %></p>
+    </li>
+  <% end %>
+</ul>

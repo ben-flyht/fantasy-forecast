@@ -76,7 +76,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     token = user.generate_token_for(:pack_link)
     get pack_sign_in_path(token: token)
-    assert_select "[data-pack-confirm-sign-in] input[type=submit][value=?]", "Sign in and play"
+    assert_select "[data-pack-confirm-sign-in] button[type=submit]", text: "Sign in and play"
     get weekly_pack_path(gameweek: 1)
     assert_redirected_to pack_landing_path, "opening the link alone does not sign you in"
 
@@ -157,19 +157,19 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     patch pack_profile_path, params: { username: "12" }
     assert_response :unprocessable_entity
-    assert_select "[data-pack-username-error]", /needs a letter/
+    assert_select "[data-field-error=username]", /needs a letter/
 
     patch pack_profile_path, params: { username: "Bob (you)" }
     assert_response :unprocessable_entity
-    assert_select "[data-pack-username-error]", /can only use letters/
+    assert_select "[data-field-error=username]", /can only use letters/
 
     patch pack_profile_path, params: { username: "anonymous" }
     assert_response :unprocessable_entity
-    assert_select "[data-pack-username-error]", /kept for players/
+    assert_select "[data-field-error=username]", /kept for players/
 
     patch pack_profile_path, params: { username: "taken" }
     assert_response :unprocessable_entity
-    assert_select "[data-pack-username-error]", /already been taken/
+    assert_select "[data-field-error=username]", /already been taken/
 
     patch pack_profile_path, params: { username: "Sam's Side" }
     assert_redirected_to pack_profile_path
@@ -200,7 +200,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-profile] input[name=first_name]"
     assert_select "[data-pack-profile] input[name=last_name]"
     assert_select "a[aria-current=page]", text: "Play"
-    assert_select "nav[data-controller=navigation] a[aria-current=page][href=?]", pack_landing_path
+    assert_select "nav a[aria-current=page][href=?]", pack_landing_path
 
     patch pack_profile_path, params: { first_name: "Sam", last_name: "Kerr", username: "" }
     assert_redirected_to pack_profile_path
@@ -437,7 +437,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
       get path
       assert_select "ol > li[data-pack-row], ol > li[data-pack-accuracy-row]", count: 11
       assert_select "ol > li[data-pack-gap]", count: 1
-      assert_select "ol > li:last-child.bg-zinc-100", text: /Ana L \(you\)/
+      assert_select "ol > li:last-child.bg-surface-muted", text: /Ana L \(you\)/
     end
 
     Selection.joins(:user).where(users: { email: %w[p0@example.com p1@example.com p2@example.com] }).destroy_all

@@ -2,11 +2,10 @@
 <% content_for :meta_robots, "noindex, nofollow" %>
 
 <div class="mx-auto max-w-xl">
-  <div class="rounded-2xl bg-zinc-950 p-6 text-white" data-pack-sent>
-    <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Check your inbox</p>
-    <p class="mt-2 text-2xl font-extrabold tracking-[-0.02em]">Your pack is on its way.</p>
-    <p class="mt-3 text-sm/6 text-zinc-300">
+  <%= render CalloutComponent.new(eyebrow: "Check your inbox", title: "Your pack is on its way.", tone: :dark,
+                                  data: { pack_sent: true }) do %>
+    <p>
       We've sent a link to <strong class="text-white"><%= @user.email %></strong>. Open it on the device you want to play on. It works once, within an hour.
     </p>
-  </div>
+  <% end %>
 </div>

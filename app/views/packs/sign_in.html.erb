@@ -2,7 +2,7 @@
 <% content_for :meta_robots, "noindex, nofollow" %>
 
 <div class="mx-auto max-w-xl">
-  <div class="mb-6">
+  <div class="mb-group">
     <%= render PageHeadingComponent.new(
           title: "Play",
           subtitle: "A weekly test of your FPL judgement. Pick the better player from each of five pairs, scored on real FPL points. Prove you call it right, week after week, and your picks will help shape our player rankings.",
@@ -18,28 +18,26 @@
     </div>
   </div>
 
-  <%= form_with url: pack_sign_ins_path, class: "relative z-10 w-full rounded-2xl border border-white/70 bg-white/75 p-6 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.18)] backdrop-blur-[3px]", data: { turbo: false } do |form| %>
-    <h2 class="mb-4 text-lg font-extrabold tracking-tight text-zinc-950">
+  <%= form_with url: pack_sign_ins_path, class: "relative z-10 w-full rounded-card border border-white/70 bg-surface/75 p-6 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.18)] backdrop-blur-[3px]", data: { turbo: false } do |form| %>
+    <h2 class="mb-4 text-heading text-ink">
       <%= @gameweek ? "Your Gameweek #{@gameweek.fpl_id} pack is waiting" : "Your pack is waiting" %>
     </h2>
     <% if @user&.errors&.any? %>
-      <p class="mb-4 rounded-lg bg-red-400/20 px-4 py-3 text-sm text-red-700"><%= @user.errors.full_messages.to_sentence %></p>
+      <%= render NoticeComponent.new(message: @user.errors.full_messages.to_sentence, tone: :alert, class: "mb-4") %>
     <% end %>
-    <%= form.label :email, "Your email", class: "block text-xs font-bold uppercase tracking-wider text-zinc-800" %>
-    <div class="mt-1 flex flex-col gap-3 sm:flex-row">
-      <%= form.email_field :email, value: @user&.email, required: true, autocomplete: "email",
-            class: "block w-full min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base" %>
-      <%= form.submit "Email me my pack", class: "shrink-0 rounded-xl bg-zinc-950 px-5 py-3 text-sm font-extrabold uppercase text-white cursor-pointer" %>
-    </div>
-    <p class="mt-4 text-xs/5 text-zinc-700">
+    <%= render FieldComponent.new(name: :email, label: "Your email", type: :email, value: @user&.email,
+                                  required: true, autocomplete: "email") do |field| %>
+      <% field.with_action { render ButtonComponent.new(label: "Email me my pack", variant: :solid, size: :md, type: "submit", class: "shrink-0") } %>
+    <% end %>
+    <p class="mt-4 text-xs/5 text-body">
       We email you a link that opens your pack and keeps you signed in on that device. No password. Your email is only used for your pack and is never shown.
     </p>
   <% end %>
   </div>
 
-  <ul class="mt-8 space-y-2 text-sm/6 text-zinc-700">
-    <li><strong class="text-zinc-950">One pack a week.</strong> Five pairs of players. Keep one from each, and change your mind as often as you like until the FPL deadline.</li>
-    <li><strong class="text-zinc-950">Scored for real.</strong> Your five score their real FPL points, with your captain counting twice. Watch your place on the leaderboard as the games are played.</li>
-    <li><strong class="text-zinc-950">Prove you know your stuff.</strong> Accuracy is how much of the points on offer you score. Keep it high across the season and you become a Pro, and Pros' picks will help shape the Fantasy Forecast player rankings.</li>
+  <ul class="mt-section space-y-2 text-copy text-body">
+    <li><strong class="text-ink">One pack a week.</strong> Five pairs of players. Keep one from each, and change your mind as often as you like until the FPL deadline.</li>
+    <li><strong class="text-ink">Scored for real.</strong> Your five score their real FPL points, with your captain counting twice. Watch your place on the leaderboard as the games are played.</li>
+    <li><strong class="text-ink">Prove you know your stuff.</strong> Accuracy is how much of the points on offer you score. Keep it high across the season and you become a Pro, and Pros' picks will help shape the Fantasy Forecast player rankings.</li>
   </ul>
 </div>

@@ -1,0 +1,3 @@
+<%= render FieldComponent.new(name: :email, label: "Your email", type: :email, autocomplete: "email") do |field| %>
+  <% field.with_action { render ButtonComponent.new(label: "Email me my pack", variant: :solid, type: "submit", class: "shrink-0") } %>
+<% end %>
