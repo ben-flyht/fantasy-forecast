@@ -36,11 +36,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "Play is hidden from the public until someone has been sent to /play" do
-    get root_path
-    assert_select "a[href=?]", pack_landing_path, count: 0
-
-    get pack_landing_path
+  test "Play is in the header for everyone" do
     get root_path
     assert_select "a[href=?]", pack_landing_path, text: "Play"
   end

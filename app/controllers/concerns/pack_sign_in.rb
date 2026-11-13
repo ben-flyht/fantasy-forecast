@@ -2,18 +2,12 @@ module PackSignIn
   extend ActiveSupport::Concern
 
   SIGNED_IN_FOR = 1.year
-  PLAY_COOKIE = :play
 
   included do
     helper_method :current_user
-    before_action :remember_play
   end
 
   private
-
-  def remember_play
-    cookies.permanent[PLAY_COOKIE] = "1"
-  end
 
   def current_user
     return @current_user if defined?(@current_user)
