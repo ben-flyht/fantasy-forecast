@@ -13,9 +13,6 @@
     <% hand.pack.pairs.each_with_index do |pair, index| %>
       <% chosen = hand.choice_at(index) %>
       <div data-controller="pack-pair" data-pack-pair>
-        <% if pair.shiny? %>
-          <p class="pack-shiny-label mb-2 text-right text-xs font-extrabold uppercase tracking-wide">Shiny · your captain</p>
-        <% end %>
         <div class="grid grid-cols-2 gap-4 sm:gap-6">
           <% pair.cards.each_with_index do |card, choice| %>
             <% state = ("kept" if chosen == choice) || ("passed" unless chosen.nil?) %>

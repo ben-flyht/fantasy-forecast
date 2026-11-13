@@ -401,13 +401,6 @@
   }
 }
 
-.pack-shiny-label {
-  background: linear-gradient(90deg, #52525b, #d4d4d8 40%, #71717a 60%, #a1a1aa);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 .pack-forfeit {
   display: grid;
   place-items: center;
