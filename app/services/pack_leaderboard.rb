@@ -16,6 +16,10 @@ class PackLeaderboard
 
   def row_for(selection) = rows.find { |row| row.selection == selection }
 
+  def real
+    @real ||= PackRealPoints.new(gameweek)
+  end
+
   private
 
   attr_reader :gameweek
@@ -34,9 +38,5 @@ class PackLeaderboard
   def score(selection)
     hand = selection.pack_hand
     Row.new(place: nil, selection: selection, points: real.for(hand), right: real.right_calls(hand), pairs: hand.pack.size)
-  end
-
-  def real
-    @real ||= PackRealPoints.new(gameweek)
   end
 end

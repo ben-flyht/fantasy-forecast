@@ -276,6 +276,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_match(/1st Ana L\. 2 weeks played (25|30) 100%/, rows.first)
     assert_match(/2nd Bo K\. 1 week played 0 0%/, rows.second)
     assert_select "a[aria-current], a", text: "Season"
+    assert_select "[data-pack-season-row] button[data-pack-points]", count: 2
+    assert_match(/Best week, Gameweek 2/, css_select("[data-pack-season-row]").first["data-pack-row-summary"])
   end
 
   test "once the games start, the leaderboard shows each five above the cards they let go, with points on every card" do
@@ -285,19 +287,21 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-row-hand]", count: 0
-    assert_select "[data-pack-view-team]", count: 0
+    assert_select "button[data-pack-points]", count: 0
 
     score_everyone(3)
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
     get pack_leaderboard_path(gameweek: 1)
-    assert_select "[data-pack-row] button[data-pack-view-team][aria-haspopup=dialog]", text: "View team"
+    assert_select "[data-pack-row] button[data-pack-points][aria-haspopup=dialog]", count: 1
     assert_select "[data-pack-row] template[data-pack-row-hand-template]"
     assert_select "[data-pack-row-hand] [data-pack-row-kept] .pack-card", count: 4
     assert_select "[data-pack-row-hand] [data-pack-row-kept] [data-pack-forfeit]", count: 1
     assert_select "[data-pack-row-hand] [data-pack-row-discarded] .pack-card", count: 4
     assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: "3 pts", count: 4
     assert_select "[data-pack-row-kept] [data-pack-card-points]", text: /\A\s*(3|6) pts\s*\z/, count: 4
+    assert_select "[data-pack-row-verdict=level]", text: /Level/, count: 4
+    assert_select "[data-pack-row-verdict=no_pick]", count: 1
   end
 
   test "a finished pack can be shared by its own address and opened by anyone, read-only" do

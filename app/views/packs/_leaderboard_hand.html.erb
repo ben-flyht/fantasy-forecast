@@ -1,27 +1,30 @@
 <template data-pack-row-hand-template>
-<div class="grid grid-cols-5 gap-2" data-pack-row-hand>
-  <% hand.picks.zip(hand.discards).each_with_index do |(kept, discarded), index| %>
-    <div class="flex flex-col" style="--row: <%= index %>;" data-pack-row-pair>
-      <div class="relative z-10 flex flex-col" data-pack-row-kept>
-        <% if kept %>
-          <%= render PackCardComponent.new(card: kept, captain: kept == hand.captain, size: :small, index: index) %>
-          <p class="mt-1 text-center text-xs font-bold tabular-nums text-zinc-950 order-first mb-1" data-pack-card-points>
-            <%= pluralize(real.of(kept) * (kept == hand.captain ? 2 : 1), "pt") %>
-          </p>
-        <% else %>
-          <%= render "packs/forfeit", index: index %>
-        <% end %>
-      </div>
-      <% discarded.each.with_index(1) do |card, depth| %>
-        <div class="relative -mt-[78%] px-[6%] opacity-50 grayscale"
-             style="z-index: <%= 10 - depth %>;" data-pack-row-discarded>
-          <%= render PackCardComponent.new(card: card, size: :small, index: index) %>
-          <p class="mt-1 text-center text-xs font-medium tabular-nums text-zinc-500" data-pack-card-points>
-            <%= pluralize(real.of(card), "pt") %>
-          </p>
+  <ol class="flex flex-col gap-4" data-pack-row-hand>
+    <% hand.picks.zip(hand.discards).each_with_index do |(kept, discarded), index| %>
+      <% verdict = real.verdict(kept, discarded) %>
+      <li class="grid grid-cols-[minmax(0,7rem)_1fr_minmax(0,7rem)] items-center gap-3" style="--row: <%= index %>;" data-pack-row-pair>
+        <div data-pack-row-kept>
+          <% if kept %>
+            <%= render PackCardComponent.new(card: kept, captain: kept == hand.captain, index: index) %>
+            <p class="mt-1 text-center text-sm font-bold tabular-nums text-zinc-950" data-pack-card-points>
+              <%= pluralize(real.of(kept) * (kept == hand.captain ? 2 : 1), "pt") %>
+            </p>
+          <% else %>
+            <%= render "packs/forfeit", index: index %>
+          <% end %>
         </div>
-      <% end %>
-    </div>
-  <% end %>
-</div>
+        <div class="text-center" data-pack-row-verdict="<%= verdict %>">
+          <%= render "packs/pick_verdict", verdict: verdict %>
+        </div>
+        <% discarded.each do |card| %>
+          <div class="opacity-50 grayscale" data-pack-row-discarded>
+            <%= render PackCardComponent.new(card: card, index: index) %>
+            <p class="mt-1 text-center text-sm font-medium tabular-nums text-zinc-500" data-pack-card-points>
+              <%= pluralize(real.of(card), "pt") %>
+            </p>
+          </div>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
 </template>
