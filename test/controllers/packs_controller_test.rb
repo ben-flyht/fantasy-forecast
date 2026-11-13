@@ -22,7 +22,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
   def sign_in(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
     user = User.create!(email: email, first_name: first_name, last_name: last_name)
-    get pack_sign_in_path(token: user.generate_token_for(:pack_link))
+    post pack_sign_in_path(token: user.generate_token_for(:pack_link))
     user
   end
 
@@ -74,9 +74,51 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     user = User.find_by(email: "new@example.com")
     assert_not user.named?
 
-    get pack_sign_in_path(token: user.generate_token_for(:pack_link))
+    token = user.generate_token_for(:pack_link)
+    get pack_sign_in_path(token: token)
+    assert_select "[data-pack-confirm-sign-in] input[type=submit][value=?]", "Sign in and play"
+    get weekly_pack_path(gameweek: 1)
+    assert_redirected_to pack_landing_path, "opening the link alone does not sign you in"
+
+    post pack_sign_in_path(token: token)
     follow_redirect!
     assert_redirected_to weekly_pack_path(gameweek: 1)
+
+    delete pack_sign_out_path
+    post pack_sign_in_path(token: token)
+    assert_redirected_to pack_landing_path
+    assert_equal "That link has expired or has already been used. Ask for a new one below.", flash[:alert]
+  end
+
+  test "a sign-in link stops working after an hour" do
+    user = User.create!(email: "late@example.com")
+    token = user.generate_token_for(:pack_link)
+
+    travel 61.minutes do
+      post pack_sign_in_path(token: token)
+      assert_redirected_to pack_landing_path
+      assert_match(/expired/, flash[:alert])
+    end
+  end
+
+  test "asking again within two minutes sends no second email" do
+    assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "busy@example.com" } }
+    assert_no_enqueued_emails { post pack_sign_ins_path, params: { email: "busy@example.com" } }
+    assert_select "[data-pack-sent]"
+
+    travel 3.minutes do
+      assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "busy@example.com" } }
+    end
+  end
+
+  test "signing out ends that session, so an old sign-in cookie stops working" do
+    sign_in
+    stolen = cookies[:play_session]
+    delete pack_sign_out_path
+
+    cookies[:play_session] = stolen
+    get weekly_pack_path(gameweek: 1)
+    assert_redirected_to pack_landing_path
   end
 
   test "a returning email keeps its username" do
@@ -116,6 +158,10 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     patch pack_profile_path, params: { username: "12" }
     assert_response :unprocessable_entity
     assert_select "[data-pack-username-error]", /needs a letter/
+
+    patch pack_profile_path, params: { username: "Bob (you)" }
+    assert_response :unprocessable_entity
+    assert_select "[data-pack-username-error]", /can only use letters/
 
     patch pack_profile_path, params: { username: "anonymous" }
     assert_response :unprocessable_entity

@@ -34,6 +34,7 @@ Rails.application.routes.draw do
   get "play", to: "packs#latest", as: :pack_landing
   post "play/sign-in", to: "pack_sign_ins#create", as: :pack_sign_ins
   get "play/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
+  post "play/sign-in/:token", to: "pack_sign_ins#confirm", constraints: { token: %r{[^/]+} }
   delete "play/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
   get "play/profile", to: "pack_profiles#edit", as: :pack_profile
   patch "play/profile", to: "pack_profiles#update"

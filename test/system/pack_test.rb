@@ -27,6 +27,7 @@ class PackTest < ApplicationSystemTestCase
   def sign_in
     user = User.create!(email: "sys@example.com", first_name: "Sys", last_name: "Tem")
     visit pack_sign_in_path(token: user.generate_token_for(:pack_link))
+    click_on "Sign in and play"
   end
 
   def saved?(picks)
