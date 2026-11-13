@@ -28,7 +28,6 @@
           <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place.ordinalize %></span>
           <span class="min-w-0 flex-1">
             <%= render "packs/manager_name", user: row.user, mine: mine, pro: row.pro? %>
-            <span class="block truncate text-xs text-zinc-500">Best week, Gameweek <%= row.best.selection.gameweek.fpl_id %></span>
           </span>
           <%= render "packs/leaderboard_scores", points: row.points, openable: true %>
           <%= render "packs/leaderboard_hand", hand: row.best.selection.pack_hand, real: row.real %>

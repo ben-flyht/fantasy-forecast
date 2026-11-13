@@ -286,8 +286,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_season_leaderboard_path
     rows = css_select("[data-pack-season-row]").map { |row| row.text.squish }
-    assert_match(/1st Ana L\. Pro Best week, Gameweek 2 30 GK/, rows.first)
-    assert_match(/2nd Bo K\. Best week, Gameweek 1 0 No pick/, rows.second)
+    assert_match(/1st Ana L\. Pro 30 GK/, rows.first)
+    assert_match(/2nd Bo K\. 0 No pick/, rows.second)
     assert_select "a[aria-current=page]", text: "Points"
     assert_select "[data-pack-season-row] button[data-pack-points]", count: 2
     assert_select "[data-pack-season-row] [data-pack-accuracy]", count: 0
