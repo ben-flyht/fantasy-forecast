@@ -93,5 +93,5 @@ group :test do
   # For testing controller assigns
   gem "rails-controller-testing"
   # Lock minitest to 5.x for Rails 8.1 compatibility
-  gem "minitest", "~> 6.0"
+  gem "minitest", "~> 6.1"
 end
