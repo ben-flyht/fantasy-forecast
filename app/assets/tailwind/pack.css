@@ -184,21 +184,15 @@
   color: #fff;
 }
 
-.pack-card__captain {
-  position: absolute;
-  top: 5cqw;
+.pack-card__corner--points {
   right: 5.5cqw;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 14cqw;
-  height: 14cqw;
-  border-radius: 999px;
-  background: var(--color-zinc-950);
+  background: var(--frame);
   color: #fff;
-  font-size: 8cqw;
-  font-weight: 800;
-  box-shadow: 0 0 0 0.8cqw var(--frame);
+}
+
+.pack-card__captain {
+  text-decoration: none;
+  cursor: help;
 }
 
 .pack-card__banner {
@@ -399,12 +393,6 @@
 
 .pack-card--shiny .pack-card__photo {
   z-index: 1;
-}
-
-.pack-card--shiny .pack-card__captain {
-  background: var(--color-zinc-950);
-  color: #fff;
-  box-shadow: 0 0 0 0.8cqw #e4e4e7, 0 0 0 1.4cqw #71717a;
 }
 
 @media (hover: none) {

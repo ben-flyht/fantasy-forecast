@@ -24,12 +24,12 @@
           <% if player.given_name.present? %>
             <span class="pack-card__given"><%= player.given_name %></span>
           <% end %>
-          <span class="<%= name_class %>"><%= player.display_name %></span>
+          <span class="<%= name_class %>"><%= player.display_name %><% if captain? %> <abbr class="pack-card__captain" title="Captain">(C)</abbr><% end %></span>
           <span class="pack-card__team"><%= team&.short_name %> <span class="pack-card__fixture" data-pack-fixture><%= fixture %></span></span>
         </div>
 
-        <% if captain? %>
-          <span class="pack-card__captain" title="Captain">C</span>
+        <% if points %>
+          <span class="pack-card__corner pack-card__corner--points" data-pack-card-points><%= points %></span>
         <% end %>
 
       </div>

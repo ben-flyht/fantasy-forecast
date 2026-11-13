@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 class PackCardComponent < ViewComponent::Base
-  def initialize(card:, href: nil, method: nil, shiny: false, captain: false, size: :full, index: 0)
+  def initialize(card:, href: nil, method: nil, shiny: false, captain: false, size: :full, index: 0, points: nil)
     @card = card
+    @points = points
     @href = href
     @method = method
     @shiny = shiny
@@ -13,7 +14,7 @@ class PackCardComponent < ViewComponent::Base
 
   private
 
-  attr_reader :card, :href, :index
+  attr_reader :card, :href, :index, :points
 
   def player = card.player
   def team = player.team
@@ -44,7 +45,7 @@ class PackCardComponent < ViewComponent::Base
   end
 
   def name_class
-    length = player.display_name.length
+    length = player.display_name.length + (captain? ? 4 : 0)
     return "pack-card__name pack-card__name--longest" if length > 10
     return "pack-card__name pack-card__name--long" if length > 7
 

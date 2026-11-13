@@ -5,10 +5,8 @@
       <li class="grid grid-cols-[minmax(0,7rem)_1fr_minmax(0,7rem)] items-center gap-3" style="--row: <%= index %>;" data-pack-row-pair>
         <div data-pack-row-kept>
           <% if kept %>
-            <%= render PackCardComponent.new(card: kept, captain: kept == hand.captain, index: index) %>
-            <p class="mt-1 text-center text-sm font-bold tabular-nums text-zinc-950" data-pack-card-points>
-              <%= pluralize(real.of(kept) * (kept == hand.captain ? 2 : 1), "pt") %>
-            </p>
+            <%= render PackCardComponent.new(card: kept, captain: kept == hand.captain, index: index,
+                  points: pluralize(real.of(kept) * (kept == hand.captain ? 2 : 1), "pt")) %>
           <% else %>
             <%= render "packs/forfeit", index: index %>
           <% end %>
@@ -18,10 +16,7 @@
         </div>
         <% discarded.each do |card| %>
           <div class="opacity-50 grayscale" data-pack-row-discarded>
-            <%= render PackCardComponent.new(card: card, index: index) %>
-            <p class="mt-1 text-center text-sm font-medium tabular-nums text-zinc-500" data-pack-card-points>
-              <%= pluralize(real.of(card), "pt") %>
-            </p>
+            <%= render PackCardComponent.new(card: card, index: index, points: pluralize(real.of(card), "pt")) %>
           </div>
         <% end %>
       </li>
