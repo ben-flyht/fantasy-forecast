@@ -1,0 +1,35 @@
+<% content_for :meta_title, "Pack of the Week Season Leaderboard | Fantasy Forecast" %>
+<% content_for :meta_robots, "noindex, nofollow" %>
+
+<div class="mx-auto max-w-xl">
+  <div class="mb-6">
+    <%= render PageHeadingComponent.new(
+          title: "Leaderboard: Season",
+          subtitle: "Every pack this season added up. Accuracy is how often you kept the better card of a pair.",
+          horizons: (leaderboard_tabs(gameweek: @gameweek, season: true) if @gameweek)) %>
+  </div>
+
+  <% if @board.rows.empty? %>
+    <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">No gameweek has been played yet.</div>
+  <% else %>
+    <p class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= pluralize(@board.rows.size, "player") %></p>
+    <%= render "packs/leaderboard_columns" %>
+    <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
+      <% @board.rows.each do |row| %>
+        <% mine = current_user && row.user == current_user %>
+        <li class="flex items-center gap-4 px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-season-row>
+          <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place.ordinalize %></span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate font-bold text-zinc-950"><%= row.user.leaderboard_name %><%= " (you)" if mine %></span>
+            <span class="block truncate text-xs text-zinc-500"><%= pluralize(row.weeks, "week") %> played</span>
+          </span>
+          <%= render "packs/leaderboard_scores", points: row.points, accuracy: row.accuracy %>
+        </li>
+      <% end %>
+    </ol>
+  <% end %>
+
+  <p class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
+    <%= link_to "Play this week's pack", pack_landing_path, class: "text-zinc-950 underline underline-offset-2" %>
+  </p>
+</div>

@@ -29,8 +29,16 @@ class PacksController < ApplicationController
 
   def leaderboard
     @gameweek = Gameweek.find_by!(fpl_id: params[:gameweek])
+    latest = Gameweek.latest_started
+    return redirect_to(pack_leaderboard_path(gameweek: latest.fpl_id)) if latest && !@gameweek.started?
+
     @board = PackLeaderboard.new(@gameweek)
     @real = PackRealPoints.new(@gameweek) if @gameweek.started?
+  end
+
+  def season
+    @gameweek = Gameweek.latest_started
+    @board = PackSeasonLeaderboard.new
   end
 
   private

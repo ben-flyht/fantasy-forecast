@@ -14,9 +14,14 @@ class Gameweek < ApplicationRecord
   scope :finished, -> { where(is_finished: true) }
   scope :with_forecasts, -> { joins(:forecasts).distinct }
   scope :ordered, -> { order(:fpl_id) }
+  scope :started, -> { where(start_time: ..Time.current) }
 
   def self.current_gameweek
     current.first
+  end
+
+  def self.latest_started
+    started.ordered.last
   end
 
   def self.next_gameweek

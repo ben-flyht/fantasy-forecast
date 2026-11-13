@@ -5,7 +5,8 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Leaderboard: Gameweek #{@gameweek.fpl_id}",
-          subtitle: "Everyone opened their own pack. Real FPL points for each five, with the captain counting twice.") %>
+          subtitle: "Everyone opened their own pack. Real FPL points for each five, with the captain counting twice.",
+          horizons: leaderboard_tabs(gameweek: @gameweek)) %>
   </div>
 
   <% if @board.rows.empty? %>
@@ -15,6 +16,7 @@
       <%= pluralize(@board.rows.size, "player") %> ·
       <%= @gameweek.is_finished ? "final points" : @gameweek.started? ? "live points" : "ranked once the games start" %>
     </p>
+    <%= render "packs/leaderboard_columns" %>
     <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
       <% @board.rows.each do |row| %>
         <% mine = current_user && row.user == current_user %>
@@ -27,9 +29,7 @@
                 <span class="block truncate text-xs text-zinc-500">Captain <%= captain.player.display_name %></span>
               <% end %>
             </span>
-            <% if row.points %>
-              <span class="text-xl font-extrabold tabular-nums text-zinc-950"><%= row.points %></span>
-            <% end %>
+            <%= render "packs/leaderboard_scores", points: row.points, accuracy: row.accuracy %>
           </div>
           <% if @real %>
             <%= render "packs/leaderboard_hand", hand: row.selection.pack_hand, real: @real %>

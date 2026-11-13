@@ -165,10 +165,6 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     bo = User.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
     Selection.deal(bo, @gameweek).then { |selection| "aaxxx".each_char { |choice| selection.pick(choice) } }
 
-    get pack_leaderboard_path(gameweek: 1)
-    assert_select "p", /ranked once the games start/
-    assert_select "[data-pack-row]", count: 2
-
     score_everyone(3)
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
@@ -181,6 +177,50 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get weekly_pack_path(gameweek: 1)
     assert_select "[data-pack-verdict]", /1st of 2/
     assert_select "[data-pack-verdict]", /live/
+  end
+
+  test "each row has a points column and an accuracy column: how often the better card of a pair was kept" do
+    sign_in
+    get weekly_pack_path(gameweek: 1)
+    pick_all("aaaaa")
+    bo = User.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
+    Selection.deal(bo, @gameweek).then { |selection| "aaxxx".each_char { |choice| selection.pick(choice) } }
+    score_everyone(3)
+    @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
+
+    get pack_leaderboard_path(gameweek: 1)
+    assert_select "[data-pack-columns]", /Points.*Accuracy/
+    assert_equal %w[100% 40%], css_select("[data-pack-row] [data-pack-accuracy]").map { |cell| cell.text.strip }
+  end
+
+  test "last week's leaderboard stays up until this week's deadline passes" do
+    @gameweek.update!(start_time: 2.days.ago, is_next: false, is_current: true, is_finished: true)
+    Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 3.days.from_now, is_next: true)
+
+    get pack_leaderboard_path(gameweek: 2)
+    assert_redirected_to pack_leaderboard_path(gameweek: 1)
+
+    follow_redirect!
+    assert_select "a[href=?]", pack_leaderboard_path(gameweek: 1), text: "This week"
+    assert_select "a[href=?]", pack_season_leaderboard_path, text: "Season"
+  end
+
+  test "the season leaderboard adds up every started gameweek" do
+    @gameweek.update!(start_time: 9.days.ago, is_next: false, is_finished: true)
+    second = Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 2.days.ago, is_current: true)
+    ana = User.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
+    bo = User.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
+    offered = PackDraw.call(gameweek: @gameweek, seed: 3).dump
+    [ [ ana, @gameweek, "aaaaa" ], [ ana, second, "aaaaa" ], [ bo, @gameweek, "xxxxx" ] ].each do |user, gameweek, picks|
+      Selection.new(user: user, gameweek: gameweek, offered: offered, picks: picks).save!(validate: false)
+    end
+    [ @gameweek, second ].each { |gameweek| Player.find_each { |player| Performance.create!(player: player, gameweek: gameweek, team: player.team, gameweek_score: 2) } }
+
+    get pack_season_leaderboard_path
+    rows = css_select("[data-pack-season-row]").map { |row| row.text.squish }
+    assert_match(/1st Ana L\. 2 weeks played 2[04] 100%/, rows.first)
+    assert_match(/2nd Bo K\. 1 week played 0 0%/, rows.second)
+    assert_select "a[aria-current], a", text: "Season"
   end
 
   test "once the games start, the leaderboard shows each five above the cards they let go, with points on every card" do

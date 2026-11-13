@@ -6,4 +6,8 @@ class PackRealPoints
   def of(card) = @scores.fetch(card.player_id, 0)
 
   def for(hand) = hand.kept.sum { |card| of(card) } + (hand.captain ? of(hand.captain) : 0)
+
+  def right_calls(hand)
+    hand.picks.zip(hand.discards).count { |kept, others| kept && others.all? { |other| of(kept) >= of(other) } }
+  end
 end

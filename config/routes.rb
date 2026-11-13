@@ -38,6 +38,7 @@ Rails.application.routes.draw do
   get "play/gameweeks/:gameweek/leaderboard", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
   post "play/gameweeks/:gameweek/picks", to: "pack_picks#create", as: :weekly_pack_picks, constraints: { gameweek: /\d+/ }
   get "play/gameweeks/:gameweek", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/ }
+  get "play/leaderboard", to: "packs#season", as: :pack_season_leaderboard
   get "play/selections/:id", to: "packs#selection", as: :pack_selection, constraints: { id: /\d+/ }
   get "pack(/*rest)", to: redirect { |params, _| [ "/play", params[:rest]&.sub(/\Agw(\d+)/, 'gameweeks/\1') ].compact.join("/") },
                      format: false
