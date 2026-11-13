@@ -288,8 +288,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-row-hand] [data-pack-row-kept] .pack-card", count: 4
     assert_select "[data-pack-row-hand] [data-pack-row-kept] [data-pack-forfeit]", count: 1
-    assert_select "[data-pack-row-hand] [data-pack-row-discarded] .pack-card", count: 6
-    assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: "3 pts", count: 6
+    assert_select "[data-pack-row-hand] [data-pack-row-discarded] .pack-card", count: 4
+    assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: "3 pts", count: 4
     assert_select "[data-pack-row-kept] [data-pack-card-points]", text: /\A\s*(3|6) pts\s*\z/, count: 4
   end
 

@@ -52,10 +52,10 @@ class PackHandTest < ActiveSupport::TestCase
     assert_equal "axb", hand.code
   end
 
-  test "the cards let go are the other of each pair, and both of a forfeited one" do
+  test "the cards let go are the other of each pair, and none of a pair with no pick" do
     discards = PackHand.parse(pack, "axb").discards
 
-    assert_equal [ [ 2 ], [ 3, 4 ], [ 5 ] ], discards.map { |cards| cards.map(&:player_id) }
+    assert_equal [ [ 2 ], [], [ 5 ] ], discards.map { |cards| cards.map(&:player_id) }
   end
 
   test "forfeiting the shiny pair leaves you without a captain" do
