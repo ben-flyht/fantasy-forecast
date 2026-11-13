@@ -295,6 +295,30 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Best week, Gameweek 2/, css_select("[data-pack-season-row]").first["data-pack-row-summary"])
   end
 
+  test "each board shows the top ten, and your own row underneath when you are further down" do
+    offered = PackDraw.call(gameweek: @gameweek, seed: 3).dump
+    12.times do |i|
+      user = User.create!(email: "p#{i}@example.com", first_name: "P#{i}", last_name: "Top")
+      Selection.new(user: user, gameweek: @gameweek, offered: offered, picks: "aaaaa", created_at: (20 - i).minutes.ago).save!(validate: false)
+    end
+    me = sign_in
+    Selection.new(user: me, gameweek: @gameweek, offered: offered, picks: "xxxxx").save!(validate: false)
+    @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
+    score_everyone(3)
+
+    [ pack_current_leaderboard_path, pack_season_leaderboard_path, pack_season_accuracy_leaderboard_path ].each do |path|
+      get path
+      assert_select "ol > li[data-pack-row], ol > li[data-pack-accuracy-row]", count: 11
+      assert_select "ol > li[data-pack-gap]", count: 1
+      assert_select "ol > li:last-child.bg-zinc-100", text: /Ana L\. \(you\)/
+    end
+
+    Selection.joins(:user).where(users: { email: %w[p0@example.com p1@example.com p2@example.com] }).destroy_all
+    get pack_current_leaderboard_path
+    assert_select "ol > li[data-pack-row]", count: 10
+    assert_select "[data-pack-gap]", count: 0
+  end
+
   test "the season accuracy board ranks on right calls, weighed by how many pairs were called" do
     @gameweek.update!(start_time: 9.days.ago, is_next: false, is_finished: true)
     second = Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 2.days.ago, is_current: true)

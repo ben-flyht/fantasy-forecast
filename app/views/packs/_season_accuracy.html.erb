@@ -7,7 +7,8 @@
   <span class="w-12 text-right">Rating</span>
 </div>
 <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
-  <% rows.each do |row| %>
+  <% leaderboard_top(rows).each_with_index do |row, index| %>
+    <%= render "packs/leaderboard_gap", row: row, index: index %>
     <% mine = current_user && row.user == current_user %>
     <li class="flex items-center gap-3 px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-accuracy-row>
       <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place.ordinalize %></span>

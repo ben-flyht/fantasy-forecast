@@ -8,6 +8,14 @@ module PacksHelper
     ]
   end
 
+  def leaderboard_top(rows, size: 10)
+    top = rows.first(size)
+    yours = current_user && rows.drop(size).find { |row| row.user == current_user }
+    yours ? [ *top, yours ] : top
+  end
+
+  def leaderboard_gap?(row, index, size: 10) = index == size && row.user == current_user
+
   def leaderboard_steps(gameweek)
     played = Gameweek.started.where(id: Selection.select(:gameweek_id))
     {
