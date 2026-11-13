@@ -30,7 +30,7 @@ class PacksController < ApplicationController
   end
 
   def season
-    @gameweek = Gameweek.latest_started
+    @accuracy = params[:board] == "accuracy"
     @board = PackSeasonLeaderboard.new
   end
 

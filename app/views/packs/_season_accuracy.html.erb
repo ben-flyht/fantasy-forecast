@@ -1,0 +1,21 @@
+<p class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= pluralize(rows.size, "player") %> · ranked on accuracy and pairs called</p>
+<div class="mb-2 flex items-center gap-4 px-4 text-[10px] font-bold uppercase tracking-wider text-zinc-400" data-pack-columns>
+  <span class="w-10 text-right">#</span>
+  <span class="flex-1">Player</span>
+  <span class="w-16 text-right">Right</span>
+  <span class="w-14 text-right">Rating</span>
+</div>
+<ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
+  <% rows.each do |row| %>
+    <% mine = current_user && row.user == current_user %>
+    <li class="flex items-center gap-4 px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-accuracy-row>
+      <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place.ordinalize %></span>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate font-bold text-zinc-950"><%= row.user.leaderboard_name %><%= " (you)" if mine %></span>
+        <span class="block truncate text-xs text-zinc-500"><%= row.accuracy || 0 %>% · <%= pluralize(row.weeks, "week") %></span>
+      </span>
+      <span class="w-16 text-right text-sm font-bold tabular-nums text-zinc-500" data-pack-right><%= row.right %>/<%= row.pairs %></span>
+      <span class="w-14 text-right text-xl font-extrabold tabular-nums text-zinc-950" data-pack-rating><%= row.rating %></span>
+    </li>
+  <% end %>
+</ol>

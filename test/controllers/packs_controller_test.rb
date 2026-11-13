@@ -285,11 +285,28 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_season_leaderboard_path
     rows = css_select("[data-pack-season-row]").map { |row| row.text.squish }
-    assert_match(/1st Ana L\. 2 weeks played (25|30) 100%/, rows.first)
-    assert_match(/2nd Bo K\. 1 week played 0 0%/, rows.second)
+    assert_match(/1st Ana L\. Best week, Gameweek 2 30 100%/, rows.first)
+    assert_match(/2nd Bo K\. Best week, Gameweek 1 0 0%/, rows.second)
     assert_select "a[aria-current]", text: "Season"
     assert_select "[data-pack-season-row] button[data-pack-points]", count: 2
     assert_match(/Best week, Gameweek 2/, css_select("[data-pack-season-row]").first["data-pack-row-summary"])
+  end
+
+  test "the season accuracy board ranks on right calls, weighed by how many pairs were called" do
+    @gameweek.update!(start_time: 9.days.ago, is_next: false, is_finished: true)
+    second = Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 2.days.ago, is_current: true)
+    ana = User.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
+    bo = User.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
+    offered = PackDraw.call(gameweek: @gameweek, seed: 3).dump
+    [ [ ana, @gameweek, "aaaaa" ], [ ana, second, "aaaaa" ], [ bo, @gameweek, "aaaaa" ] ].each do |user, gameweek, picks|
+      Selection.new(user: user, gameweek: gameweek, offered: offered, picks: picks).save!(validate: false)
+    end
+
+    get pack_season_accuracy_leaderboard_path
+    assert_select "[data-pack-season-boards] a[aria-current=page]", text: "Accuracy"
+    rows = css_select("[data-pack-accuracy-row]").map { |row| row.text.squish }
+    assert_match(/\A1st Ana L\. 100% · 2 weeks 10\/10 \d+\z/, rows.first)
+    assert_match(/\A2nd Bo K\. 100% · 1 week 5\/5 \d+\z/, rows.second)
   end
 
   test "once the games start, the leaderboard shows each five above the cards they let go, with points on every card" do
