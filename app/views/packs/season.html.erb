@@ -18,7 +18,7 @@
     <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
       <% @board.rows.each do |row| %>
         <% mine = current_user && row.user == current_user %>
-        <li class="flex items-center gap-4 px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-season-row data-pack-row
+        <li class="group flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-zinc-50 <%= 'bg-zinc-100' if mine %>" data-action="click->leaderboard-hand#open" data-pack-season-row data-pack-row
             data-pack-row-name="<%= row.place.ordinalize %> <%= row.user.leaderboard_name %>"
             data-pack-row-summary="Best week, Gameweek <%= row.best.selection.gameweek.fpl_id %> · <%= pluralize(row.points, 'point') %>">
           <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place.ordinalize %></span>

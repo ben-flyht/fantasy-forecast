@@ -300,12 +300,14 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-row-hand]", count: 0
     assert_select "button[data-pack-points]", count: 0
+    assert_select "[data-pack-row][data-action]", count: 0
 
     score_everyone(3)
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-row] button[data-pack-points][aria-haspopup=dialog]", count: 1
+    assert_select "[data-pack-row][data-action='click->leaderboard-hand#open']", count: 1
     assert_select "[data-pack-row] template[data-pack-row-hand-template]"
     assert_select "[data-pack-row-hand] [data-pack-row-kept] .pack-card", count: 4
     assert_select "[data-pack-row-hand] [data-pack-row-kept] [data-pack-forfeit]", count: 1

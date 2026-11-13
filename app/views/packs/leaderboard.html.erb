@@ -23,7 +23,7 @@
     <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
       <% @board.rows.each do |row| %>
         <% mine = current_user && row.user == current_user %>
-        <li class="px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-row
+        <li class="group px-4 py-3 <%= 'bg-zinc-100' if mine %> <%= 'cursor-pointer hover:bg-zinc-50' if @real %>" <%= tag.attributes(data: { action: "click->leaderboard-hand#open" }) if @real %> data-pack-row
             data-pack-row-name="<%= row.place&.ordinalize %> <%= row.user.leaderboard_name %>"
             data-pack-row-summary="<%= "#{pluralize(row.points.to_i, 'point')} · #{row.accuracy}% accuracy" if @real %>">
           <div class="flex w-full items-center gap-4">

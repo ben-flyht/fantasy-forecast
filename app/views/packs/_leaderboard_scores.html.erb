@@ -1,6 +1,6 @@
 <% if openable %>
-  <button type="button" class="w-14 cursor-pointer text-right text-xl font-extrabold tabular-nums text-zinc-950 underline decoration-zinc-300 decoration-2 underline-offset-4 hover:decoration-zinc-950"
-          aria-haspopup="dialog" aria-label="<%= pluralize(points, 'point') %>, view team" data-action="leaderboard-hand#open" data-pack-points><%= points %></button>
+  <button type="button" class="w-14 cursor-pointer text-right text-xl font-extrabold tabular-nums text-zinc-950 underline decoration-zinc-300 decoration-2 underline-offset-4 group-hover:decoration-zinc-950"
+          aria-haspopup="dialog" aria-label="<%= pluralize(points, 'point') %>, view team" data-pack-points><%= points %></button>
 <% else %>
   <span class="w-14 text-right text-xl font-extrabold tabular-nums text-zinc-950" data-pack-points><%= points || "–" %></span>
 <% end %>

@@ -44,4 +44,19 @@ class PackTest < ApplicationSystemTestCase
     assert_selector "[data-pack-pair]:first-child [data-pack-choice=kept]:last-child"
     assert_equal "baaaa", Selection.last.reload.picks
   end
+
+  test "clicking anywhere on a leaderboard row opens that player's team, and Close puts it away" do
+    sign_in
+    assert_selector "[data-pack-pair]", count: 5
+    Selection.last.update!(picks: "aaaaa")
+    @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
+
+    visit pack_current_leaderboard_path
+    find("[data-pack-row]", text: "Sys T.").find("span", text: "Sys T.", match: :first).click
+    within("dialog[open]") do
+      assert_selector "[data-pack-row-pair]", count: 5
+      click_on "Close"
+    end
+    assert_no_selector "dialog[open]"
+  end
 end
