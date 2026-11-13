@@ -1,5 +1,0 @@
-<%= form_with url: pack_profile_path, method: :patch, class: "mb-8 rounded-2xl border-2 border-zinc-950 p-5", data: { pack_entry_name_prompt: true } do %>
-  <h2 class="mb-3 text-base font-extrabold tracking-tight text-zinc-950">Name your entry for the leaderboards</h2>
-  <%= hidden_field_tag :from, "pack" %>
-  <%= render "packs/entry_name_field", user: current_user %>
-<% end %>

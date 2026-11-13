@@ -79,11 +79,11 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to weekly_pack_path(gameweek: 1)
   end
 
-  test "a returning email keeps its entry name" do
-    User.create!(email: "ana@example.com", entry_name: "Ana's Army")
+  test "a returning email keeps its username" do
+    User.create!(email: "ana@example.com", username: "Ana's Army")
 
-    assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "ana@example.com", entry_name: "Not Ana" } }
-    assert_equal "Ana's Army", User.find_by(email: "ana@example.com").entry_name
+    assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "ana@example.com", username: "Not Ana" } }
+    assert_equal "Ana's Army", User.find_by(email: "ana@example.com").username
   end
 
   test "a bad email is sent back to the form" do
@@ -93,33 +93,33 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=email][name=email]"
   end
 
-  test "a new player is asked to name their entry, and it shows on the leaderboards" do
+  test "a new player is asked for a username, and it shows on the leaderboards" do
     sign_in(email: "sam@example.com", first_name: nil, last_name: nil)
     get weekly_pack_path(gameweek: 1)
-    assert_select "[data-pack-entry-name-prompt] input[name=entry_name]"
+    assert_select "[data-pack-username-prompt] input[name=username]"
 
-    patch pack_profile_path, params: { entry_name: "  Kerr  Blimey ", from: "pack" }
+    patch pack_profile_path, params: { username: "  Kerr  Blimey ", from: "pack" }
     assert_redirected_to pack_landing_path
     assert_equal "Kerr Blimey", User.find_by(email: "sam@example.com").leaderboard_name
 
     get weekly_pack_path(gameweek: 1)
-    assert_select "[data-pack-entry-name-prompt]", count: 0
+    assert_select "[data-pack-username-prompt]", count: 0
   end
 
-  test "the profile page changes your entry name, and names are one per entry" do
-    User.create!(email: "taken@example.com", entry_name: "Taken")
+  test "the profile page changes your username, and usernames are one per player" do
+    User.create!(email: "taken@example.com", username: "Taken")
     sign_in(email: "sam@example.com", first_name: nil, last_name: nil)
 
     get pack_profile_path
     assert_select "dd", text: "sam@example.com"
 
-    patch pack_profile_path, params: { entry_name: "taken" }
+    patch pack_profile_path, params: { username: "taken" }
     assert_response :unprocessable_entity
-    assert_select "[data-pack-entry-name-error]", /already been taken/
+    assert_select "[data-pack-username-error]", /already been taken/
 
-    patch pack_profile_path, params: { entry_name: "Sam's Side" }
+    patch pack_profile_path, params: { username: "Sam's Side" }
     assert_redirected_to pack_profile_path
-    assert_equal "Sam's Side", User.find_by(email: "sam@example.com").entry_name
+    assert_equal "Sam's Side", User.find_by(email: "sam@example.com").username
   end
 
   test "the profile page needs you signed in" do

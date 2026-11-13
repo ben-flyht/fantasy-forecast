@@ -1,0 +1,11 @@
+<%= label_tag :username, "Username", class: "block text-xs font-bold uppercase tracking-wider text-zinc-800" %>
+<div class="mt-1 flex flex-col gap-3 sm:flex-row">
+  <%= text_field_tag :username, user.username, required: true, maxlength: User::USERNAME_LENGTH, autocomplete: "nickname",
+        placeholder: "e.g. Haaland's Hairband", aria: { describedby: "username-help" },
+        class: "block w-full min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base" %>
+  <%= submit_tag "Save", class: "shrink-0 rounded-xl bg-zinc-950 px-5 py-3 text-sm font-extrabold uppercase text-white cursor-pointer" %>
+</div>
+<% if user.errors[:username].any? %>
+  <p class="mt-2 text-sm text-red-700" data-pack-username-error>Username <%= user.errors[:username].to_sentence %>.</p>
+<% end %>
+<p id="username-help" class="mt-2 text-xs text-zinc-600">This is what the leaderboards show. Up to <%= User::USERNAME_LENGTH %> characters, and you can change it any time on your profile.</p>

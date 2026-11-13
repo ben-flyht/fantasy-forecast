@@ -1,22 +1,22 @@
 class User < ApplicationRecord
   NAME_LENGTH = 40
-  ENTRY_NAME_LENGTH = 24
+  USERNAME_LENGTH = 24
 
   has_many :selections, dependent: :destroy
 
   normalizes :email, with: ->(email) { email.strip.downcase }
-  normalizes :first_name, :last_name, :entry_name, with: ->(name) { name.squish.presence }
+  normalizes :first_name, :last_name, :username, with: ->(name) { name.squish.presence }
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }, uniqueness: { case_sensitive: false }
   validates :first_name, :last_name, length: { maximum: NAME_LENGTH }
-  validates :entry_name, length: { maximum: ENTRY_NAME_LENGTH }
-  validates :entry_name, uniqueness: { case_sensitive: false }, allow_nil: true, if: :entry_name_changed?
+  validates :username, length: { maximum: USERNAME_LENGTH }
+  validates :username, uniqueness: { case_sensitive: false }, allow_nil: true, if: :username_changed?
 
   generates_token_for :pack_link, expires_in: 7.days
 
-  def leaderboard_name = entry_name || initialled_name || "Unnamed entry"
+  def leaderboard_name = username || initialled_name || "New player"
 
-  def named? = entry_name.present?
+  def named? = username.present?
 
   private
 

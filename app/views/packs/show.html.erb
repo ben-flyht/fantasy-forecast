@@ -11,7 +11,7 @@
   </div>
 
   <% if current_user && !current_user.named? %>
-    <%= render "packs/entry_name_prompt" %>
+    <%= render "packs/username_prompt" %>
   <% end %>
 
   <% if @gameweek.started? %>
