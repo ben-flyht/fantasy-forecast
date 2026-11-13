@@ -1,0 +1,7 @@
+<span class="flex min-w-0 items-center gap-1.5">
+  <span class="truncate font-bold text-zinc-950"><%= user.leaderboard_name %><%= " (you)" if mine %></span>
+  <% if pro %>
+    <abbr class="shrink-0 cursor-help rounded bg-zinc-950 px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-wider text-white no-underline"
+          title="Accuracy rating of <%= PackSeasonLeaderboard::PRO_RATING %> or more this season" data-pack-pro>Pro</abbr>
+  <% end %>
+</span>

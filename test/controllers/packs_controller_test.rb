@@ -285,11 +285,13 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_season_leaderboard_path
     rows = css_select("[data-pack-season-row]").map { |row| row.text.squish }
-    assert_match(/1st Ana L\. Best week, Gameweek 2 30 100%/, rows.first)
-    assert_match(/2nd Bo K\. Best week, Gameweek 1 0 0%/, rows.second)
+    assert_match(/1st Ana L\. Pro Best week, Gameweek 2 30 GK/, rows.first)
+    assert_match(/2nd Bo K\. Best week, Gameweek 1 0 No pick/, rows.second)
     assert_select "a[aria-current]", text: "Season"
     assert_select "[data-pack-season-boards] a[aria-current=page]", text: "Score"
     assert_select "[data-pack-season-row] button[data-pack-points]", count: 2
+    assert_select "[data-pack-season-row] [data-pack-accuracy]", count: 0
+    assert_select "[data-pack-columns]", text: /Accuracy/, count: 0
     assert_match(/Best week, Gameweek 2/, css_select("[data-pack-season-row]").first["data-pack-row-summary"])
   end
 
@@ -306,9 +308,14 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_season_accuracy_leaderboard_path
     assert_select "[data-pack-season-boards] a[aria-current=page]", text: "Accuracy"
     rows = css_select("[data-pack-accuracy-row]").map { |row| row.text.squish }
-    assert_match(/\A1st Ana L\. 10 of 10 right 2 100% \d+\z/, rows.first)
-    assert_match(/\A2nd Bo K\. 5 of 5 right 1 100% \d+\z/, rows.second)
+    assert_match(/\A1st Ana L\. Pro 2 100% \d+\z/, rows.first)
+    assert_match(/\A2nd Bo K\. 1 100% \d+\z/, rows.second)
     assert_select "[data-pack-columns]", /Weeks.*Avg.*Rating/
+    assert_select "[data-pack-accuracy-row] [data-pack-pro]", count: 1, text: "Pro"
+    assert_select "[data-pack-accuracy-row]:first-child [data-pack-pro]"
+
+    get pack_leaderboard_path(gameweek: 2)
+    assert_select "[data-pack-row] [data-pack-pro]", count: 1
   end
 
   test "once the games start, the leaderboard shows each five above the cards they let go, with points on every card" do

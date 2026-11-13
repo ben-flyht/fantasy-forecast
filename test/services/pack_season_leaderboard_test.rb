@@ -12,4 +12,11 @@ class PackSeasonLeaderboardTest < ActiveSupport::TestCase
     assert_equal 0, row(0, 0).rating
     assert_equal 57, row(5, 5).rating
   end
+
+  test "a manager is a Pro once their accuracy rating reaches the bar, and one perfect week is not enough" do
+    assert_not row(5, 5).pro?
+    assert row(9, 10).pro?
+    assert row(30, 40).pro?
+    assert_not row(16, 20).pro?
+  end
 end

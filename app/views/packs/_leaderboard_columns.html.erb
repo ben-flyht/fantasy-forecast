@@ -2,5 +2,7 @@
   <span class="w-10 text-right">#</span>
   <span class="flex-1">Player</span>
   <span class="w-14 text-right">Points</span>
-  <span class="w-16 text-right">Accuracy</span>
+  <% if local_assigns.fetch(:accuracy, true) %>
+    <span class="w-16 text-right">Accuracy</span>
+  <% end %>
 </div>

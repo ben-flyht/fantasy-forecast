@@ -1,4 +1,6 @@
 class PackSeasonLeaderboard
+  PRO_RATING = 60
+
   Row = Data.define(:place, :user, :points, :right, :pairs, :weeks, :best, :real) do
     def accuracy
       (right * 100).fdiv(pairs).round if pairs.positive?
@@ -7,11 +9,15 @@ class PackSeasonLeaderboard
     def rating
       pairs.positive? ? AccuracyRating.of(right, pairs) : 0
     end
+
+    def pro? = rating >= PRO_RATING
   end
 
   def rows
     @rows ||= rank(totals) { |row| row.points }
   end
+
+  def pros = totals.select(&:pro?).map(&:user)
 
   def accuracy_rows
     @accuracy_rows ||= rank(totals) { |row| row.rating }

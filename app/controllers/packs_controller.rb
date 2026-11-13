@@ -36,6 +36,9 @@ class PacksController < ApplicationController
 
   private
 
+  def pros = @pros ||= PackSeasonLeaderboard.new.pros.to_set
+  helper_method :pros
+
   def unopened = render(@gameweek.started? ? :closed : :not_open)
 
   def play_selection
