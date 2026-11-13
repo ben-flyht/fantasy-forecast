@@ -41,6 +41,7 @@ class PackTest < ApplicationSystemTestCase
     assert_selector "[data-pack-choice=kept]", count: 5
 
     first("[data-pack-pair]").all(".pack-card--choice").last.click
+    assert_selector "[data-pack-pair]:first-child .pack-choice--passed:first-child"
     assert_selector "[data-pack-pair]:first-child [data-pack-choice=kept]:last-child"
     assert_equal "baaaa", Selection.last.reload.picks
   end

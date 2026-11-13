@@ -185,7 +185,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     @gameweek.update!(is_finished: true, start_time: 1.day.ago)
     Forecast.where(gameweek: @gameweek).find_each { |forecast| forecast.dup.update!(gameweek: later) }
     get weekly_pack_path(gameweek: 2)
-    assert_select "h2", /Pair 1 of 5/
+    assert_select "[data-pack-pair]", count: 5
   end
 
   test "while a gameweek is being played, Play shows that gameweek" do

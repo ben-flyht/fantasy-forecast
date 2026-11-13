@@ -12,19 +12,14 @@
   <div class="space-y-8 <%= 'pack-reveal pack-deal' if @dealing %>">
     <% hand.pack.pairs.each_with_index do |pair, index| %>
       <% chosen = hand.choice_at(index) %>
-      <div data-pack-pair>
-        <div class="mb-2 flex items-baseline justify-between gap-3">
-          <h2 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-            Pair <%= index + 1 %> of <%= hand.pack.size %><%= " · wildcard" if pair.wildcard? %>
-          </h2>
-          <% if pair.shiny? %>
-            <p class="pack-shiny-label text-xs font-extrabold uppercase tracking-wide">Shiny · your captain</p>
-          <% end %>
-        </div>
+      <div data-controller="pack-pair" data-pack-pair>
+        <% if pair.shiny? %>
+          <p class="pack-shiny-label mb-2 text-right text-xs font-extrabold uppercase tracking-wide">Shiny · your captain</p>
+        <% end %>
         <div class="grid grid-cols-2 gap-4 sm:gap-6">
           <% pair.cards.each_with_index do |card, choice| %>
             <% state = ("kept" if chosen == choice) || ("passed" unless chosen.nil?) %>
-            <div class="pack-choice <%= "pack-choice--#{state}" if state %>" data-pack-choice="<%= state %>">
+            <div class="pack-choice <%= "pack-choice--#{state}" if state %>" data-pack-choice="<%= state %>" data-pack-pair-target="choice" data-action="click->pack-pair#choose">
               <%= render PackCardComponent.new(card: card, method: :post, shiny: pair.shiny?, captain: pair.shiny? && state == "kept",
                     href: weekly_pack_picks_path(gameweek: @gameweek.fpl_id, pair: index, keep: PackHand::LETTERS[choice]),
                     index: (index * 2) + choice) %>

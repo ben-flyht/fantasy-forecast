@@ -443,12 +443,13 @@
 }
 
 .pack-choice {
-  transition: opacity 0.2s ease, filter 0.2s ease;
+  transition: opacity 0.25s ease, filter 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .pack-choice--passed {
   opacity: 0.4;
   filter: grayscale(1);
+  transform: scale(0.9);
 }
 
 .pack-choice--kept .pack-card__body {
@@ -471,6 +472,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pack-card *,
+  .pack-choice,
   .pack-reveal * {
     animation: none !important;
     transition: none !important;
