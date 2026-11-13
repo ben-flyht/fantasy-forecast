@@ -13,7 +13,7 @@ class PackSeasonLeaderboard
 
   def totals
     weekly_rows.group_by(&:user).map do |user, rows|
-      { user: user, points: rows.sum(&:points), right: rows.sum(&:right), pairs: rows.sum(&:pairs), weeks: rows.size }
+      { user: user, points: rows.map(&:points).max, right: rows.sum(&:right), pairs: rows.sum(&:pairs), weeks: rows.size }
     end
   end
 

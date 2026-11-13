@@ -5,7 +5,7 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Leaderboard: Season",
-          subtitle: "Every pack this season added up. Accuracy is how often you kept the better card of a pair.",
+          subtitle: "Points are your best single gameweek this season. Accuracy is how often you kept the better card of a pair, across every pack.",
           horizons: (leaderboard_tabs(gameweek: @gameweek, season: true) if @gameweek)) %>
   </div>
 

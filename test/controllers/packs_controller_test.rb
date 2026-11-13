@@ -205,7 +205,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", pack_season_leaderboard_path, text: "Season"
   end
 
-  test "the season leaderboard adds up every started gameweek" do
+  test "the season leaderboard ranks on each player's best single gameweek" do
     @gameweek.update!(start_time: 9.days.ago, is_next: false, is_finished: true)
     second = Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 2.days.ago, is_current: true)
     ana = User.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
@@ -214,11 +214,13 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     [ [ ana, @gameweek, "aaaaa" ], [ ana, second, "aaaaa" ], [ bo, @gameweek, "xxxxx" ] ].each do |user, gameweek, picks|
       Selection.new(user: user, gameweek: gameweek, offered: offered, picks: picks).save!(validate: false)
     end
-    [ @gameweek, second ].each { |gameweek| Player.find_each { |player| Performance.create!(player: player, gameweek: gameweek, team: player.team, gameweek_score: 2) } }
+    { @gameweek => 2, second => 5 }.each do |gameweek, points|
+      Player.find_each { |player| Performance.create!(player: player, gameweek: gameweek, team: player.team, gameweek_score: points) }
+    end
 
     get pack_season_leaderboard_path
     rows = css_select("[data-pack-season-row]").map { |row| row.text.squish }
-    assert_match(/1st Ana L\. 2 weeks played 2[04] 100%/, rows.first)
+    assert_match(/1st Ana L\. 2 weeks played (25|30) 100%/, rows.first)
     assert_match(/2nd Bo K\. 1 week played 0 0%/, rows.second)
     assert_select "a[aria-current], a", text: "Season"
   end
