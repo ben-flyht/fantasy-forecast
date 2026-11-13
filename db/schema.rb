@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -67,12 +67,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
     t.integer "home_difficulty"
     t.integer "away_difficulty"
     t.boolean "finished", default: false, null: false
+    t.datetime "kickoff_at"
+    t.integer "home_score"
+    t.integer "away_score"
+    t.boolean "started", default: false, null: false
+    t.boolean "finished_provisional", default: false, null: false
     t.index ["away_team_id"], name: "index_matches_on_away_team_id"
     t.index ["fpl_id"], name: "index_matches_on_fpl_id", unique: true
     t.index ["gameweek_id", "away_team_id"], name: "index_matches_on_gameweek_id_and_away_team_id"
     t.index ["gameweek_id", "home_team_id"], name: "index_matches_on_gameweek_id_and_home_team_id"
     t.index ["gameweek_id"], name: "index_matches_on_gameweek_id"
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
+    t.index ["kickoff_at"], name: "index_matches_on_kickoff_at"
   end
 
   create_table "payloads", force: :cascade do |t|
