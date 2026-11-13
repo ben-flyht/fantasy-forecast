@@ -326,7 +326,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     ana = User.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
     bo = User.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
     offered = PackDraw.call(gameweek: @gameweek, seed: 3).dump
-    [ [ ana, @gameweek, "aaaaa" ], [ ana, second, "aaaaa" ], [ bo, @gameweek, "aaaaa" ] ].each do |user, gameweek, picks|
+    [ [ ana, @gameweek, "aaaaa" ], [ ana, second, "aaaaa" ], [ bo, @gameweek, "aaxxx" ] ].each do |user, gameweek, picks|
       Selection.new(user: user, gameweek: gameweek, offered: offered, picks: picks).save!(validate: false)
     end
     [ @gameweek, second ].each do |gameweek|
@@ -337,7 +337,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[aria-current=page]", text: "Accuracy"
     rows = css_select("[data-pack-accuracy-row]").map { |row| row.text.squish }
     assert_match(/\A1st Ana L\. Pro 2 100% \d+\z/, rows.first)
-    assert_match(/\A2nd Bo K\. 1 100% \d+\z/, rows.second)
+    assert_match(/\A2nd Bo K\. 1 \d{2}% \d+\z/, rows.second)
     assert_select "[data-pack-columns]", /Weeks.*Avg.*Rating/
     assert_select "[data-pack-accuracy-row] [data-pack-pro]", count: 1, text: "Pro"
     assert_select "[data-pack-accuracy-row]:first-child [data-pack-pro]"

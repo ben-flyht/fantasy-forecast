@@ -1,22 +1,21 @@
 require "test_helper"
 
 class PackSeasonLeaderboardTest < ActiveSupport::TestCase
-  def row(right, pairs)
-    PackSeasonLeaderboard::Row.new(place: nil, user: nil, points: 0, got: right, possible: pairs, pairs: pairs, weeks: 1, best: nil, real: nil)
+  def row(got, possible, average: 0.7)
+    PackSeasonLeaderboard::Row.new(place: nil, user: nil, points: 0, got: got, possible: possible, pairs: 5,
+                                   weeks: 1, best: nil, real: nil, average: average)
   end
 
-  test "the accuracy rating grows with the pairs called, so a perfect week trails a long good run" do
-    assert_operator row(40, 50).rating, :>, row(5, 5).rating
-    assert_operator row(10, 10).rating, :>, row(5, 5).rating
-    assert_operator row(5, 5).rating, :>, row(4, 5).rating
-    assert_equal 0, row(0, 0).rating
-    assert_equal 57, row(5, 5).rating
+  test "the rating is accuracy pulled towards the field average until there are enough points on offer" do
+    assert_operator row(37, 37).rating, :>, row(18, 18).rating, "a bigger perfect week is surer"
+    assert_operator row(140, 160).rating, :>, row(37, 37).rating, "a strong season beats one perfect week"
+    assert_equal 70, row(0, 0).rating, "with nothing on offer you sit at the average"
+    assert_in_delta row(900, 1000).accuracy, row(900, 1000).rating, 2, "with plenty on offer it is your accuracy"
   end
 
-  test "a manager is a Pro once their accuracy rating reaches the bar, and one perfect week is not enough" do
-    assert_not row(5, 5).pro?
-    assert row(9, 10).pro?
-    assert row(30, 40).pro?
-    assert_not row(16, 20).pro?
+  test "a manager is a Pro once their rating reaches the bar, and one perfect week is not enough" do
+    assert_not row(37, 37).pro?
+    assert row(150, 160).pro?
+    assert_not row(100, 160).pro?
   end
 end
