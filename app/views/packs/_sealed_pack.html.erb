@@ -1,0 +1,18 @@
+<div class="pack-sealed" data-pack-open-target="pack" data-pack-sealed>
+  <div class="pack-sealed__cards" aria-hidden="true">
+    <% 3.times do |card| %>
+      <span class="pack-sealed__card" style="--card: <%= card %>;"><%= render "shared/logo", size: "0.8rem" %></span>
+    <% end %>
+  </div>
+  <div class="pack-sealed__wrapper">
+    <span class="pack-sealed__strip" aria-hidden="true"></span>
+    <div class="pack-sealed__face">
+      <%= render "shared/logo", size: "1rem" %>
+      <p class="pack-sealed__title">Pack of the Week</p>
+      <% if gameweek %>
+        <p class="pack-sealed__gameweek">Gameweek <%= gameweek.fpl_id %></p>
+      <% end %>
+      <p class="pack-sealed__count">10 cards · 5 pairs</p>
+    </div>
+  </div>
+</div>

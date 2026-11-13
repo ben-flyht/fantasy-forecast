@@ -380,14 +380,23 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-row] [data-pack-accuracy]", text: "–"
   end
 
-  test "a pack is dealt out the first time it is opened, and stays put once picking starts" do
+  test "a new pack waits sealed with an Open pack button, and stays open once picking starts" do
     sign_in
     get weekly_pack_path(gameweek: 1)
-    assert_select ".pack-deal"
+    assert_select "[data-pack-sealed]", text: /Gameweek 1/
+    assert_select "button[data-action='pack-open#open']", text: "Open pack"
+    assert_select "[data-pack-open-target=board][hidden]"
 
     pick_all("a")
     get weekly_pack_path(gameweek: 1)
-    assert_select ".pack-deal", count: 0
+    assert_select "[data-pack-sealed]", count: 0
+    assert_select "[data-pack-pair]", count: 5
+  end
+
+  test "signed out, the pack waits sealed under the form that opens it" do
+    get pack_landing_path
+    assert_select "[data-pack-sealed]", text: /Gameweek 1/
+    assert_select "form h2", text: "Your Gameweek 1 pack is waiting"
   end
 
   test "the game lives at /play, and old /pack links still land there" do

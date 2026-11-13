@@ -2,10 +2,10 @@ class PacksController < ApplicationController
   include PackSignIn
 
   def latest
+    @gameweek = playing_gameweek
     return render(:sign_in) unless current_user
 
-    gameweek = playing_gameweek
-    gameweek ? redirect_to(weekly_pack_path(gameweek: gameweek.fpl_id)) : render(:empty)
+    @gameweek ? redirect_to(weekly_pack_path(gameweek: @gameweek.fpl_id)) : render(:empty)
   end
 
   def weekly

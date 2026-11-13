@@ -40,11 +40,14 @@ class PackTest < ApplicationSystemTestCase
 
   test "the whole pack is dealt, every pair is picked by tapping, and a pick can be changed" do
     sign_in
+    assert_selector "[data-pack-sealed]"
+    click_on "Open pack"
     assert_selector "[data-pack-pair]", count: 5
+    assert_no_selector "[data-pack-sealed]", visible: :visible
     assert_text "0 of 5 picked"
 
-    all("[data-pack-pair]").each_with_index do |pair, index|
-      pair.all(".pack-card--choice").first.click
+    5.times do |index|
+      all("[data-pack-pair]")[index].all(".pack-card--choice").first.click
       assert_text(index == 4 ? "That's your five" : "#{index + 1} of 5 picked")
     end
     assert_selector "[data-pack-choice=kept]", count: 5
@@ -57,7 +60,7 @@ class PackTest < ApplicationSystemTestCase
 
   test "clicking anywhere on a leaderboard row opens that player's team, and Close puts it away" do
     sign_in
-    assert_selector "[data-pack-pair]", count: 5
+    assert_selector "[data-pack-sealed]"
     Selection.last.update!(picks: "aaaaa")
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
