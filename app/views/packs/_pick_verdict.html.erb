@@ -1,11 +1,11 @@
 <% case verdict %>
 <% when :better %>
   <span class="block text-2xl font-extrabold leading-none text-zinc-950" aria-hidden="true">←</span>
-  <span class="mt-1 block text-xs font-bold uppercase tracking-wide text-zinc-950">Right call</span>
+  <span class="mt-1 block text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-xs text-zinc-950">Right call</span>
 <% when :level %>
-  <span class="block text-2xl font-extrabold leading-none text-zinc-500" aria-hidden="true">↔</span>
-  <span class="mt-1 block text-xs font-bold uppercase tracking-wide text-zinc-600">Level</span>
+  <span class="block text-2xl font-extrabold leading-none text-zinc-950" aria-hidden="true">↔</span>
+  <span class="mt-1 block text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-xs text-zinc-950">Right call</span>
 <% when :worse %>
   <span class="block text-2xl font-extrabold leading-none text-zinc-400" aria-hidden="true">→</span>
-  <span class="mt-1 block text-xs font-bold uppercase tracking-wide text-zinc-400">Wrong call</span>
+  <span class="mt-1 block text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-xs text-zinc-400">Wrong call</span>
 <% end %>
