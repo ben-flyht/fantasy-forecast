@@ -1,4 +1,4 @@
-<div class="pack-sealed" data-pack-open-target="pack" data-pack-sealed>
+<div class="pack-sealed <%= "pack-sealed--small" if local_assigns[:small] %>" data-pack-open-target="pack" data-pack-sealed>
   <div class="pack-sealed__cards" aria-hidden="true">
     <% 3.times do |card| %>
       <span class="pack-sealed__card" style="--card: <%= card %>;"><%= render "shared/logo", size: "0.8rem" %></span>

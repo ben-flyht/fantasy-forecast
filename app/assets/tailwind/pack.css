@@ -569,6 +569,11 @@
   animation: pack-float 4s ease-in-out infinite alternate;
 }
 
+.pack-sealed--small {
+  width: min(11rem, 52vw);
+  font-size: 0.8em;
+}
+
 .pack-sealed.is-tearing {
   animation: pack-shake 0.35s ease-in-out;
 }
@@ -661,14 +666,14 @@
 }
 
 .pack-sealed__title {
-  font-size: 0.95rem;
+  font-size: 0.95em;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .pack-sealed__gameweek {
-  font-size: 0.7rem;
+  font-size: 0.7em;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -676,7 +681,7 @@
 }
 
 .pack-sealed__count {
-  font-size: 0.65rem;
+  font-size: 0.65em;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;

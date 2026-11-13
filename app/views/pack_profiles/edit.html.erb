@@ -1,0 +1,20 @@
+<% content_for :meta_title, "Your profile | Fantasy Forecast" %>
+<% content_for :meta_robots, "noindex, nofollow" %>
+
+<div class="mx-auto max-w-xl">
+  <div class="mb-6">
+    <%= render PageHeadingComponent.new(title: "Your profile", horizons: play_tabs(current: nil)) %>
+  </div>
+
+  <%= form_with url: pack_profile_path, method: :patch, class: "rounded-2xl border border-zinc-200 p-6" do %>
+    <%= render "packs/entry_name_field", user: @user %>
+  <% end %>
+
+  <dl class="mt-6 rounded-2xl border border-zinc-200 p-6 text-sm">
+    <dt class="text-xs font-bold uppercase tracking-wider text-zinc-800">Email</dt>
+    <dd class="mt-1 text-zinc-950"><%= @user.email %></dd>
+    <dd class="mt-1 text-xs text-zinc-600">Only used to send your pack link. Never shown.</dd>
+  </dl>
+
+  <%= button_to "Sign out", pack_sign_out_path, method: :delete, form_class: "mt-6", class: "text-xs font-medium text-zinc-500 underline underline-offset-2 cursor-pointer" %>
+</div>

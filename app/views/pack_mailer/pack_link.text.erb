@@ -1,4 +1,4 @@
-Your <%= "Gameweek #{@gameweek.fpl_id} " if @gameweek %>Pack of the Week is ready, <%= @user.first_name %>.
+Your <%= "Gameweek #{@gameweek.fpl_id} " if @gameweek %>Pack of the Week is ready<%= ", #{@user.entry_name}" if @user.named? %>.
 
 Five pairs of players. Your own pack: keep one from each pair, changing your mind as often as you like until the FPL deadline, then watch your five climb the leaderboard on real FPL points.
 

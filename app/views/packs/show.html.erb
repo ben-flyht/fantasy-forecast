@@ -6,9 +6,13 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Pack of the Week: Gameweek #{@gameweek.fpl_id}",
-          subtitle: "Your own pack for the week. Keep one player from each pair, and change your mind as often as you like until the FPL deadline.",
+          subtitle: "Keep the player you think will score more from each pair. Change your mind as often as you like until the FPL deadline. Call it right all season and you become a Pro, and your picks help shape our player rankings.",
           horizons: play_tabs(current: :pack)) %>
   </div>
+
+  <% if current_user && !current_user.named? %>
+    <%= render "packs/entry_name_prompt" %>
+  <% end %>
 
   <% if @gameweek.started? %>
     <%= render "packs/score", hand: @hand %>
@@ -18,6 +22,7 @@
 
   <p class="mt-10 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
     <% if current_user %>
+      <%= link_to "Your profile", pack_profile_path, class: "text-zinc-950 underline underline-offset-2" %>
       <%= button_to "Sign out", pack_sign_out_path, method: :delete, form_class: "inline", class: "text-xs font-medium text-zinc-500 underline underline-offset-2 cursor-pointer" %>
     <% end %>
   </p>

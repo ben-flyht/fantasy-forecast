@@ -59,38 +59,72 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the weekly pack asks who you are first" do
+  test "the weekly pack asks only for your email first, and says what the game is for" do
     get pack_landing_path
     assert_select "h1", /Pack of the Week/
     assert_select "input[type=email][name=email]"
-    assert_select "input[name=first_name]"
-    assert_select "input[name=last_name]"
+    assert_select "input[name=first_name]", count: 0
     assert_select "li", /change your mind as often as you like until the FPL deadline/
+    assert_select "li", /Pros' picks feed into the Fantasy Forecast player rankings/
   end
 
-  test "joining with an email and a name sends a link that signs you in" do
-    assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "New@Example.com", first_name: "Sam", last_name: "Kerr" } }
+  test "joining with just an email sends a link that signs you in" do
+    assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "New@Example.com" } }
     assert_select "[data-pack-sent]", /new@example.com/
     user = User.find_by(email: "new@example.com")
-    assert_equal "Sam K.", user.leaderboard_name
+    assert_not user.named?
 
     get pack_sign_in_path(token: user.generate_token_for(:pack_link))
     follow_redirect!
     assert_redirected_to weekly_pack_path(gameweek: 1)
   end
 
-  test "a returning email needs no name, and nobody else can rename it" do
-    User.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
+  test "a returning email keeps its entry name" do
+    User.create!(email: "ana@example.com", entry_name: "Ana's Army")
 
-    assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "ana@example.com", first_name: "Not", last_name: "Ana" } }
-    assert_equal "Ana", User.find_by(email: "ana@example.com").first_name
+    assert_enqueued_emails(1) { post pack_sign_ins_path, params: { email: "ana@example.com", entry_name: "Not Ana" } }
+    assert_equal "Ana's Army", User.find_by(email: "ana@example.com").entry_name
   end
 
-  test "a new email without a name is sent back to the form" do
-    assert_no_enqueued_emails { post pack_sign_ins_path, params: { email: "fresh@example.com" } }
+  test "a bad email is sent back to the form" do
+    assert_no_enqueued_emails { post pack_sign_ins_path, params: { email: "not an email" } }
 
     assert_response :unprocessable_entity
-    assert_select "input[name=first_name]"
+    assert_select "input[type=email][name=email]"
+  end
+
+  test "a new player is asked to name their entry, and it shows on the leaderboards" do
+    sign_in(email: "sam@example.com", first_name: nil, last_name: nil)
+    get weekly_pack_path(gameweek: 1)
+    assert_select "[data-pack-entry-name-prompt] input[name=entry_name]"
+
+    patch pack_profile_path, params: { entry_name: "  Kerr  Blimey ", from: "pack" }
+    assert_redirected_to pack_landing_path
+    assert_equal "Kerr Blimey", User.find_by(email: "sam@example.com").leaderboard_name
+
+    get weekly_pack_path(gameweek: 1)
+    assert_select "[data-pack-entry-name-prompt]", count: 0
+  end
+
+  test "the profile page changes your entry name, and names are one per entry" do
+    User.create!(email: "taken@example.com", entry_name: "Taken")
+    sign_in(email: "sam@example.com", first_name: nil, last_name: nil)
+
+    get pack_profile_path
+    assert_select "dd", text: "sam@example.com"
+
+    patch pack_profile_path, params: { entry_name: "taken" }
+    assert_response :unprocessable_entity
+    assert_select "[data-pack-entry-name-error]", /already been taken/
+
+    patch pack_profile_path, params: { entry_name: "Sam's Side" }
+    assert_redirected_to pack_profile_path
+    assert_equal "Sam's Side", User.find_by(email: "sam@example.com").entry_name
+  end
+
+  test "the profile page needs you signed in" do
+    get pack_profile_path
+    assert_redirected_to pack_landing_path
   end
 
   test "picking the weekly pack needs you signed in" do

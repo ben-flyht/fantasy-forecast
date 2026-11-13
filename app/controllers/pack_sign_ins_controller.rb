@@ -6,7 +6,6 @@ class PackSignInsController < ApplicationController
 
   def create
     @user = User.find_or_initialize_by(email: User.normalize_value_for(:email, params[:email].to_s))
-    @user.assign_attributes(params.permit(:first_name, :last_name)) if @user.new_record?
     return render("packs/sign_in", status: :unprocessable_entity) unless @user.save
 
     PackMailer.with(user: @user, gameweek: Gameweek.next_gameweek).pack_link.deliver_later
