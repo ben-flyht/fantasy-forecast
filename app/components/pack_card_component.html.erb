@@ -13,6 +13,12 @@
             <span class="pack-card__glitter--flecks-a"></span>
             <span class="pack-card__glitter--flecks-b"></span>
           </span>
+          <% if team&.badge_url %>
+            <span class="pack-card__crest" aria-hidden="true">
+              <%= image_tag team.badge_url, alt: "", class: "pack-card__crest-silhouette #{badge_silhouette}" %>
+              <%= image_tag team.badge_url, alt: "", class: "pack-card__crest-colour" %>
+            </span>
+          <% end %>
           <% if player.cutout_url %>
             <%= image_tag player.cutout_url, alt: "", class: "pack-card__photo", onerror: "this.remove()" %>
           <% end %>
@@ -34,6 +40,8 @@
         <% if points %>
           <span class="pack-card__corner pack-card__corner--points" data-pack-card-points><%= points %></span>
         <% end %>
+
+        <span class="pack-card__light" aria-hidden="true"></span>
 
       </div>
 

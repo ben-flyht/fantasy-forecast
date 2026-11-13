@@ -32,6 +32,10 @@ class PackCardComponent < ViewComponent::Base
     "--club: #{team&.color || Team::DEFAULT_COLOR}; --i: #{index};"
   end
 
+  def badge_silhouette
+    team&.on_light? ? "brightness-0" : "brightness-0 invert"
+  end
+
   def ink_class
     team&.on_light? ? "pack-card__face--light" : "pack-card__face--dark"
   end
