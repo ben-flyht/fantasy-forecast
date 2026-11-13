@@ -1,15 +1,17 @@
 class PackSeasonLeaderboard
-  PRIOR_POINTS = 60
+  PRIOR_WEEKS = 2
   PRO_RATING = 85
 
   Row = Data.define(:place, :user, :points, :got, :possible, :pairs, :weeks, :best, :real, :average) do
     def accuracy
-      (got * 100).fdiv(possible).round(1) if possible.positive?
+      (got * 100).fdiv(possible).round if possible.positive?
     end
 
-    def score = (got + (PRIOR_POINTS * average)).fdiv(possible + PRIOR_POINTS) * 100
+    def field_accuracy = (average * 100).round
 
-    def rating = score.round(1)
+    def rating
+      (((accuracy || field_accuracy) * weeks) + (field_accuracy * PRIOR_WEEKS)).fdiv(weeks + PRIOR_WEEKS).round
+    end
 
     def pro? = rating >= PRO_RATING
   end
@@ -54,7 +56,7 @@ class PackSeasonLeaderboard
   end
 
   def rank(rows, &score)
-    sorted = rows.sort_by { |row| [ -score.call(row), -row.possible, row.user.leaderboard_name ] }
+    sorted = rows.sort_by { |row| [ -score.call(row), -row.weeks, row.user.leaderboard_name ] }
     sorted.map { |row| row.with(place: sorted.index { |other| score.call(other) == score.call(row) } + 1) }
   end
 end

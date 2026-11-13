@@ -3,7 +3,7 @@
   <span class="w-10 text-right">#</span>
   <span class="flex-1">Player</span>
   <span class="w-11 text-right">Weeks</span>
-  <span class="w-14 text-right">Avg</span>
+  <span class="w-12 text-right">Avg</span>
   <span class="w-14 text-right">Rating</span>
 </div>
 <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
@@ -16,8 +16,8 @@
         <%= render "packs/manager_name", user: row.user, mine: mine, pro: row.pro? %>
       </span>
       <span class="w-11 text-right text-sm font-bold tabular-nums text-zinc-500" data-pack-weeks><%= row.weeks %></span>
-      <span class="w-14 text-right text-sm font-bold tabular-nums text-zinc-500" data-pack-average><%= format("%.1f", row.accuracy || 0) %>%</span>
-      <span class="w-14 text-right text-xl font-extrabold tabular-nums text-zinc-950" data-pack-rating><%= format("%.1f", row.rating) %></span>
+      <span class="w-12 text-right text-sm font-bold tabular-nums text-zinc-500" data-pack-average><%= row.accuracy || 0 %>%</span>
+      <span class="w-14 text-right text-xl font-extrabold tabular-nums text-zinc-950" data-pack-rating><%= row.rating %></span>
     </li>
   <% end %>
 </ol>

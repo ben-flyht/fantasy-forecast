@@ -1,21 +1,29 @@
 require "test_helper"
 
 class PackSeasonLeaderboardTest < ActiveSupport::TestCase
-  def row(got, possible, average: 0.7)
-    PackSeasonLeaderboard::Row.new(place: nil, user: nil, points: 0, got: got, possible: possible, pairs: 5,
-                                   weeks: 1, best: nil, real: nil, average: average)
+  def row(accuracy, weeks, average: 0.73)
+    PackSeasonLeaderboard::Row.new(place: nil, user: nil, points: 0, got: accuracy, possible: 100, pairs: weeks * 5,
+                                   weeks: weeks, best: nil, real: nil, average: average)
   end
 
-  test "the rating is accuracy pulled towards the field average until there are enough points on offer" do
-    assert_operator row(37, 37).rating, :>, row(18, 18).rating, "a bigger perfect week is surer"
-    assert_operator row(140, 160).rating, :>, row(37, 37).rating, "a strong season beats one perfect week"
-    assert_equal 70, row(0, 0).rating, "with nothing on offer you sit at the average"
-    assert_in_delta row(900, 1000).accuracy, row(900, 1000).rating, 2, "with plenty on offer it is your accuracy"
+  test "the rating blends your average with the field's as if you started with two average weeks" do
+    assert_equal 82, row(100, 1).rating
+    assert_equal 87, row(90, 10).rating
+    assert_operator row(90, 10).rating, :>, row(100, 1).rating, "a strong season beats one perfect week"
+  end
+
+  test "the same weeks and average always give the same rating" do
+    a = PackSeasonLeaderboard::Row.new(place: nil, user: nil, points: 0, got: 896, possible: 1000, pairs: 50, weeks: 10, best: nil, real: nil, average: 0.73)
+    b = PackSeasonLeaderboard::Row.new(place: nil, user: nil, points: 0, got: 44, possible: 49, pairs: 50, weeks: 10, best: nil, real: nil, average: 0.73)
+
+    assert_equal [ a.accuracy, a.weeks ], [ b.accuracy, b.weeks ]
+    assert_equal a.rating, b.rating
   end
 
   test "a manager is a Pro once their rating reaches the bar, and one perfect week is not enough" do
-    assert_not row(37, 37).pro?
-    assert row(150, 160).pro?
-    assert_not row(100, 160).pro?
+    assert_not row(100, 1).pro?
+    assert row(94, 3).pro?
+    assert row(88, 10).pro?
+    assert_not row(85, 10).pro?
   end
 end

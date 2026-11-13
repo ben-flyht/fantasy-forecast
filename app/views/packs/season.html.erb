@@ -5,7 +5,7 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: @accuracy ? "Leaderboard: Season accuracy" : "Leaderboard: Season points",
-          subtitle: (@accuracy ? "Accuracy is the share of the points on offer you scored: keep the better card of every pair and it's 100%. Rating is your accuracy weighed by how much you've played. Until you've had a few weeks of points on offer it sits closer to everyone's average, so one lucky week can't top a season of good calls." : "Points are your best single gameweek this season."),
+          subtitle: (@accuracy ? "Accuracy is the share of the points on offer you scored: keep the better card of every pair and it's 100%. Rating blends your average with everyone's, as if you'd started the season with two average weeks, so one lucky week can't top a season of good calls. The same weeks and average always give the same rating." : "Points are your best single gameweek this season."),
           horizons: play_tabs(current: @accuracy ? :accuracy : :points)) %>
   </div>
 
