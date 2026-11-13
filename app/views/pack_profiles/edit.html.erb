@@ -3,13 +3,32 @@
 
 <div class="mx-auto max-w-xl">
   <div class="mb-6">
-    <%= render PageHeadingComponent.new(title: "Your profile", horizons: play_tabs(current: nil)) do |heading| %>
+    <%= render PageHeadingComponent.new(title: "Your profile", horizons: play_tabs(current: :pack)) do |heading| %>
       <% heading.with_aside { render "packs/play_account" } %>
     <% end %>
   </div>
 
-  <%= form_with url: pack_profile_path, method: :patch, class: "rounded-2xl border border-zinc-200 p-6" do %>
-    <%= render "packs/username_field", user: @user %>
+  <%= form_with url: pack_profile_path, method: :patch, class: "space-y-5 rounded-2xl border border-zinc-200 p-6", data: { pack_profile: true } do %>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <%= label_tag :first_name, "First name", class: "block text-xs font-bold uppercase tracking-wider text-zinc-800" %>
+        <%= text_field_tag :first_name, @user.first_name, maxlength: User::NAME_LENGTH, autocomplete: "given-name",
+              class: "mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base" %>
+      </div>
+      <div>
+        <%= label_tag :last_name, "Last name", class: "block text-xs font-bold uppercase tracking-wider text-zinc-800" %>
+        <%= text_field_tag :last_name, @user.last_name, maxlength: User::NAME_LENGTH, autocomplete: "family-name",
+              class: "mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base" %>
+      </div>
+    </div>
+    <p class="-mt-2 text-xs text-zinc-600">For our records only. Never shown in full.</p>
+
+    <div>
+      <%= render "packs/username_field", user: @user, required: false, submit: false, placeholder: @user.default_username,
+            help: "What the leaderboards show. Leave it blank and you'll appear as #{@user.default_username}." %>
+    </div>
+
+    <%= submit_tag "Save", class: "rounded-xl bg-zinc-950 px-5 py-3 text-sm font-extrabold uppercase text-white cursor-pointer" %>
   <% end %>
 
   <dl class="mt-6 rounded-2xl border border-zinc-200 p-6 text-sm">

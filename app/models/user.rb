@@ -14,11 +14,13 @@ class User < ApplicationRecord
 
   generates_token_for :pack_link, expires_in: 7.days
 
-  def leaderboard_name = username || initialled_name || "New player"
+  def leaderboard_name = username || default_username
 
-  def named? = username.present?
+  def default_username = initialled_name || "Manager #{id}"
+
+  def named? = username.present? || initialled_name.present?
 
   private
 
-  def initialled_name = ("#{first_name} #{last_name.first}." if first_name && last_name)
+  def initialled_name = [ first_name, ("#{last_name.first}." if last_name) ].compact.join(" ").presence
 end

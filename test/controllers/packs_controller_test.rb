@@ -138,6 +138,26 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-play-account] a[aria-current]", count: 0
   end
 
+  test "the profile keeps your first and last name, and they make your username until you choose one" do
+    me = sign_in(email: "sam@example.com", first_name: nil, last_name: nil)
+    assert_equal "Manager #{me.id}", me.leaderboard_name, "with no names at all there is still something to show"
+
+    get pack_profile_path
+    assert_select "[data-pack-profile] input[name=first_name]"
+    assert_select "[data-pack-profile] input[name=last_name]"
+    assert_select "a[aria-current=page]", text: "Play"
+    assert_select "nav[data-controller=navigation] a[aria-current=page][href=?]", pack_landing_path
+
+    patch pack_profile_path, params: { first_name: "Sam", last_name: "Kerr", username: "" }
+    assert_redirected_to pack_profile_path
+    me.reload
+    assert_equal [ "Sam", "Kerr", nil ], [ me.first_name, me.last_name, me.username ]
+    assert_equal "Sam K.", me.leaderboard_name
+
+    patch pack_profile_path, params: { first_name: "Sam", last_name: "Kerr", username: "Kerr Blimey" }
+    assert_equal "Kerr Blimey", me.reload.leaderboard_name
+  end
+
   test "the profile page needs you signed in" do
     get pack_profile_path
     assert_redirected_to pack_landing_path

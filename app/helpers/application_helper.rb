@@ -4,18 +4,18 @@ module ApplicationHelper
   # The five pages this site is. Everything else is reached from inside one of them,
   # so it belongs in the footer rather than here.
   NAVIGATION = [
-    [ "Rankings", :rankings_path, "players" ],
-    [ "Compare", :comparisons_path, "comparisons" ],
-    [ "Squad", :squad_path, "squads" ],
-    [ "Captain", :captain_path, "captains" ],
-    [ "Play", :pack_landing_path, "packs" ]
+    [ "Rankings", :rankings_path, %w[players] ],
+    [ "Compare", :comparisons_path, %w[comparisons] ],
+    [ "Squad", :squad_path, %w[squads] ],
+    [ "Captain", :captain_path, %w[captains] ],
+    [ "Play", :pack_landing_path, %w[packs pack_profiles] ]
   ].freeze
 
   # Which one you are on is decided by the controller answering, not by the address,
   # because a ranking has an address per position and a gameweek and is one page.
   def navigation_links
     NAVIGATION.map do |label, path, on|
-      [ label, public_send(path), controller.controller_name == on ]
+      [ label, public_send(path), on.include?(controller.controller_name) ]
     end
   end
 
