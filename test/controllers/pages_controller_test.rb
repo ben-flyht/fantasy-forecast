@@ -25,4 +25,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get contact_us_url
     assert_response :success
   end
+
+  test "each legal page names itself in the browser tab" do
+    { privacy_policy_url => "Privacy Policy", terms_of_service_url => "Terms of Service",
+      cookie_policy_url => "Cookie Policy", contact_us_url => "Contact Us" }.each do |url, name|
+      get url
+      assert_select "title", "#{name} | Fantasy Forecast"
+    end
+  end
 end
