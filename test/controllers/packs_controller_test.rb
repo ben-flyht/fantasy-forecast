@@ -306,8 +306,9 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_season_accuracy_leaderboard_path
     assert_select "[data-pack-season-boards] a[aria-current=page]", text: "Accuracy"
     rows = css_select("[data-pack-accuracy-row]").map { |row| row.text.squish }
-    assert_match(/\A1st Ana L\. 100% · 2 weeks 10\/10 \d+\z/, rows.first)
-    assert_match(/\A2nd Bo K\. 100% · 1 week 5\/5 \d+\z/, rows.second)
+    assert_match(/\A1st Ana L\. 10 of 10 right 2 100% \d+\z/, rows.first)
+    assert_match(/\A2nd Bo K\. 5 of 5 right 1 100% \d+\z/, rows.second)
+    assert_select "[data-pack-columns]", /Weeks.*Avg.*Rating/
   end
 
   test "once the games start, the leaderboard shows each five above the cards they let go, with points on every card" do
