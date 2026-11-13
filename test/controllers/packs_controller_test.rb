@@ -288,6 +288,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_match(/1st Ana L\. Best week, Gameweek 2 30 100%/, rows.first)
     assert_match(/2nd Bo K\. Best week, Gameweek 1 0 0%/, rows.second)
     assert_select "a[aria-current]", text: "Season"
+    assert_select "[data-pack-season-boards] a[aria-current=page]", text: "Score"
     assert_select "[data-pack-season-row] button[data-pack-points]", count: 2
     assert_match(/Best week, Gameweek 2/, css_select("[data-pack-season-row]").first["data-pack-row-summary"])
   end
