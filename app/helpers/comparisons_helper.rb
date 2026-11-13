@@ -45,6 +45,10 @@ module ComparisonsHelper
     question(comparison) { |side| and_list(side.players.map(&:full_name)) }
   end
 
+  def comparison_links(pairs)
+    pairs.map { |pair| [ comparison_title(pair), comparison_path(pair: pair.slug) ] }
+  end
+
   # The cross for taking a player off a side, in a tone of his own club's colour so it
   # belongs to the card rather than sitting on it as a foreign white dot. The colour is
   # pushed further the way its own ink already runs — darker on a dark shirt, paler on a
@@ -94,12 +98,6 @@ module ComparisonsHelper
       facts: { "now_cost" => member.cost, "selected_by_percent" => member.ownership },
       leading: headline_points(member) || "—"
     }
-  end
-
-  # A figure that favours a player is set in ink; the other is set quietly. Both
-  # lit says less than neither.
-  def comparison_value_class(leading)
-    leading ? "font-bold text-zinc-950" : "text-zinc-500"
   end
 
   private

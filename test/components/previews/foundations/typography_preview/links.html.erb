@@ -1,0 +1,12 @@
+<div class="max-w-3xl space-y-4">
+  <p class="text-copy text-body">
+    A link inside a sentence is ink, medium and underlined:
+    <a href="#" class="text-link">See every player, by position</a>.
+  </p>
+  <%= render PanelComponent.new(tone: :dark) do %>
+    <p class="text-copy text-inverse-muted">
+      On an ink panel the same link turns white:
+      <a href="#" class="text-link text-white">See the leaderboard</a>.
+    </p>
+  <% end %>
+</div>

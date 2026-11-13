@@ -1,0 +1,12 @@
+<div class="flex items-center gap-3" data-controller="price-slider">
+  <span class="shrink-0 text-sm text-muted">Price</span>
+  <div class="price-slider relative h-6 w-full lg:w-40">
+    <div class="price-slider__track"></div>
+    <div class="price-slider__range" data-price-slider-target="range"></div>
+    <%= range_field_tag :min_price, filter[:min], **range_options("min", "Minimum price") %>
+    <%= range_field_tag :max_price, filter[:max], **range_options("max", "Maximum price") %>
+  </div>
+  <span class="whitespace-nowrap text-sm font-medium tabular-nums text-ink" data-price-slider-target="label">
+    <%= price(filter[:min]) %> – <%= price(filter[:max]) %>
+  </span>
+</div>

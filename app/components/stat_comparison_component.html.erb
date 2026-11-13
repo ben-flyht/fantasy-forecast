@@ -1,0 +1,15 @@
+<dl class="divide-y divide-line-subtle">
+  <% rows.each do |row| %>
+    <div class="grid grid-cols-[1fr_6rem_1fr] items-center gap-2 py-2.5 sm:grid-cols-[1fr_10rem_1fr] sm:gap-3">
+      <dd class="flex items-center gap-2 sm:gap-3">
+        <span class="w-11 shrink-0 text-left text-sm tabular-nums <%= value_classes(row, :left) %>"><%= row.left %></span>
+        <span class="flex flex-1 justify-end" aria-hidden="true"><%= bar(row, :left) %></span>
+      </dd>
+      <dt class="text-center text-xs leading-tight text-muted"><%= render StatLabelComponent.new(term: row.term) %></dt>
+      <dd class="flex items-center gap-2 sm:gap-3">
+        <span class="flex-1" aria-hidden="true"><%= bar(row, :right) %></span>
+        <span class="w-11 shrink-0 text-right text-sm tabular-nums <%= value_classes(row, :right) %>"><%= row.right %></span>
+      </dd>
+    </div>
+  <% end %>
+</dl>

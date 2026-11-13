@@ -1,11 +1,11 @@
-<dialog class="m-auto max-h-[92dvh] w-[calc(100%-1rem)] max-w-xl overflow-y-auto rounded-2xl bg-white p-4 sm:p-6 backdrop:bg-zinc-950/60"
+<dialog class="m-auto max-h-[92dvh] w-[calc(100%-1rem)] max-w-xl overflow-y-auto rounded-card bg-surface p-4 sm:p-6 backdrop:bg-ink/60"
         data-leaderboard-hand-target="dialog" data-action="click->leaderboard-hand#backdrop" data-pack-hand-dialog>
   <div class="flex items-start justify-between gap-4">
     <div>
-      <h2 class="text-lg font-extrabold text-zinc-950" data-leaderboard-hand-target="title"></h2>
-      <p class="text-sm text-zinc-500" data-leaderboard-hand-target="summary"></p>
+      <h2 class="text-heading text-ink" data-leaderboard-hand-target="title"></h2>
+      <p class="text-sm text-muted" data-leaderboard-hand-target="summary"></p>
     </div>
-    <button type="button" class="cursor-pointer text-sm font-bold text-zinc-500 underline underline-offset-2" data-action="leaderboard-hand#close">Close</button>
+    <%= render ButtonComponent.new(label: "Close", class: "shrink-0", data: { action: "leaderboard-hand#close" }) %>
   </div>
   <div class="pack-hand-dialog mt-4" data-leaderboard-hand-target="body"></div>
 </dialog>

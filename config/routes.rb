@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  mount Lookbook::Engine, at: "/lookbook" if Rails.env.development?
+
   # The front page introduces the three things this site does and shows a little of
   # each, so somebody arriving from a search meets answers rather than a menu.
   root "home#show"

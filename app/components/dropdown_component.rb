@@ -9,13 +9,11 @@ class DropdownComponent < ViewComponent::Base
     @form = form
   end
 
-  def select_classes
-    "appearance-none relative isolate inline-flex items-center justify-center gap-x-2 rounded-lg border text-sm/6 " \
-      "font-semibold pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-400 " \
-      "cursor-default border-zinc-950/10 text-zinc-950 hover:bg-zinc-950/[2.5%] bg-white"
-  end
+  private
 
-  def selected_label
-    @options.find { |opt| opt[1].to_s == @selected.to_s }&.first || @options.first&.first
+  def select_classes = "appearance-none pr-8 #{ButtonComponent.classes}"
+
+  def submit
+    @form ? "document.getElementById('#{@form}').requestSubmit()" : "this.form.requestSubmit()"
   end
 end

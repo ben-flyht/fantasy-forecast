@@ -43,7 +43,7 @@
 }
 
 .pack-card--choice:focus-visible .pack-card__body {
-  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--color-zinc-950), 0 22px 40px -10px rgb(0 0 0 / 0.4);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--color-ink), 0 22px 40px -10px rgb(0 0 0 / 0.4);
 }
 
 .pack-card__space {
@@ -139,7 +139,7 @@
 }
 
 .pack-card__face--light {
-  --ink: var(--color-zinc-950);
+  --ink: var(--color-ink);
 }
 
 .pack-card__club {
@@ -348,15 +348,6 @@
   box-shadow: inset 0 0 0 1.4cqw rgb(255 255 255 / 0.12);
 }
 
-.pack-card__back .logo {
-  color: #fff;
-}
-
-.pack-card__back .logo__forecast {
-  background: #fff;
-  color: var(--color-zinc-950);
-}
-
 .pack-card__foil {
   position: absolute;
   inset: 0;
@@ -399,7 +390,7 @@
 }
 
 .pack-card--shiny .pack-card__face {
-  --ink: var(--color-zinc-950);
+  --ink: var(--color-ink);
 }
 
 .pack-card--shiny .pack-card__club {
@@ -476,7 +467,7 @@
   display: grid;
   place-items: center;
   aspect-ratio: 5 / 7;
-  border: 2px dashed var(--color-zinc-300);
+  border: 2px dashed var(--color-line-strong);
   border-radius: 1rem;
   container-type: inline-size;
 }
@@ -485,7 +476,7 @@
   font-size: 9cqw;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--color-zinc-400);
+  color: var(--color-faint);
 }
 
 .pack-reveal {
@@ -564,6 +555,7 @@
 .pack-sealed {
   --foil: linear-gradient(115deg, #3f3f46, #a1a1aa 18%, #f4f4f5 32%, #71717a 46%, #e4e4e7 60%, #52525b 76%, #d4d4d8);
   position: relative;
+  container-type: inline-size;
   width: min(15rem, 70vw);
   aspect-ratio: 5 / 7.6;
   animation: pack-float 4s ease-in-out infinite alternate;
@@ -596,15 +588,6 @@
   box-shadow: inset 0 0 0 4px rgb(255 255 255 / 0.12), 0 2px 6px rgb(0 0 0 / 0.3);
   transform: translateY(calc(var(--card) * 3px)) rotate(calc((var(--card) - 1) * 2deg));
   transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-}
-
-.pack-sealed__card .logo {
-  color: #fff;
-}
-
-.pack-sealed__card .logo__forecast {
-  background: #fff;
-  color: var(--color-zinc-950);
 }
 
 .pack-sealed__wrapper {
@@ -660,11 +643,6 @@
   text-align: center;
 }
 
-.pack-sealed__face .logo__forecast {
-  background: #fff;
-  color: var(--color-zinc-950);
-}
-
 .pack-sealed__title {
   font-size: 0.95em;
   font-weight: 800;
@@ -677,7 +655,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--color-zinc-400);
+  color: var(--color-faint);
 }
 
 .pack-sealed__count {
@@ -685,7 +663,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-zinc-500);
+  color: var(--color-muted);
 }
 
 .pack-sealed.is-tearing .pack-sealed__strip {

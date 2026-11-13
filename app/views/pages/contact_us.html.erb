@@ -1,14 +1,13 @@
 <% content_for :meta_title, "Contact Us | Fantasy Forecast" %>
 
 <div class="mx-auto max-w-xl">
-  <div class="mb-6">
+  <div class="mb-group">
     <%= render PageHeadingComponent.new(
           title: "Contact us",
           subtitle: "Questions, feedback, a ranking you disagree with, or help with your Play account. We read everything.") %>
   </div>
 
-  <div class="rounded-2xl border border-zinc-200 p-6">
-    <p class="text-xs font-bold uppercase tracking-wider text-zinc-500">Email</p>
-    <%= mail_to "support@fantasyforecast.co.uk", class: "mt-1 block break-all text-lg font-bold text-zinc-950 underline underline-offset-4 hover:text-zinc-600" %>
-  </div>
+  <%= render PanelComponent.new(tone: :outline, tag: :dl) do %>
+    <%= render StatComponent.new(label: "Email", value: mail_to("support@fantasyforecast.co.uk", class: "break-all underline underline-offset-4")) %>
+  <% end %>
 </div>

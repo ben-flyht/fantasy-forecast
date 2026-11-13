@@ -1,0 +1,22 @@
+<div class="max-w-3xl">
+  <p class="text-copy text-body">
+    One family, Inter, in ten named styles. A style carries its own size, line height, weight and tracking;
+    colour is chosen separately from the palette. Player cards are artwork and are set to their own pixel grid.
+  </p>
+
+  <ul class="mt-group divide-y divide-line-subtle">
+    <% styles.each do |style| %>
+      <li class="grid gap-2 py-5 sm:grid-cols-[11rem_1fr] sm:gap-6">
+        <div>
+          <p class="text-sm font-semibold text-ink"><%= style.name %></p>
+          <p class="font-mono text-xs text-ink"><%= style.token %></p>
+          <p class="mt-1 font-mono text-xs text-faint"><%= style.spec %></p>
+        </div>
+        <div class="min-w-0">
+          <p class="<%= style.token %> <%= "text-ink" unless style.token == "eyebrow" %>"><%= style.sample %></p>
+          <p class="mt-2 text-sm text-muted"><%= style.use %></p>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+</div>

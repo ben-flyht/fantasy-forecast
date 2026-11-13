@@ -1,0 +1,19 @@
+<div class="max-w-3xl">
+  <p class="text-copy text-body">
+    A club's colour fills its players' cards and nothing else. Ink on a card is white, or near-black for the
+    clubs that play in something pale.
+  </p>
+
+  <ul class="mt-group grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <% teams.each do |team| %>
+      <li class="rounded-card p-panel <%= team.on_light? ? "text-ink" : "text-white" %>" style="background-color: <%= team.color %>">
+        <p class="text-figure"><%= team.short_name %></p>
+        <p class="mt-1 font-mono text-xs opacity-80"><%= team.color %></p>
+      </li>
+    <% end %>
+    <li class="rounded-card p-panel text-white" style="background-color: <%= fallback %>">
+      <p class="text-figure">No club</p>
+      <p class="mt-1 font-mono text-xs opacity-80"><%= fallback %></p>
+    </li>
+  </ul>
+</div>

@@ -18,7 +18,7 @@ class ComparisonStats < ApplicationService
 
   Reading = Struct.new(:value, :text, keyword_init: true)
 
-  Row = Struct.new(:term, :left, :right, :leader, keyword_init: true) do
+  Row = Struct.new(:term, :left, :right, :leader, :shares, keyword_init: true) do
     def label = term.label
   end
 
@@ -86,7 +86,22 @@ class ComparisonStats < ApplicationService
 
   def row_of(stat, left_reading, right_reading)
     Row.new(term: StatGlossary.fetch(stat.term), leader: leader(stat, left_reading.value, right_reading.value),
-            left: left_reading.text, right: right_reading.text)
+            left: left_reading.text, right: right_reading.text,
+            shares: shares(stat, left_reading.value, right_reading.value))
+  end
+
+  def shares(stat, *values)
+    return if stat.order? || values.any?(&:nil?) || !values.max.positive?
+
+    stat.better == :low ? shares_of_least(values) : shares_of_most(values)
+  end
+
+  def shares_of_most(values)
+    values.map { |value| value.clamp(0..) / values.max.to_f }
+  end
+
+  def shares_of_least(values)
+    values.map { |value| value.positive? ? values.min / value.to_f : 1.0 }
   end
 
   def sides = [ left, right ]

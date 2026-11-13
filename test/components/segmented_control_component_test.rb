@@ -28,8 +28,8 @@ class SegmentedControlComponentTest < ViewComponent::TestCase
   test "the current choice is the lit one" do
     render_inline SegmentedControlComponent.new(label: "Position", options: options(current: "/a"))
 
-    assert_selector "a[href='/a'].bg-white"
-    assert_no_selector "a[href='/b'].bg-white"
+    assert_selector "a[href='/a'].bg-surface"
+    assert_no_selector "a[href='/b'].bg-surface"
   end
 
   # Full width on a phone so each option is thumb-sized, its own width from sm up.

@@ -1,0 +1,33 @@
+<div>
+  <%= render SectionHeadingComponent.new(title: title) %>
+  <% if rows.any? %>
+    <table class="data-table mt-stack">
+      <thead>
+        <tr>
+          <th class="w-[28%]">GW</th>
+          <th class="w-[28%]">Date</th>
+          <th class="w-[30%]">Opponent</th>
+          <th class="w-[14%] text-right"><%= points_label %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.each do |row| %>
+          <tr>
+            <td class="whitespace-nowrap tabular-nums">GW<%= row[:gameweek].fpl_id %></td>
+            <td class="whitespace-nowrap tabular-nums"><%= date(row) %></td>
+            <td class="whitespace-nowrap">
+              <% if row[:opponent] %>
+                <span class="lg:hidden"><%= row[:opponent].short_name || row[:opponent].name %></span>
+                <span class="hidden lg:inline"><%= row[:opponent].name %></span>
+                <span class="text-faint">(<%= row[:home] ? "H" : "A" %>)</span>
+              <% else %>—<% end %>
+            </td>
+            <td class="text-right font-semibold tabular-nums"><%= points(row) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="mt-3 text-sm text-muted"><%= empty_message %></p>
+  <% end %>
+</div>

@@ -1,0 +1,25 @@
+<div>
+  <%= render SectionHeadingComponent.new(title: title) %>
+  <% if rows.any? %>
+    <ol class="mt-stack grid auto-cols-fr grid-flow-col gap-2 sm:gap-3">
+      <% rows.each do |row| %>
+        <li class="text-center">
+          <div class="flex h-28 flex-col justify-end">
+            <p class="mb-1 text-sm/5 font-semibold tabular-nums <%= blank?(row) ? "text-faint" : "text-ink" %>">
+              <%= row[:points] || "—" %><span class="sr-only"> points</span>
+            </p>
+            <span class="block w-full shrink-0 rounded-badge <%= blank?(row) ? "bg-line-strong" : "bg-ink" %>" style="height: <%= height(row) %>" aria-hidden="true"></span>
+          </div>
+          <p class="mt-1.5 truncate text-xs text-body">
+            <% if row[:opponent] %>
+              <%= opponent(row) %> <span class="text-faint">(<%= row[:home] ? "H" : "A" %>)</span>
+            <% else %>—<% end %>
+          </p>
+          <p class="text-xs tabular-nums text-faint">GW<%= row[:gameweek].fpl_id %></p>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p class="mt-3 text-sm text-muted"><%= empty_message %></p>
+  <% end %>
+</div>

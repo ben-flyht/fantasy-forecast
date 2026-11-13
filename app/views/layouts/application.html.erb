@@ -68,18 +68,13 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-white" data-controller="analytics">
+  <body class="bg-surface pb-16 sm:pb-0" data-controller="analytics">
     <%= render "shared/navigation" %>
 
-    <% if notice %>
-      <div class="container mx-auto px-4 mt-4">
-        <div class="rounded-lg bg-lime-400/20 px-4 py-3 text-sm text-lime-700"><%= notice %></div>
-      </div>
-    <% end %>
-
-    <% if alert %>
-      <div class="container mx-auto px-4 mt-4">
-        <div class="rounded-lg bg-red-400/20 px-4 py-3 text-sm text-red-700"><%= alert %></div>
+    <% if notice || alert %>
+      <div class="container mx-auto mt-4 space-y-2 px-4">
+        <%= render NoticeComponent.new(message: notice) %>
+        <%= render NoticeComponent.new(message: alert, tone: :alert) %>
       </div>
     <% end %>
 
@@ -87,22 +82,26 @@
       <%= yield %>
     </main>
 
-    <footer class="border-t border-zinc-950/10 mt-16">
+    <footer class="border-t border-line mt-16">
       <div class="container mx-auto px-4 py-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <%= render "shared/logo", size: "0.875rem" %>
-            <p class="text-xs/6 text-zinc-500 mt-1">FPL player rankings, graded.</p>
+            <%= render LogoComponent.new(size: "0.875rem") %>
+            <p class="text-xs/6 text-muted mt-1">FPL player rankings, graded.</p>
           </div>
-          <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs/6 text-zinc-500">
-            <%= link_to "Privacy", privacy_policy_path, class: "hover:text-zinc-950" %>
-            <%= link_to "Terms", terms_of_service_path, class: "hover:text-zinc-950" %>
-            <%= link_to "Cookies", cookie_policy_path, class: "hover:text-zinc-950" %>
-            <%= link_to "Contact", contact_us_path, class: "hover:text-zinc-950" %>
+          <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs/6 text-muted">
+            <%= link_to "Privacy", privacy_policy_path, class: "hover:text-ink" %>
+            <%= link_to "Terms", terms_of_service_path, class: "hover:text-ink" %>
+            <%= link_to "Cookies", cookie_policy_path, class: "hover:text-ink" %>
+            <%= link_to "Contact", contact_us_path, class: "hover:text-ink" %>
           </div>
         </div>
-        <p class="mt-6 text-xs text-zinc-400">Not affiliated with the Premier League or Fantasy Premier League.</p>
+        <p class="mt-group text-xs text-faint">Not affiliated with the Premier League or Fantasy Premier League.</p>
       </div>
     </footer>
+
+    <div class="fixed inset-x-0 bottom-0 z-40 sm:hidden">
+      <%= render TabBarComponent.new(links: navigation_links) %>
+    </div>
   </body>
 </html>

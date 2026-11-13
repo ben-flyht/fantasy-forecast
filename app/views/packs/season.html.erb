@@ -2,7 +2,7 @@
 <% content_for :meta_robots, "noindex, nofollow" %>
 
 <div class="mx-auto max-w-xl">
-  <div class="mb-6">
+  <div class="mb-group">
     <%= render PageHeadingComponent.new(
           title: @accuracy ? "Leaderboard: Season accuracy" : "Leaderboard: Season points",
           subtitle: (@accuracy ? "Accuracy is the share of the points on offer you scored: keep the better card of every pair and it's 100%. Rating blends your average with everyone's, as if you'd started the season with two average weeks, so one lucky week can't top a season of good calls. The same weeks and average always give the same rating." : "Points are your best single gameweek this season."),
@@ -13,30 +13,28 @@
 
 
   <% if @board.rows.empty? %>
-    <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">No gameweek has been played yet.</div>
+    <%= render EmptyStateComponent.new(message: "No gameweek has been played yet.") %>
   <% elsif @accuracy %>
     <%= render "packs/season_accuracy", rows: @board.accuracy_rows %>
   <% else %>
-    <p class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= pluralize(@board.rows.size, "player") %></p>
-    <%= render "packs/leaderboard_columns", accuracy: false %>
     <div data-controller="leaderboard-hand">
-    <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
-      <% leaderboard_top(@board.rows).each_with_index do |row, index| %>
-        <%= render "packs/leaderboard_gap", row: row, index: index %>
-        <% mine = current_user && row.user == current_user %>
-        <li class="group flex items-center gap-3 px-4 py-3 cursor-pointer <%= mine ? 'bg-zinc-100' : 'hover:bg-zinc-50' %>" data-action="click->leaderboard-hand#open" data-pack-season-row data-pack-row
-            data-pack-row-name="<%= row.place.ordinalize %> <%= row.user.leaderboard_name %>"
-            data-pack-row-summary="Best week, Gameweek <%= row.best.selection.gameweek.fpl_id %> · <%= pluralize(row.points, 'point') %>">
-          <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place.ordinalize %></span>
-          <span class="min-w-0 flex-1">
-            <%= render "packs/manager_name", user: row.user, mine: mine, pro: row.pro? %>
-          </span>
-          <%= render "packs/leaderboard_scores", points: row.points, openable: true %>
-          <%= render "packs/leaderboard_hand", hand: row.best.selection.pack_hand, real: row.real %>
-        </li>
+      <%= render LeaderboardComponent.new(caption: pluralize(@board.rows.size, "player"), columns: [ %w[Points w-14] ]) do |board| %>
+        <% leaderboard_top(@board.rows).each_with_index do |row, index| %>
+          <% mine = current_user && row.user == current_user %>
+          <% board.with_row(place: row.place.ordinalize, name: row.user.leaderboard_name, pro: row.pro?,
+                            mine: mine, gap: leaderboard_gap?(row, index),
+                            class: "cursor-pointer #{'hover:bg-surface-subtle' unless mine}",
+                            data: { pack_row: true, pack_season_row: true, action: "click->leaderboard-hand#open",
+                                    pack_row_name: "#{row.place.ordinalize} #{row.user.leaderboard_name}",
+                                    pack_row_summary: "Best week, Gameweek #{row.best.selection.gameweek.fpl_id} · #{pluralize(row.points, 'point')}" }) do |entry| %>
+            <% entry.with_figures do %>
+              <%= render "packs/leaderboard_scores", points: row.points, openable: true %>
+            <% end %>
+            <%= render "packs/leaderboard_hand", hand: row.best.selection.pack_hand, real: row.real %>
+          <% end %>
+        <% end %>
       <% end %>
-    </ol>
-    <%= render "packs/hand_dialog" %>
+      <%= render "packs/hand_dialog" %>
     </div>
   <% end %>
 </div>

@@ -1,0 +1,5 @@
+<dl>
+  <%= render StatComponent.new(label: "Rank", value: "#3", size: :xl) do %>
+    <%= render RankMovementComponent.new(history: PreviewFixtures.history) %>
+  <% end %>
+</dl>

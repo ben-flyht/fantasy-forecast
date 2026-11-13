@@ -1,0 +1,8 @@
+<ul class="divide-y divide-line-subtle">
+  <% rows.each do |label, value| %>
+    <li class="flex items-center justify-between gap-4 py-2.5">
+      <span class="text-sm text-body"><%= label %></span>
+      <span class="text-sm font-semibold tabular-nums text-ink"><%= value %></span>
+    </li>
+  <% end %>
+</ul>

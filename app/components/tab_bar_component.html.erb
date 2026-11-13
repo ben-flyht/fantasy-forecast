@@ -1,0 +1,12 @@
+<nav class="border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]" aria-label="Main">
+  <ul class="grid auto-cols-fr grid-flow-col px-2">
+    <% links.each do |label, path, current, name| %>
+      <li>
+        <%= link_to path, "aria-current": ("page" if current), class: link_classes(current) do %>
+          <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="<%= current ? 2 : 1.6 %>" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%= icon(name) %></svg>
+          <%= label %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</nav>

@@ -1,28 +1,16 @@
-<tr class="cursor-pointer group"
-    onclick="Turbo.visit('<%= helpers.player_path(player) %>')"
-    data-action="click->analytics#track keydown.enter->analytics#track"
-    data-analytics-event-param="player_card_click"
-    data-analytics-player-param="<%= player.to_param %>"
-    role="link" tabindex="0"
-    onkeydown="if(event.key === 'Enter') Turbo.visit('<%= helpers.player_path(player) %>')">
-  <td class="w-[104px] pl-[10px] text-center align-middle bg-white border-y border-l border-zinc-200 rounded-l-xl group-hover:bg-zinc-50">
-    <span class="text-[46px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-zinc-900"><%= leading %></span>
-  </td>
+<%= link_to helpers.player_path(player), data: link_data,
+      class: "flex items-stretch overflow-hidden rounded-card border border-line bg-surface hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-emphasis focus-visible:ring-offset-2" do %>
+  <div class="flex w-[104px] shrink-0 items-center justify-center pl-[10px]">
+    <span class="text-[46px] font-extrabold tracking-[-0.03em] leading-none tabular-nums text-ink"><%= leading %></span>
+  </div>
 
-  <td class="p-0 w-full align-middle bg-white border-y border-zinc-200 group-hover:bg-zinc-50">
+  <div class="min-w-0 flex-1">
     <div class="relative h-[104px] w-full overflow-hidden">
       <div class="relative z-[1] flex items-center h-full w-full pl-10 <%= text_class %>">
         <%# 28px over 104px is 15.06 degrees: Inter's slash, the same lean as the logo. %>
         <div class="absolute inset-0 z-0 overflow-hidden [clip-path:polygon(28px_0,100%_0,calc(100%_-_28px)_100%,0_100%)]">
           <div class="absolute inset-0" style="background-color: <%= color %>"></div>
-          <% if team&.badge_url %>
-            <span class="absolute -right-4 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.2]">
-              <%= image_tag team.badge_url, alt: "", loading: "lazy", class: "w-full h-full object-contain #{team.on_light? ? 'brightness-0' : 'brightness-0 invert'}" %>
-            </span>
-            <span class="absolute -right-4 top-1/2 -translate-y-1/2 h-[152px] w-[152px] pointer-events-none opacity-[.22]">
-              <%= image_tag team.badge_url, alt: "", loading: "lazy", class: "w-full h-full object-contain" %>
-            </span>
-          <% end %>
+          <%= render TeamWatermarkComponent.new(team: team, class: "absolute -right-4 top-1/2 h-[152px] w-[152px] -translate-y-1/2") %>
         </div>
 
         <div class="relative z-[1] min-w-0 grid grid-rows-[0px_12px_2px_26px_2px_14px] justify-items-start">
@@ -54,9 +42,9 @@
         </span>
       <% end %>
     </div>
-  </td>
+  </div>
 
-  <td class="w-[104px] text-center align-middle bg-white border-y border-r border-zinc-200 rounded-r-xl group-hover:bg-zinc-50">
-    <span class="relative right-[9px] text-[46px] font-extrabold tracking-[-0.03em] leading-none text-zinc-900"><%= grade %></span>
-  </td>
-</tr>
+  <div class="flex w-[104px] shrink-0 items-center justify-center">
+    <span class="relative right-[9px] text-[46px] font-extrabold tracking-[-0.03em] leading-none text-ink"><%= grade %></span>
+  </div>
+<% end %>

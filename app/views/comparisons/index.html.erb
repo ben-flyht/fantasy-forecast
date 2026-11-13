@@ -10,26 +10,22 @@
       share: "Share these FPL player comparisons",
       back: back_home) %>
 
-<div class="mt-6">
+<div class="mt-group">
   <%= render "comparisons/builder" %>
 </div>
 
 <% if @most_requested.any? %>
-  <section class="mt-8">
-    <h2 class="text-lg font-semibold text-zinc-900">Most compared this week</h2>
-    <p class="mt-1 text-sm text-zinc-500">The straight choices managers are actually asking about.</p>
-    <ul class="mt-3 flex flex-wrap gap-2">
-      <% @most_requested.each do |pair| %>
-        <li>
-          <%= link_to comparison_title(pair), comparison_path(pair: pair.slug),
-              class: "inline-block rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:border-zinc-400 hover:text-zinc-950" %>
-        </li>
-      <% end %>
-    </ul>
+  <section class="mt-section">
+    <%= render SectionHeadingComponent.new(
+          title: "Most compared this week",
+          subtitle: "The straight choices managers are actually asking about.") %>
+    <div class="mt-stack">
+      <%= render ChipLinksComponent.new(links: comparison_links(@most_requested)) %>
+    </div>
   </section>
 <% end %>
 
-<p class="mt-8 max-w-2xl text-sm/6 text-zinc-600">
+<p class="mt-section max-w-2xl text-copy text-body">
   The picks worth arguing about
   <%= @gameweek ? "for Gameweek #{@gameweek.fpl_id}" : "this season" %>: players our forecast puts
   next to each other, where the choice is genuinely close. Every pair has an address of its own,
@@ -38,22 +34,17 @@
 
 <% if @pairs.any? %>
   <% @pairs.each do |position, pairs| %>
-    <section class="mt-8">
-      <h2 class="text-lg font-semibold text-zinc-900"><%= position.capitalize %>s</h2>
-      <ul class="mt-3 flex flex-wrap gap-2">
-        <% pairs.each do |pair| %>
-          <li>
-            <%= link_to comparison_title(pair), comparison_path(pair: pair.slug),
-                class: "inline-block rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:border-zinc-400 hover:text-zinc-950" %>
-          </li>
-        <% end %>
-      </ul>
+    <section class="mt-section">
+      <%= render SectionHeadingComponent.new(title: "#{position.capitalize}s") %>
+      <div class="mt-stack">
+        <%= render ChipLinksComponent.new(links: comparison_links(pairs)) %>
+      </div>
     </section>
   <% end %>
 
-  <section class="mt-10">
-    <h2 class="text-lg font-semibold text-zinc-900">How a comparison is answered</h2>
-    <p class="mt-2 text-sm text-zinc-600">
+  <section class="mt-section">
+    <%= render SectionHeadingComponent.new(title: "How a comparison is answered") %>
+    <p class="mt-2 text-sm text-body">
       Both players are forecast the same way, from the same stored numbers the rankings are read from,
       so a comparison can never disagree with the tables. Price and ownership lead, weighed against
       minutes, recent form, expected goals and assists, and who they are playing. Where the gap is
@@ -61,7 +52,7 @@
     </p>
   </section>
 
-  <%= render "shared/faq", title: "FPL Comparison FAQ", pairs: [
+  <%= render FaqComponent.new(title: "FPL Comparison FAQ", pairs: [
         [ "Which FPL player should I pick?",
           "Whichever of the two we forecast to score more, and every pair above says which that is. The comparison pages answer one question at a time: two players, the points we expect from each, and a verdict rather than a table for you to read yourself." ],
         [ "How do you decide who wins a comparison?",
@@ -70,7 +61,7 @@
           "We say so. Where the gap is under #{HeadToHead::CLOSE} of a point a week it is smaller than the difference our forecast can honestly claim to see, so neither is named a winner. Owning either is the same decision." ],
         [ "Can I compare any two FPL players?",
           "Yes. Every pair of players in the game has an address of its own. The pairs listed here are the arguments worth having, the ones our own forecast puts closest together, and each of those pages links on to the next player worth weighing." ]
-      ] %>
+      ]) %>
 <% else %>
-  <p class="mt-8 text-sm text-zinc-500">No forecasts yet for the coming gameweek, so there is nothing to compare.</p>
+  <p class="mt-section text-sm text-muted">No forecasts yet for the coming gameweek, so there is nothing to compare.</p>
 <% end %>

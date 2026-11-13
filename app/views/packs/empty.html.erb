@@ -1,7 +1,8 @@
 <% content_for :meta_title, "Open a Pack | Fantasy Forecast" %>
 <% content_for :meta_robots, "noindex, nofollow" %>
 
-<div class="mx-auto max-w-md rounded-xl border border-zinc-200 px-6 py-10 text-center">
-  <h2 class="text-sm font-medium text-zinc-900">No pack to open</h2>
-  <p class="mt-1 text-sm text-zinc-500">There is no forecast for this gameweek to draw one from yet.</p>
+<div class="mx-auto max-w-xl">
+  <%= render EmptyStateComponent.new(
+        title: "No pack to open",
+        message: "There is no forecast for this gameweek to draw one from yet.") %>
 </div>

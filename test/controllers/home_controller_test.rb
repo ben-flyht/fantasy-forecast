@@ -6,7 +6,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", /FPL Rankings and Predictions/
-    assert_select "table tbody tr", minimum: 1
+    assert_select "ol li a[href^='/players/']", minimum: 1
     assert_includes response.body, players(:midfielder).display_name
   end
 

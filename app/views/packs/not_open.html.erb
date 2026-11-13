@@ -2,16 +2,13 @@
 <% content_for :meta_robots, "noindex, nofollow" %>
 
 <div class="mx-auto max-w-xl">
-  <div class="mb-6">
+  <div class="mb-group">
     <%= render PageHeadingComponent.new(title: "Play: Gameweek #{@gameweek.fpl_id}") %>
   </div>
-  <div class="rounded-2xl border border-zinc-200 px-6 py-10 text-center" data-pack-not-open>
-    <h2 class="text-base font-extrabold text-zinc-950">Not open yet</h2>
-    <p class="mt-2 text-sm text-zinc-500">
-      The Gameweek <%= @gameweek.fpl_id %> pack opens once every Gameweek <%= @gameweek.fpl_id - 1 %> game has been played.
-    </p>
-    <p class="mt-5 flex justify-center gap-5 text-sm">
-      <%= link_to "Gameweek #{@gameweek.fpl_id - 1} leaderboard", pack_leaderboard_path(gameweek: @gameweek.fpl_id - 1), class: "font-bold underline underline-offset-2" %>
-    </p>
-  </div>
+  <%= render EmptyStateComponent.new(
+        title: "Not open yet",
+        message: "The Gameweek #{@gameweek.fpl_id} pack opens once every Gameweek #{@gameweek.fpl_id - 1} game has been played.",
+        data: { pack_not_open: true }) do %>
+    <%= link_to "Gameweek #{@gameweek.fpl_id - 1} leaderboard", pack_leaderboard_path(gameweek: @gameweek.fpl_id - 1), class: "text-link" %>
+  <% end %>
 </div>

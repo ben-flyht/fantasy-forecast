@@ -1,0 +1,8 @@
+<%= render PanelComponent.new do %>
+  <dl class="flex flex-wrap items-baseline gap-x-6 gap-y-4 lg:gap-x-10">
+    <%= render StatComponent.new(label: "Rank", value: "#3", size: :xl) %>
+    <%= render StatComponent.new(label: "Grade", value: "A", size: :xl) %>
+    <%= render StatComponent.new(label: "Expected points", value: "7.4", size: :xl) %>
+  </dl>
+  <%= render ForecastWorkingComponent.new(working: working, horizon: horizon, position: position, chance: chance) %>
+<% end %>

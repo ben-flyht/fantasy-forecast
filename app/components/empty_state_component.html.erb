@@ -1,0 +1,11 @@
+<%= tag.div class: "rounded-card border border-line px-6 py-10 text-center", **attributes do %>
+  <% if title %>
+    <h2 class="text-subheading text-ink"><%= title %></h2>
+  <% end %>
+  <% if message %>
+    <p class="<%= "mt-1" if title %> text-sm text-muted"><%= message %></p>
+  <% end %>
+  <% if content? %>
+    <div class="mt-5 text-sm"><%= content %></div>
+  <% end %>
+<% end %>

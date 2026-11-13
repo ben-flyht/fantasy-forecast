@@ -53,7 +53,13 @@ class SeasonRecordComponent < ViewComponent::Base
     [ "Blanks", "#{history.blanks} of #{history.appearances.size}" ]
   end
 
-  def latest(trend)
-    format("%.2f", trend.latest)
+  def rates
+    [ *trends.map { |trend| [ trend.label, format("%.2f", trend.latest) ] }, price ].compact
+  end
+
+  def price
+    return unless history.price_history.moving?
+
+    [ "Price", helpers.player_price(history.price_history.latest) ]
   end
 end

@@ -1,0 +1,12 @@
+<div class="max-w-xl space-y-6">
+  <%= render FieldComponent.new(name: :email, label: "Your email", type: :email) do |field| %>
+    <% field.with_action { render ButtonComponent.new(label: "Email me my pack", variant: :solid, size: :md, type: "submit", class: "shrink-0") } %>
+  <% end %>
+
+  <form class="flex items-center gap-2" onsubmit="return false">
+    <span class="text-sm text-muted">Team</span>
+    <%= render DropdownComponent.new(label: "Team", name: "team_id", options: [ [ "All", "" ], [ "Arsenal", 1 ] ]) %>
+    <%= render ShareButtonComponent.new(url: "#", title: "Rankings") %>
+    <%= render ButtonComponent.new(label: "Close", variant: :ghost) %>
+  </form>
+</div>

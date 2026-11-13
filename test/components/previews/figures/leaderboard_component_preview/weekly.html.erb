@@ -1,0 +1,13 @@
+<div class="mx-auto max-w-xl">
+  <%= render LeaderboardComponent.new(caption: "128 players · live points",
+                                      columns: [ %w[Accuracy w-16], %w[Points w-14] ]) do |board| %>
+    <% rows.each do |row| %>
+      <% board.with_row(**row.slice(:place, :name, :pro, :mine, :gap)) do |entry| %>
+        <% entry.with_figures do %>
+          <span class="w-16 text-right text-sm font-bold tabular-nums text-muted"><%= row[:accuracy] %>%</span>
+          <span class="w-14 text-right text-figure tabular-nums text-ink"><%= row[:points] %></span>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

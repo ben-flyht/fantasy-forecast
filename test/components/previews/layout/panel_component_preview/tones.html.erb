@@ -1,0 +1,8 @@
+<div class="space-y-4">
+  <% tones.each do |tone| %>
+    <%= render PanelComponent.new(tone: tone) do %>
+      <p class="eyebrow"><%= tone %></p>
+      <p class="mt-1 text-copy">A panel sets a block of content apart from the page. This one uses the <%= tone %> tone.</p>
+    <% end %>
+  <% end %>
+</div>

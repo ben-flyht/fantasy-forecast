@@ -1,0 +1,22 @@
+<table class="border-separate border-spacing-x-6 border-spacing-y-4">
+  <thead>
+    <tr>
+      <th></th>
+      <% sizes.each do |size| %>
+        <th class="eyebrow text-left"><%= size %></th>
+      <% end %>
+    </tr>
+  </thead>
+  <tbody>
+    <% variants.each do |variant| %>
+      <tr>
+        <th class="eyebrow text-left"><%= variant %></th>
+        <% sizes.each do |size| %>
+          <td class="<%= "rounded-card bg-ink p-panel" if variant == :inverse %>">
+            <%= render ButtonComponent.new(label: label, variant: variant, size: size) %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

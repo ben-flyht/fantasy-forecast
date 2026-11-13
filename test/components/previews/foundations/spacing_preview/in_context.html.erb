@@ -1,0 +1,23 @@
+<div class="max-w-3xl">
+  <%= render PageHeadingComponent.new(title: "A page title", subtitle: "Followed by a group gap before the first content.") %>
+
+  <div class="mt-group">
+    <%= render PanelComponent.new do %>
+      <p class="text-copy text-body">A panel, padded by the panel distance on every side.</p>
+    <% end %>
+  </div>
+
+  <section class="mt-section">
+    <%= render SectionHeadingComponent.new(title: "A section", subtitle: "A section gap above, a stack gap below.") %>
+    <div class="mt-stack">
+      <%= render StatStripComponent.new(stats: [ [ "Formation", "3-4-3" ], [ "Expected points", 71 ] ]) %>
+    </div>
+  </section>
+
+  <section class="mt-section">
+    <%= render SectionHeadingComponent.new(title: "Another section") %>
+    <div class="mt-stack">
+      <%= render ChipLinksComponent.new(links: [ [ "Haaland or Salah?", "#" ], [ "Saka or Palmer?", "#" ] ]) %>
+    </div>
+  </section>
+</div>

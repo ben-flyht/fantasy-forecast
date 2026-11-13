@@ -1,0 +1,24 @@
+<div class="max-w-3xl">
+  <p class="text-copy text-body">
+    Four named distances set the vertical rhythm of every page. Anything finer than these is Tailwind's
+    ordinary four-pixel scale.
+  </p>
+
+  <ul class="mt-group divide-y divide-line-subtle">
+    <% steps.each do |step| %>
+      <li class="flex items-center gap-4 py-4">
+        <div class="w-24 shrink-0">
+          <span class="block h-3 rounded-badge bg-ink <%= step.bar %>"></span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-ink"><%= step.name %></p>
+          <p class="text-sm text-muted"><%= step.use %></p>
+        </div>
+        <div class="shrink-0 text-right">
+          <p class="font-mono text-xs text-ink"><%= step.token %></p>
+          <p class="font-mono text-xs text-faint"><%= step.size %></p>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+</div>

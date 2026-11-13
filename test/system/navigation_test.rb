@@ -1,61 +1,55 @@
 require "application_system_test_case"
 
-# The menu behind the button is JavaScript, so no controller test can reach it. A
-# controller test can only say the links are in the markup, and they were in the
-# markup all along: what a phone could not do was open the thing holding them.
 class NavigationTest < ApplicationSystemTestCase
   PHONE = [ 390, 844 ].freeze
-
-  setup do
-    page.driver.browser.manage.window.resize_to(*PHONE)
-  end
+  DESKTOP = [ 1400, 1400 ].freeze
 
   teardown do
-    page.driver.browser.manage.window.resize_to(1400, 1400)
+    page.driver.browser.manage.window.resize_to(*DESKTOP)
   end
 
-  # The button is an icon, so it has no text to click by: its name is its aria-label,
-  # which is also the only name a screen reader has for it.
-  def open_menu = find("button[aria-label=Menu]").click
-
-  test "the links are behind the button on a phone, and the button opens them" do
+  test "a phone carries every destination in a bar at the foot of the screen" do
+    on_a_phone
     visit root_path
 
-    assert_no_selector "#navigation-menu a", visible: true
-    assert_selector "button[aria-label=Menu][aria-expanded=false]"
-
-    open_menu
-
-    assert_selector "#navigation-menu a", text: "Squad", visible: true
-    assert_selector "button[aria-label=Menu][aria-expanded=true]"
+    %w[Rankings Compare Squad Captain Play].each do |label|
+      assert_selector "nav[aria-label=Main] a", text: label, visible: true
+    end
+    assert_no_selector "nav[aria-label=Site] a", text: "Squad", visible: true
   end
 
-  test "escape closes it, so it is not a trap on a keyboard" do
+  test "a tab goes where it says, and then says that is where you are" do
+    on_a_phone
     visit root_path
-    open_menu
-    assert_selector "#navigation-menu a", visible: true
 
-    find("body").send_keys :escape
-
-    assert_no_selector "#navigation-menu a", visible: true
-  end
-
-  test "clicking away closes it" do
-    visit root_path
-    open_menu
-    assert_selector "#navigation-menu a", visible: true
-
-    find("main").click
-
-    assert_no_selector "#navigation-menu a", visible: true
-  end
-
-  test "a link behind the button goes where it says" do
-    visit root_path
-    open_menu
-
-    within("#navigation-menu") { click_link "Squad" }
+    within("nav[aria-label=Main]") { click_link "Squad" }
 
     assert_current_path squad_path
+    assert_selector "nav[aria-label=Main] a[aria-current=page]", text: "Squad"
+  end
+
+  test "the bar stays out of the way of the page's last line" do
+    on_a_phone
+    visit root_path
+
+    page.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+
+    bar_top = page.evaluate_script("document.querySelector('nav[aria-label=Main]').getBoundingClientRect().top")
+    footer_bottom = page.evaluate_script("document.querySelector('footer').getBoundingClientRect().bottom")
+    assert_operator footer_bottom, :<=, bar_top
+  end
+
+  test "a desktop has the row at the top and no bar" do
+    page.driver.browser.manage.window.resize_to(*DESKTOP)
+    visit root_path
+
+    assert_selector "nav[aria-label=Site] a", text: "Squad", visible: true
+    assert_no_selector "nav[aria-label=Main] a", visible: true
+  end
+
+  private
+
+  def on_a_phone
+    page.driver.browser.manage.window.resize_to(*PHONE)
   end
 end

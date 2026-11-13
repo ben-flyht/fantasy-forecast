@@ -1,0 +1,13 @@
+<div>
+  <%= label_tag name, label, class: "block text-xs font-bold uppercase tracking-wider text-body" %>
+  <div class="mt-1 flex flex-col gap-3 sm:flex-row">
+    <%= input %>
+    <%= action %>
+  </div>
+  <% if error %>
+    <p class="mt-2 text-sm text-danger" data-field-error="<%= name %>"><%= error %></p>
+  <% end %>
+  <% if help %>
+    <p id="<%= help_id %>" class="mt-2 text-xs text-body"><%= help %></p>
+  <% end %>
+</div>

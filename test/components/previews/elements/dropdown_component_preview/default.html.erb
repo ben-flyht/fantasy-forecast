@@ -1,0 +1,4 @@
+<form onsubmit="return false">
+  <%= render DropdownComponent.new(label: "Team", name: "team_id", selected: selected,
+                                   options: [ [ "All", "" ], [ "Arsenal", 1 ], [ "Man City", 2 ], [ "Liverpool", 3 ] ]) %>
+</form>

@@ -11,14 +11,11 @@
 %>
 <% sides = local_assigns.fetch(:sides, [ [], [] ]) %>
 
-<section class="rounded-xl bg-white p-4 ring-2 ring-zinc-900 sm:p-5"
-         data-controller="comparison-builder"
-         data-comparison-builder-url-value="<%= comparison_search_path %>">
-  <h2 class="text-lg font-semibold text-zinc-900">Compare any two players, or any two moves</h2>
-  <p class="mt-1 text-sm text-zinc-500">
-    Start typing a name on each side. A side can hold one player or the several you would
-    buy in one move, and once both sides have somebody the comparison opens itself.
-  </p>
+<%= render PanelComponent.new(tone: :strong, tag: :section,
+                              data: { controller: "comparison-builder", comparison_builder_url_value: comparison_search_path }) do %>
+  <%= render SectionHeadingComponent.new(
+        title: "Compare any two players, or any two moves",
+        subtitle: "Start typing a name on each side. A side can hold one player or the several you would buy in one move, and once both sides have somebody the comparison opens itself.") %>
 
   <div class="relative mt-5 grid grid-cols-2 gap-4">
     <% 2.times do |side| %>
@@ -26,36 +23,16 @@
         <div class="space-y-2">
           <div class="flex flex-col gap-2 empty:hidden" data-comparison-builder-target="chips">
             <% sides[side].each do |player| %>
-              <div class="relative rounded-xl border border-zinc-200 bg-white px-3 py-2 pr-8"
+              <div class="relative rounded-card border border-line bg-surface px-3 py-2 pr-8"
                    data-comparison-builder-target="chip" data-side="<%= side %>" data-param="<%= player.comparison_param %>">
-                <p class="text-sm font-medium text-zinc-900"><%= player.full_name %></p>
-                <p class="text-xs text-zinc-500"><%= [ player.team&.short_name, FantasyForecast::POSITION_CONFIG.dig(player.position, :display_name) ].compact.join(" · ") %></p>
-                <button type="button" data-action="comparison-builder#remove"
-                        aria-label="Remove <%= player.display_name %>"
-                        class="absolute right-2 top-2 cursor-pointer rounded p-0.5 text-zinc-400 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20">
-                  <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
-                  </svg>
-                </button>
+                <p class="text-sm font-medium text-ink"><%= player.full_name %></p>
+                <p class="text-xs text-muted"><%= [ player.team&.short_name, FantasyForecast::POSITION_CONFIG.dig(player.position, :display_name) ].compact.join(" · ") %></p>
+                <%= render "comparisons/remove_button", name: player.display_name %>
               </div>
             <% end %>
           </div>
 
-          <div class="relative">
-            <label class="sr-only" for="comparison-add-<%= side %>">
-              Add a player to <%= side.zero? ? "the first" : "the second" %> side
-            </label>
-            <input type="text" id="comparison-add-<%= side %>"
-                   data-comparison-builder-target="input" data-side="<%= side %>"
-                   data-action="input->comparison-builder#search keydown->comparison-builder#keydown"
-                   autocomplete="off" placeholder="Add a player"
-                   role="combobox" aria-autocomplete="list" aria-expanded="false"
-                   aria-controls="comparison-results-<%= side %>"
-                   class="w-full rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm font-medium text-zinc-700 placeholder:text-zinc-500 hover:border-zinc-400 focus:border-solid focus:border-zinc-900/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 sm:px-4 sm:py-3.5 sm:text-base">
-            <div class="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg"
-                 id="comparison-results-<%= side %>"
-                 data-comparison-builder-target="results" data-side="<%= side %>" role="listbox" hidden></div>
-          </div>
+          <%= render PlayerSearchFieldComponent.new(side: side) %>
         </div>
       </div>
     <% end %>
@@ -63,13 +40,17 @@
     <%# A badge on the seam, overlapping both boxes, so the two sides read as one
         question rather than two fields. It aligns with the empty boxes; once a side
         has cards it sits by the newest, which is close enough. %>
-    <div class="pointer-events-none absolute left-1/2 top-1/2 z-10 mt-1 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-zinc-900 text-sm font-bold text-white shadow-sm">vs</div>
+    <div class="pointer-events-none absolute left-1/2 top-1/2 z-10 mt-1 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-ink text-sm font-bold text-white shadow-sm">vs</div>
   </div>
 
+  <template data-comparison-builder-target="removeTemplate">
+    <%= render "comparisons/remove_button", name: "player" %>
+  </template>
+
   <noscript>
-    <p class="mt-3 text-xs text-zinc-500">
+    <p class="mt-3 text-xs text-muted">
       Searching needs JavaScript. The lists below work without it, and so does every
       /compare address once you have one.
     </p>
   </noscript>
-</section>
+<% end %>
