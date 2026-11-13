@@ -47,14 +47,15 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", pack_landing_path, text: "Play"
   end
 
-  test "every Play page carries the same three tabs: your pack, the weekly board and the season" do
+  test "every Play page carries the same tabs: your pack and the weekly, points and accuracy boards" do
     sign_in
-    [ weekly_pack_path(gameweek: 1), pack_current_leaderboard_path, pack_season_leaderboard_path ].zip(%w[Your\ pack Weekly Season]).each do |path, current|
+    [ weekly_pack_path(gameweek: 1), pack_current_leaderboard_path, pack_season_leaderboard_path, pack_season_accuracy_leaderboard_path ].zip(%w[Your\ pack Weekly Points Accuracy]).each do |path, current|
       get path
-      assert_select "a[href=?]", pack_landing_path, text: "Your pack"
+      assert_select "a[href=?][aria-label=?]", pack_landing_path, "Your pack"
       assert_select "a", text: "Weekly"
-      assert_select "a[href=?]", pack_season_leaderboard_path, text: "Season"
-      assert_select "a[aria-current=page]", text: current
+      assert_select "a[href=?]", pack_season_leaderboard_path, text: "Points"
+      assert_select "a[href=?]", pack_season_accuracy_leaderboard_path, text: "Accuracy"
+      assert_select "a[aria-current=page]", text: /#{current}\z/
     end
   end
 
@@ -239,9 +240,9 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_current_leaderboard_path
     assert_select "h1", /Gameweek 1/
-    assert_select "a[href=?]", pack_landing_path, text: "Your pack"
+    assert_select "a[href=?][aria-label=?]", pack_landing_path, "Your pack"
     assert_select "a[href=?][aria-current]", pack_current_leaderboard_path, text: "Weekly"
-    assert_select "a[href=?]", pack_season_leaderboard_path, text: "Season"
+    assert_select "a[href=?]", pack_season_leaderboard_path, text: "Points"
 
     get pack_leaderboard_path(gameweek: 2)
     assert_redirected_to pack_current_leaderboard_path
@@ -287,8 +288,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     rows = css_select("[data-pack-season-row]").map { |row| row.text.squish }
     assert_match(/1st Ana L\. Pro Best week, Gameweek 2 30 GK/, rows.first)
     assert_match(/2nd Bo K\. Best week, Gameweek 1 0 No pick/, rows.second)
-    assert_select "a[aria-current]", text: "Season"
-    assert_select "[data-pack-season-boards] a[aria-current=page]", text: "Score"
+    assert_select "a[aria-current=page]", text: "Points"
     assert_select "[data-pack-season-row] button[data-pack-points]", count: 2
     assert_select "[data-pack-season-row] [data-pack-accuracy]", count: 0
     assert_select "[data-pack-columns]", text: /Accuracy/, count: 0
@@ -306,7 +306,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     end
 
     get pack_season_accuracy_leaderboard_path
-    assert_select "[data-pack-season-boards] a[aria-current=page]", text: "Accuracy"
+    assert_select "a[aria-current=page]", text: "Accuracy"
     rows = css_select("[data-pack-accuracy-row]").map { |row| row.text.squish }
     assert_match(/\A1st Ana L\. Pro 2 100% \d+\z/, rows.first)
     assert_match(/\A2nd Bo K\. 1 100% \d+\z/, rows.second)

@@ -1,20 +1,14 @@
-<% content_for :meta_title, "Pack of the Week Season #{@accuracy ? 'Accuracy' : 'Leaderboard'} | Fantasy Forecast" %>
+<% content_for :meta_title, "Pack of the Week Season #{@accuracy ? 'Accuracy' : 'Points'} | Fantasy Forecast" %>
 <% content_for :meta_robots, "noindex, nofollow" %>
 
 <div class="mx-auto max-w-xl">
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
-          title: @accuracy ? "Leaderboard: Season accuracy" : "Leaderboard: Season",
+          title: @accuracy ? "Leaderboard: Season accuracy" : "Leaderboard: Season points",
           subtitle: (@accuracy ? "Weeks played, your average accuracy (how often you kept the better card of a pair), and a rating out of 100 that weighs the two. The more weeks you play, the more your average counts, so one lucky week can't top a season of good calls." : "Points are your best single gameweek this season."),
-          horizons: play_tabs(current: :season)) %>
+          horizons: play_tabs(current: @accuracy ? :accuracy : :points)) %>
   </div>
 
-  <nav class="mb-4 flex gap-5 text-sm font-bold" aria-label="Season boards" data-pack-season-boards>
-    <% { "Score" => [ pack_season_leaderboard_path, !@accuracy ], "Accuracy" => [ pack_season_accuracy_leaderboard_path, @accuracy ] }.each do |label, (url, current)| %>
-      <%= link_to label, url, "aria-current": ("page" if current),
-            class: current ? "text-zinc-950 underline decoration-2 underline-offset-4" : "text-zinc-400 hover:text-zinc-950" %>
-    <% end %>
-  </nav>
 
   <% if @board.rows.empty? %>
     <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">No gameweek has been played yet.</div>
