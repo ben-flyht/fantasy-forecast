@@ -27,6 +27,32 @@ module Fpl
       assert_equal 0, Gameweek.count
     end
 
+    test "keeps every Play pack, archived with its cards and points, and frees it from the gameweek" do
+      gameweek = gameweeks(:finished)
+      cards = [ players(:goalkeeper), players(:midfielder), players(:midfielder_two), players(:brazilian) ]
+      { cards[0] => 6, cards[1] => 2, cards[2] => 9, cards[3] => 1 }.each do |player, points|
+        Performance.find_or_initialize_by(player: player, gameweek: gameweek).update!(team: player.team, gameweek_score: points)
+      end
+      offered = cards.each_slice(2).with_index.map do |pair, index|
+        { "slot" => Pack::SLOTS[index], "shiny" => index == 1,
+          "cards" => pair.map { |player| { "player_id" => player.id, "rank" => 1, "expected_points" => 4.0, "fixtures" => [] } } }
+      end
+      user = User.create!(email: "kept@example.com", username: "Kept")
+      selection = Selection.new(user: user, gameweek: gameweek, offered: offered, picks: "ab", season: Season.current, gameweek_number: gameweek.fpl_id)
+      selection.save!(validate: false)
+
+      Fpl::ResetSeason.call
+
+      selection.reload
+      assert_nil selection.gameweek_id
+      assert_equal gameweek.fpl_id, selection.gameweek_number
+      assert_equal 6 + (1 * 2), selection.archive["points"], "goalkeeper, then the Brazilian as captain"
+      assert_equal [ 6, 2 ], selection.archive["hand"].first["cards"].map { |card| card["points"] }
+      assert_equal players(:goalkeeper).display_name, selection.archive["hand"].first["cards"].first["player"]
+      assert_equal [ 0, 1 ], selection.archive["hand"].map { |pair| pair["kept"] }
+      assert_equal 1, Selection.count
+    end
+
     test "keeps tuned strategies" do
       strategies = Strategy.count
       assert_predicate strategies, :positive?

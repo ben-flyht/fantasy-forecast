@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -126,15 +126,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_140000) do
     t.index ["team_id"], name: "index_players_on_team_id"
   end
 
+  create_table "seasons", force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_seasons_on_name", unique: true
+  end
+
   create_table "selections", force: :cascade do |t|
     t.bigint "user_id", null: false
-    t.bigint "gameweek_id", null: false
+    t.bigint "gameweek_id"
     t.jsonb "offered", default: [], null: false
     t.string "picks", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "season_id"
+    t.integer "gameweek_number"
+    t.jsonb "archive"
     t.index ["gameweek_id", "user_id"], name: "index_selections_on_gameweek_id_and_user_id", unique: true
     t.index ["gameweek_id"], name: "index_selections_on_gameweek_id"
+    t.index ["season_id"], name: "index_selections_on_season_id"
     t.index ["user_id"], name: "index_selections_on_user_id"
   end
 
@@ -217,6 +228,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_140000) do
   add_foreign_key "performances", "teams"
   add_foreign_key "players", "teams"
   add_foreign_key "selections", "gameweeks"
+  add_foreign_key "selections", "seasons"
   add_foreign_key "selections", "users"
   add_foreign_key "squads", "gameweeks"
   add_foreign_key "statistics", "gameweeks"

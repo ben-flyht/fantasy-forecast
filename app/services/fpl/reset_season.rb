@@ -10,6 +10,8 @@ module Fpl
 
     def call
       ActiveRecord::Base.transaction do
+        PackArchive.call
+        Selection.where.not(gameweek_id: nil).update_all(gameweek_id: nil)
         DELETE_ORDER.to_h { |model| [ model.table_name, model.delete_all ] }
       end
     end

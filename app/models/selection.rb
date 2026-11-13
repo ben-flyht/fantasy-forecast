@@ -1,8 +1,11 @@
 class Selection < ApplicationRecord
   belongs_to :user
-  belongs_to :gameweek
+  belongs_to :gameweek, optional: true
+  belongs_to :season, optional: true
 
-  validates :user_id, uniqueness: { scope: :gameweek_id }
+  scope :archived, -> { where.not(archive: nil) }
+
+  validates :user_id, uniqueness: { scope: :gameweek_id }, if: :gameweek
   validates :picks, format: { with: PackHand::FORMAT }
   validate :within_the_pack
   validate :before_the_deadline, if: :picks_changed?
@@ -13,7 +16,7 @@ class Selection < ApplicationRecord
 
   def self.draw(user, gameweek)
     pack = PackDraw.call(gameweek: gameweek)
-    create!(user: user, gameweek: gameweek, offered: pack.dump) if pack
+    create!(user: user, gameweek: gameweek, offered: pack.dump, season: Season.current, gameweek_number: gameweek.fpl_id) if pack
   rescue ActiveRecord::RecordNotUnique
     find_by(user: user, gameweek: gameweek)
   end
