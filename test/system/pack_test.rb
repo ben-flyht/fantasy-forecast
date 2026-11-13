@@ -29,6 +29,15 @@ class PackTest < ApplicationSystemTestCase
     visit pack_sign_in_path(token: user.generate_token_for(:pack_link))
   end
 
+  def saved?(picks)
+    Timeout.timeout(Capybara.default_max_wait_time) do
+      sleep 0.05 until Selection.last.reload.picks == picks
+      true
+    end
+  rescue Timeout::Error
+    false
+  end
+
   test "the whole pack is dealt, every pair is picked by tapping, and a pick can be changed" do
     sign_in
     assert_selector "[data-pack-pair]", count: 5
@@ -43,7 +52,7 @@ class PackTest < ApplicationSystemTestCase
     first("[data-pack-pair]").all(".pack-card--choice").last.click
     assert_selector "[data-pack-pair]:first-child .pack-choice--passed:first-child"
     assert_selector "[data-pack-pair]:first-child [data-pack-choice=kept]:last-child"
-    assert_equal "baaaa", Selection.last.reload.picks
+    assert saved?("baaaa"), "the changed pick reaches the server"
   end
 
   test "clicking anywhere on a leaderboard row opens that player's team, and Close puts it away" do
