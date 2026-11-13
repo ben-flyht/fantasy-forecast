@@ -152,7 +152,10 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to pack_profile_path
     me.reload
     assert_equal [ "Sam", "Kerr", nil ], [ me.first_name, me.last_name, me.username ]
-    assert_equal "Sam K.", me.leaderboard_name
+    assert_equal "Sam K", me.leaderboard_name
+
+    get pack_profile_path
+    assert_select "#username-help", text: /appear as Sam K\.\z/
 
     patch pack_profile_path, params: { first_name: "Sam", last_name: "Kerr", username: "Kerr Blimey" }
     assert_equal "Kerr Blimey", me.reload.leaderboard_name
@@ -281,8 +284,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_leaderboard_path(gameweek: 1)
     rows = css_select("[data-pack-row]").map { |row| row.text.squish }
-    assert_match(/1st Ana L\. \(you\).*1[58]/, rows.first)
-    assert_match(/2nd Bo K\..*[69]/, rows.second)
+    assert_match(/1st Ana L \(you\).*1[58]/, rows.first)
+    assert_match(/2nd Bo K.*[69]/, rows.second)
     assert_select "p", /live points/
 
     get weekly_pack_path(gameweek: 1)
@@ -356,8 +359,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_season_leaderboard_path
     rows = css_select("[data-pack-season-row]").map { |row| row.text.squish }
-    assert_match(/1st Ana L\. Pro 30 GK/, rows.first)
-    assert_match(/2nd Bo K\. 0 No pick/, rows.second)
+    assert_match(/1st Ana L Pro 30 GK/, rows.first)
+    assert_match(/2nd Bo K 0 No pick/, rows.second)
     assert_select "a[aria-current=page]", text: "Points"
     assert_select "[data-pack-season-row] button[data-pack-points]", count: 2
     assert_select "[data-pack-season-row] [data-pack-accuracy]", count: 0
@@ -380,7 +383,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
       get path
       assert_select "ol > li[data-pack-row], ol > li[data-pack-accuracy-row]", count: 11
       assert_select "ol > li[data-pack-gap]", count: 1
-      assert_select "ol > li:last-child.bg-zinc-100", text: /Ana L\. \(you\)/
+      assert_select "ol > li:last-child.bg-zinc-100", text: /Ana L \(you\)/
     end
 
     Selection.joins(:user).where(users: { email: %w[p0@example.com p1@example.com p2@example.com] }).destroy_all
@@ -406,8 +409,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_season_accuracy_leaderboard_path
     assert_select "a[aria-current=page]", text: "Accuracy"
     rows = css_select("[data-pack-accuracy-row]").map { |row| row.text.squish }
-    assert_match(/\A1st Ana L\. Pro 2 100% \d+\z/, rows.first)
-    assert_match(/\A2nd Bo K\. 1 \d{2}% \d+\z/, rows.second)
+    assert_match(/\A1st Ana L Pro 2 100% \d+\z/, rows.first)
+    assert_match(/\A2nd Bo K 1 \d{2}% \d+\z/, rows.second)
     assert_select "[data-pack-columns]", /Weeks.*Avg.*Rating/
     assert_select "[data-pack-accuracy-row] [data-pack-pro]", count: 1, text: "Pro"
     assert_select "[data-pack-accuracy-row]:first-child [data-pack-pro]"

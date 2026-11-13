@@ -22,5 +22,5 @@ class User < ApplicationRecord
 
   private
 
-  def initialled_name = [ first_name, ("#{last_name.first}." if last_name) ].compact.join(" ").presence
+  def initialled_name = [ first_name, last_name&.first ].compact.join(" ").presence
 end

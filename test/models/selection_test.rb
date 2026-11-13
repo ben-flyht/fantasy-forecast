@@ -20,7 +20,7 @@ class SelectionTest < ActiveSupport::TestCase
 
   test "a user is one email, shown on the leaderboard by first name and last initial" do
     assert_equal "ana@example.com", @ana.email
-    assert_equal "Ana L.", @ana.leaderboard_name
+    assert_equal "Ana L", @ana.leaderboard_name
   end
 
   test "each user is dealt their own random pack, and keeps it" do

@@ -74,7 +74,7 @@ class PackTest < ApplicationSystemTestCase
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
     visit pack_current_leaderboard_path
-    find("[data-pack-row]", text: "Sys T.").find("span", text: "Sys T.", match: :first).click
+    find("[data-pack-row]", text: "Sys T").find("span", text: "Sys T", match: :first).click
     within("dialog[open]") do
       assert_selector "[data-pack-row-pair]", count: 5
       click_on "Close"
