@@ -7,9 +7,10 @@ module PacksHelper
   end
 
   def leaderboard_steps(gameweek)
+    played = Gameweek.started.where(id: Selection.select(:gameweek_id))
     {
-      previous: Gameweek.started.where(fpl_id: ...gameweek.fpl_id).ordered.last,
-      next: Gameweek.started.where(fpl_id: (gameweek.fpl_id + 1)..).ordered.first
+      previous: played.where(fpl_id: ...gameweek.fpl_id).ordered.last,
+      next: played.where(fpl_id: (gameweek.fpl_id + 1)..).ordered.first
     }
   end
 

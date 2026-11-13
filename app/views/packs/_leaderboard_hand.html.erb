@@ -1,6 +1,7 @@
-<div class="mt-3 hidden grid-cols-5 gap-2 sm:grid" data-pack-row-hand>
+<template data-pack-row-hand-template>
+<div class="grid grid-cols-5 gap-2" data-pack-row-hand>
   <% hand.picks.zip(hand.discards).each_with_index do |(kept, discarded), index| %>
-    <div class="flex flex-col" data-pack-row-pair>
+    <div class="flex flex-col" style="--row: <%= index %>;" data-pack-row-pair>
       <div class="relative z-10 flex flex-col" data-pack-row-kept>
         <% if kept %>
           <%= render PackCardComponent.new(card: kept, captain: kept == hand.captain, size: :small, index: index) %>
@@ -23,3 +24,4 @@
     </div>
   <% end %>
 </div>
+</template>

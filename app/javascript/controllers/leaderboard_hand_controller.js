@@ -1,17 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
-const DESKTOP = "(min-width: 640px)"
-
 export default class extends Controller {
   static targets = ["dialog", "title", "summary", "body"]
 
   open(event) {
-    if (window.matchMedia(DESKTOP).matches) return
-
     const row = event.currentTarget.closest("[data-pack-row]")
-    const hand = row.querySelector("[data-pack-row-hand]").cloneNode(true)
-    hand.classList.remove("hidden")
-    hand.classList.add("grid")
+    const hand = row.querySelector("[data-pack-row-hand-template]").content.cloneNode(true)
 
     this.titleTarget.textContent = row.dataset.packRowName
     this.summaryTarget.textContent = row.dataset.packRowSummary

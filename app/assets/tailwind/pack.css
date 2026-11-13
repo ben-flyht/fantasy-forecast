@@ -536,3 +536,17 @@
 .pack-hand-dialog [data-pack-row-discarded] [data-pack-card-points] {
   order: -1;
 }
+
+.pack-hand-dialog [data-pack-row-pair] {
+  animation: pack-drop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) calc(0.1s + var(--row) * 0.09s) backwards;
+}
+
+@keyframes pack-drop {
+  from { transform: translateY(-2.5rem); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pack-hand-dialog [data-pack-row-pair] {
+    animation: none;
+  }
+}

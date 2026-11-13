@@ -239,14 +239,18 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", /Gameweek 2/
   end
 
-  test "a gameweek leaderboard steps back and forward through the gameweeks that have started" do
-    @gameweek.update!(start_time: 9.days.ago, is_next: false, is_finished: true)
-    Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 2.days.ago, is_current: true)
-    Gameweek.create!(fpl_id: 3, name: "Gameweek 3", start_time: 5.days.from_now, is_next: true)
+  test "a gameweek leaderboard steps back and forward through the started gameweeks someone played" do
+    @gameweek.update!(start_time: 16.days.ago, is_next: false, is_finished: true)
+    Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 9.days.ago, is_finished: true)
+    third = Gameweek.create!(fpl_id: 3, name: "Gameweek 3", start_time: 2.days.ago, is_current: true)
+    Gameweek.create!(fpl_id: 4, name: "Gameweek 4", start_time: 5.days.from_now, is_next: true)
+    ana = User.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
+    offered = PackDraw.call(gameweek: @gameweek, seed: 3).dump
+    [ @gameweek, third ].each { |gameweek| Selection.new(user: ana, gameweek: gameweek, offered: offered, picks: "aaaaa").save!(validate: false) }
 
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-steps] a", count: 1
-    assert_select "[data-pack-steps] a[href=?]", pack_leaderboard_path(gameweek: 2), text: /Gameweek 2/
+    assert_select "[data-pack-steps] a[href=?]", pack_leaderboard_path(gameweek: 3), text: /Gameweek 3/
     assert_select "a[href=?]", pack_leaderboard_path(gameweek: 1), text: "Gameweek 1"
 
     get pack_current_leaderboard_path
@@ -281,11 +285,14 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-row-hand]", count: 0
+    assert_select "[data-pack-view-team]", count: 0
 
     score_everyone(3)
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
     get pack_leaderboard_path(gameweek: 1)
+    assert_select "[data-pack-row] button[data-pack-view-team][aria-haspopup=dialog]", text: "View team"
+    assert_select "[data-pack-row] template[data-pack-row-hand-template]"
     assert_select "[data-pack-row-hand] [data-pack-row-kept] .pack-card", count: 4
     assert_select "[data-pack-row-hand] [data-pack-row-kept] [data-pack-forfeit]", count: 1
     assert_select "[data-pack-row-hand] [data-pack-row-discarded] .pack-card", count: 4
