@@ -40,7 +40,6 @@ Rails.application.routes.draw do
   get "play/leaderboard/gameweeks", to: "packs#leaderboard", as: :pack_current_leaderboard
   get "play/leaderboard/gameweeks/:gameweek", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
   get "play/leaderboard/seasons", to: "packs#season", as: :pack_season_leaderboard
-  get "play/selections/:id", to: "packs#selection", as: :pack_selection, constraints: { id: /\d+/ }
   get "pack/gw:gameweek/leaderboard", to: redirect("/play/leaderboard/gameweeks/%{gameweek}"), constraints: { gameweek: /\d+/ }
   get "pack(/*rest)", to: redirect { |params, _| [ "/play", params[:rest]&.sub(/\Agw(\d+)/, 'gameweeks/\1') ].compact.join("/") },
                      format: false

@@ -130,7 +130,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get weekly_pack_path(gameweek: 1)
     assert_select "[data-pack-status]", /That's your five/
-    assert_select "[aria-label='Share my pack']"
+    assert_select "[aria-label*=Share]", count: 0
 
     post weekly_pack_picks_path(gameweek: 1), params: { pair: 1, keep: "a" }
     assert_equal "aaaab", user.selections.last.picks
@@ -314,28 +314,6 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-row-kept] [data-pack-card-points]", text: /\A\s*(3|6) pts\s*\z/, count: 4
     assert_select "[data-pack-row-verdict=level]", text: /Right call/, count: 4
     assert_select "[data-pack-row-verdict=no_pick]", count: 1
-  end
-
-  test "a finished pack can be shared by its own address and opened by anyone, read-only" do
-    user = sign_in
-    get weekly_pack_path(gameweek: 1)
-    pick_all("abaab")
-    selection = user.selections.last
-    delete pack_sign_out_path
-
-    get pack_selection_path(selection)
-    assert_select "[data-pack-stage=scored]"
-    assert_select "h2", /Their five/
-    assert_select ".pack-card--choice", count: 0
-  end
-
-  test "a half-picked pack cannot be shared" do
-    user = sign_in
-    get weekly_pack_path(gameweek: 1)
-    pick_all("ab")
-
-    get pack_selection_path(user.selections.last)
-    assert_response :not_found
   end
 
   test "a pack is dealt out the first time it is opened, and stays put once picking starts" do

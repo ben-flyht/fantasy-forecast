@@ -1,18 +1,16 @@
 <% content_for :meta_title, "Pack of the Week, Gameweek #{@gameweek.fpl_id} | Fantasy Forecast" %>
 <% content_for :meta_robots, "noindex, nofollow" %>
 <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
-<% content_for :meta_url, share_path if @hand.complete? %>
 
 <div class="mx-auto max-w-xl">
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Pack of the Week: Gameweek #{@gameweek.fpl_id}",
           subtitle: "Your own pack for the week. Keep one player from each pair, and change your mind as often as you like until the FPL deadline.",
-          share: ("Share my pack" if @hand.complete? && !shared?),
           horizons: play_tabs(current: :pack)) %>
   </div>
 
-  <% if @gameweek.started? || shared? %>
+  <% if @gameweek.started? %>
     <%= render "packs/score", hand: @hand %>
   <% else %>
     <%= render "packs/board", hand: @hand %>
