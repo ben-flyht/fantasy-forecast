@@ -2,6 +2,8 @@ require "application_system_test_case"
 
 class PackTest < ApplicationSystemTestCase
   setup do
+    Selection.destroy_all
+    User.destroy_all
     Statistic.destroy_all
     Forecast.destroy_all
     Player.destroy_all
@@ -22,25 +24,62 @@ class PackTest < ApplicationSystemTestCase
     end
   end
 
-  test "a pack is picked and scored by tapping cards" do
-    visit pack_path(seed: 5)
-
-    5.times do |pair|
-      assert_text(/Pair #{pair + 1} of 5/i)
-      assert_selector "[data-pack-revealed]"
-      first(".pack-card--choice").click
-    end
-
-    assert_selector "[data-pack-stage=scored]"
-    assert_selector "[data-pack-practice-done]"
+  def sign_in
+    user = User.create!(email: "sys@example.com", first_name: "Sys", last_name: "Tem")
+    visit pack_sign_in_path(token: user.generate_token_for(:pack_link))
+    click_on "Sign in and play"
   end
 
-  test "waiting out the ten seconds forfeits the pair and moves on" do
-    visit pack_path(seed: 5)
-    assert_text(/Pair 1 of 5/i)
+  def saved?(picks)
+    Timeout.timeout(Capybara.default_max_wait_time) do
+      sleep 0.05 until Selection.last.reload.picks == picks
+      true
+    end
+  rescue Timeout::Error
+    false
+  end
 
-    assert_text(/Pair 2 of 5/i, wait: 14)
-    assert_current_path pack_path(seed: 5, hand: "x")
-    assert_selector "[data-pack-forfeit]", text: /Time's up/i
+  test "the whole pack is dealt, every pair is picked by tapping, and a pick can be changed" do
+    sign_in
+    assert_selector "[data-pack-sealed]"
+    click_on "Open pack"
+    assert_selector "[data-pack-pair]", count: 5
+    assert_no_selector "[data-pack-sealed]", visible: :visible
+    assert_text "0 of 5 picked"
+
+    5.times do |index|
+      all("[data-pack-pair]")[index].all(".pack-card--choice").first.click
+      assert_text(index == 4 ? "That's your five" : "#{index + 1} of 5 picked")
+      assert saved?(("a" * (index + 1)).ljust(5, "x")), "pick #{index + 1} is saved before the next tap"
+    end
+    assert_selector "[data-pack-choice=kept]", count: 5
+
+    last_card = find("#pack_pair_4 .pack-choice:last-child .pack-card")
+    page.execute_script("arguments[0].scrollIntoView({ block: 'center' })", last_card)
+    scrolled = page.evaluate_script("window.scrollY")
+    last_card.click
+    assert_selector "#pack_pair_4 .pack-choice:last-child[data-pack-choice=kept]"
+    assert saved?("aaaab"), "the pick reaches the server"
+    assert_equal scrolled, page.evaluate_script("window.scrollY"), "picking leaves the page where it was"
+
+    first("[data-pack-pair]").all(".pack-card--choice").last.click
+    assert_selector "[data-pack-pair]:first-child .pack-choice--passed:first-child"
+    assert_selector "[data-pack-pair]:first-child [data-pack-choice=kept]:last-child"
+    assert saved?("baaab"), "the changed pick reaches the server"
+  end
+
+  test "clicking anywhere on a leaderboard row opens that player's team, and Close puts it away" do
+    sign_in
+    assert_selector "[data-pack-sealed]"
+    Selection.last.update!(picks: "aaaaa")
+    @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
+
+    visit pack_current_leaderboard_path
+    find("[data-pack-row]", text: "Sys T").find("span", text: "Sys T", match: :first).click
+    within("dialog[open]") do
+      assert_selector "[data-pack-row-pair]", count: 5
+      click_on "Close"
+    end
+    assert_no_selector "dialog[open]"
   end
 end

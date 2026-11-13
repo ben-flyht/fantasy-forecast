@@ -1,0 +1,23 @@
+<p class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= pluralize(rows.size, "player") %></p>
+<div class="mb-2 flex items-center gap-3 px-4 text-[10px] font-bold uppercase tracking-wider text-zinc-400" data-pack-columns>
+  <span class="w-10 text-right">#</span>
+  <span class="flex-1">Player</span>
+  <span class="w-11 text-right">Weeks</span>
+  <span class="w-12 text-right">Avg</span>
+  <span class="w-14 text-right">Rating</span>
+</div>
+<ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
+  <% leaderboard_top(rows).each_with_index do |row, index| %>
+    <%= render "packs/leaderboard_gap", row: row, index: index %>
+    <% mine = current_user && row.user == current_user %>
+    <li class="flex items-center gap-3 px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-accuracy-row>
+      <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place.ordinalize %></span>
+      <span class="min-w-0 flex-1">
+        <%= render "packs/manager_name", user: row.user, mine: mine, pro: row.pro? %>
+      </span>
+      <span class="w-11 text-right text-sm font-bold tabular-nums text-zinc-500" data-pack-weeks><%= row.weeks %></span>
+      <span class="w-12 text-right text-sm font-bold tabular-nums text-zinc-500" data-pack-average><%= row.accuracy || 0 %>%</span>
+      <span class="w-14 text-right text-xl font-extrabold tabular-nums text-zinc-950" data-pack-rating><%= row.rating %></span>
+    </li>
+  <% end %>
+</ol>

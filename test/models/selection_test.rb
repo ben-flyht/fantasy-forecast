@@ -20,7 +20,7 @@ class SelectionTest < ActiveSupport::TestCase
 
   test "a user is one email, shown on the leaderboard by first name and last initial" do
     assert_equal "ana@example.com", @ana.email
-    assert_equal "Ana L.", @ana.leaderboard_name
+    assert_equal "Ana L", @ana.leaderboard_name
   end
 
   test "each user is dealt their own random pack, and keeps it" do
@@ -33,13 +33,21 @@ class SelectionTest < ActiveSupport::TestCase
     assert_equal offered(ana), offered(Selection.find(ana.id))
   end
 
-  test "a selection records what was offered and what was picked, one card at a time" do
+  test "a selection records what was offered and a pick per pair, in any order, changeable" do
     selection = Selection.deal(@ana, @gameweek)
 
-    "abxab".each_char { |choice| assert selection.pick(choice) }
+    assert selection.choose(2, "b")
+    assert_equal "xxbxx", selection.reload.picks
+    assert_not selection.complete?
+
+    assert selection.choose(2, "a")
+    [ 0, 1, 3, 4 ].each { |pair| selection.choose(pair, "b") }
     assert selection.complete?
-    assert_not selection.pick("a")
-    assert_equal "abxab", selection.reload.picks
+    assert_equal "bbabb", selection.reload.picks
+
+    assert_not selection.choose(5, "a")
+    assert_not selection.choose(nil, "a")
+    assert_not selection.choose(0, "x")
     assert_equal 5, selection.offered.size
     assert_equal %w[expected_points fixtures player_id rank], selection.offered.first["cards"].first.keys.sort
   end
@@ -61,11 +69,12 @@ class SelectionTest < ActiveSupport::TestCase
 
   test "no pack is dealt once the deadline has passed, and picks stop" do
     selection = Selection.deal(@ana, @gameweek)
-    selection.pick("a")
-    @gameweek.update!(start_time: 1.minute.ago)
+    selection.choose(0, "a")
+    @gameweek.update!(start_time: 1.second.ago)
 
     assert_nil Selection.deal(@bo, @gameweek)
-    assert_not selection.reload.pick("b")
-    assert_equal "axxxx", selection.pack_hand.code
+    assert_not selection.reload.choose(0, "b")
+    assert_not selection.reload.choose(1, "a")
+    assert_equal "axxxx", selection.reload.pack_hand.code
   end
 end

@@ -24,9 +24,13 @@ class PackHand
 
   def kept = picks.compact
 
-  def complete? = keeps.size == pack.size
+  def discards
+    pack.pairs.zip(keeps).first(keeps.size).map { |pair, keep| keep.nil? ? [] : pair.cards.reject.with_index { |_, choice| choice == keep } }
+  end
 
-  def current_pair = pack.pairs[keeps.size]
+  def complete? = keeps.size == pack.size && keeps.all?
+
+  def choice_at(index) = keeps[index]
 
   def captain
     index = pack.shiny_index
@@ -34,8 +38,4 @@ class PackHand
   end
 
   def code = keeps.map { |keep| keep ? LETTERS[keep] : FORFEIT }.join
-
-  def keeping(choice) = self.class.new(pack, keeps: keeps + [ choice ])
-
-  def forfeiting = keeping(nil)
 end

@@ -1,0 +1,42 @@
+<% content_for :meta_title, "Play: Season #{@accuracy ? 'Accuracy' : 'Points'} | Fantasy Forecast" %>
+<% content_for :meta_robots, "noindex, nofollow" %>
+
+<div class="mx-auto max-w-xl">
+  <div class="mb-6">
+    <%= render PageHeadingComponent.new(
+          title: @accuracy ? "Leaderboard: Season accuracy" : "Leaderboard: Season points",
+          subtitle: (@accuracy ? "Accuracy is the share of the points on offer you scored: keep the better card of every pair and it's 100%. Rating blends your average with everyone's, as if you'd started the season with two average weeks, so one lucky week can't top a season of good calls. The same weeks and average always give the same rating." : "Points are your best single gameweek this season."),
+          horizons: play_tabs(current: @accuracy ? :accuracy : :points)) do |heading| %>
+      <% heading.with_aside { render "packs/play_account" } %>
+    <% end %>
+  </div>
+
+
+  <% if @board.rows.empty? %>
+    <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">No gameweek has been played yet.</div>
+  <% elsif @accuracy %>
+    <%= render "packs/season_accuracy", rows: @board.accuracy_rows %>
+  <% else %>
+    <p class="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><%= pluralize(@board.rows.size, "player") %></p>
+    <%= render "packs/leaderboard_columns", accuracy: false %>
+    <div data-controller="leaderboard-hand">
+    <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
+      <% leaderboard_top(@board.rows).each_with_index do |row, index| %>
+        <%= render "packs/leaderboard_gap", row: row, index: index %>
+        <% mine = current_user && row.user == current_user %>
+        <li class="group flex items-center gap-3 px-4 py-3 cursor-pointer <%= mine ? 'bg-zinc-100' : 'hover:bg-zinc-50' %>" data-action="click->leaderboard-hand#open" data-pack-season-row data-pack-row
+            data-pack-row-name="<%= row.place.ordinalize %> <%= row.user.leaderboard_name %>"
+            data-pack-row-summary="Best week, Gameweek <%= row.best.selection.gameweek.fpl_id %> · <%= pluralize(row.points, 'point') %>">
+          <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place.ordinalize %></span>
+          <span class="min-w-0 flex-1">
+            <%= render "packs/manager_name", user: row.user, mine: mine, pro: row.pro? %>
+          </span>
+          <%= render "packs/leaderboard_scores", points: row.points, openable: true %>
+          <%= render "packs/leaderboard_hand", hand: row.best.selection.pack_hand, real: row.real %>
+        </li>
+      <% end %>
+    </ol>
+    <%= render "packs/hand_dialog" %>
+    </div>
+  <% end %>
+</div>

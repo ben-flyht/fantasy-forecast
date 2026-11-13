@@ -49,7 +49,9 @@ module Fpl
       stub_request(:get, @fixtures_api_url).to_return(
         status: 200,
         body: [ { "id" => 7001, "event" => 1, "team_h" => team_h.fpl_id, "team_a" => team_a.fpl_id,
-                  "team_h_difficulty" => 2, "team_a_difficulty" => 4 } ].to_json,
+                  "team_h_difficulty" => 2, "team_a_difficulty" => 4, "finished" => true,
+                  "kickoff_time" => "2026-08-15T14:00:00Z", "team_h_score" => 3, "team_a_score" => 1,
+                  "started" => true, "finished_provisional" => true } ].to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
@@ -58,6 +60,11 @@ module Fpl
 
       assert_equal 2, match.home_difficulty, "without this every fixture reads as unplayable"
       assert_equal 4, match.away_difficulty
+      assert match.finished, "a pack pair is only called once both teams have finished"
+      assert_equal Time.utc(2026, 8, 15, 14), match.kickoff_at
+      assert_equal [ 3, 1 ], [ match.home_score, match.away_score ]
+      assert match.started
+      assert match.finished_provisional
     end
 
     test "call creates new gameweeks from API data" do

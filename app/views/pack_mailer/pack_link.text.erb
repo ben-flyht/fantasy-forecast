@@ -1,7 +1,7 @@
-Your <%= "Gameweek #{@gameweek.fpl_id} " if @gameweek %>Pack of the Week is ready, <%= @user.first_name %>.
+Your <%= "Gameweek #{@gameweek.fpl_id} " if @gameweek %>pack is ready to play<%= ", #{@user.leaderboard_name}" if @user.named? %>.
 
-Five pairs of players. Your own pack, one go: keep one from each pair before the deadline, then watch your five climb the leaderboard on real FPL points.
+Five pairs of players. Your own pack: keep one from each pair, changing your mind as often as you like until the FPL deadline, then watch your five climb the leaderboard on real FPL points.
 
 Open my pack: <%= @link %>
 
-The link signs you in on this device and works for seven days. If you did not ask for it, ignore this email.
+The link signs you in on this device. It works once, within an hour. If you did not ask for it, ignore this email.

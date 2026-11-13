@@ -31,7 +31,13 @@ class PackCardComponentTest < ViewComponent::TestCase
   test "the captain keeps his foil" do
     render_inline PackCardComponent.new(card: @card, captain: true)
 
-    assert_selector ".pack-card--shiny .pack-card__captain", text: "C"
+    assert_selector ".pack-card--shiny .pack-card__name abbr.pack-card__captain[title=Captain]", text: "(C)"
+  end
+
+  test "a scored card wears its points in the corner" do
+    render_inline PackCardComponent.new(card: @card, points: "6 pts")
+
+    assert_selector ".pack-card__corner--points[data-pack-card-points]", text: "6 pts"
   end
 
   test "a card says who he plays, and where" do

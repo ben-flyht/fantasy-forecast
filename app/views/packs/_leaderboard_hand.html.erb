@@ -1,0 +1,25 @@
+<template data-pack-row-hand-template>
+  <ol class="flex flex-col gap-4" data-pack-row-hand>
+    <% hand.picks.zip(hand.discards).each_with_index do |(kept, discarded), index| %>
+      <% verdict = real.verdict(kept, discarded) %>
+      <li class="grid grid-cols-[minmax(0,10rem)_minmax(3.5rem,1fr)_minmax(0,10rem)] items-center gap-2 sm:gap-4" style="--row: <%= index %>;" data-pack-row-pair>
+        <div data-pack-row-kept>
+          <% if kept %>
+            <%= render PackCardComponent.new(card: kept, captain: kept == hand.captain, index: index,
+                  points: pluralize(real.of(kept) * (kept == hand.captain ? 2 : 1), "pt")) %>
+          <% else %>
+            <%= render "packs/forfeit", index: index %>
+          <% end %>
+        </div>
+        <div class="text-center" data-pack-row-verdict="<%= verdict %>">
+          <%= render "packs/pick_verdict", verdict: verdict %>
+        </div>
+        <% discarded.each do |card| %>
+          <div class="opacity-50 grayscale" data-pack-row-discarded>
+            <%= render PackCardComponent.new(card: card, index: index, points: pluralize(real.of(card), "pt")) %>
+          </div>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+</template>

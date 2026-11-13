@@ -1,4 +1,4 @@
-<% content_for :meta_title, "Pack of the Week Leaderboard, Gameweek #{@gameweek.fpl_id} | Fantasy Forecast" %>
+<% content_for :meta_title, "Play: Gameweek #{@gameweek.fpl_id} Leaderboard | Fantasy Forecast" %>
 <% content_for :meta_robots, "noindex, nofollow" %>
 
 <div class="mx-auto max-w-xl">
@@ -6,8 +6,12 @@
     <%= render PageHeadingComponent.new(
           title: "Leaderboard: Gameweek #{@gameweek.fpl_id}",
           subtitle: "Everyone opened their own pack. Real FPL points for each five, with the captain counting twice.",
-          horizons: pack_sections(current: :play)) %>
+          horizons: play_tabs(current: :weekly, gameweek: @gameweek)) do |heading| %>
+      <% heading.with_aside { render "packs/play_account" } %>
+    <% end %>
   </div>
+
+  <%= render "packs/leaderboard_steps", gameweek: @gameweek %>
 
   <% if @board.rows.empty? %>
     <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">Nobody has locked in a pack yet.</div>
@@ -16,27 +20,29 @@
       <%= pluralize(@board.rows.size, "player") %> ·
       <%= @gameweek.is_finished ? "final points" : @gameweek.started? ? "live points" : "ranked once the games start" %>
     </p>
+    <%= render "packs/leaderboard_columns" %>
+    <div data-controller="leaderboard-hand">
     <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
-      <% @board.rows.each do |row| %>
+      <% leaderboard_top(@board.rows).each_with_index do |row, index| %>
+        <%= render "packs/leaderboard_gap", row: row, index: index %>
         <% mine = current_user && row.user == current_user %>
-        <li class="flex items-center gap-4 px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-row>
-          <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place&.ordinalize || "–" %></span>
-          <span class="min-w-0 flex-1">
-            <span class="block truncate font-bold text-zinc-950"><%= row.user.leaderboard_name %><%= " (you)" if mine %></span>
-            <% if (captain = row.selection.pack_hand.captain) %>
-              <span class="block truncate text-xs text-zinc-500">Captain <%= captain.player.display_name %></span>
-            <% end %>
-          </span>
-          <% if row.points %>
-            <span class="text-xl font-extrabold tabular-nums text-zinc-950"><%= row.points %></span>
+        <li class="group px-4 py-3 <%= 'bg-zinc-100' if mine %> <%= 'cursor-pointer' if @real %> <%= 'hover:bg-zinc-50' if @real && !mine %>" <%= tag.attributes(data: { action: "click->leaderboard-hand#open" }) if @real %> data-pack-row
+            data-pack-row-name="<%= row.place&.ordinalize %> <%= row.user.leaderboard_name %>"
+            data-pack-row-summary="<%= "#{pluralize(row.points.to_i, 'point')} · #{row.accuracy}% accuracy" if @real %>">
+          <div class="flex w-full items-center gap-3">
+            <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place&.ordinalize || "–" %></span>
+            <span class="min-w-0 flex-1">
+              <%= render "packs/manager_name", user: row.user, mine: mine, pro: pros.include?(row.user) %>
+            </span>
+            <%= render "packs/leaderboard_scores", points: row.points, accuracy: row.accuracy, openable: @real.present? %>
+          </div>
+          <% if @real %>
+            <%= render "packs/leaderboard_hand", hand: row.selection.pack_hand, real: @real %>
           <% end %>
         </li>
       <% end %>
     </ol>
+    <%= render "packs/hand_dialog" %>
+    </div>
   <% end %>
-
-  <p class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
-    <%= link_to "Play this week's pack", pack_landing_path, class: "text-zinc-950 underline underline-offset-2" %>
-    <%= link_to "Practice", practice_pack_path, class: "text-zinc-500 underline underline-offset-2" %>
-  </p>
 </div>

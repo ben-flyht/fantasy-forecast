@@ -30,9 +30,12 @@ class PackHandTest < ActiveSupport::TestCase
     assert_nil PackHand.parse(pack, "aa").captain
   end
 
-  test "a hand is unfinished until all five are kept" do
+  test "a hand is unfinished until every pair has a pick" do
     assert_not PackHand.parse(pack, "aaa").complete?
-    assert_equal pack.pairs[3], PackHand.parse(pack, "aaa").current_pair
+    assert_not PackHand.parse(pack, "aaxaa").complete?
+    assert PackHand.parse(pack, "aabab").complete?
+    assert_equal 1, PackHand.parse(pack, "aab").choice_at(2)
+    assert_nil PackHand.parse(pack, "axb").choice_at(1)
   end
 
   test "a code that is not a pack's is refused" do
@@ -41,17 +44,22 @@ class PackHandTest < ActiveSupport::TestCase
     assert_nil PackHand.parse(pack, "aaaaa-12"), "the old bench suffix"
   end
 
-  test "a pair left too long is forfeited, and kept as an empty slot" do
+  test "a pair with no pick is kept as an empty slot" do
     hand = PackHand.parse(pack, "axb")
 
     assert_equal [ 1, nil, 6 ], hand.picks.map { |card| card&.player_id }
     assert_equal [ 1, 6 ], hand.kept.map(&:player_id)
     assert_equal "axb", hand.code
-    assert_equal "axbx", hand.forfeiting.code
+  end
+
+  test "the cards let go are the other of each pair, and none of a pair with no pick" do
+    discards = PackHand.parse(pack, "axb").discards
+
+    assert_equal [ [ 2 ], [], [ 5 ] ], discards.map { |cards| cards.map(&:player_id) }
   end
 
   test "forfeiting the shiny pair leaves you without a captain" do
     assert_nil PackHand.parse(pack, "aax").captain
-    assert PackHand.parse(pack, "aaxaa").complete?
+    assert_nil PackHand.parse(pack, "aaxaa").captain
   end
 end

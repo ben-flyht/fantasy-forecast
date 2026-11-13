@@ -80,7 +80,13 @@ module Fpl
       return nil unless gameweek && home_team && away_team
 
       { home_team: home_team, away_team: away_team, gameweek: gameweek,
-        home_difficulty: fixture["team_h_difficulty"], away_difficulty: fixture["team_a_difficulty"] }
+        home_difficulty: fixture["team_h_difficulty"], away_difficulty: fixture["team_a_difficulty"], **result(fixture) }
+    end
+
+    def result(fixture)
+      { kickoff_at: fixture["kickoff_time"], home_score: fixture["team_h_score"], away_score: fixture["team_a_score"],
+        started: fixture["started"] == true, finished_provisional: fixture["finished_provisional"] == true,
+        finished: fixture["finished"] == true }
     end
 
     def fixture_valid?(fixture)

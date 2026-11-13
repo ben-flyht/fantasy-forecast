@@ -13,13 +13,13 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
   test "on production, search engines are kept out of the invite-only pack game" do
     get "/robots.txt"
 
-    assert_includes response.body, "Disallow: /pack"
+    assert_includes response.body, "Disallow: /play"
   end
 
   test "the sitemap does not list the pack game" do
     get "/sitemap.xml"
 
-    assert_not_includes response.body, "/pack"
+    assert_no_match %r{/play[/<]}, response.body
   end
 
   test "the sitemap offers a season page for every position" do

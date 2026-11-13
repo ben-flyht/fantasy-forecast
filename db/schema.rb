@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -66,12 +66,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_090000) do
     t.integer "home_difficulty"
     t.bigint "home_team_id", null: false
     t.datetime "updated_at", null: false
+    t.boolean "finished", default: false, null: false
+    t.datetime "kickoff_at"
+    t.integer "home_score"
+    t.integer "away_score"
+    t.boolean "started", default: false, null: false
+    t.boolean "finished_provisional", default: false, null: false
     t.index ["away_team_id"], name: "index_matches_on_away_team_id"
     t.index ["fpl_id"], name: "index_matches_on_fpl_id", unique: true
     t.index ["gameweek_id", "away_team_id"], name: "index_matches_on_gameweek_id_and_away_team_id"
     t.index ["gameweek_id", "home_team_id"], name: "index_matches_on_gameweek_id_and_home_team_id"
     t.index ["gameweek_id"], name: "index_matches_on_gameweek_id"
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
+    t.index ["kickoff_at"], name: "index_matches_on_kickoff_at"
   end
 
   create_table "payloads", force: :cascade do |t|
@@ -125,15 +132,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_090000) do
     t.index ["team_id"], name: "index_players_on_team_id"
   end
 
+  create_table "seasons", force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_seasons_on_name", unique: true
+  end
+
   create_table "selections", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.bigint "gameweek_id", null: false
+    t.bigint "gameweek_id"
     t.jsonb "offered", default: [], null: false
     t.string "picks", default: "", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.bigint "season_id"
+    t.integer "gameweek_number"
+    t.jsonb "archive"
     t.index ["gameweek_id", "user_id"], name: "index_selections_on_gameweek_id_and_user_id", unique: true
     t.index ["gameweek_id"], name: "index_selections_on_gameweek_id"
+    t.index ["season_id"], name: "index_selections_on_season_id"
     t.index ["user_id"], name: "index_selections_on_user_id"
   end
 
@@ -196,10 +214,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_090000) do
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false
-    t.string "first_name", null: false
-    t.string "last_name", null: false
+    t.string "first_name"
+    t.string "last_name"
     t.datetime "updated_at", null: false
+    t.string "username"
+    t.datetime "last_signed_in_at"
+    t.datetime "link_sent_at"
+    t.string "session_token"
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
+    t.index "lower((username)::text)", name: "index_users_on_lower_username", unique: true
+    t.index ["session_token"], name: "index_users_on_session_token", unique: true
   end
 
   add_foreign_key "comparisons", "gameweeks"
@@ -215,6 +239,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_090000) do
   add_foreign_key "performances", "teams"
   add_foreign_key "players", "teams"
   add_foreign_key "selections", "gameweeks"
+  add_foreign_key "selections", "seasons"
   add_foreign_key "selections", "users"
   add_foreign_key "squads", "gameweeks"
   add_foreign_key "statistics", "gameweeks"

@@ -2,10 +2,10 @@ class PacksController < ApplicationController
   include PackSignIn
 
   def latest
+    @gameweek = playing_gameweek
     return render(:sign_in) unless current_user
 
-    gameweek = playing_gameweek
-    gameweek ? redirect_to(weekly_pack_path(gameweek: gameweek.fpl_id)) : render(:empty)
+    @gameweek ? redirect_to(weekly_pack_path(gameweek: @gameweek.fpl_id)) : render(:empty)
   end
 
   def weekly
@@ -15,57 +15,38 @@ class PacksController < ApplicationController
     @selection = Selection.deal(current_user, @gameweek)
     return unopened unless @selection
 
-    play_selection
-  end
-
-  def selection
-    @selection = Selection.find(params[:id])
-    return head(:not_found) unless @selection.complete?
-
-    @shared = @selection.user != current_user
-    @gameweek = @selection.gameweek
+    @dealing = @selection.picks.empty? && !@gameweek.started?
     play_selection
   end
 
   def leaderboard
-    @gameweek = Gameweek.find_by!(fpl_id: params[:gameweek])
+    latest = Gameweek.latest_started
+    @gameweek = params[:gameweek] ? Gameweek.find_by!(fpl_id: params[:gameweek]) : latest || Gameweek.next_gameweek
+    return render(:empty) unless @gameweek
+    return redirect_to(pack_current_leaderboard_path) if latest && !@gameweek.started?
+
     @board = PackLeaderboard.new(@gameweek)
+    @real = PackRealPoints.new(@gameweek) if @gameweek.started?
   end
 
-  def practice
-    resume = session[:practice]
-    if resume.present?
-      return redirect_to(pack_path(seed: resume["seed"], hand: resume["hand"].presence))
-    end
-
-    start
-  end
-
-  def start
-    session.delete(:practice)
-    redirect_to pack_path(seed: rand(PackDraw::SEEDS))
-  end
-
-  def show
-    @gameweek = Gameweek.next_gameweek
-    @seed = params[:seed].to_i
-    @pack = PackDraw.call(gameweek: @gameweek, seed: @seed)
-    return render(:empty) unless @pack
-
-    hand = PackHand.parse(@pack, params[:hand])
-    session[:practice] = hand.complete? ? nil : { "seed" => @seed, "hand" => hand.code }
-    show_hand(hand)
+  def season
+    @accuracy = params[:board] == "accuracy"
+    @board = PackSeasonLeaderboard.new
   end
 
   private
+
+  def pros = @pros ||= PackSeasonLeaderboard.new.pros.to_set
+  helper_method :pros
 
   def unopened = render(@gameweek.started? ? :closed : :not_open)
 
   def play_selection
     @pack = @selection.pack
     @real = PackRealPoints.new(@gameweek) if @gameweek.started?
-    @board = PackLeaderboard.new(@gameweek) unless @shared
-    show_hand(@selection.pack_hand)
+    @board = PackLeaderboard.new(@gameweek)
+    @hand = @selection.pack_hand
+    render :show
   end
 
   def playing_gameweek
@@ -74,25 +55,4 @@ class PacksController < ApplicationController
 
     Gameweek.next_gameweek || current || Gameweek.finished.ordered.last
   end
-
-  def show_hand(hand)
-    @hand = hand
-    render :show
-  end
-
-  def weekly? = @selection.present?
-  helper_method :weekly?
-
-  def shared? = @shared.present?
-  helper_method :shared?
-
-  def pick_path(hand, choice)
-    return pack_path(seed: @seed, hand: hand.keeping(choice).code) unless weekly?
-
-    weekly_pack_picks_path(gameweek: @gameweek.fpl_id, keep: choice ? PackHand::LETTERS[choice] : PackHand::FORFEIT)
-  end
-  helper_method :pick_path
-
-  def share_path = pack_selection_url(@selection)
-  helper_method :share_path
 end

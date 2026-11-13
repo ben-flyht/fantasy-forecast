@@ -1,0 +1,8 @@
+<%= turbo_stream.replace "pack_status", method: :morph do %>
+  <%= render "packs/pick_status", hand: @hand, gameweek: @gameweek %>
+<% end %>
+<% if @pair %>
+  <%= turbo_stream.replace "pack_pair_#{@pair}", method: :morph do %>
+    <%= render "packs/pick_pair", pair: @hand.pack.pairs[@pair], index: @pair, hand: @hand, gameweek: @gameweek %>
+  <% end %>
+<% end %>

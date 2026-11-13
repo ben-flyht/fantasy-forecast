@@ -1,28 +1,14 @@
-<% content_for :title, "Contact Us - Fantasy Forecast" %>
+<% content_for :meta_title, "Contact Us | Fantasy Forecast" %>
 
-<div class="max-w-4xl mx-auto">
-  <h1 class="text-4xl font-bold text-gray-800 mb-8">Contact Us</h1>
+<div class="mx-auto max-w-xl">
+  <div class="mb-6">
+    <%= render PageHeadingComponent.new(
+          title: "Contact us",
+          subtitle: "Questions, feedback, a ranking you disagree with, or help with your Play account. We read everything.") %>
+  </div>
 
-  <div class="max-w-2xl mx-auto text-center">
-    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Get in Touch</h2>
-    <p class="text-gray-700 mb-12 text-lg">
-      Have questions about Fantasy Forecast? Want to challenge the bot? Need help with your account? We'd love to hear from you!
-    </p>
-
-    <div class="bg-white rounded-lg shadow-lg p-8 mb-12">
-      <div class="flex items-center justify-center mb-6">
-        <div class="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center">
-          <span class="text-3xl">📧</span>
-        </div>
-      </div>
-
-      <h3 class="text-xl font-semibold text-gray-800 mb-6">Email Us</h3>
-
-      <div class="p-6 bg-gray-50 rounded-lg">
-        <a href="mailto:support@fantasyforecast.co.uk" class="font-semibold text-lg break-all sm:text-2xl">
-          support@fantasyforecast.co.uk
-        </a>
-      </div>
-    </div>
+  <div class="rounded-2xl border border-zinc-200 p-6">
+    <p class="text-xs font-bold uppercase tracking-wider text-zinc-500">Email</p>
+    <%= mail_to "support@fantasyforecast.co.uk", class: "mt-1 block break-all text-lg font-bold text-zinc-950 underline underline-offset-4 hover:text-zinc-600" %>
   </div>
 </div>

@@ -7,8 +7,11 @@
   --frame: #0a0a0b;
   --ink: #fff;
   --ease-spring: cubic-bezier(0.3, 1.35, 0.5, 1);
+  --edge-colour: color-mix(in oklab, var(--club, #18181b) 50%, #000);
+  --thickness: 0.4cqw;
 
   position: relative;
+  display: block;
   width: 100%;
   aspect-ratio: 5 / 7;
   container-type: inline-size;
@@ -25,6 +28,10 @@
 
 .pack-card--choice:hover {
   --lift: 1;
+}
+
+.pack-card:not(.is-tilting) {
+  transition: --tx 0.6s ease, --ty 0.6s ease, --mx 0.6s ease, --my 0.6s ease;
 }
 
 .pack-card.is-tilting {
@@ -104,6 +111,33 @@
   color: var(--ink);
 }
 
+.pack-card__light {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  --light-x: calc(30% + (0.5 - var(--tx)) * 50%);
+  --light-y: calc(18% + (0.5 - var(--ty)) * 50%);
+  background:
+    radial-gradient(circle at var(--light-x) var(--light-y), rgb(255 255 255 / 0.2), rgb(255 255 255 / 0) 55%),
+    radial-gradient(circle at calc(100% - var(--light-x)) calc(100% - var(--light-y)), rgb(0 0 0 / 0.1), rgb(0 0 0 / 0) 65%);
+}
+
+.pack-card__face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0.6cqw 0 rgb(255 255 255 / 0.28),
+    inset 0 -0.6cqw 0 rgb(0 0 0 / 0.22),
+    inset 0 0 0 0.3cqw rgb(0 0 0 / 0.12);
+}
+
 .pack-card__face--light {
   --ink: var(--color-zinc-950);
 }
@@ -150,6 +184,35 @@
   pointer-events: none;
 }
 
+.pack-card__crest {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  height: 84%;
+  aspect-ratio: 219 / 280;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.pack-card__crest img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 92cqw;
+  height: 92cqw;
+  max-width: none;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+}
+
+.pack-card__crest-silhouette {
+  opacity: 0.2;
+}
+
+.pack-card__crest-colour {
+  opacity: 0.22;
+}
+
 .pack-card__photo {
   position: absolute;
   left: 50%;
@@ -183,21 +246,15 @@
   color: #fff;
 }
 
-.pack-card__captain {
-  position: absolute;
-  top: 5cqw;
+.pack-card__corner--points {
   right: 5.5cqw;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 14cqw;
-  height: 14cqw;
-  border-radius: 999px;
-  background: var(--color-zinc-950);
+  background: var(--frame);
   color: #fff;
-  font-size: 8cqw;
-  font-weight: 800;
-  box-shadow: 0 0 0 0.8cqw var(--frame);
+}
+
+.pack-card__captain {
+  text-decoration: none;
+  cursor: help;
 }
 
 .pack-card__banner {
@@ -272,8 +329,17 @@
   text-transform: uppercase;
 }
 
+.pack-card__edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--edge-colour), #000 calc(var(--layer) * 4%));
+  transform: translateZ(calc(var(--layer) * var(--thickness) * -1));
+  pointer-events: none;
+}
+
 .pack-card__back {
-  transform: rotateY(180deg);
+  transform: translateZ(calc(var(--thickness) * -9)) rotateY(180deg);
   display: grid;
   place-items: center;
   background:
@@ -400,49 +466,10 @@
   z-index: 1;
 }
 
-.pack-card--shiny .pack-card__captain {
-  background: var(--color-zinc-950);
-  color: #fff;
-  box-shadow: 0 0 0 0.8cqw #e4e4e7, 0 0 0 1.4cqw #71717a;
-}
-
 @media (hover: none) {
   .pack-card--shiny {
     animation: pack-silver-idle 5s ease-in-out infinite alternate;
   }
-}
-
-.pack-shiny-label {
-  background: linear-gradient(90deg, #52525b, #d4d4d8 40%, #71717a 60%, #a1a1aa);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.pack-hand {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-@media (min-width: 640px) {
-  .pack-hand {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-  }
-}
-
-.pack-hand .pack-card {
-  rotate: calc((var(--i) - 3) * 1.4deg);
-}
-
-.pack-clock__bar {
-  transform-origin: left;
-  transition-property: transform;
-  transition-timing-function: linear;
-}
-
-.pack-clock__bar.is-running {
-  transform: scaleX(0);
 }
 
 .pack-forfeit {
@@ -454,10 +481,6 @@
   container-type: inline-size;
 }
 
-.pack-hand .pack-forfeit {
-  rotate: calc((var(--i) - 3) * 1.4deg);
-}
-
 .pack-forfeit span {
   font-size: 9cqw;
   font-weight: 800;
@@ -465,44 +488,40 @@
   color: var(--color-zinc-400);
 }
 
-.pack-card.is-kept {
-  animation: pack-keep 0.4s cubic-bezier(0.4, 0, 0.6, 1) forwards;
-}
-
-.pack-card.is-discarded {
-  animation: pack-discard 0.4s cubic-bezier(0.5, 0, 0.75, 0) forwards;
-}
-
-@keyframes pack-keep {
-  35% { transform: translateY(-6%) scale(1.05); }
-  to { transform: translateY(55%) scale(0.5); opacity: 0; }
-}
-
-@keyframes pack-discard {
-  to { transform: translate(40%, -12%) rotate(16deg) scale(0.8); opacity: 0; }
-}
-
 .pack-reveal {
   --reveal-wait: 0.15s;
   --reveal-step: 0.15s;
 }
 
-.pack-reveal--pair {
-  --reveal-wait: 0.7s;
-  --reveal-step: 0.35s;
+.pack-deal {
+  --reveal-wait: 0.35s;
+  --reveal-step: 0.12s;
+}
+
+.pack-deal .pack-card {
+  animation: pack-deal 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) calc(var(--i) * var(--reveal-step)) backwards;
+}
+
+@keyframes pack-deal {
+  from { transform: translateY(-40vh) rotate(-10deg) scale(0.7); opacity: 0; }
+}
+
+.pack-choice {
+  transition: opacity 0.25s ease, filter 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pack-choice--passed {
+  opacity: 0.4;
+  filter: grayscale(1);
+  transform: scale(0.9);
+}
+
+.pack-choice--kept .pack-card__body {
+  box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.3);
 }
 
 .pack-reveal .pack-card__body {
   animation: pack-flip 0.65s var(--ease-spring) calc(var(--reveal-wait) + var(--i) * var(--reveal-step)) backwards;
-}
-
-.pack-reveal--shiny .pack-card__back {
-  animation: pack-tease 0.9s ease-in-out 0.1s backwards;
-}
-
-@keyframes pack-tease {
-  0%, 100% { box-shadow: inset 0 0 0 1.4cqw rgb(255 255 255 / 0.12), 0 0 0 0 rgb(212 212 216 / 0); }
-  55% { box-shadow: inset 0 0 0 2cqw #e4e4e7, 0 0 8cqw 2cqw rgb(161 161 170 / 0.8); }
 }
 
 @keyframes pack-flip {
@@ -517,6 +536,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pack-card *,
+  .pack-choice,
   .pack-reveal * {
     animation: none !important;
     transition: none !important;
@@ -524,5 +544,184 @@
 
   .pack-card--shiny {
     animation: none !important;
+  }
+}
+
+.pack-hand-dialog [data-pack-row-pair] {
+  animation: pack-drop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) calc(0.1s + var(--row) * 0.09s) backwards;
+}
+
+@keyframes pack-drop {
+  from { transform: translateY(-2.5rem); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pack-hand-dialog [data-pack-row-pair] {
+    animation: none;
+  }
+}
+
+.pack-sealed {
+  --foil: linear-gradient(115deg, #3f3f46, #a1a1aa 18%, #f4f4f5 32%, #71717a 46%, #e4e4e7 60%, #52525b 76%, #d4d4d8);
+  position: relative;
+  width: min(15rem, 70vw);
+  aspect-ratio: 5 / 7.6;
+  animation: pack-float 4s ease-in-out infinite alternate;
+}
+
+.pack-sealed--small {
+  width: min(11rem, 52vw);
+  font-size: 0.8em;
+}
+
+.pack-sealed.is-tearing {
+  animation: pack-shake 0.35s ease-in-out;
+}
+
+.pack-sealed__cards {
+  position: absolute;
+  inset: 12% 7% 4%;
+  transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.pack-sealed__card {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.9rem;
+  background:
+    repeating-linear-gradient(105deg, rgb(255 255 255 / 0.05) 0 6px, transparent 6px 18px),
+    radial-gradient(circle at 50% 40%, #27272a, #09090b 70%);
+  box-shadow: inset 0 0 0 4px rgb(255 255 255 / 0.12), 0 2px 6px rgb(0 0 0 / 0.3);
+  transform: translateY(calc(var(--card) * 3px)) rotate(calc((var(--card) - 1) * 2deg));
+  transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.pack-sealed__card .logo {
+  color: #fff;
+}
+
+.pack-sealed__card .logo__forecast {
+  background: #fff;
+  color: var(--color-zinc-950);
+}
+
+.pack-sealed__wrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transition: transform 0.55s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.45s ease 0.1s;
+}
+
+.pack-sealed__strip,
+.pack-sealed__face {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--foil);
+  box-shadow: 0 12px 30px -12px rgb(0 0 0 / 0.5);
+}
+
+.pack-sealed__strip {
+  top: 0;
+  height: 13%;
+  border-radius: 0.6rem 0.6rem 0 0;
+  background:
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.14) 0 2px, transparent 2px 6px) top / 100% 30% no-repeat,
+    var(--foil);
+  transform-origin: 85% 100%;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.4, 1), opacity 0.35s ease 0.1s;
+}
+
+.pack-sealed__strip::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: -1px;
+  border-bottom: 2px dashed rgb(0 0 0 / 0.35);
+}
+
+.pack-sealed__face {
+  top: 13%;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border-radius: 0 0 0.6rem 0.6rem;
+  background:
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.14) 0 2px, transparent 2px 6px) bottom / 100% 7% no-repeat,
+    radial-gradient(ellipse 70% 45% at 50% 50%, #09090b 0 98%, transparent 100%),
+    var(--foil);
+  color: #fff;
+  text-align: center;
+}
+
+.pack-sealed__face .logo__forecast {
+  background: #fff;
+  color: var(--color-zinc-950);
+}
+
+.pack-sealed__title {
+  font-size: 0.95em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pack-sealed__gameweek {
+  font-size: 0.7em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-zinc-400);
+}
+
+.pack-sealed__count {
+  font-size: 0.65em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-zinc-500);
+}
+
+.pack-sealed.is-tearing .pack-sealed__strip {
+  transform: translate(35%, -140%) rotate(24deg);
+  opacity: 0;
+}
+
+.pack-sealed.is-revealing .pack-sealed__wrapper {
+  transform: translateY(45%);
+  opacity: 0;
+}
+
+.pack-sealed.is-revealing .pack-sealed__cards {
+  transform: translateY(-14%);
+}
+
+.pack-sealed.is-revealing .pack-sealed__card {
+  transform: translateY(calc(var(--card) * -10px)) rotate(calc((var(--card) - 1) * 9deg));
+}
+
+@keyframes pack-float {
+  from { transform: translateY(0) rotate(-1deg); }
+  to { transform: translateY(-6px) rotate(1deg); }
+}
+
+@keyframes pack-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg) scale(1.02); }
+  75% { transform: rotate(-2deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pack-sealed,
+  .pack-sealed * {
+    animation: none !important;
+    transition: none !important;
   }
 }

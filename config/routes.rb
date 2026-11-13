@@ -31,18 +31,22 @@ Rails.application.routes.draw do
   # No horizon: you captain a player for a gameweek or you do not captain him.
   get "captain", to: "captains#show", as: :captain
 
-  get "pack", to: "packs#latest", as: :pack_landing
-  post "pack/sign-in", to: "pack_sign_ins#create", as: :pack_sign_ins
-  get "pack/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
-  delete "pack/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
-  get "pack/practice", to: "packs#practice", as: :practice_pack
-  get "pack/practice/new", to: "packs#start", as: :new_pack
-  get "pack/gw:gameweek/leaderboard", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
-  post "pack/gw:gameweek/picks", to: "pack_picks#create", as: :weekly_pack_picks, constraints: { gameweek: /\d+/ }
-  get "pack/gw:gameweek", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/ }
-  get "pack/selections/:id", to: "packs#selection", as: :pack_selection, constraints: { id: /\d+/ }
-  get "pack/:seed(/:hand)", to: "packs#show", as: :pack,
-      constraints: { seed: /\d{1,9}/, hand: /[abx]{0,5}/ }
+  get "play", to: "packs#latest", as: :pack_landing
+  post "play/sign-in", to: "pack_sign_ins#create", as: :pack_sign_ins
+  get "play/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
+  post "play/sign-in/:token", to: "pack_sign_ins#confirm", constraints: { token: %r{[^/]+} }
+  delete "play/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
+  get "play/profile", to: "pack_profiles#edit", as: :pack_profile
+  patch "play/profile", to: "pack_profiles#update"
+  post "play/gameweeks/:gameweek/picks", to: "pack_picks#create", as: :weekly_pack_picks, constraints: { gameweek: /\d+/ }
+  get "play/gameweeks/:gameweek", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/ }
+  get "play/leaderboard/gameweeks", to: "packs#leaderboard", as: :pack_current_leaderboard
+  get "play/leaderboard/gameweeks/:gameweek", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
+  get "play/leaderboard/seasons", to: "packs#season", as: :pack_season_leaderboard
+  get "play/leaderboard/seasons/accuracy", to: "packs#season", defaults: { board: "accuracy" }, as: :pack_season_accuracy_leaderboard
+  get "pack/gw:gameweek/leaderboard", to: redirect("/play/leaderboard/gameweeks/%{gameweek}"), constraints: { gameweek: /\d+/ }
+  get "pack(/*rest)", to: redirect { |params, _| [ "/play", params[:rest]&.sub(/\Agw(\d+)/, 'gameweeks/\1') ].compact.join("/") },
+                     format: false
 
   # Him or him: the question a manager asks when he has already narrowed it to
   # two, with an address of its own so it can be found by asking it.
