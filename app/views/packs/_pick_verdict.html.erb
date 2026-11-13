@@ -1,11 +1,11 @@
-<% case verdict %>
-<% when :better %>
-  <span class="block text-2xl font-extrabold leading-none text-zinc-950" aria-hidden="true">←</span>
-  <span class="mt-1 block text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-xs text-zinc-950">Right call</span>
-<% when :level %>
-  <span class="block text-2xl font-extrabold leading-none text-zinc-950" aria-hidden="true">↔</span>
-  <span class="mt-1 block text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-xs text-zinc-950">Right call</span>
-<% when :worse %>
-  <span class="block text-2xl font-extrabold leading-none text-zinc-400" aria-hidden="true">→</span>
-  <span class="mt-1 block text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-xs text-zinc-400">Wrong call</span>
+<% if %i[better level].include?(verdict) %>
+  <span class="mx-auto flex size-9 items-center justify-center rounded-full bg-zinc-950 text-white sm:size-10" data-pack-verdict-mark="tick">
+    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    <span class="sr-only">Right call</span>
+  </span>
+<% elsif verdict == :worse %>
+  <span class="mx-auto flex size-9 items-center justify-center rounded-full border-2 border-zinc-300 text-zinc-400 sm:size-10" data-pack-verdict-mark="cross">
+    <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    <span class="sr-only">Wrong call</span>
+  </span>
 <% end %>

@@ -365,7 +365,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-row-hand] [data-pack-row-discarded] .pack-card", count: 4
     assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: "3 pts", count: 4
     assert_select "[data-pack-row-kept] [data-pack-card-points]", text: /\A\s*(3|6) pts\s*\z/, count: 4
-    assert_select "[data-pack-row-verdict=level]", text: /Right call/, count: 4
+    assert_select "[data-pack-row-verdict=level] [data-pack-verdict-mark=tick]", text: /Right call/, count: 4
+    assert_select "[data-pack-verdict-mark=cross]", count: 0
     assert_select "[data-pack-row-verdict=no_pick]", count: 1
   end
 
