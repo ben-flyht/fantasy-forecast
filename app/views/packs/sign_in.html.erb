@@ -6,7 +6,9 @@
     <%= render PageHeadingComponent.new(
           title: "Play",
           subtitle: "A weekly test of your FPL judgement. Pick the better player from each of five pairs, scored on real FPL points. Prove you call it right, week after week, and your picks help shape our player rankings.",
-          horizons: play_tabs(current: :pack)) %>
+          horizons: play_tabs(current: :pack)) do |heading| %>
+      <% heading.with_aside { render "packs/play_account" } %>
+    <% end %>
   </div>
 
   <div class="relative flex min-h-[26rem] items-center">

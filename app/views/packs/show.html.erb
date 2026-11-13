@@ -7,7 +7,9 @@
     <%= render PageHeadingComponent.new(
           title: "Play: Gameweek #{@gameweek.fpl_id}",
           subtitle: "Keep the player you think will score more from each pair. Change your mind as often as you like until the FPL deadline. Call it right all season and you become a Pro, and your picks help shape our player rankings.",
-          horizons: play_tabs(current: :pack)) %>
+          horizons: play_tabs(current: :pack)) do |heading| %>
+      <% heading.with_aside { render "packs/play_account" } %>
+    <% end %>
   </div>
 
   <% if current_user && !current_user.named? %>
@@ -19,11 +21,4 @@
   <% else %>
     <%= render "packs/board", hand: @hand %>
   <% end %>
-
-  <p class="mt-10 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
-    <% if current_user %>
-      <%= link_to "Your profile", pack_profile_path, class: "text-zinc-950 underline underline-offset-2" %>
-      <%= button_to "Sign out", pack_sign_out_path, method: :delete, form_class: "inline", class: "text-xs font-medium text-zinc-500 underline underline-offset-2 cursor-pointer" %>
-    <% end %>
-  </p>
 </div>

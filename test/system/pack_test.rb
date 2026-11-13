@@ -52,10 +52,19 @@ class PackTest < ApplicationSystemTestCase
     end
     assert_selector "[data-pack-choice=kept]", count: 5
 
+    assert saved?("aaaaa"), "every pick reaches the server"
+    last_card = find("#pack_pair_4 .pack-choice:last-child .pack-card")
+    page.execute_script("arguments[0].scrollIntoView({ block: 'center' })", last_card)
+    scrolled = page.evaluate_script("window.scrollY")
+    last_card.click
+    assert_selector "#pack_pair_4 .pack-choice:last-child[data-pack-choice=kept]"
+    assert saved?("aaaab"), "the pick reaches the server"
+    assert_equal scrolled, page.evaluate_script("window.scrollY"), "picking leaves the page where it was"
+
     first("[data-pack-pair]").all(".pack-card--choice").last.click
     assert_selector "[data-pack-pair]:first-child .pack-choice--passed:first-child"
     assert_selector "[data-pack-pair]:first-child [data-pack-choice=kept]:last-child"
-    assert saved?("baaaa"), "the changed pick reaches the server"
+    assert saved?("baaab"), "the changed pick reaches the server"
   end
 
   test "clicking anywhere on a leaderboard row opens that player's team, and Close puts it away" do

@@ -33,6 +33,12 @@
     </div>
   <% end %>
 
+  <% if aside? %>
+    <div class="sm:col-start-2 sm:row-start-2 sm:justify-self-end" data-page-heading-aside>
+      <%= aside %>
+    </div>
+  <% end %>
+
   <% if updated_at %>
     <p class="whitespace-nowrap text-xs text-zinc-400 <%= updated_placement %>">
       Updated

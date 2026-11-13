@@ -20,6 +20,8 @@ class PageHeadingComponent < ViewComponent::Base
   # Where a page came from, for the pages that are arrived at from another one.
   Back = Struct.new(:label, :url, keyword_init: true)
 
+  renders_one :aside
+
   # @param share [String, nil] what is being shared, said in full. The button reads
   #   "Share"; this is what a screen reader hears and what the share sheet is titled.
   def initialize(title:, subtitle: nil, updated_at: nil, share: nil, back: nil, horizons: nil)

@@ -122,6 +122,22 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Sam's Side", User.find_by(email: "sam@example.com").username
   end
 
+  test "signed in, every Play page has Profile and Sign out beside the tabs" do
+    get pack_landing_path
+    assert_select "[data-play-account]", count: 0
+
+    sign_in
+    [ weekly_pack_path(gameweek: 1), pack_current_leaderboard_path, pack_season_leaderboard_path, pack_profile_path ].each do |path|
+      get path
+      assert_select "[data-page-heading-aside] [data-play-account] a[href=?]", pack_profile_path, text: "Profile"
+      assert_select "[data-page-heading-aside] [data-play-account] form[action=?] button", pack_sign_out_path, text: "Sign out"
+    end
+    assert_select "[data-play-account] a[aria-current=page]", text: "Profile"
+
+    get pack_current_leaderboard_path
+    assert_select "[data-play-account] a[aria-current]", count: 0
+  end
+
   test "the profile page needs you signed in" do
     get pack_profile_path
     assert_redirected_to pack_landing_path
@@ -412,6 +428,21 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-row-verdict=pending]", count: 4
     assert_select "[data-pack-row-verdict=pending] [data-pack-verdict-mark]", count: 0
     assert_select "[data-pack-row] [data-pack-accuracy]", text: "–"
+  end
+
+  test "a pick answers with a stream that updates just that pair and the status, not the page" do
+    sign_in
+    get weekly_pack_path(gameweek: 1)
+
+    post weekly_pack_picks_path(gameweek: 1), params: { pair: 2, keep: "b" }, as: :turbo_stream
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_select "turbo-stream[action=replace][target=pack_status][method=morph]", count: 1
+    assert_select "turbo-stream[action=replace][target=pack_pair_2][method=morph] [data-pack-choice=kept]", count: 1
+    assert_select "turbo-stream[target=pack_pair_0]", count: 0
+
+    @gameweek.update!(start_time: 1.second.ago)
+    post weekly_pack_picks_path(gameweek: 1), params: { pair: 2, keep: "a" }, as: :turbo_stream
+    assert_select "turbo-stream[target=pack_pair_2] .pack-choice:last-child[data-pack-choice=kept]", count: 1
   end
 
   test "a new pack waits sealed with an Open pack button, and stays open once picking starts" do
