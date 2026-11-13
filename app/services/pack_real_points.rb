@@ -1,5 +1,8 @@
 class PackRealPoints
-  CALLED = %i[better level worse no_pick].freeze
+  Tally = Data.define(:got, :possible, :pairs) do
+    def +(other) = with(got: got + other.got, possible: possible + other.possible, pairs: pairs + other.pairs)
+  end
+  NONE = Tally.new(got: 0, possible: 0, pairs: 0)
 
   def initialize(gameweek)
     @scores = Performance.where(gameweek: gameweek).pluck(:player_id, :gameweek_score).to_h
@@ -10,9 +13,9 @@ class PackRealPoints
 
   def for(hand) = hand.kept.sum { |card| of(card) } + (hand.captain ? of(hand.captain) : 0)
 
-  def right_calls(hand) = verdicts(hand).count { |verdict| %i[better level].include?(verdict) }
-
-  def called(hand) = verdicts(hand).count { |verdict| CALLED.include?(verdict) }
+  def tally(hand)
+    hand.pack.pairs.each_with_index.sum(NONE) { |pair, index| pair_tally(pair, hand.picks[index]) }
+  end
 
   def verdict(kept, others)
     return :no_pick unless kept
@@ -24,7 +27,14 @@ class PackRealPoints
 
   private
 
-  def finished?(card) = !@playing.include?(card.player.team_id)
+  def pair_tally(pair, kept)
+    return NONE unless pair.cards.all? { |card| finished?(card) }
 
-  def verdicts(hand) = hand.picks.zip(hand.discards).map { |kept, others| verdict(kept, others) }
+    weight = pair.shiny? ? 2 : 1
+    Tally.new(got: (kept ? gain(kept) : 0) * weight, possible: pair.cards.map { |card| gain(card) }.max * weight, pairs: 1)
+  end
+
+  def gain(card) = [ of(card), 0 ].max
+
+  def finished?(card) = !@playing.include?(card.player.team_id)
 end

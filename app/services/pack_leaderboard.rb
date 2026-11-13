@@ -1,8 +1,9 @@
 class PackLeaderboard
-  Row = Data.define(:place, :selection, :points, :right, :pairs) do
+  Row = Data.define(:place, :selection, :points, :got, :possible, :pairs) do
     def user = selection.user
+
     def accuracy
-      (right * 100).fdiv(pairs).round if right && pairs.positive?
+      (got * 100).fdiv(possible).round if possible.to_i.positive?
     end
   end
 
@@ -28,7 +29,7 @@ class PackLeaderboard
     @selections ||= Selection.where(gameweek: gameweek).includes(:user, :gameweek).to_a
   end
 
-  def unranked(selection) = Row.new(place: nil, selection: selection, points: nil, right: nil, pairs: 0)
+  def unranked(selection) = Row.new(place: nil, selection: selection, points: nil, got: 0, possible: 0, pairs: 0)
 
   def ranked
     scored = selections.map { |selection| score(selection) }.sort_by { |row| [ -row.points, row.selection.created_at ] }
@@ -37,6 +38,6 @@ class PackLeaderboard
 
   def score(selection)
     hand = selection.pack_hand
-    Row.new(place: nil, selection: selection, points: real.for(hand), right: real.right_calls(hand), pairs: real.called(hand))
+    Row.new(place: nil, selection: selection, points: real.for(hand), **real.tally(hand).to_h)
   end
 end

@@ -1,11 +1,11 @@
 class AccuracyRating
   Z = 1.96
 
-  def self.of(right, total) = new(right, total).score
+  def self.of(rate, count) = new(rate, count).score
 
-  def initialize(right, total)
-    @rate = right.fdiv(total)
-    @total = total
+  def initialize(rate, count)
+    @rate = rate
+    @total = count
   end
 
   def score = ((centre - spread) / shrink * 100).round

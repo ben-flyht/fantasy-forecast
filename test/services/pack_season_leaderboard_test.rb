@@ -2,7 +2,7 @@ require "test_helper"
 
 class PackSeasonLeaderboardTest < ActiveSupport::TestCase
   def row(right, pairs)
-    PackSeasonLeaderboard::Row.new(place: nil, user: nil, points: 0, right: right, pairs: pairs, weeks: 1, best: nil, real: nil)
+    PackSeasonLeaderboard::Row.new(place: nil, user: nil, points: 0, got: right, possible: pairs, pairs: pairs, weeks: 1, best: nil, real: nil)
   end
 
   test "the accuracy rating grows with the pairs called, so a perfect week trails a long good run" do

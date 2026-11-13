@@ -36,4 +36,40 @@ class PackRealPointsTest < ActiveSupport::TestCase
     match.update!(finished: true)
     assert_equal :better, PackRealPoints.new(@gameweek).verdict(high, [ later ])
   end
+
+  def card_scoring(points, index, team: Team.find_by(fpl_id: 931))
+    player = Player.create!(first_name: "P", last_name: "t#{index}", fpl_id: 93_300 + index, code: 93_300 + index, team: team, position: "midfielder")
+    Performance.create!(player: player, gameweek: @gameweek, team: team, gameweek_score: points)
+    Pack::Card.new(player: player, rank: index, expected_points: 4.0)
+  end
+
+  def pack_of(*pairs, shiny: nil)
+    Pack.new(pairs: pairs.each_with_index.map { |cards, i| Pack::Pair.new(slot: Pack::SLOTS[i], cards: cards, shiny: i == shiny) })
+  end
+
+  test "accuracy is the share of the points on offer that was scored, so a big miss costs more than a near one" do
+    near = [ card_scoring(2, 1), card_scoring(3, 2) ]
+    big = [ card_scoring(2, 3), card_scoring(12, 4) ]
+    captain = [ card_scoring(6, 5), card_scoring(1, 6) ]
+    negative = [ card_scoring(-2, 7), card_scoring(-1, 8) ]
+    skipped = [ card_scoring(5, 9), card_scoring(4, 10) ]
+    hand = PackHand.parse(pack_of(near, big, captain, negative, skipped, shiny: 2), "aaaax")
+
+    tally = PackRealPoints.new(@gameweek).tally(hand)
+
+    assert_equal 2 + 2 + 12 + 0 + 0, tally.got
+    assert_equal 3 + 12 + 12 + 0 + 5, tally.possible
+    assert_equal 5, tally.pairs
+  end
+
+  test "a pair still being played is left out of accuracy until it is decided" do
+    Match.create!(gameweek: @gameweek, home_team: @late, away_team: @rival, fpl_id: 93_401)
+    done = [ card_scoring(5, 11), card_scoring(1, 12) ]
+    live = [ card_scoring(0, 13, team: @late), card_scoring(9, 14) ]
+    hand = PackHand.parse(pack_of(done, live), "aa")
+
+    tally = PackRealPoints.new(@gameweek).tally(hand)
+
+    assert_equal [ 5, 5, 1 ], [ tally.got, tally.possible, tally.pairs ]
+  end
 end

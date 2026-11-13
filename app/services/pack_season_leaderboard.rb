@@ -1,13 +1,13 @@
 class PackSeasonLeaderboard
   PRO_RATING = 60
 
-  Row = Data.define(:place, :user, :points, :right, :pairs, :weeks, :best, :real) do
+  Row = Data.define(:place, :user, :points, :got, :possible, :pairs, :weeks, :best, :real) do
     def accuracy
-      (right * 100).fdiv(pairs).round if pairs.positive?
+      (got * 100).fdiv(possible).round if possible.positive?
     end
 
     def rating
-      pairs.positive? ? AccuracyRating.of(right, pairs) : 0
+      possible.positive? && pairs.positive? ? AccuracyRating.of(got.fdiv(possible), pairs) : 0
     end
 
     def pro? = rating >= PRO_RATING
@@ -26,11 +26,14 @@ class PackSeasonLeaderboard
   private
 
   def totals
-    @totals ||= weekly_rows.group_by { |row, _| row.user }.map do |user, entries|
-      best, real = entries.max_by { |row, _| row.points }
-      rows = entries.map(&:first)
-      Row.new(place: nil, user: user, points: best.points, right: rows.sum(&:right), pairs: rows.sum(&:pairs), weeks: rows.size, best: best, real: real)
-    end
+    @totals ||= weekly_rows.group_by { |row, _| row.user }.map { |user, entries| total(user, entries) }
+  end
+
+  def total(user, entries)
+    best, real = entries.max_by { |row, _| row.points }
+    rows = entries.map(&:first)
+    Row.new(place: nil, user: user, points: best.points, got: rows.sum(&:got), possible: rows.sum(&:possible),
+            pairs: rows.sum(&:pairs), weeks: rows.size, best: best, real: real)
   end
 
   def weekly_rows

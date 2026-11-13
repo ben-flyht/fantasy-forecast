@@ -220,7 +220,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-verdict]", /live/
   end
 
-  test "each row has a points column and an accuracy column: how often the better card of a pair was kept" do
+  test "each row has a points column and an accuracy column: the share of the points on offer that was scored" do
     sign_in
     get weekly_pack_path(gameweek: 1)
     pick_all("aaaaa")
@@ -231,7 +231,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-columns]", /Accuracy.*Points/
-    assert_equal %w[100% 40%], css_select("[data-pack-row] [data-pack-accuracy]").map { |cell| cell.text.strip }
+    assert_equal %w[100% 33%], css_select("[data-pack-row] [data-pack-accuracy]").map { |cell| cell.text.strip }
   end
 
   test "the gameweek leaderboard index shows last week's board until this week's deadline passes" do
@@ -320,7 +320,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-gap]", count: 0
   end
 
-  test "the season accuracy board ranks on right calls, weighed by how many pairs were called" do
+  test "the season accuracy board ranks on the share of points on offer, weighed by how many pairs were called" do
     @gameweek.update!(start_time: 9.days.ago, is_next: false, is_finished: true)
     second = Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 2.days.ago, is_current: true)
     ana = User.create!(email: "ana@example.com", first_name: "Ana", last_name: "Lopes")
@@ -328,6 +328,9 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     offered = PackDraw.call(gameweek: @gameweek, seed: 3).dump
     [ [ ana, @gameweek, "aaaaa" ], [ ana, second, "aaaaa" ], [ bo, @gameweek, "aaaaa" ] ].each do |user, gameweek, picks|
       Selection.new(user: user, gameweek: gameweek, offered: offered, picks: picks).save!(validate: false)
+    end
+    [ @gameweek, second ].each do |gameweek|
+      Player.find_each { |player| Performance.create!(player: player, gameweek: gameweek, team: player.team, gameweek_score: 4) }
     end
 
     get pack_season_accuracy_leaderboard_path
@@ -374,7 +377,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-row-verdict=pending]", count: 4
     assert_select "[data-pack-row-verdict=pending] [data-pack-verdict-mark]", count: 0
-    assert_select "[data-pack-row] [data-pack-accuracy]", text: "0%"
+    assert_select "[data-pack-row] [data-pack-accuracy]", text: "–"
   end
 
   test "a pack is dealt out the first time it is opened, and stays put once picking starts" do
