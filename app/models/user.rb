@@ -11,14 +11,14 @@ class User < ApplicationRecord
   validates :first_name, :last_name, length: { maximum: NAME_LENGTH }
   validates :username, length: { maximum: USERNAME_LENGTH }
   validates :username, format: { without: /\A\d+\z/, message: "needs a letter in it" }, allow_nil: true
-  validates :username, format: { without: /\Auser\s*\d+\z/i, message: "is kept for players who haven't picked one" }, allow_nil: true
+  validates :username, format: { without: /\Aanonymous\z/i, message: "is kept for players who haven't picked one" }, allow_nil: true
   validates :username, uniqueness: { case_sensitive: false }, allow_nil: true, if: :username_changed?
 
   generates_token_for :pack_link, expires_in: 7.days
 
   def leaderboard_name = username || default_username
 
-  def default_username = initialled_name || "User #{id}"
+  def default_username = initialled_name || "Anonymous"
 
   def named? = username.present? || initialled_name.present?
 

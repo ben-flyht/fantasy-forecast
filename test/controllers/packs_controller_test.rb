@@ -117,7 +117,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "[data-pack-username-error]", /needs a letter/
 
-    patch pack_profile_path, params: { username: "user 7" }
+    patch pack_profile_path, params: { username: "anonymous" }
     assert_response :unprocessable_entity
     assert_select "[data-pack-username-error]", /kept for players/
 
@@ -148,7 +148,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
   test "the profile keeps your first and last name, and they make your username until you choose one" do
     me = sign_in(email: "sam@example.com", first_name: nil, last_name: nil)
-    assert_equal "User #{me.id}", me.leaderboard_name, "with no names at all the account number stands in"
+    assert_equal "Anonymous", me.leaderboard_name, "with no names at all there is still something to show"
 
     get pack_profile_path
     assert_select "[data-pack-profile] input[name=first_name]"
