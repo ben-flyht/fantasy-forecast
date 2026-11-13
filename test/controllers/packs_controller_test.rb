@@ -316,6 +316,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     Selection.joins(:user).where(users: { email: %w[p0@example.com p1@example.com p2@example.com] }).destroy_all
     get pack_current_leaderboard_path
     assert_select "ol > li[data-pack-row]", count: 10
+    assert_select "ol > li[data-pack-row] > div", text: /Captain/, count: 0
     assert_select "[data-pack-gap]", count: 0
   end
 
