@@ -6,7 +6,7 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Play: Gameweek #{@gameweek.fpl_id}",
-          subtitle: "Keep the player you think will score more from each pair. Change your mind as often as you like until the FPL deadline. Call it right all season and you become a Pro, and your picks help shape our player rankings.",
+          subtitle: "Keep the player you think will score more from each pair. Change your mind as often as you like until the FPL deadline. Call it right all season and you become a Pro, and your picks will help shape our player rankings.",
           horizons: play_tabs(current: :pack)) do |heading| %>
       <% heading.with_aside { render "packs/play_account" } %>
     <% end %>

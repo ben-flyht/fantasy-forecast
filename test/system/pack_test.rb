@@ -49,10 +49,10 @@ class PackTest < ApplicationSystemTestCase
     5.times do |index|
       all("[data-pack-pair]")[index].all(".pack-card--choice").first.click
       assert_text(index == 4 ? "That's your five" : "#{index + 1} of 5 picked")
+      assert saved?(("a" * (index + 1)).ljust(5, "x")), "pick #{index + 1} is saved before the next tap"
     end
     assert_selector "[data-pack-choice=kept]", count: 5
 
-    assert saved?("aaaaa"), "every pick reaches the server"
     last_card = find("#pack_pair_4 .pack-choice:last-child .pack-card")
     page.execute_script("arguments[0].scrollIntoView({ block: 'center' })", last_card)
     scrolled = page.evaluate_script("window.scrollY")

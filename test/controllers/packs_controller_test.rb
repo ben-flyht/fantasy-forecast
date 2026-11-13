@@ -65,7 +65,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=email][name=email]"
     assert_select "input[name=first_name]", count: 0
     assert_select "li", /change your mind as often as you like until the FPL deadline/
-    assert_select "li", /Pros' picks feed into the Fantasy Forecast player rankings/
+    assert_select "li", /Pros' picks will help shape the Fantasy Forecast player rankings/
   end
 
   test "joining with just an email sends a link that signs you in" do
@@ -113,6 +113,10 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_profile_path
     assert_select "dd", text: "sam@example.com"
 
+    patch pack_profile_path, params: { username: "12" }
+    assert_response :unprocessable_entity
+    assert_select "[data-pack-username-error]", /needs a letter/
+
     patch pack_profile_path, params: { username: "taken" }
     assert_response :unprocessable_entity
     assert_select "[data-pack-username-error]", /already been taken/
@@ -140,7 +144,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
   test "the profile keeps your first and last name, and they make your username until you choose one" do
     me = sign_in(email: "sam@example.com", first_name: nil, last_name: nil)
-    assert_equal "Manager #{me.id}", me.leaderboard_name, "with no names at all there is still something to show"
+    assert_equal me.id.to_s, me.leaderboard_name, "with no names at all the account number stands in"
 
     get pack_profile_path
     assert_select "[data-pack-profile] input[name=first_name]"
