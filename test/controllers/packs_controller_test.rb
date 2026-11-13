@@ -251,8 +251,13 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get "/pack"
     assert_redirected_to "/play"
 
+    assert_equal "/play/gameweeks/1/leaderboard", pack_leaderboard_path(gameweek: 1)
+
+    get "/pack/gw1"
+    assert_redirected_to "/play/gameweeks/1"
+
     get "/pack/gw1/leaderboard"
-    assert_redirected_to "/play/gw1/leaderboard"
+    assert_redirected_to "/play/gameweeks/1/leaderboard"
 
     get "/pack/sign-in/abc--def.ghi"
     assert_redirected_to "/play/sign-in/abc--def.ghi"

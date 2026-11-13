@@ -35,11 +35,12 @@ Rails.application.routes.draw do
   post "play/sign-in", to: "pack_sign_ins#create", as: :pack_sign_ins
   get "play/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
   delete "play/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
-  get "play/gw:gameweek/leaderboard", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
-  post "play/gw:gameweek/picks", to: "pack_picks#create", as: :weekly_pack_picks, constraints: { gameweek: /\d+/ }
-  get "play/gw:gameweek", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/ }
+  get "play/gameweeks/:gameweek/leaderboard", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
+  post "play/gameweeks/:gameweek/picks", to: "pack_picks#create", as: :weekly_pack_picks, constraints: { gameweek: /\d+/ }
+  get "play/gameweeks/:gameweek", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/ }
   get "play/selections/:id", to: "packs#selection", as: :pack_selection, constraints: { id: /\d+/ }
-  get "pack(/*rest)", to: redirect { |params, _| [ "/play", params[:rest] ].compact.join("/") }, format: false
+  get "pack(/*rest)", to: redirect { |params, _| [ "/play", params[:rest]&.sub(/\Agw(\d+)/, 'gameweeks/\1') ].compact.join("/") },
+                     format: false
 
   # Him or him: the question a manager asks when he has already narrowed it to
   # two, with an address of its own so it can be found by asking it.
