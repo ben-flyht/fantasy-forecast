@@ -47,11 +47,11 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", pack_landing_path, text: "Play"
   end
 
-  test "every Play page carries the same tabs: your pack and the weekly, points and accuracy boards" do
+  test "every Play page carries the same tabs: play and the weekly, points and accuracy boards" do
     sign_in
-    [ weekly_pack_path(gameweek: 1), pack_current_leaderboard_path, pack_season_leaderboard_path, pack_season_accuracy_leaderboard_path ].zip(%w[Your\ pack Weekly Points Accuracy]).each do |path, current|
+    [ weekly_pack_path(gameweek: 1), pack_current_leaderboard_path, pack_season_leaderboard_path, pack_season_accuracy_leaderboard_path ].zip(%w[Play Weekly Points Accuracy]).each do |path, current|
       get path
-      assert_select "a[href=?][aria-label=?]", pack_landing_path, "Your pack"
+      assert_select "a[href=?]", pack_landing_path, text: "Play"
       assert_select "a", text: "Weekly"
       assert_select "a[href=?]", pack_season_leaderboard_path, text: "Points"
       assert_select "a[href=?]", pack_season_accuracy_leaderboard_path, text: "Accuracy"
@@ -61,7 +61,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
   test "the weekly pack asks only for your email first, and says what the game is for" do
     get pack_landing_path
-    assert_select "h1", /Pack of the Week/
+    assert_select "h1", "Play"
     assert_select "input[type=email][name=email]"
     assert_select "input[name=first_name]", count: 0
     assert_select "li", /change your mind as often as you like until the FPL deadline/
@@ -274,7 +274,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_current_leaderboard_path
     assert_select "h1", /Gameweek 1/
-    assert_select "a[href=?][aria-label=?]", pack_landing_path, "Your pack"
+    assert_select "a[href=?]", pack_landing_path, text: "Play"
     assert_select "a[href=?][aria-current]", pack_current_leaderboard_path, text: "Weekly"
     assert_select "a[href=?]", pack_season_leaderboard_path, text: "Points"
 

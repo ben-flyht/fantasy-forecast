@@ -1,7 +1,7 @@
 module PacksHelper
   def play_tabs(current:, gameweek: nil)
     [
-      PageHeadingComponent::Horizon.new(label: "Your pack", short_label: "Pack", url: pack_landing_path, current: current == :pack),
+      PageHeadingComponent::Horizon.new(label: "Play", url: pack_landing_path, current: current == :pack),
       PageHeadingComponent::Horizon.new(label: "Weekly", url: weekly_tab_url(gameweek, current), current: current == :weekly),
       PageHeadingComponent::Horizon.new(label: "Points", url: pack_season_leaderboard_path, current: current == :points),
       PageHeadingComponent::Horizon.new(label: "Accuracy", url: pack_season_accuracy_leaderboard_path, current: current == :accuracy)

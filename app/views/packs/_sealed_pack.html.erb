@@ -8,10 +8,7 @@
     <span class="pack-sealed__strip" aria-hidden="true"></span>
     <div class="pack-sealed__face">
       <%= render "shared/logo", size: "1rem" %>
-      <p class="pack-sealed__title">Pack of the Week</p>
-      <% if gameweek %>
-        <p class="pack-sealed__gameweek">Gameweek <%= gameweek.fpl_id %></p>
-      <% end %>
+      <p class="pack-sealed__title"><%= gameweek ? "Gameweek #{gameweek.fpl_id}" : "This week" %></p>
       <p class="pack-sealed__count">10 cards · 5 pairs</p>
     </div>
   </div>

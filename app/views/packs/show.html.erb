@@ -1,11 +1,11 @@
-<% content_for :meta_title, "Pack of the Week, Gameweek #{@gameweek.fpl_id} | Fantasy Forecast" %>
+<% content_for :meta_title, "Play: Gameweek #{@gameweek.fpl_id} | Fantasy Forecast" %>
 <% content_for :meta_robots, "noindex, nofollow" %>
 <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
 
 <div class="mx-auto max-w-xl">
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
-          title: "Pack of the Week: Gameweek #{@gameweek.fpl_id}",
+          title: "Play: Gameweek #{@gameweek.fpl_id}",
           subtitle: "Keep the player you think will score more from each pair. Change your mind as often as you like until the FPL deadline. Call it right all season and you become a Pro, and your picks help shape our player rankings.",
           horizons: play_tabs(current: :pack)) %>
   </div>

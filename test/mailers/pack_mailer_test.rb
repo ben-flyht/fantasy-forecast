@@ -8,7 +8,7 @@ class PackMailerTest < ActionMailer::TestCase
     mail = PackMailer.with(user: user, gameweek: Gameweek.new(fpl_id: 8)).pack_link
 
     assert_equal [ "dee@example.com" ], mail.to
-    assert_match "Pack of the Week", mail.subject
+    assert_match "pack is ready to play", mail.subject
     token = mail.text_part.body.to_s[%r{/play/sign-in/(\S+)}, 1]
     assert_equal user, User.find_by_token_for(:pack_link, token)
   end
