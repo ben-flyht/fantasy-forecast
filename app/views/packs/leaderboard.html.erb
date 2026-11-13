@@ -17,11 +17,16 @@
       <%= @gameweek.is_finished ? "final points" : @gameweek.started? ? "live points" : "ranked once the games start" %>
     </p>
     <%= render "packs/leaderboard_columns" %>
+    <div data-controller="leaderboard-hand">
     <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
       <% @board.rows.each do |row| %>
         <% mine = current_user && row.user == current_user %>
-        <li class="px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-row>
-          <div class="flex items-center gap-4">
+        <li class="px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-row
+            data-pack-row-name="<%= row.place&.ordinalize %> <%= row.user.leaderboard_name %>"
+            data-pack-row-summary="<%= "#{pluralize(row.points.to_i, 'point')} · #{row.accuracy}% accuracy" if @real %>">
+          <%= tag.send(@real ? :button : :div, type: ("button" if @real),
+                class: "flex w-full items-center gap-4 text-left #{'cursor-pointer sm:cursor-default' if @real}",
+                data: ({ action: "leaderboard-hand#open" } if @real), aria: ({ haspopup: "dialog" } if @real)) do %>
             <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place&.ordinalize || "–" %></span>
             <span class="min-w-0 flex-1">
               <span class="block truncate font-bold text-zinc-950"><%= row.user.leaderboard_name %><%= " (you)" if mine %></span>
@@ -30,13 +35,28 @@
               <% end %>
             </span>
             <%= render "packs/leaderboard_scores", points: row.points, accuracy: row.accuracy %>
-          </div>
+            <% if @real %>
+              <svg class="size-4 shrink-0 text-zinc-400 sm:hidden" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd"/></svg>
+            <% end %>
+          <% end %>
           <% if @real %>
             <%= render "packs/leaderboard_hand", hand: row.selection.pack_hand, real: @real %>
           <% end %>
         </li>
       <% end %>
     </ol>
+    <dialog class="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl bg-white p-5 backdrop:bg-zinc-950/60"
+            data-leaderboard-hand-target="dialog" data-action="click->leaderboard-hand#backdrop" data-pack-hand-dialog>
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-extrabold text-zinc-950" data-leaderboard-hand-target="title"></h2>
+          <p class="text-sm text-zinc-500" data-leaderboard-hand-target="summary"></p>
+        </div>
+        <button type="button" class="cursor-pointer text-sm font-bold text-zinc-500 underline underline-offset-2" data-action="leaderboard-hand#close">Close</button>
+      </div>
+      <div class="pack-hand-dialog mt-4" data-leaderboard-hand-target="body"></div>
+    </dialog>
+    </div>
   <% end %>
 
   <p class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">

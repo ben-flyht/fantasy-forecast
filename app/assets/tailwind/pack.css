@@ -526,3 +526,45 @@
     animation: none !important;
   }
 }
+
+.pack-hand-dialog [data-pack-row-hand] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0;
+}
+
+.pack-hand-dialog [data-pack-row-pair] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pack-hand-dialog [data-pack-row-kept],
+.pack-hand-dialog [data-pack-row-discarded] {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+}
+
+.pack-hand-dialog [data-pack-row-kept] > .pack-card,
+.pack-hand-dialog [data-pack-row-kept] > .pack-forfeit,
+.pack-hand-dialog [data-pack-row-discarded] > .pack-card {
+  width: 5rem;
+  flex: none;
+}
+
+.pack-hand-dialog [data-pack-card-points] {
+  order: 1;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.pack-hand-dialog [data-pack-row-discarded] [data-pack-card-points] {
+  order: -1;
+}
