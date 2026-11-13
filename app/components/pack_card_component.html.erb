@@ -1,6 +1,9 @@
 <%= content_tag tag_name, class: classes, style: style, data: data, **link_attributes do %>
   <div class="pack-card__space">
     <div class="pack-card__body">
+      <% 1.upto(8) do |layer| %>
+        <span class="pack-card__edge" style="--layer: <%= layer %>;" aria-hidden="true"></span>
+      <% end %>
       <div class="pack-card__face <%= ink_class %>">
         <div class="pack-card__club">
           <span class="pack-card__foil" aria-hidden="true">

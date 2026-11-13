@@ -8,7 +8,7 @@
   --ink: #fff;
   --ease-spring: cubic-bezier(0.3, 1.35, 0.5, 1);
   --edge-colour: color-mix(in oklab, var(--club, #18181b) 50%, #000);
-  --edge: 0 1.5cqw 0 var(--edge-colour);
+  --thickness: 0.4cqw;
 
   position: relative;
   display: block;
@@ -39,7 +39,7 @@
 }
 
 .pack-card--choice:focus-visible .pack-card__body {
-  box-shadow: var(--edge), 0 0 0 3px #fff, 0 0 0 6px var(--color-zinc-950), 0 22px 40px -10px rgb(0 0 0 / 0.4);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--color-zinc-950), 0 22px 40px -10px rgb(0 0 0 / 0.4);
 }
 
 .pack-card__space {
@@ -52,15 +52,13 @@
   position: absolute;
   inset: 0;
   border-radius: 7cqw;
-  background: var(--edge-colour);
   transform-style: preserve-3d;
   transform:
     translateY(calc(var(--lift) * -2.5cqw))
     rotateX(var(--rx))
     rotateY(var(--ry));
   box-shadow:
-    var(--edge),
-    0 1.4cqw 2px rgb(0 0 0 / 0.18),
+    0 1px 2px rgb(0 0 0 / 0.14),
     0 6px 16px -6px rgb(0 0 0 / 0.3);
   transition:
     transform 0.45s var(--ease-spring),
@@ -69,14 +67,12 @@
 
 .pack-card--choice:hover .pack-card__body {
   box-shadow:
-    var(--edge),
     0 4px 8px rgb(0 0 0 / 0.14),
     0 24px 40px -12px rgb(0 0 0 / 0.45);
 }
 
 .pack-card.is-tilting .pack-card__body {
   box-shadow:
-    calc((0.5 - var(--tx)) * 2cqw) calc((0.5 - var(--ty)) * 2cqw + 1.5cqw) 0 var(--edge-colour),
     calc((0.5 - var(--tx)) * 4cqw) calc((0.5 - var(--ty)) * 4cqw + 2cqw) 4cqw rgb(0 0 0 / 0.18),
     calc((0.5 - var(--tx)) * 10cqw) calc((0.5 - var(--ty)) * 10cqw + 8cqw) 14cqw -4cqw rgb(0 0 0 / 0.4);
 }
@@ -92,7 +88,7 @@
     rotateY(var(--ry))
     scale(0.965);
   box-shadow:
-    0 0.6cqw 0 var(--edge-colour),
+    0 1px 2px rgb(0 0 0 / 0.2),
     0 3px 8px -4px rgb(0 0 0 / 0.3);
 }
 
@@ -286,8 +282,17 @@
   text-transform: uppercase;
 }
 
+.pack-card__edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--edge-colour), #000 calc(var(--layer) * 4%));
+  transform: translateZ(calc(var(--layer) * var(--thickness) * -1));
+  pointer-events: none;
+}
+
 .pack-card__back {
-  transform: rotateY(180deg);
+  transform: translateZ(calc(var(--thickness) * -9)) rotateY(180deg);
   display: grid;
   place-items: center;
   background:
@@ -465,7 +470,7 @@
 }
 
 .pack-choice--kept .pack-card__body {
-  box-shadow: var(--edge), 0 1.4cqw 2px rgb(0 0 0 / 0.18), 0 6px 16px -6px rgb(0 0 0 / 0.3);
+  box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.3);
 }
 
 .pack-reveal .pack-card__body {
