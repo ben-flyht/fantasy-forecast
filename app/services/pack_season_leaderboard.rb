@@ -4,12 +4,12 @@ class PackSeasonLeaderboard
 
   Row = Data.define(:place, :user, :points, :got, :possible, :pairs, :weeks, :best, :real, :average) do
     def accuracy
-      (got * 100).fdiv(possible).round if possible.positive?
+      (got * 100).fdiv(possible).round(1) if possible.positive?
     end
 
     def score = (got + (PRIOR_POINTS * average)).fdiv(possible + PRIOR_POINTS) * 100
 
-    def rating = score.round
+    def rating = score.round(1)
 
     def pro? = rating >= PRO_RATING
   end

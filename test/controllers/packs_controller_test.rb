@@ -336,8 +336,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_season_accuracy_leaderboard_path
     assert_select "a[aria-current=page]", text: "Accuracy"
     rows = css_select("[data-pack-accuracy-row]").map { |row| row.text.squish }
-    assert_match(/\A1st Ana L\. Pro 2 100% \d+\z/, rows.first)
-    assert_match(/\A2nd Bo K\. 1 \d{2}% \d+\z/, rows.second)
+    assert_match(/\A1st Ana L\. Pro 2 100\.0% \d+\.\d\z/, rows.first)
+    assert_match(/\A2nd Bo K\. 1 \d{2}\.\d% \d+\.\d\z/, rows.second)
     assert_select "[data-pack-columns]", /Weeks.*Avg.*Rating/
     assert_select "[data-pack-accuracy-row] [data-pack-pro]", count: 1, text: "Pro"
     assert_select "[data-pack-accuracy-row]:first-child [data-pack-pro]"
