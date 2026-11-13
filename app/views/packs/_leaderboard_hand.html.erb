@@ -12,7 +12,7 @@
         <% end %>
       </div>
       <% discarded.each.with_index(1) do |card, depth| %>
-        <div class="relative opacity-50 grayscale <%= kept ? 'sm:-mt-[100%]' : 'sm:mt-1.5' %>"
+        <div class="relative opacity-50 grayscale <%= kept ? 'sm:-mt-[88%]' : 'sm:mt-1.5' %>"
              style="z-index: <%= 10 - depth %>;" data-pack-row-discarded>
           <%= render PackCardComponent.new(card: card, size: :small, index: index) %>
           <p class="mt-1 text-center text-xs font-medium tabular-nums text-zinc-500" data-pack-card-points>
