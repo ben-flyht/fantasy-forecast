@@ -230,7 +230,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
     get pack_leaderboard_path(gameweek: 1)
-    assert_select "[data-pack-columns]", /Points.*Accuracy/
+    assert_select "[data-pack-columns]", /Accuracy.*Points/
     assert_equal %w[100% 40%], css_select("[data-pack-row] [data-pack-accuracy]").map { |cell| cell.text.strip }
   end
 

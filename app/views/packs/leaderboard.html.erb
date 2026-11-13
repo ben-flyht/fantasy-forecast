@@ -27,7 +27,7 @@
         <li class="group px-4 py-3 <%= 'bg-zinc-100' if mine %> <%= 'cursor-pointer' if @real %> <%= 'hover:bg-zinc-50' if @real && !mine %>" <%= tag.attributes(data: { action: "click->leaderboard-hand#open" }) if @real %> data-pack-row
             data-pack-row-name="<%= row.place&.ordinalize %> <%= row.user.leaderboard_name %>"
             data-pack-row-summary="<%= "#{pluralize(row.points.to_i, 'point')} · #{row.accuracy}% accuracy" if @real %>">
-          <div class="flex w-full items-center gap-4">
+          <div class="flex w-full items-center gap-3">
             <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place&.ordinalize || "–" %></span>
             <span class="min-w-0 flex-1">
               <%= render "packs/manager_name", user: row.user, mine: mine, pro: pros.include?(row.user) %>
