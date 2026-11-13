@@ -5,8 +5,7 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Leaderboard: Gameweek #{@gameweek.fpl_id}",
-          subtitle: "Everyone opened their own pack. Real FPL points for each five, with the captain counting twice.",
-          horizons: pack_sections(current: :play)) %>
+          subtitle: "Everyone opened their own pack. Real FPL points for each five, with the captain counting twice.") %>
   </div>
 
   <% if @board.rows.empty? %>
@@ -19,16 +18,21 @@
     <ol class="divide-y divide-zinc-200 rounded-2xl border border-zinc-200">
       <% @board.rows.each do |row| %>
         <% mine = current_user && row.user == current_user %>
-        <li class="flex items-center gap-4 px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-row>
-          <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place&.ordinalize || "–" %></span>
-          <span class="min-w-0 flex-1">
-            <span class="block truncate font-bold text-zinc-950"><%= row.user.leaderboard_name %><%= " (you)" if mine %></span>
-            <% if (captain = row.selection.pack_hand.captain) %>
-              <span class="block truncate text-xs text-zinc-500">Captain <%= captain.player.display_name %></span>
+        <li class="px-4 py-3 <%= 'bg-zinc-100' if mine %>" data-pack-row>
+          <div class="flex items-center gap-4">
+            <span class="w-10 text-right text-lg font-extrabold tabular-nums text-zinc-950"><%= row.place&.ordinalize || "–" %></span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-bold text-zinc-950"><%= row.user.leaderboard_name %><%= " (you)" if mine %></span>
+              <% if (captain = row.selection.pack_hand.captain) %>
+                <span class="block truncate text-xs text-zinc-500">Captain <%= captain.player.display_name %></span>
+              <% end %>
+            </span>
+            <% if row.points %>
+              <span class="text-xl font-extrabold tabular-nums text-zinc-950"><%= row.points %></span>
             <% end %>
-          </span>
-          <% if row.points %>
-            <span class="text-xl font-extrabold tabular-nums text-zinc-950"><%= row.points %></span>
+          </div>
+          <% if @real %>
+            <%= render "packs/leaderboard_hand", hand: row.selection.pack_hand, real: @real %>
           <% end %>
         </li>
       <% end %>
@@ -37,6 +41,5 @@
 
   <p class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
     <%= link_to "Play this week's pack", pack_landing_path, class: "text-zinc-950 underline underline-offset-2" %>
-    <%= link_to "Practice", practice_pack_path, class: "text-zinc-500 underline underline-offset-2" %>
   </p>
 </div>

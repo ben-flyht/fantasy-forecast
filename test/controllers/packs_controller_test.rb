@@ -36,7 +36,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "Play is hidden from the public until someone has been sent to /pack" do
+  test "Play is hidden from the public until someone has been sent to /play" do
     get root_path
     assert_select "a[href=?]", pack_landing_path, count: 0
 
@@ -79,13 +79,9 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=first_name]"
   end
 
-  test "picking the weekly pack needs you signed in, practice does not" do
+  test "picking the weekly pack needs you signed in" do
     get weekly_pack_path(gameweek: 1)
     assert_redirected_to pack_landing_path
-
-    get pack_path(seed: 3)
-    assert_select "h2", /Pair 1 of 5/
-    assert_select "nav a, [role=tablist] a, a", text: "Practice"
   end
 
   test "every user gets their own pack, and every pick is final as they make it" do
@@ -187,6 +183,25 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-verdict]", /live/
   end
 
+  test "once the games start, the leaderboard shows each five above the cards they let go, with points on every card" do
+    sign_in
+    get weekly_pack_path(gameweek: 1)
+    pick_all("abxaa")
+
+    get pack_leaderboard_path(gameweek: 1)
+    assert_select "[data-pack-row-hand]", count: 0
+
+    score_everyone(3)
+    @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
+
+    get pack_leaderboard_path(gameweek: 1)
+    assert_select "[data-pack-row-hand] [data-pack-row-kept] .pack-card", count: 4
+    assert_select "[data-pack-row-hand] [data-pack-row-kept] [data-pack-forfeit]", count: 1
+    assert_select "[data-pack-row-hand] [data-pack-row-discarded] .pack-card", count: 6
+    assert_select "[data-pack-row-discarded] [data-pack-card-points]", text: "3 pts", count: 6
+    assert_select "[data-pack-row-kept] [data-pack-card-points]", text: /\A\s*(3|6) pts\s*\z/, count: 4
+  end
+
   test "a finished pack can be shared by its own address and opened by anyone, read-only" do
     user = sign_in
     get weekly_pack_path(gameweek: 1)
@@ -210,32 +225,13 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "practice never counts, and points you to the real pack" do
-    get pack_path(seed: 3, hand: "aaaaa")
-
-    assert_select "[data-pack-practice-done]", /Pack of the Week/
-    assert_select "[data-pack-verdict]", count: 0
-  end
-
-  test "practice packs need no email, and you pick up where you left off" do
-    get practice_pack_path
-    follow_redirect!
-    seed = request.path[%r{/pack/(\d+)}, 1]
-
-    get pack_path(seed: seed, hand: "ab")
-    get practice_pack_path
-    assert_redirected_to pack_path(seed: seed, hand: "ab")
-    follow_redirect!
-    assert_select "a[href=?]", new_pack_path, text: "Start a new practice pack"
-
-    get new_pack_path
-    assert_redirected_to %r{/pack/\d+\z}
-  end
-
   test "each pair runs on a ten-second clock that forfeits it" do
-    get pack_path(seed: 3, hand: "ab")
+    sign_in
+    get weekly_pack_path(gameweek: 1)
+    pick_all("ab")
+    get weekly_pack_path(gameweek: 1)
 
-    assert_select "[data-controller=pack-pick][data-pack-pick-forfeit-value=?]", pack_path(seed: 3, hand: "abx")
+    assert_select "[data-controller=pack-pick][data-pack-pick-forfeit-value=?]", weekly_pack_picks_path(gameweek: 1, keep: "x")
     assert_select "[data-pack-pick-target=clock]", "10"
   end
 
@@ -249,9 +245,16 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-stage=scored] .pack-card", count: 4
   end
 
-  test "a hand longer than the pack is not a pack page" do
-    get "/pack/3/aaaaaa"
+  test "the game lives at /play, and old /pack links still land there" do
+    assert_equal "/play", pack_landing_path
 
-    assert_response :not_found
+    get "/pack"
+    assert_redirected_to "/play"
+
+    get "/pack/gw1/leaderboard"
+    assert_redirected_to "/play/gw1/leaderboard"
+
+    get "/pack/sign-in/abc--def.ghi"
+    assert_redirected_to "/play/sign-in/abc--def.ghi"
   end
 end

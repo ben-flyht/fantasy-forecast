@@ -5,14 +5,12 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Pack of the Week",
-          subtitle: "Every gameweek you get your own pack of five pairs. Keep one player from each pair and climb the leaderboard on real FPL points.",
-          horizons: pack_sections(current: :play)) %>
+          subtitle: "Every gameweek you get your own pack of five pairs. Keep one player from each pair and climb the leaderboard on real FPL points.") %>
   </div>
 
   <ul class="mb-6 space-y-2 text-sm/6 text-zinc-700">
     <li><strong class="text-zinc-950">One pack a week, one go.</strong> Every pick is final, and your five are your team for the gameweek.</li>
     <li><strong class="text-zinc-950">Scored for real.</strong> Come back while the games are on and we'll show your points and your place on the leaderboard as they happen.</li>
-    <li><strong class="text-zinc-950">Practice is free.</strong> Open as many practice packs as you like, no email needed.</li>
   </ul>
 
   <%= form_with url: pack_sign_ins_path, class: "rounded-2xl border border-zinc-200 p-6", data: { turbo: false } do |form| %>
@@ -44,8 +42,4 @@
       We email you a link that opens your pack and keeps you signed in on that device. No password. Your email is only used for your pack and is never shown.
     </p>
   <% end %>
-
-  <p class="mt-8 text-xs">
-    <%= link_to "Or play a practice pack, no email needed", practice_pack_path, class: "font-medium text-zinc-500 underline underline-offset-2" %>
-  </p>
 </div>

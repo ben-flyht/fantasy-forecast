@@ -24,6 +24,10 @@ class PackHand
 
   def kept = picks.compact
 
+  def discards
+    pack.pairs.zip(keeps).first(keeps.size).map { |pair, keep| pair.cards.reject.with_index { |_, choice| choice == keep } }
+  end
+
   def complete? = keeps.size == pack.size
 
   def current_pair = pack.pairs[keeps.size]

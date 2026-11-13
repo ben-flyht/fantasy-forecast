@@ -6,7 +6,7 @@ const REVEAL_MS = 1750
 
 export default class extends Controller {
   static targets = ["card", "clock", "bar"]
-  static values = { forfeit: String, method: String, seconds: { type: Number, default: 10 } }
+  static values = { forfeit: String, seconds: { type: Number, default: 10 } }
 
   connect() {
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -55,8 +55,6 @@ export default class extends Controller {
   }
 
   go(url) {
-    if (this.methodValue !== "post") return window.Turbo.visit(url)
-
     const form = document.createElement("form")
     form.method = "post"
     form.action = url

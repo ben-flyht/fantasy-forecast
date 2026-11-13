@@ -2,6 +2,8 @@ require "application_system_test_case"
 
 class PackTest < ApplicationSystemTestCase
   setup do
+    Selection.destroy_all
+    User.destroy_all
     Statistic.destroy_all
     Forecast.destroy_all
     Player.destroy_all
@@ -22,8 +24,13 @@ class PackTest < ApplicationSystemTestCase
     end
   end
 
+  def sign_in
+    user = User.create!(email: "sys@example.com", first_name: "Sys", last_name: "Tem")
+    visit pack_sign_in_path(token: user.generate_token_for(:pack_link))
+  end
+
   test "a pack is picked and scored by tapping cards" do
-    visit pack_path(seed: 5)
+    sign_in
 
     5.times do |pair|
       assert_text(/Pair #{pair + 1} of 5/i)
@@ -32,15 +39,15 @@ class PackTest < ApplicationSystemTestCase
     end
 
     assert_selector "[data-pack-stage=scored]"
-    assert_selector "[data-pack-practice-done]"
+    assert_selector "[data-pack-locked]"
   end
 
   test "waiting out the ten seconds forfeits the pair and moves on" do
-    visit pack_path(seed: 5)
+    sign_in
     assert_text(/Pair 1 of 5/i)
 
     assert_text(/Pair 2 of 5/i, wait: 14)
-    assert_current_path pack_path(seed: 5, hand: "x")
+    assert_current_path weekly_pack_path(gameweek: 1)
     assert_selector "[data-pack-forfeit]", text: /Time's up/i
   end
 end

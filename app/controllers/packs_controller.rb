@@ -30,31 +30,7 @@ class PacksController < ApplicationController
   def leaderboard
     @gameweek = Gameweek.find_by!(fpl_id: params[:gameweek])
     @board = PackLeaderboard.new(@gameweek)
-  end
-
-  def practice
-    resume = session[:practice]
-    if resume.present?
-      return redirect_to(pack_path(seed: resume["seed"], hand: resume["hand"].presence))
-    end
-
-    start
-  end
-
-  def start
-    session.delete(:practice)
-    redirect_to pack_path(seed: rand(PackDraw::SEEDS))
-  end
-
-  def show
-    @gameweek = Gameweek.next_gameweek
-    @seed = params[:seed].to_i
-    @pack = PackDraw.call(gameweek: @gameweek, seed: @seed)
-    return render(:empty) unless @pack
-
-    hand = PackHand.parse(@pack, params[:hand])
-    session[:practice] = hand.complete? ? nil : { "seed" => @seed, "hand" => hand.code }
-    show_hand(hand)
+    @real = PackRealPoints.new(@gameweek) if @gameweek.started?
   end
 
   private
@@ -80,15 +56,10 @@ class PacksController < ApplicationController
     render :show
   end
 
-  def weekly? = @selection.present?
-  helper_method :weekly?
-
   def shared? = @shared.present?
   helper_method :shared?
 
   def pick_path(hand, choice)
-    return pack_path(seed: @seed, hand: hand.keeping(choice).code) unless weekly?
-
     weekly_pack_picks_path(gameweek: @gameweek.fpl_id, keep: choice ? PackHand::LETTERS[choice] : PackHand::FORFEIT)
   end
   helper_method :pick_path
