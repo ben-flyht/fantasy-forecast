@@ -15,6 +15,7 @@ class PacksController < ApplicationController
     @selection = Selection.deal(current_user, @gameweek)
     return unopened unless @selection
 
+    @dealing = @selection.picks.empty? && !@gameweek.started?
     play_selection
   end
 
@@ -28,9 +29,10 @@ class PacksController < ApplicationController
   end
 
   def leaderboard
-    @gameweek = Gameweek.find_by!(fpl_id: params[:gameweek])
     latest = Gameweek.latest_started
-    return redirect_to(pack_leaderboard_path(gameweek: latest.fpl_id)) if latest && !@gameweek.started?
+    @gameweek = params[:gameweek] ? Gameweek.find_by!(fpl_id: params[:gameweek]) : latest || Gameweek.next_gameweek
+    return render(:empty) unless @gameweek
+    return redirect_to(pack_current_leaderboard_path) if latest && !@gameweek.started?
 
     @board = PackLeaderboard.new(@gameweek)
     @real = PackRealPoints.new(@gameweek) if @gameweek.started?
@@ -66,11 +68,6 @@ class PacksController < ApplicationController
 
   def shared? = @shared.present?
   helper_method :shared?
-
-  def pick_path(hand, choice)
-    weekly_pack_picks_path(gameweek: @gameweek.fpl_id, keep: choice ? PackHand::LETTERS[choice] : PackHand::FORFEIT)
-  end
-  helper_method :pick_path
 
   def share_path = pack_selection_url(@selection)
   helper_method :share_path

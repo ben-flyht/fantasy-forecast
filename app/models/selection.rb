@@ -29,10 +29,12 @@ class Selection < ApplicationRecord
 
   def complete? = pack_hand&.complete?
 
-  def pick(choice)
-    return false if complete? || !PackHand::CHOICES.include?(choice)
+  def choose(pair, choice)
+    return false unless pair&.between?(0, pack.size - 1) && PackHand::LETTERS.include?(choice)
 
-    self.picks += choice
+    code = picks.ljust(pack.size, PackHand::FORFEIT)
+    code[pair] = choice
+    self.picks = code
     save
   end
 

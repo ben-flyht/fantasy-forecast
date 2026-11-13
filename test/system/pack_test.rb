@@ -29,25 +29,19 @@ class PackTest < ApplicationSystemTestCase
     visit pack_sign_in_path(token: user.generate_token_for(:pack_link))
   end
 
-  test "a pack is picked and scored by tapping cards" do
+  test "the whole pack is dealt, every pair is picked by tapping, and a pick can be changed" do
     sign_in
+    assert_selector "[data-pack-pair]", count: 5
+    assert_text "0 of 5 picked"
 
-    5.times do |pair|
-      assert_text(/Pair #{pair + 1} of 5/i)
-      assert_selector "[data-pack-revealed]"
-      first(".pack-card--choice").click
+    all("[data-pack-pair]").each_with_index do |pair, index|
+      pair.all(".pack-card--choice").first.click
+      assert_text(index == 4 ? "That's your five" : "#{index + 1} of 5 picked")
     end
+    assert_selector "[data-pack-choice=kept]", count: 5
 
-    assert_selector "[data-pack-stage=scored]"
-    assert_selector "[data-pack-locked]"
-  end
-
-  test "waiting out the ten seconds forfeits the pair and moves on" do
-    sign_in
-    assert_text(/Pair 1 of 5/i)
-
-    assert_text(/Pair 2 of 5/i, wait: 14)
-    assert_current_path weekly_pack_path(gameweek: 1)
-    assert_selector "[data-pack-forfeit]", text: /Time's up/i
+    first("[data-pack-pair]").all(".pack-card--choice").last.click
+    assert_selector "[data-pack-pair]:first-child [data-pack-choice=kept]:last-child"
+    assert_equal "baaaa", Selection.last.reload.picks
   end
 end

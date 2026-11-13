@@ -9,6 +9,8 @@
           horizons: leaderboard_tabs(gameweek: @gameweek)) %>
   </div>
 
+  <%= render "packs/leaderboard_steps", gameweek: @gameweek %>
+
   <% if @board.rows.empty? %>
     <div class="rounded-xl border border-zinc-200 px-6 py-10 text-center text-sm text-zinc-500">Nobody has locked in a pack yet.</div>
   <% else %>

@@ -56,8 +56,7 @@ class PackCardComponent < ViewComponent::Base
   def data
     actions = "pointermove->pack-card#tilt pointerleave->pack-card#rest pointerdown->pack-card#press " \
               "pointerup->pack-card#release pointercancel->pack-card#rest"
-    { controller: "pack-card", pack_pick_target: ("card" if href), action: href ? "#{actions} click->pack-pick#keep" : actions,
-      turbo_method: @method, turbo_prefetch: (false if @method) }
+    { controller: "pack-card", action: actions, turbo_method: @method, turbo_prefetch: (false if @method) }
   end
 
   def link_attributes

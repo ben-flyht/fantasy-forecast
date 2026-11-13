@@ -35,11 +35,13 @@ Rails.application.routes.draw do
   post "play/sign-in", to: "pack_sign_ins#create", as: :pack_sign_ins
   get "play/sign-in/:token", to: "pack_sign_ins#show", as: :pack_sign_in, constraints: { token: %r{[^/]+} }
   delete "play/sign-out", to: "pack_sign_ins#destroy", as: :pack_sign_out
-  get "play/gameweeks/:gameweek/leaderboard", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
   post "play/gameweeks/:gameweek/picks", to: "pack_picks#create", as: :weekly_pack_picks, constraints: { gameweek: /\d+/ }
   get "play/gameweeks/:gameweek", to: "packs#weekly", as: :weekly_pack, constraints: { gameweek: /\d+/ }
-  get "play/leaderboard", to: "packs#season", as: :pack_season_leaderboard
+  get "play/leaderboard/gameweeks", to: "packs#leaderboard", as: :pack_current_leaderboard
+  get "play/leaderboard/gameweeks/:gameweek", to: "packs#leaderboard", as: :pack_leaderboard, constraints: { gameweek: /\d+/ }
+  get "play/leaderboard/seasons", to: "packs#season", as: :pack_season_leaderboard
   get "play/selections/:id", to: "packs#selection", as: :pack_selection, constraints: { id: /\d+/ }
+  get "pack/gw:gameweek/leaderboard", to: redirect("/play/leaderboard/gameweeks/%{gameweek}"), constraints: { gameweek: /\d+/ }
   get "pack(/*rest)", to: redirect { |params, _| [ "/play", params[:rest]&.sub(/\Agw(\d+)/, 'gameweeks/\1') ].compact.join("/") },
                      format: false
 

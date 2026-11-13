@@ -27,7 +27,13 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
   end
 
   def pick_all(code)
-    code.each_char { |choice| post weekly_pack_picks_path(gameweek: 1), params: { keep: choice } }
+    code.each_char.with_index do |choice, pair|
+      post weekly_pack_picks_path(gameweek: 1), params: { pair: pair, keep: choice } unless choice == PackHand::FORFEIT
+    end
+  end
+
+  def choose_all(selection, code)
+    code.each_char.with_index { |choice, pair| selection.choose(pair, choice) unless choice == PackHand::FORFEIT }
   end
 
   def score_everyone(points)
@@ -47,7 +53,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=email][name=email]"
     assert_select "input[name=first_name]"
     assert_select "input[name=last_name]"
-    assert_select "li", /One pack a week, one go/
+    assert_select "li", /change your mind as often as you like until the FPL deadline/
   end
 
   test "joining with an email and a name sends a link that signs you in" do
@@ -80,18 +86,25 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to pack_landing_path
   end
 
-  test "every user gets their own pack, and every pick is final as they make it" do
+  test "every user gets their own whole pack at once, and can change any pick" do
     ana = sign_in
     get weekly_pack_path(gameweek: 1)
-    assert_select "h2", /Pair 1 of 5/
-    assert_select "[data-pack-rules]", /Every pick is final/
+    assert_select "[data-pack-pair]", count: 5
+    assert_select ".pack-card--choice", count: 10
+    assert_select "[data-pack-status]", /0 of 5 picked/
+    assert_select "a.pack-card--choice[data-turbo-method=post][href=?]", weekly_pack_picks_path(gameweek: 1, pair: 2, keep: "b")
 
-    post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" }
+    post weekly_pack_picks_path(gameweek: 1), params: { pair: 0, keep: "a" }
     assert_redirected_to weekly_pack_path(gameweek: 1)
+    assert_response :see_other
     follow_redirect!
-    assert_select "h2", /Pair 2 of 5/
-    assert_select "a.pack-card--choice[data-turbo-method=post][href=?]", weekly_pack_picks_path(gameweek: 1, keep: "b")
-    assert_equal "a", ana.selections.last.picks
+    assert_select "[data-pack-status]", /1 of 5 picked/
+    assert_select "[data-pack-choice=kept]", count: 1
+    assert_select "[data-pack-choice=passed]", count: 1
+    assert_equal "axxxx", ana.selections.last.picks
+
+    post weekly_pack_picks_path(gameweek: 1), params: { pair: 0, keep: "b" }
+    assert_equal "bxxxx", ana.selections.last.picks
 
     delete pack_sign_out_path
     bo = sign_in(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
@@ -99,16 +112,35 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal ana.selections.last.offered, bo.selections.last.offered
   end
 
-  test "once five are picked, that is your one pack for the week" do
+  test "a full five can still be changed until the deadline, and not a second after" do
     user = sign_in
     get weekly_pack_path(gameweek: 1)
     pick_all("abaab")
 
-    assert_no_difference(-> { user.selections.last.picks.size }) { post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" } }
     get weekly_pack_path(gameweek: 1)
-    assert_select "[data-pack-locked]", /your one pack for Gameweek 1/
+    assert_select "[data-pack-status]", /That's your five/
     assert_select "[aria-label='Share my pack']"
-    assert_equal "abaab", user.selections.last.picks
+
+    post weekly_pack_picks_path(gameweek: 1), params: { pair: 1, keep: "a" }
+    assert_equal "aaaab", user.selections.last.picks
+
+    @gameweek.update!(start_time: 1.second.ago)
+    post weekly_pack_picks_path(gameweek: 1), params: { pair: 1, keep: "b" }
+    assert_equal "aaaab", user.selections.last.picks
+
+    follow_redirect!
+    assert_select "[data-pack-stage=scored]"
+    assert_select ".pack-card--choice", count: 0
+  end
+
+  test "a pick naming no pair, or a pair that is not there, changes nothing" do
+    user = sign_in
+    get weekly_pack_path(gameweek: 1)
+
+    [ { keep: "a" }, { pair: 5, keep: "a" }, { pair: "one", keep: "a" }, { pair: 0, keep: "x" } ].each do |params|
+      post weekly_pack_picks_path(gameweek: 1), params: params
+    end
+    assert_equal "", user.selections.last.picks
   end
 
   test "after the deadline the pack is closed to anyone who has not started it" do
@@ -117,17 +149,18 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get weekly_pack_path(gameweek: 1)
     assert_select "h2", /has closed/
-    assert_no_difference(-> { Selection.count }) { post weekly_pack_picks_path(gameweek: 1), params: { keep: "a" } }
+    assert_no_difference(-> { Selection.count }) { post weekly_pack_picks_path(gameweek: 1), params: { pair: 0, keep: "a" } }
   end
 
-  test "a pack left half-picked at the deadline counts the rest as forfeited" do
+  test "a pair left unpicked at the deadline is shown as no pick and scores nothing" do
     sign_in
     get weekly_pack_path(gameweek: 1)
     pick_all("ab")
     @gameweek.update!(start_time: 1.minute.ago)
 
     get weekly_pack_path(gameweek: 1)
-    assert_select "[data-pack-stage=scored] [data-pack-forfeit]", count: 3
+    assert_select "[data-pack-stage=scored] [data-pack-forfeit]", text: /No pick/, count: 3
+    assert_select "[data-pack-stage=scored] .pack-card", count: 2
   end
 
   test "next week's pack does not open until every game this gameweek has been played" do
@@ -159,7 +192,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get weekly_pack_path(gameweek: 1)
     pick_all("aaaaa")
     bo = User.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
-    Selection.deal(bo, @gameweek).then { |selection| "aaxxx".each_char { |choice| selection.pick(choice) } }
+    choose_all(Selection.deal(bo, @gameweek), "aaxxx")
 
     score_everyone(3)
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
@@ -180,7 +213,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get weekly_pack_path(gameweek: 1)
     pick_all("aaaaa")
     bo = User.create!(email: "bo@example.com", first_name: "Bo", last_name: "Kim")
-    Selection.deal(bo, @gameweek).then { |selection| "aaxxx".each_char { |choice| selection.pick(choice) } }
+    choose_all(Selection.deal(bo, @gameweek), "aaxxx")
     score_everyone(3)
     @gameweek.update!(start_time: 1.hour.ago, is_next: false, is_current: true)
 
@@ -189,16 +222,36 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[100% 40%], css_select("[data-pack-row] [data-pack-accuracy]").map { |cell| cell.text.strip }
   end
 
-  test "last week's leaderboard stays up until this week's deadline passes" do
+  test "the gameweek leaderboard index shows last week's board until this week's deadline passes" do
     @gameweek.update!(start_time: 2.days.ago, is_next: false, is_current: true, is_finished: true)
-    Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 3.days.from_now, is_next: true)
+    second = Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 3.days.from_now, is_next: true)
+
+    get pack_current_leaderboard_path
+    assert_select "h1", /Gameweek 1/
+    assert_select "a[href=?]", pack_current_leaderboard_path, text: "This week"
+    assert_select "a[href=?]", pack_season_leaderboard_path, text: "Season"
 
     get pack_leaderboard_path(gameweek: 2)
-    assert_redirected_to pack_leaderboard_path(gameweek: 1)
+    assert_redirected_to pack_current_leaderboard_path
 
-    follow_redirect!
-    assert_select "a[href=?]", pack_leaderboard_path(gameweek: 1), text: "This week"
-    assert_select "a[href=?]", pack_season_leaderboard_path, text: "Season"
+    second.update!(start_time: 1.second.ago)
+    get pack_current_leaderboard_path
+    assert_select "h1", /Gameweek 2/
+  end
+
+  test "a gameweek leaderboard steps back and forward through the gameweeks that have started" do
+    @gameweek.update!(start_time: 9.days.ago, is_next: false, is_finished: true)
+    Gameweek.create!(fpl_id: 2, name: "Gameweek 2", start_time: 2.days.ago, is_current: true)
+    Gameweek.create!(fpl_id: 3, name: "Gameweek 3", start_time: 5.days.from_now, is_next: true)
+
+    get pack_leaderboard_path(gameweek: 1)
+    assert_select "[data-pack-steps] a", count: 1
+    assert_select "[data-pack-steps] a[href=?]", pack_leaderboard_path(gameweek: 2), text: /Gameweek 2/
+    assert_select "a[href=?]", pack_leaderboard_path(gameweek: 1), text: "Gameweek 1"
+
+    get pack_current_leaderboard_path
+    assert_select "[data-pack-steps] a", count: 1
+    assert_select "[data-pack-steps] a[href=?]", pack_leaderboard_path(gameweek: 1), text: /Gameweek 1/
   end
 
   test "the season leaderboard ranks on each player's best single gameweek" do
@@ -251,7 +304,6 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-pack-stage=scored]"
     assert_select "h2", /Their five/
     assert_select ".pack-card--choice", count: 0
-    assert_select "[data-pack-locked]", count: 0
   end
 
   test "a half-picked pack cannot be shared" do
@@ -263,24 +315,14 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "each pair runs on a ten-second clock that forfeits it" do
+  test "a pack is dealt out the first time it is opened, and stays put once picking starts" do
     sign_in
     get weekly_pack_path(gameweek: 1)
-    pick_all("ab")
-    get weekly_pack_path(gameweek: 1)
+    assert_select ".pack-deal"
 
-    assert_select "[data-controller=pack-pick][data-pack-pick-forfeit-value=?]", weekly_pack_picks_path(gameweek: 1, keep: "x")
-    assert_select "[data-pack-pick-target=clock]", "10"
-  end
-
-  test "a forfeited pair shows as time's up and scores nothing" do
-    sign_in
+    pick_all("a")
     get weekly_pack_path(gameweek: 1)
-    pick_all("axaaa")
-
-    get weekly_pack_path(gameweek: 1)
-    assert_select "[data-pack-stage=scored] [data-pack-forfeit]", text: /Time's up/
-    assert_select "[data-pack-stage=scored] .pack-card", count: 4
+    assert_select ".pack-deal", count: 0
   end
 
   test "the game lives at /play, and old /pack links still land there" do
@@ -289,13 +331,15 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get "/pack"
     assert_redirected_to "/play"
 
-    assert_equal "/play/gameweeks/1/leaderboard", pack_leaderboard_path(gameweek: 1)
+    assert_equal "/play/leaderboard/gameweeks/1", pack_leaderboard_path(gameweek: 1)
+    assert_equal "/play/leaderboard/gameweeks", pack_current_leaderboard_path
+    assert_equal "/play/leaderboard/seasons", pack_season_leaderboard_path
 
     get "/pack/gw1"
     assert_redirected_to "/play/gameweeks/1"
 
     get "/pack/gw1/leaderboard"
-    assert_redirected_to "/play/gameweeks/1/leaderboard"
+    assert_redirected_to "/play/leaderboard/gameweeks/1"
 
     get "/pack/sign-in/abc--def.ghi"
     assert_redirected_to "/play/sign-in/abc--def.ghi"
