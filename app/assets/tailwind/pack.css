@@ -7,6 +7,7 @@
   --frame: #0a0a0b;
   --ink: #fff;
   --ease-spring: cubic-bezier(0.3, 1.35, 0.5, 1);
+  --edge: 0 0.7cqw 0 #d4d4d8, 0 1.4cqw 0 #a1a1aa;
 
   position: relative;
   display: block;
@@ -37,7 +38,7 @@
 }
 
 .pack-card--choice:focus-visible .pack-card__body {
-  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--color-zinc-950), 0 22px 40px -10px rgb(0 0 0 / 0.4);
+  box-shadow: var(--edge), 0 0 0 3px #fff, 0 0 0 6px var(--color-zinc-950), 0 22px 40px -10px rgb(0 0 0 / 0.4);
 }
 
 .pack-card__space {
@@ -56,7 +57,8 @@
     rotateX(var(--rx))
     rotateY(var(--ry));
   box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.14),
+    var(--edge),
+    0 1.4cqw 2px rgb(0 0 0 / 0.18),
     0 6px 16px -6px rgb(0 0 0 / 0.3);
   transition:
     transform 0.45s var(--ease-spring),
@@ -65,12 +67,15 @@
 
 .pack-card--choice:hover .pack-card__body {
   box-shadow:
+    var(--edge),
     0 4px 8px rgb(0 0 0 / 0.14),
     0 24px 40px -12px rgb(0 0 0 / 0.45);
 }
 
 .pack-card.is-tilting .pack-card__body {
   box-shadow:
+    calc((0.5 - var(--tx)) * 1.4cqw) calc((0.5 - var(--ty)) * 1.4cqw + 0.7cqw) 0 #d4d4d8,
+    calc((0.5 - var(--tx)) * 2.8cqw) calc((0.5 - var(--ty)) * 2.8cqw + 1.4cqw) 0 #a1a1aa,
     calc((0.5 - var(--tx)) * 4cqw) calc((0.5 - var(--ty)) * 4cqw + 2cqw) 4cqw rgb(0 0 0 / 0.18),
     calc((0.5 - var(--tx)) * 10cqw) calc((0.5 - var(--ty)) * 10cqw + 8cqw) 14cqw -4cqw rgb(0 0 0 / 0.4);
 }
@@ -86,7 +91,8 @@
     rotateY(var(--ry))
     scale(0.965);
   box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.2),
+    0 0.4cqw 0 #d4d4d8,
+    0 0.8cqw 0 #a1a1aa,
     0 3px 8px -4px rgb(0 0 0 / 0.3);
 }
 
@@ -103,6 +109,19 @@
 .pack-card__face {
   background: var(--frame);
   color: var(--ink);
+}
+
+.pack-card__face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0.6cqw 0 rgb(255 255 255 / 0.28),
+    inset 0 -0.6cqw 0 rgb(0 0 0 / 0.22),
+    inset 0 0 0 0.3cqw rgb(0 0 0 / 0.12);
 }
 
 .pack-card__face--light {
@@ -446,7 +465,7 @@
 }
 
 .pack-choice--kept .pack-card__body {
-  box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.3);
+  box-shadow: var(--edge), 0 1.4cqw 2px rgb(0 0 0 / 0.18), 0 6px 16px -6px rgb(0 0 0 / 0.3);
 }
 
 .pack-reveal .pack-card__body {
