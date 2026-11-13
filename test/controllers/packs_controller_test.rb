@@ -47,6 +47,17 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", pack_landing_path, text: "Play"
   end
 
+  test "every Play page carries the same three tabs: your pack, the weekly board and the season" do
+    sign_in
+    [ weekly_pack_path(gameweek: 1), pack_current_leaderboard_path, pack_season_leaderboard_path ].zip(%w[Your\ pack Weekly Season]).each do |path, current|
+      get path
+      assert_select "a[href=?]", pack_landing_path, text: "Your pack"
+      assert_select "a", text: "Weekly"
+      assert_select "a[href=?]", pack_season_leaderboard_path, text: "Season"
+      assert_select "a[aria-current=page]", text: current
+    end
+  end
+
   test "the weekly pack asks who you are first" do
     get pack_landing_path
     assert_select "h1", /Pack of the Week/
@@ -228,7 +239,8 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
 
     get pack_current_leaderboard_path
     assert_select "h1", /Gameweek 1/
-    assert_select "a[href=?]", pack_current_leaderboard_path, text: "This week"
+    assert_select "a[href=?]", pack_landing_path, text: "Your pack"
+    assert_select "a[href=?][aria-current]", pack_current_leaderboard_path, text: "Weekly"
     assert_select "a[href=?]", pack_season_leaderboard_path, text: "Season"
 
     get pack_leaderboard_path(gameweek: 2)
@@ -251,7 +263,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     get pack_leaderboard_path(gameweek: 1)
     assert_select "[data-pack-steps] a", count: 1
     assert_select "[data-pack-steps] a[href=?]", pack_leaderboard_path(gameweek: 3), text: /Gameweek 3/
-    assert_select "a[href=?]", pack_leaderboard_path(gameweek: 1), text: "Gameweek 1"
+    assert_select "a[href=?]", pack_leaderboard_path(gameweek: 1), text: "Weekly"
 
     get pack_current_leaderboard_path
     assert_select "[data-pack-steps] a", count: 1
@@ -275,7 +287,7 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     rows = css_select("[data-pack-season-row]").map { |row| row.text.squish }
     assert_match(/1st Ana L\. 2 weeks played (25|30) 100%/, rows.first)
     assert_match(/2nd Bo K\. 1 week played 0 0%/, rows.second)
-    assert_select "a[aria-current], a", text: "Season"
+    assert_select "a[aria-current]", text: "Season"
     assert_select "[data-pack-season-row] button[data-pack-points]", count: 2
     assert_match(/Best week, Gameweek 2/, css_select("[data-pack-season-row]").first["data-pack-row-summary"])
   end

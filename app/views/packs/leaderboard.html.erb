@@ -6,7 +6,7 @@
     <%= render PageHeadingComponent.new(
           title: "Leaderboard: Gameweek #{@gameweek.fpl_id}",
           subtitle: "Everyone opened their own pack. Real FPL points for each five, with the captain counting twice.",
-          horizons: leaderboard_tabs(gameweek: @gameweek)) %>
+          horizons: play_tabs(current: :weekly, gameweek: @gameweek)) %>
   </div>
 
   <%= render "packs/leaderboard_steps", gameweek: @gameweek %>

@@ -6,7 +6,7 @@
     <%= render PageHeadingComponent.new(
           title: "Leaderboard: Season",
           subtitle: "Points are your best single gameweek this season. Accuracy is how often you kept the better card of a pair, across every pack.",
-          horizons: (leaderboard_tabs(gameweek: @gameweek, season: true) if @gameweek)) %>
+          horizons: play_tabs(current: :season)) %>
   </div>
 
   <% if @board.rows.empty? %>

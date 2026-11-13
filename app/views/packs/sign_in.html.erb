@@ -5,7 +5,8 @@
   <div class="mb-6">
     <%= render PageHeadingComponent.new(
           title: "Pack of the Week",
-          subtitle: "Every gameweek you get your own pack of five pairs. Keep one player from each pair and climb the leaderboard on real FPL points.") %>
+          subtitle: "Every gameweek you get your own pack of five pairs. Keep one player from each pair and climb the leaderboard on real FPL points.",
+          horizons: play_tabs(current: :pack)) %>
   </div>
 
   <ul class="mb-6 space-y-2 text-sm/6 text-zinc-700">
