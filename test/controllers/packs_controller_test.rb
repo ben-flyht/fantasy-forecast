@@ -42,6 +42,17 @@ class PacksControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "on production, the pack game tells search engines not to index it" do
+    original = ENV["APP_HOST"]
+    ENV["APP_HOST"] = "www.fantasyforecast.co.uk"
+
+    get pack_landing_path
+
+    assert_select "meta[name=robots][content=?]", "noindex, nofollow"
+  ensure
+    ENV["APP_HOST"] = original
+  end
+
   test "Play is in the header for everyone" do
     get root_path
     assert_select "a[href=?]", pack_landing_path, text: "Play"
